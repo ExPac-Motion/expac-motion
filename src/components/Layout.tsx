@@ -1,0 +1,59 @@
+import { NavLink, Outlet } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
+
+const NAV = [
+  { to: "/", label: "Dashboard", end: true },
+  { to: "/quotes", label: "Quotations", end: false },
+  { to: "/jobs", label: "Active Jobs", end: false },
+  { to: "/clients", label: "Clients", end: false },
+  { to: "/suppliers", label: "Suppliers", end: false },
+];
+
+export default function Layout() {
+  const { user, signOut } = useAuth();
+  const name =
+    (user?.user_metadata?.full_name as string | undefined) || user?.email || "";
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-lockup">
+            <img
+              src="/ExPac-Final_Maybe-300x106.png"
+              alt="ExPac Motion"
+              className="brand-logo"
+            />
+            <div className="brand-name" aria-label="Forwarding">
+              {"FORWARDING".split("").map((ch, i) => (
+                <span key={i}>{ch}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <nav className="nav">
+          {NAV.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.end}
+              className={({ isActive }) => (isActive ? "active" : "")}
+            >
+              <span className="nav-dot" />
+              {n.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="footer-user">
+          <div className="who">{name}</div>
+          <button className="link-btn" onClick={() => signOut()}>
+            Sign out
+          </button>
+        </div>
+      </aside>
+      <main className="main">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
