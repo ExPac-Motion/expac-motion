@@ -1197,9 +1197,7 @@ tr.clickable:hover {
   font-size: 9.5px;
 }
 .qs-totals {
-  /* compact block, right edge flush with the charges table above */
-  width: 210px;
-  margin-left: auto;
+  /* fills its own grid column; right edge is flush with the charges table above */
 }
 .qs-totals .row {
   display: flex;
