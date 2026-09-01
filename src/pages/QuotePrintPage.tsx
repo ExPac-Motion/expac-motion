@@ -113,8 +113,8 @@ export default function QuotePrintPage() {
           <div className="lines">{COMPANY.headerLine2}</div>
         </div>
 
-        {/* top */}
-        <div className="qs-top">
+        {/* QUOTATION + meta on the left, logo on the right */}
+        <div className="qs-head">
           <div className="qs-metacol">
             <h1>QUOTATION</h1>
             <div className="qs-meta">
@@ -134,7 +134,8 @@ export default function QuotePrintPage() {
               alt="ExPac"
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
-                const wm = e.currentTarget.nextElementSibling as HTMLElement | null;
+                const wm =
+                  e.currentTarget.nextElementSibling as HTMLElement | null;
                 if (wm) wm.style.display = "block";
               }}
             />
@@ -147,8 +148,20 @@ export default function QuotePrintPage() {
 
         <hr className="rule" />
 
-        {/* route */}
-        <div className="qs-route">
+        {/* client (TO) on the left, port codes on the right */}
+        <div className="qs-head">
+          <div className="qs-client">
+            <div className="qs-fromto">TO</div>
+            <div className="qs-cbar">{q.client?.company ?? "CLIENT"}</div>
+            <div className="qs-pgrid">
+              {clientRows.map(([k, v]) => (
+                <Fragment key={k}>
+                  <b>{k}:</b>
+                  <span>{v}</span>
+                </Fragment>
+              ))}
+            </div>
+          </div>
           <div className="qs-routebox">
             <div>
               <div className="qs-routelbl">FROM</div>
@@ -164,31 +177,17 @@ export default function QuotePrintPage() {
 
         <hr className="rule" />
 
-        {/* parties */}
-        <div className="qs-parties">
-          <div>
-            <div className="qs-fromto">FROM</div>
-            <div className="qs-cbar">{COMPANY.legalName}</div>
-            <div className="qs-pgrid">
-              {COMPANY.from.map(([k, v]) => (
-                <Fragment key={k}>
-                  <b>{k}:</b>
-                  <span>{v}</span>
-                </Fragment>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="qs-fromto">TO</div>
-            <div className="qs-cbar">{q.client?.company ?? "CLIENT"}</div>
-            <div className="qs-pgrid">
-              {clientRows.map(([k, v]) => (
-                <Fragment key={k}>
-                  <b>{k}:</b>
-                  <span>{v}</span>
-                </Fragment>
-              ))}
-            </div>
+        {/* from (ExPac) */}
+        <div className="qs-fromblock">
+          <div className="qs-fromto">FROM</div>
+          <div className="qs-cbar">{COMPANY.legalName}</div>
+          <div className="qs-pgrid">
+            {COMPANY.from.map(([k, v]) => (
+              <Fragment key={k}>
+                <b>{k}:</b>
+                <span>{v}</span>
+              </Fragment>
+            ))}
           </div>
         </div>
 

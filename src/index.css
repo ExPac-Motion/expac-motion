@@ -910,14 +910,24 @@ tr.clickable:hover {
 .qs-green {
   color: var(--green-dark);
 }
-.qs-top {
+.qs-head {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
   align-items: start;
 }
-.qs-top > .qs-metacol {
+.qs-head + .qs-head {
+  margin-top: 4px;
+}
+.qs-metacol {
   min-width: 0;
+}
+.qs-client {
+  min-width: 0;
+}
+.qs-fromblock {
+  margin-top: 8px;
+  max-width: calc(50% - 9px);
 }
 .qs-meta {
   display: grid;
@@ -961,13 +971,7 @@ tr.clickable:hover {
   height: auto;
   object-fit: contain;
 }
-.qs-route {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
 .qs-routebox {
-  grid-column: 2;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
