@@ -1192,6 +1192,8 @@ tr.clickable:hover {
 }
 .qs-foot > div > p {
   line-height: 1.45;
+  /* never let the blurb spill out of its column */
+  overflow-wrap: break-word;
 }
 .qs-foot .bank div {
   font-size: 9.5px;
