@@ -200,6 +200,11 @@ export default function QuotePrintPage() {
               Dimensions in cm · weights in KGS · volume in CBM
             </div>
             <table className="qs-pk">
+              <colgroup>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <col key={i} style={{ width: "10%" }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
                   <th>L (cm)</th>

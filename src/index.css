@@ -1077,7 +1077,6 @@ tr.clickable:hover {
 }
 .qs-pk th,
 .qs-pk td {
-  width: 10%;
   padding: 4px 3px;
   text-align: right;
   border-bottom: 1px solid #ececec;
