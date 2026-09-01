@@ -1061,6 +1061,10 @@ tr.clickable:hover {
 .qs-info > div {
   min-width: 0;
 }
+/* last column right-aligned to the section edge, like Tot Vol on the packing list */
+.qs-info > div:nth-child(4n) {
+  text-align: right;
+}
 .qs-info .k {
   color: var(--muted);
 }
