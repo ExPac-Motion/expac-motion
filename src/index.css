@@ -1054,15 +1054,19 @@ tr.clickable:hover {
 }
 .qs-info {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 16px;
   font-size: 10px;
+}
+.qs-info > div {
+  min-width: 0;
 }
 .qs-info .k {
   color: var(--muted);
 }
 .qs-info .v {
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .qs-pkcaption {
   font-size: 9px;
