@@ -177,20 +177,6 @@ export default function QuotePrintPage() {
 
         <hr className="rule" />
 
-        {/* from (ExPac) */}
-        <div className="qs-fromblock">
-          <div className="qs-fromto">FROM</div>
-          <div className="qs-cbar">{COMPANY.legalName}</div>
-          <div className="qs-pgrid">
-            {COMPANY.from.map(([k, v]) => (
-              <Fragment key={k}>
-                <b>{k}:</b>
-                <span>{v}</span>
-              </Fragment>
-            ))}
-          </div>
-        </div>
-
         {/* shipment information */}
         <div className="qs-bar">Shipment Information</div>
         <div className="qs-info">
