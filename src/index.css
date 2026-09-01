@@ -1191,7 +1191,8 @@ tr.clickable:hover {
   letter-spacing: 0.02em;
 }
 .qs-foot > div > p {
-  line-height: 1.45;
+  /* match the banking column's line-height so line 7 lands level with "Swift Code" */
+  line-height: 1.4;
   /* never let the blurb spill out of its column */
   overflow-wrap: break-word;
 }
