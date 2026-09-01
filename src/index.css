@@ -1111,6 +1111,10 @@ tr.clickable:hover {
   width: 100%;
   border-collapse: collapse;
   font-size: 10px;
+  table-layout: fixed;
+}
+.qs-charges td {
+  overflow-wrap: anywhere;
 }
 .qs-charges th {
   text-align: left;
