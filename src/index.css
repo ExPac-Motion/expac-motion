@@ -1052,6 +1052,9 @@ tr.clickable:hover {
   letter-spacing: 0.03em;
   margin: 16px 0 8px;
 }
+.qs-bar--tight {
+  margin-top: 4px;
+}
 .qs-info {
   display: grid;
   /* cols 3 & 4 sized to content and pushed toward the right edge */
@@ -1173,18 +1176,30 @@ tr.clickable:hover {
 }
 .qs-foot {
   display: grid;
-  grid-template-columns: 1.1fr 1.2fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 36px;
   margin-top: 16px;
 }
+.qs-foot > div {
+  min-width: 0;
+}
 .qs-foot h4 {
-  margin: 0 0 4px;
+  margin: 0 0 7px;
   color: #b02b2b;
   font-size: 11px;
+  line-height: 1.35;
   letter-spacing: 0.02em;
+}
+.qs-foot > div > p {
+  line-height: 1.45;
 }
 .qs-foot .bank div {
   font-size: 9.5px;
+}
+.qs-totals {
+  /* compact block, right edge flush with the charges table above */
+  width: 210px;
+  margin-left: auto;
 }
 .qs-totals .row {
   display: flex;

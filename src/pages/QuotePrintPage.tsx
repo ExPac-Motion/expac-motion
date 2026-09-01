@@ -177,10 +177,8 @@ export default function QuotePrintPage() {
           </div>
         </div>
 
-        <hr className="rule" />
-
         {/* shipment information */}
-        <div className="qs-bar">Shipment Information</div>
+        <div className="qs-bar qs-bar--tight">Shipment Information</div>
         <div className="qs-info">
           {shipment.map(([k, v]) => (
             <div key={k}>
@@ -326,7 +324,7 @@ export default function QuotePrintPage() {
                   {rows}
                   <tr className="sub">
                     <td className="n" colSpan={5}>
-                      {g.category} subtotal
+                      Subtotal
                     </td>
                     <td className="n">{money(gEx)}</td>
                     <td className="n">{money(gEx)}</td>
