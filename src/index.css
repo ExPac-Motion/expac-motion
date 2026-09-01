@@ -895,9 +895,11 @@ tr.clickable:hover {
 }
 .qs-top {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+}
+.qs-top > .qs-metacol {
+  flex: 1 1 50%;
+  min-width: 0;
 }
 .qs-meta {
   display: grid;
@@ -910,14 +912,18 @@ tr.clickable:hover {
   color: var(--muted);
 }
 .qs-logo {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   font-family: var(--display);
   font-weight: 800;
-  font-size: 40px;
+  font-size: 34px;
   color: var(--green);
   letter-spacing: -0.02em;
   line-height: 1;
   white-space: nowrap;
-  text-align: right;
 }
 .qs-logo .dark {
   color: var(--ink);
@@ -931,8 +937,12 @@ tr.clickable:hover {
   margin-top: 2px;
 }
 .qs-logo img {
-  max-width: 190px;
-  max-height: 60px;
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  max-height: 66px;
+  height: auto;
+  object-fit: contain;
 }
 .qs-route {
   display: flex;

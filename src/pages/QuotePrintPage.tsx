@@ -135,7 +135,7 @@ export default function QuotePrintPage() {
       <div className="qs-sheet">
         {/* top */}
         <div className="qs-top">
-          <div>
+          <div className="qs-metacol">
             <h1>QUOTATION</h1>
             <div className="qs-meta">
               <b>Document Number</b>
