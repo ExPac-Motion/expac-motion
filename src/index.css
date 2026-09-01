@@ -1176,8 +1176,8 @@ tr.clickable:hover {
 }
 .qs-foot {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 36px;
+  grid-template-columns: 185px 1fr 195px;
+  gap: 24px;
   margin-top: 16px;
 }
 .qs-foot > div {
