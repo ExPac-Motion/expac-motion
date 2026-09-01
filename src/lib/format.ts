@@ -58,3 +58,16 @@ export function newReference(): string {
 export function todayPlusDays(days: number): string {
   return new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
 }
+
+/**
+ * Best-effort short "port code" from a free-text origin/destination, for the
+ * big FROM → TO line on the quotation. "SZX — Shenzhen" -> "SZX";
+ * "Cape Town, South Africa" -> "CAPE". (A dedicated port-code field can replace this later.)
+ */
+export function portCode(place: string | null | undefined): string {
+  const s = (place ?? "").trim();
+  if (!s) return "—";
+  const first = s.split(/[\s,\-–—/]+/)[0] ?? s;
+  return first.toUpperCase().slice(0, 5);
+}
+

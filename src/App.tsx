@@ -1,14 +1,28 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import LoginPage from "./auth/LoginPage";
 import Layout from "./components/Layout";
 import DashboardPage from "./pages/DashboardPage";
 import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
+import QuotePrintPage from "./pages/QuotePrintPage";
 import JobsPage from "./pages/JobsPage";
 import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import { isSupabaseConfigured } from "./lib/supabase";
+
+function RequireAuth() {
+  const { session, loading } = useAuth();
+  if (loading) return <div className="center-note">Loading…</div>;
+  if (!session) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
 
 function Protected() {
   const { session, loading } = useAuth();
@@ -51,6 +65,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginRoute />} />
+          <Route element={<RequireAuth />}>
+            <Route path="quotes/:id/print" element={<QuotePrintPage />} />
+          </Route>
           <Route element={<Protected />}>
             <Route index element={<DashboardPage />} />
             <Route path="quotes" element={<QuotesListPage />} />

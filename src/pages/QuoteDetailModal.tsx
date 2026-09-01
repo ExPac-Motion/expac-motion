@@ -85,6 +85,15 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
             className="btn outline"
             onClick={() => {
               onClose();
+              navigate(`/quotes/${q.id}/print`);
+            }}
+          >
+            Quotation document
+          </button>
+          <button
+            className="btn outline"
+            onClick={() => {
+              onClose();
               navigate(`/quotes/${q.id}`);
             }}
           >

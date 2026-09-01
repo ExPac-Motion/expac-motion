@@ -1,0 +1,38 @@
+// ExPac company details for the client-facing quotation letterhead.
+// Edit anything here — this is the only source for the FROM block, banking
+// details and footer text on the printed quotation.
+
+export const COMPANY = {
+  legalName: "EXPAC FORWARDING CC",
+  strapline: "Air & Ocean Freight Clearing & Forwarding",
+  tagline: "Excellence in Motion",
+  from: [
+    ["Reg Number", "2010/110405/23"],
+    ["VAT No", "4670306135"],
+    ["Tel Number", "+27 (0) 11 568 8281"],
+    ["Fax Number", "+27 (0) 86 482 2371"],
+    ["Email Address", "admin@expac.co.za"],
+    ["Web Address", "www.expac.co.za"],
+    ["Postal Address", "Postnet Suite 84"],
+    ["Suburb", "Private Bag X1015"],
+    ["Province", "Lyttelton"],
+    ["Country", "Centurion, 0140"],
+  ] as [string, string][],
+  bank: [
+    "Bank Name: First National Bank",
+    "Branch Name: Centurion, South Africa",
+    "Account Name: ExPac Forwarding",
+    "Account Type: Business Current",
+    "Account Number (ZAR): 63215955452",
+    "Branch Code: 250655",
+    "Swift Code: FIRNZAJJ",
+  ],
+  blurb:
+    "We move more than just cargo, we move trust, time, and opportunity. " +
+    "Rooted in precision and propelled by passion, we specialize in seamless " +
+    "air, sea, and road freight solutions that connect businesses across " +
+    "borders. With a global mindset and local expertise, we deliver tailored " +
+    "logistics with unmatched reliability, speed, and care.",
+  /** Colour logo for the printed document (drop a PNG at this path in /public). */
+  logoPrint: "/logo-color.png",
+};
