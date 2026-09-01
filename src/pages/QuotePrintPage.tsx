@@ -201,9 +201,10 @@ export default function QuotePrintPage() {
             </div>
             <table className="qs-pk">
               <colgroup>
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <col key={i} style={{ width: "10%" }} />
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <col key={i} style={{ width: "10.33%" }} />
                 ))}
+                <col style={{ width: "7%" }} />
               </colgroup>
               <thead>
                 <tr>
