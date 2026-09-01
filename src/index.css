@@ -1093,11 +1093,17 @@ tr.clickable:hover {
   white-space: normal;
   word-break: break-word;
 }
-/* L column flush-left under the caption; the rest right-aligned (values under headings) */
+/* L / W / H (dimension) columns left-aligned; numeric columns stay right-aligned */
+.qs-pk thead th:nth-child(-n + 3),
+.qs-pk tbody td:nth-child(-n + 3) {
+  text-align: left;
+}
 .qs-pk th:first-child,
 .qs-pk td:first-child {
-  text-align: left;
   padding-left: 0;
+}
+.qs-pk tfoot td:first-child {
+  text-align: left;
 }
 .qs-pk tfoot td {
   font-weight: 800;
