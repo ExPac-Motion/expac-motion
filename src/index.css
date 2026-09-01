@@ -1179,10 +1179,9 @@ tr.clickable:hover {
 }
 .qs-foot h4 {
   margin: 0 0 4px;
-  color: var(--green-dark);
+  color: #b02b2b;
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 .qs-foot .bank div {
   font-size: 9.5px;
@@ -1198,28 +1197,12 @@ tr.clickable:hover {
   color: var(--muted);
 }
 .qs-totals .grand {
-  border-top: 1.5px solid var(--ink);
-  margin-top: 4px;
-  padding-top: 5px;
+  margin-top: 18px;
   font-weight: 800;
-  font-size: 13px;
+  font-size: 12px;
 }
-.qs-links {
-  display: grid;
-  grid-template-columns: 1.1fr 1.2fr 1fr;
-  gap: 20px;
-  margin-top: 14px;
-  padding-top: 8px;
-  border-top: 3px solid var(--green);
-  font-size: 9.5px;
-}
-.qs-balance {
-  text-align: right;
-  font-family: var(--display);
-}
-.qs-balance .amt {
-  font-weight: 800;
-  font-size: 16px;
+.qs-totals .grand span:first-child {
+  color: var(--ink);
 }
 
 @media print {

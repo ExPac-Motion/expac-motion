@@ -60,8 +60,10 @@ export default function QuotePrintPage() {
       exclusive += lineTotal(x.line);
     }),
   );
+  const discountTotal = 0;
   const vatTotal = 0;
-  const grand = exclusive + vatTotal;
+  const subTotal = exclusive + vatTotal;
+  const grand = subTotal - discountTotal;
 
   // Quote-stage fields only. Booking details (ETD/ETA, MAWB/HAWB/flight,
   // vessel/MBL/HBL/container, carrier, status) don't exist yet on a quotation.
@@ -349,45 +351,25 @@ export default function QuotePrintPage() {
           </div>
           <div className="qs-totals">
             <div className="row">
-              <b>Total Exclusive</b>
+              <b>Total Discount:</b>
+              <span>{money(discountTotal)}</span>
+            </div>
+            <div className="row">
+              <b>Total Exclusive:</b>
               <span>{money(exclusive)}</span>
             </div>
             <div className="row">
-              <b>Total VAT</b>
+              <b>Total VAT:</b>
               <span>{money(vatTotal)}</span>
             </div>
             <div className="row">
-              <b>Sub Total</b>
-              <span>{money(grand)}</span>
+              <b>Sub Total:</b>
+              <span>{money(subTotal)}</span>
             </div>
             <div className="row grand">
-              <span>Grand Total</span>
+              <span>Grand Total:</span>
               <span>{money(grand)}</span>
             </div>
-          </div>
-        </div>
-
-        <div className="qs-links">
-          <div>
-            <div className="qs-green">See our Terms &amp; Conditions</div>
-            <div className="qs-green">See our Company Portfolio</div>
-            <div className="qs-green">{COMPANY.tagline}</div>
-          </div>
-          <div>
-            <div>
-              <span className="qs-green">Payment Reference</span> &nbsp; Use
-              Invoice Number
-            </div>
-            <div>
-              <span className="qs-green">Live Tracking</span> &nbsp; Track with
-              Document Number
-            </div>
-          </div>
-          <div className="qs-balance">
-            <div style={{ fontWeight: 800, letterSpacing: ".06em" }}>
-              BALANCE DUE
-            </div>
-            <div className="amt">{money(grand)}</div>
           </div>
         </div>
       </div>
