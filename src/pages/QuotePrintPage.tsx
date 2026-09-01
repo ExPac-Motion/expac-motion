@@ -11,10 +11,6 @@ import {
 } from "../lib/calc";
 import { formatDate, money, portCode, usd } from "../lib/format";
 import { COMPANY } from "../lib/company";
-import type { QuoteMode } from "../lib/types";
-
-const AIR_MODES: QuoteMode[] = ["Air Freight (AIR)", "Courier Express (CX)"];
-const SEA_MODES: QuoteMode[] = ["Sea Freight (FCL)", "Sea Freight (LCL)"];
 
 function n2(v: number | string | null | undefined): string {
   return (Number(v) || 0).toLocaleString("en-ZA", {
@@ -56,8 +52,6 @@ export default function QuotePrintPage() {
     );
 
   const clientRec = clients?.find((c) => c.id === q.client_id);
-  const isAir = AIR_MODES.includes(q.mode);
-  const isSea = SEA_MODES.includes(q.mode);
 
   // Grand total (VAT is 0 until the per-line VAT field is added).
   let exclusive = 0;
@@ -69,6 +63,8 @@ export default function QuotePrintPage() {
   const vatTotal = 0;
   const grand = exclusive + vatTotal;
 
+  // Quote-stage fields only. Booking details (ETD/ETA, MAWB/HAWB/flight,
+  // vessel/MBL/HBL/container, carrier, status) don't exist yet on a quotation.
   const shipment: [string, string][] = [
     ["Client / Importer", q.client?.company ?? "—"],
     ["Supplier / Exporter", q.supplier?.company ?? "—"],
@@ -82,30 +78,7 @@ export default function QuotePrintPage() {
     ["Destination / Port of Discharge", q.destination || "—"],
     ["Commercial Value ($)", usd(q.commercial_value)],
     ["Insurance Amount ($)", usd(q.insurance_amount)],
-    ["ETD", formatDate(q.etd)],
-    ["ETA", formatDate(q.eta)],
   ];
-  if (isSea) {
-    shipment.push(
-      ["Vessel Name", q.vessel_name || "—"],
-      ["MBL No", q.mbl_no || "—"],
-      ["HBL No", q.hbl_no || "—"],
-      ["Container Number", q.container_no || "—"],
-    );
-  }
-  if (isAir) {
-    shipment.push(
-      ["MAWB No", q.mawb_no || "—"],
-      ["HAWB No", q.hawb_no || "—"],
-      ["Flight No", q.flight_no || "—"],
-      ["Flight Date", formatDate(q.flight_date)],
-      ["Carrier / Airline Name", q.carrier_name || "—"],
-    );
-  }
-  if (!isAir && !isSea) {
-    shipment.push(["Carrier Name", q.carrier_name || "—"]);
-  }
-  shipment.push(["Status", q.status]);
 
   const clientRows: [string, string][] = [
     ["Contact Person", clientRec?.contact || "—"],
@@ -144,8 +117,6 @@ export default function QuotePrintPage() {
               <span>{formatDate(q.created_at)}</span>
               <b>Due (or) Validity Date</b>
               <span>{formatDate(q.valid_until)}</span>
-              <b>Status</b>
-              <span>{q.status}</span>
               <b>Page</b>
               <span>1</span>
             </div>
@@ -189,10 +160,10 @@ export default function QuotePrintPage() {
               {" // "}
               {q.delivery_terms || q.mode}
             </span>
-            <b>Estimate Departure (ETD):</b>
-            <span>{formatDate(q.etd)}</span>
-            <b>Estimate Arrival (ETA):</b>
-            <span>{formatDate(q.eta)}</span>
+            <b>Mode:</b>
+            <span>{q.mode}</span>
+            <b>Valid Until:</b>
+            <span>{formatDate(q.valid_until)}</span>
           </div>
         </div>
 
