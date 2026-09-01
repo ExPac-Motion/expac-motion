@@ -1097,6 +1097,12 @@ tr.clickable:hover {
 .qs-pk td:first-child {
   padding-left: 0;
 }
+/* only the last column right-aligned, flush to the page edge */
+.qs-pk th:last-child,
+.qs-pk td:last-child {
+  text-align: right;
+  padding-right: 0;
+}
 .qs-pk tfoot td {
   font-weight: 800;
   border-bottom: 0;
