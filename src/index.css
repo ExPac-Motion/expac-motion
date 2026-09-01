@@ -1064,6 +1064,11 @@ tr.clickable:hover {
 .qs-info .v {
   font-weight: 700;
 }
+.qs-pkcaption {
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
 .qs-pk {
   width: 100%;
   border-collapse: collapse;
@@ -1072,9 +1077,12 @@ tr.clickable:hover {
 }
 .qs-pk th,
 .qs-pk td {
-  padding: 4px 4px;
+  width: 10%;
+  padding: 4px 3px;
   text-align: right;
   border-bottom: 1px solid #ececec;
+}
+.qs-pk td {
   white-space: nowrap;
 }
 .qs-pk th {
@@ -1083,6 +1091,8 @@ tr.clickable:hover {
   color: #444;
   border-bottom: 1.5px solid var(--ink);
   font-weight: 700;
+  white-space: normal;
+  word-break: break-word;
 }
 .qs-pk tfoot td {
   font-weight: 800;

@@ -196,19 +196,22 @@ export default function QuotePrintPage() {
           </p>
         ) : (
           <>
+            <div className="qs-pkcaption">
+              Dimensions in cm · weights in KGS · volume in CBM
+            </div>
             <table className="qs-pk">
               <thead>
                 <tr>
                   <th>L (cm)</th>
                   <th>W (cm)</th>
                   <th>H (cm)</th>
-                  <th>Actual (KGS)</th>
-                  <th>Qty (CTNS)</th>
-                  <th>Cubic M (CBM)</th>
-                  <th>Volume (KGS)</th>
-                  <th>Total Cbm</th>
-                  <th>Total Act (KGS)</th>
-                  <th>Total Vol (KGS)</th>
+                  <th>Actual</th>
+                  <th>Qty</th>
+                  <th>CBM</th>
+                  <th>Volume</th>
+                  <th>Tot CBM</th>
+                  <th>Tot Act</th>
+                  <th>Tot Vol</th>
                 </tr>
               </thead>
               <tbody>
