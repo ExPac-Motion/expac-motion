@@ -178,7 +178,7 @@ export default function QuotePrintPage() {
         </div>
 
         {/* shipment information */}
-        <div className="qs-bar qs-bar--tight">Shipment Information</div>
+        <div className="qs-bar">Shipment Information</div>
         <div className="qs-info">
           {shipment.map(([k, v]) => (
             <div key={k}>

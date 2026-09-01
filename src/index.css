@@ -1035,7 +1035,7 @@ tr.clickable:hover {
   grid-template-columns: 112px 1fr;
   gap: 1px 8px;
   font-size: 10px;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .qs-pgrid b {
   font-weight: 400;
@@ -1050,10 +1050,8 @@ tr.clickable:hover {
   padding: 5px 10px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin: 16px 0 8px;
-}
-.qs-bar--tight {
-  margin-top: 4px;
+  /* equal breathing room above and below every green section bar */
+  margin: 8px 0;
 }
 .qs-info {
   display: grid;
@@ -1146,7 +1144,7 @@ tr.clickable:hover {
   letter-spacing: 0.04em;
   color: #444;
   border-bottom: 1.5px solid var(--ink);
-  padding: 6px 6px;
+  padding: 2px 6px 6px;
   font-weight: 700;
 }
 .qs-charges td {
