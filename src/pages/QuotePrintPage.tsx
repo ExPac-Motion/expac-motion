@@ -106,6 +106,13 @@ export default function QuotePrintPage() {
       </div>
 
       <div className="qs-sheet">
+        {/* company header */}
+        <div className="qs-companyhead">
+          <div className="name">{COMPANY.headerName}</div>
+          <div className="lines">{COMPANY.headerLine1}</div>
+          <div className="lines">{COMPANY.headerLine2}</div>
+        </div>
+
         {/* top */}
         <div className="qs-top">
           <div className="qs-metacol">

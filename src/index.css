@@ -885,6 +885,23 @@ tr.clickable:hover {
   font-weight: 800;
   margin: 0 0 8px;
 }
+.qs-companyhead {
+  text-align: center;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--ink);
+}
+.qs-companyhead .name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.03em;
+}
+.qs-companyhead .lines {
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-top: 3px;
+}
 .qs-sheet .rule {
   border: 0;
   border-top: 2px solid var(--ink);
