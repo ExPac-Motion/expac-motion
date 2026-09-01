@@ -156,13 +156,21 @@ function draftFromQuote(q: Quote): QuoteDraft {
       if (buy <= 0 && storedSell > 0 && rate > 0) buy = storedSell / rate;
       const margin =
         Number(l.margin) || impliedMargin(buy, storedSell, cur, fx);
+      // Heal legacy formula-style units on catalog-coded lines (e.g. an old
+      // "1% on Total International Charges + R350" -> the code's standard unit).
+      const storedUnit = l.unit ?? "";
+      const catUnit = catalogItem(l.code ?? "", q.mode)?.unit;
+      const unit =
+        storedUnit && !CHARGE_UNITS.includes(storedUnit) && catUnit
+          ? catUnit
+          : storedUnit;
       return {
         position: i,
         category: (l.category as ChargeCategory) ?? CHARGE_CATEGORIES[0],
         code: l.code ?? "",
         description: l.description ?? "",
         cur,
-        unit: l.unit ?? "",
+        unit,
         qty: l.qty ?? 0,
         buy,
         margin,
