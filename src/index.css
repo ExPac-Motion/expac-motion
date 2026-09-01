@@ -894,11 +894,12 @@ tr.clickable:hover {
   color: var(--green-dark);
 }
 .qs-top {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
 }
 .qs-top > .qs-metacol {
-  flex: 1 1 50%;
   min-width: 0;
 }
 .qs-meta {
@@ -912,7 +913,6 @@ tr.clickable:hover {
   color: var(--muted);
 }
 .qs-logo {
-  flex: 1 1 50%;
   min-width: 0;
   display: flex;
   justify-content: center;
@@ -939,8 +939,8 @@ tr.clickable:hover {
 .qs-logo img {
   display: block;
   width: 100%;
-  max-width: 260px;
-  max-height: 66px;
+  max-width: 300px;
+  max-height: 78px;
   height: auto;
   object-fit: contain;
 }
