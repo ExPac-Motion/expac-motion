@@ -1054,7 +1054,8 @@ tr.clickable:hover {
 }
 .qs-info {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* 4th column sized to its content and pushed to the page's right edge */
+  grid-template-columns: 1fr 1fr 1fr auto;
   gap: 8px 18px;
   font-size: 10px;
 }
