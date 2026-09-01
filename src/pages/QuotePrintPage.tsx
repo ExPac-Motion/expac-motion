@@ -345,7 +345,9 @@ export default function QuotePrintPage() {
           </div>
           <div>
             <h4>{COMPANY.strapline}</h4>
-            <p style={{ margin: 0, fontSize: "9.5px" }}>{COMPANY.blurb}</p>
+            <p style={{ margin: 0, fontSize: "9.5px", whiteSpace: "pre-line" }}>
+              {COMPANY.blurb}
+            </p>
           </div>
           <div className="qs-totals">
             <div className="row">

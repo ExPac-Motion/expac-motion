@@ -32,12 +32,15 @@ export const COMPANY = {
     "Branch Code: 250655",
     "Swift Code: FIRNZAJJ",
   ],
+  // Rendered with white-space: pre-line — these 7 line breaks are intentional.
   blurb:
-    "We move more than just cargo, we move trust, time, and opportunity. " +
-    "Rooted in precision and propelled by passion, we specialize in seamless " +
-    "air, sea, and road freight solutions that connect businesses across " +
-    "borders. With a global mindset and local expertise, we deliver tailored " +
-    "logistics with unmatched reliability, speed, and care.",
+    "We move more than just cargo, we move trust, time,\n" +
+    "and opportunity. Rooted in precision and propelled\n" +
+    "by passion, we specialize in seamless air, sea, and\n" +
+    "road freight solutions that connect businesses\n" +
+    "across borders. With a global mindset and local\n" +
+    "expertise, we deliver tailored logistics with\n" +
+    "unmatched reliability, speed, and care.",
   /** Colour logo for the printed document (file in /public). */
   logoPrint: "/Logo.jpg",
 };
