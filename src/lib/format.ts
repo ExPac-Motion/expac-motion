@@ -60,13 +60,16 @@ export function todayPlusDays(days: number): string {
 }
 
 /**
- * Best-effort short "port code" from a free-text origin/destination, for the
- * big FROM → TO line on the quotation. "SZX — Shenzhen" -> "SZX";
- * "Cape Town, South Africa" -> "CAPE". (A dedicated port-code field can replace this later.)
+ * Port code for the big FROM → TO line on the quotation. Expects a UN/LOCODE
+ * (2-letter country + 3-char location, e.g. "CNSNZ", "ZAJNB") at the start of
+ * the Origin/Destination text — "CNSNZ — Shenzhen, China" -> "CNSNZ". Falls back
+ * to the first token capped at 5 chars.
  */
 export function portCode(place: string | null | undefined): string {
   const s = (place ?? "").trim();
   if (!s) return "—";
+  const locode = s.toUpperCase().match(/^([A-Z]{2})\s?([A-Z0-9]{3})\b/);
+  if (locode) return locode[1] + locode[2];
   const first = s.split(/[\s,\-–—/]+/)[0] ?? s;
   return first.toUpperCase().slice(0, 5);
 }

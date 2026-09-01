@@ -538,16 +538,18 @@ export default function QuoteBuilderPage() {
             <input
               value={draft.origin}
               onChange={(e) => set("origin", e.target.value)}
-              placeholder="City, country"
+              placeholder="CNSNZ — Shenzhen, China"
             />
+            <span className="hint">Start with the UN/LOCODE (e.g. CNSNZ).</span>
           </div>
           <div className="field">
             <label>Destination/Port of Discharge</label>
             <input
               value={draft.destination}
               onChange={(e) => set("destination", e.target.value)}
-              placeholder="City, country"
+              placeholder="ZAJNB — Johannesburg, South Africa"
             />
+            <span className="hint">Start with the UN/LOCODE (e.g. ZAJNB).</span>
           </div>
           <div className="field">
             <label>Vessel Name</label>
