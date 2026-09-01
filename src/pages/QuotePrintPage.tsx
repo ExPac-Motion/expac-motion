@@ -160,18 +160,6 @@ export default function QuotePrintPage() {
               <div className="qs-port">{portCode(q.destination)}</div>
             </div>
           </div>
-          <div className="qs-terms">
-            <b>Inco-Term &amp; Service:</b>
-            <span>
-              {(q.incoterms || "—")}
-              {" // "}
-              {q.delivery_terms || q.mode}
-            </span>
-            <b>Mode:</b>
-            <span>{q.mode}</span>
-            <b>Valid Until:</b>
-            <span>{formatDate(q.valid_until)}</span>
-          </div>
         </div>
 
         <hr className="rule" />
