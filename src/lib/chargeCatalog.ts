@@ -23,7 +23,7 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   // ---- International Freight Charges ----
   { category: "International Freight Charges", code: "AF-01", description: "Air Freight Fee", cur: "USD", unit: "KGS", modes: AIR },
   { category: "International Freight Charges", code: "AF-02", description: "Terminal Handling Fee", cur: "USD", unit: "", modes: AIR },
-  { category: "International Freight Charges", code: "FW-01", description: "Forwarding & Air Waybill Fee", cur: "USD", unit: "1% on Total International Charges + R350", modes: AIR },
+  { category: "International Freight Charges", code: "FW-01", description: "Forwarding & Air Waybill Fee", cur: "USD", unit: "AWB", modes: AIR },
   { category: "International Freight Charges", code: "OF-01", description: "Ocean Freight", cur: "USD", unit: "", modes: SEA },
   { category: "International Freight Charges", code: "OF-02", description: "Release Fee", cur: "USD", unit: "", modes: SEA },
   { category: "International Freight Charges", code: "IN-01", description: "Cargo Insurance", cur: "USD", unit: "0.35% USD on Commercial Value" },
