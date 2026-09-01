@@ -1093,11 +1093,9 @@ tr.clickable:hover {
   white-space: normal;
   word-break: break-word;
 }
-/* first column flush-left so L (cm) lines up under the caption */
-.qs-pk th:first-child,
-.qs-pk td:first-child {
+/* every column right-aligned so each value sits directly under its heading */
+.qs-pk tfoot td:first-child {
   text-align: left;
-  padding-left: 0;
 }
 .qs-pk tfoot td {
   font-weight: 800;
