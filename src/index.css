@@ -1054,23 +1054,15 @@ tr.clickable:hover {
 }
 .qs-info {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px 18px;
   font-size: 10px;
-}
-.qs-info > div {
-  min-width: 0;
-}
-/* 4th column right-aligned so it ends flush with the section's right edge */
-.qs-info > div:nth-child(4n) {
-  text-align: right;
 }
 .qs-info .k {
   color: var(--muted);
 }
 .qs-info .v {
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
 .qs-pkcaption {
   font-size: 9px;
