@@ -33,6 +33,6 @@ export const COMPANY = {
     "air, sea, and road freight solutions that connect businesses across " +
     "borders. With a global mindset and local expertise, we deliver tailored " +
     "logistics with unmatched reliability, speed, and care.",
-  /** Colour logo for the printed document (drop a PNG at this path in /public). */
-  logoPrint: "/logo-color.png",
+  /** Colour logo for the printed document (file in /public). */
+  logoPrint: "/Logo.jpg",
 };
