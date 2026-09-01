@@ -1061,6 +1061,10 @@ tr.clickable:hover {
 .qs-info > div {
   min-width: 0;
 }
+/* 4th column right-aligned so it ends flush with the section's right edge */
+.qs-info > div:nth-child(4n) {
+  text-align: right;
+}
 .qs-info .k {
   color: var(--muted);
 }
