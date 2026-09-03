@@ -1266,22 +1266,31 @@ tr.clickable:hover {
 }
 
 @media print {
-  .qs-wrap {
-    background: #fff;
-    padding: 0;
+  /* Isolate the quotation: hide the app chrome AND anything a browser
+     extension (Apollo, Grammarly, …) injected at the <body> level. */
+  body > *:not(#root) {
+    display: none !important;
   }
   .qs-toolbar,
   .qs-note {
     display: none !important;
   }
+  .qs-wrap {
+    background: #fff;
+    padding: 0;
+  }
   .qs-sheet {
     box-shadow: none;
-    width: auto;
-    padding: 0;
+    width: 210mm;
+    /* one exact A4 page. The visual page margins live in the sheet's own
+       padding so @page can stay margin:0 — which is also what makes Chrome
+       drop its date/URL/page-number header & footer from the PDF. */
+    min-height: 296mm;
+    padding: 8mm 12mm;
     margin: 0;
   }
   @page {
     size: A4;
-    margin: 8mm 12mm;
+    margin: 0;
   }
 }
