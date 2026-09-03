@@ -9,8 +9,8 @@
   --line: rgba(32, 36, 38, 0.12);
   --shadow: 0 12px 32px rgba(32, 36, 38, 0.1);
   --radius: 16px;
-  --display: "Rajdhani", "Arial Narrow", Arial, sans-serif;
-  --body: "Roboto", Arial, sans-serif;
+  --display: Arial, Helvetica, sans-serif;
+  --body: Arial, Helvetica, sans-serif;
 }
 * {
   box-sizing: border-box;
