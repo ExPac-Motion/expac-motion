@@ -1214,9 +1214,10 @@ tr.clickable:hover {
 }
 .qs-charges tr.group td {
   background: #eef4e3;
-  /* the tint + rule already mark the category; bold (700, Arial has no
-     semibold) made these read far heavier than everything else */
+  /* Arial has no semibold: full bold (700) read too heavy, plain 400 too
+     light — a hairline text stroke lands a "heading" weight in between */
   font-weight: 400;
+  -webkit-text-stroke: 0.3px currentColor;
   font-family: var(--display);
   font-size: 12px;
   border-bottom: 1px solid #cdddb4;

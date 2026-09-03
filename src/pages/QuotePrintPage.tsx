@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClients, useQuote } from "../lib/hooks";
 import {
@@ -42,6 +42,16 @@ export default function QuotePrintPage() {
     );
     return groupByCategory(resolved).filter((g) => g.lines.length > 0);
   }, [q, fx, pack]);
+
+  // Drive the browser tab title so "Print / Save as PDF" defaults the filename
+  // to the quote reference (e.g. JOB810890.pdf) instead of the app name.
+  useEffect(() => {
+    const previous = document.title;
+    if (q?.reference) document.title = q.reference;
+    return () => {
+      document.title = previous;
+    };
+  }, [q?.reference]);
 
   if (isLoading) return <div className="center-note">Loading quotation…</div>;
   if (isError || !q)
