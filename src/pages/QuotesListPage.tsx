@@ -4,7 +4,7 @@ import { EmptyState, ErrorNote, Loading, PageHeader, StatusBadge } from "../comp
 import QuoteDetailModal from "./QuoteDetailModal";
 import { useQuotes } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
-import { money } from "../lib/format";
+import { money, portCode } from "../lib/format";
 import { STATUS_LABEL, STATUS_ORDER, type QuoteStatus } from "../lib/types";
 
 export default function QuotesListPage() {
@@ -63,15 +63,18 @@ export default function QuotesListPage() {
           </EmptyState>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table className="table--compact">
               <thead>
                 <tr>
                   <th>Reference</th>
                   <th>Client</th>
+                  <th>Supplier</th>
                   <th>Trade lane</th>
                   <th>Mode</th>
                   <th>Value</th>
+                  <th>Total Cost</th>
                   <th>Margin</th>
+                  <th>Total Profit</th>
                   <th>Status</th>
                   <th />
                 </tr>
@@ -89,12 +92,15 @@ export default function QuotesListPage() {
                         <strong>{q.reference}</strong>
                       </td>
                       <td>{q.client?.company ?? "—"}</td>
+                      <td>{q.supplier?.company ?? "—"}</td>
                       <td className="nowrap">
-                        {q.origin || "—"} → {q.destination || "—"}
+                        {portCode(q.origin)} → {portCode(q.destination)}
                       </td>
                       <td>{q.mode}</td>
                       <td>{money(t.sell)}</td>
+                      <td>{money(t.cost)}</td>
                       <td>{t.margin.toFixed(1)}%</td>
+                      <td>{money(t.gp)}</td>
                       <td>
                         <StatusBadge status={q.status} />
                       </td>

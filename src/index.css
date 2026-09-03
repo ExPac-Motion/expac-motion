@@ -330,6 +330,18 @@ tr.clickable:hover {
 .table-wrap {
   overflow-x: auto;
 }
+/* denser table for wide, many-column lists (e.g. Quotations) */
+.table--compact {
+  font-size: 0.76rem;
+}
+.table--compact th {
+  font-size: 0.6rem;
+  letter-spacing: 0.03em;
+  padding: 6px 7px;
+}
+.table--compact td {
+  padding: 7px 7px;
+}
 
 /* ---------- Badges ---------- */
 .badge {
