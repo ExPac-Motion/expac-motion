@@ -71,8 +71,8 @@ export default function QuotesListPage() {
                   <th>Supplier</th>
                   <th>Trade lane</th>
                   <th>Mode</th>
-                  <th>Value</th>
                   <th>Total Cost</th>
+                  <th>Value</th>
                   <th>Margin</th>
                   <th>Total Profit</th>
                   <th>Status</th>
@@ -97,8 +97,8 @@ export default function QuotesListPage() {
                         {portCode(q.origin)} → {portCode(q.destination)}
                       </td>
                       <td>{q.mode}</td>
-                      <td>{money(t.sell)}</td>
                       <td>{money(t.cost)}</td>
+                      <td>{money(t.sell)}</td>
                       <td>{t.margin.toFixed(1)}%</td>
                       <td>{money(t.gp)}</td>
                       <td>
