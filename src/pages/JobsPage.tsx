@@ -1,22 +1,157 @@
+import { useState } from "react";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
-import { useJobs, useSetJobMilestone } from "../lib/hooks";
-import { formatDateTime } from "../lib/format";
-import { MILESTONES, type Job, type Milestone } from "../lib/types";
+import { useJobs, useUpdateJob } from "../lib/hooks";
+import { formatDate } from "../lib/format";
+import { LOCODE_OPTIONS } from "../lib/locodes";
+import {
+  SHIPMENT_STATUSES,
+  shipmentStatusTone,
+  type Job,
+  type JobPatch,
+} from "../lib/types";
+
+/** "AWB" for air/courier, "MBL" for sea, "Ref" otherwise. */
+function docLabel(mode: string): string {
+  if (mode.startsWith("Air") || mode.startsWith("Courier")) return "AWB No";
+  if (mode.startsWith("Sea")) return "MBL No";
+  return "Ref No";
+}
+
+function JobRow({
+  job,
+  onSave,
+}: {
+  job: Job;
+  onSave: (id: string, patch: JobPatch) => void;
+}) {
+  // Row owns its edit state; seeded once from the job. Each field saves to the
+  // server on blur / change, so a refetch never has to clobber what's typed.
+  const [row, setRow] = useState<JobPatch>({
+    po_no: job.po_no ?? "",
+    shipment_status: job.shipment_status ?? "",
+    notes: job.notes ?? "",
+    awb_mbl: job.awb_mbl ?? "",
+    etd: job.etd ?? "",
+    eta: job.eta ?? "",
+    origin: job.origin ?? "",
+    destination: job.destination ?? "",
+  });
+
+  function set<K extends keyof JobPatch>(key: K, value: JobPatch[K]) {
+    setRow((r) => ({ ...r, [key]: value }));
+  }
+  function commit<K extends keyof JobPatch>(key: K, initial: string) {
+    const next = (row[key] ?? "") as string;
+    if (next !== (initial ?? "")) onSave(job.id, { [key]: next } as JobPatch);
+  }
+
+  return (
+    <tr>
+      <td className="nowrap">{formatDate(job.created_at)}</td>
+      <td className="nowrap">
+        <strong>{job.reference}</strong>
+      </td>
+      <td>{job.supplier?.company ?? "—"}</td>
+      <td>{job.client?.company ?? "—"}</td>
+      <td>
+        <input
+          value={row.po_no ?? ""}
+          onChange={(e) => set("po_no", e.target.value)}
+          onBlur={() => commit("po_no", job.po_no ?? "")}
+          placeholder="—"
+        />
+      </td>
+      <td>
+        <select
+          className={`job-status is-${shipmentStatusTone(row.shipment_status)}`}
+          value={row.shipment_status ?? ""}
+          onChange={(e) => {
+            set("shipment_status", e.target.value);
+            onSave(job.id, { shipment_status: e.target.value });
+          }}
+        >
+          <option value="">— set status —</option>
+          {SHIPMENT_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="job-notes">
+        <input
+          value={row.notes ?? ""}
+          onChange={(e) => set("notes", e.target.value)}
+          onBlur={() => commit("notes", job.notes ?? "")}
+          placeholder="Add an update…"
+        />
+      </td>
+      <td>
+        <input
+          value={row.awb_mbl ?? ""}
+          onChange={(e) => set("awb_mbl", e.target.value)}
+          onBlur={() => commit("awb_mbl", job.awb_mbl ?? "")}
+          placeholder={docLabel(job.mode)}
+          title={docLabel(job.mode)}
+        />
+      </td>
+      <td>
+        <input
+          type="date"
+          value={row.etd ?? ""}
+          onChange={(e) => {
+            set("etd", e.target.value);
+            onSave(job.id, { etd: e.target.value });
+          }}
+        />
+      </td>
+      <td>
+        <input
+          type="date"
+          value={row.eta ?? ""}
+          onChange={(e) => {
+            set("eta", e.target.value);
+            onSave(job.id, { eta: e.target.value });
+          }}
+        />
+      </td>
+      <td>
+        <input
+          list="job-locodes"
+          value={row.origin ?? ""}
+          onChange={(e) => set("origin", e.target.value)}
+          onBlur={() => commit("origin", job.origin ?? "")}
+          placeholder="Port of Load"
+        />
+      </td>
+      <td>
+        <input
+          list="job-locodes"
+          value={row.destination ?? ""}
+          onChange={(e) => set("destination", e.target.value)}
+          onBlur={() => commit("destination", job.destination ?? "")}
+          placeholder="Port of Discharge"
+        />
+      </td>
+    </tr>
+  );
+}
 
 export default function JobsPage() {
   const { data: jobs, isLoading, isError, error } = useJobs();
-  const setMilestone = useSetJobMilestone();
+  const updateJob = useUpdateJob();
   const { toast, error: toastError } = useToast();
 
-  async function advance(job: Job, milestone: Milestone) {
-    if (job.milestone === milestone) return;
-    try {
-      await setMilestone.mutateAsync({ jobId: job.id, milestone });
-      toast(`${job.reference} → ${milestone}`);
-    } catch (e) {
-      toastError(e instanceof Error ? e.message : "Could not update milestone");
-    }
+  function save(id: string, patch: JobPatch) {
+    updateJob.mutate(
+      { id, patch },
+      {
+        onSuccess: () => toast("Job updated"),
+        onError: (e) =>
+          toastError(e instanceof Error ? e.message : "Could not save"),
+      },
+    );
   }
 
   return (
@@ -24,6 +159,13 @@ export default function JobsPage() {
       <PageHeader eyebrow="Post-acceptance tracking" title="Active Jobs" />
 
       <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>All jobs</h2>
+            <p>{(jobs ?? []).length} total · every field edits in place</p>
+          </div>
+        </div>
+
         {isLoading ? (
           <Loading />
         ) : isError ? (
@@ -33,69 +175,36 @@ export default function JobsPage() {
             No jobs yet. Accept a quote to create one automatically.
           </EmptyState>
         ) : (
-          (jobs ?? []).map((j) => {
-            const curIdx = MILESTONES.indexOf(j.milestone);
-            const lastEvent = j.job_events?.[j.job_events.length - 1];
-            return (
-              <div
-                key={j.id}
-                style={{
-                  padding: "16px 0",
-                  borderBottom: "1px solid var(--line)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    marginBottom: 10,
-                  }}
-                >
-                  <div>
-                    <strong>{j.reference}</strong>
-                    <span className="muted" style={{ marginLeft: 8 }}>
-                      {j.client?.company ?? "—"} · {j.origin || "—"} →{" "}
-                      {j.destination || "—"} · {j.mode}
-                    </span>
-                  </div>
-                  {j.milestone === "Delivered" && (
-                    <span className="badge accepted">Delivered</span>
-                  )}
-                </div>
-
-                <div className="steps">
-                  {MILESTONES.map((m, i) => {
-                    const cls =
-                      i < curIdx ? "done" : i === curIdx ? "current" : "";
-                    return (
-                      <button
-                        key={m}
-                        type="button"
-                        className={`step ${cls}`}
-                        onClick={() => advance(j, m)}
-                        disabled={setMilestone.isPending}
-                        title={`Mark ${m}`}
-                      >
-                        <span className="line" />
-                        <span className="dot">{i + 1}</span>
-                        <small>{m}</small>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {lastEvent && (
-                  <div className="hint" style={{ marginTop: 4 }}>
-                    Last update: {lastEvent.milestone} ·{" "}
-                    {formatDateTime(lastEvent.created_at)}
-                  </div>
-                )}
-              </div>
-            );
-          })
+          <div className="table-wrap">
+            <datalist id="job-locodes">
+              {LOCODE_OPTIONS.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
+            <table className="table--compact jobs-table">
+              <thead>
+                <tr>
+                  <th>Created On</th>
+                  <th>Job #</th>
+                  <th>Shipper Name</th>
+                  <th>Consignee Name</th>
+                  <th>PO #</th>
+                  <th>Shipment Status</th>
+                  <th>Additional Notes</th>
+                  <th>AWB/MBL No</th>
+                  <th>ETD</th>
+                  <th>ETA</th>
+                  <th>Port of Load</th>
+                  <th>Port of Discharge</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(jobs ?? []).map((j) => (
+                  <JobRow key={j.id} job={j} onSave={save} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </>

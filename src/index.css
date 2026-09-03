@@ -343,6 +343,71 @@ tr.clickable:hover {
   padding: 7px 7px;
 }
 
+/* ---------- Active Jobs: inline-editable grid ---------- */
+.jobs-table {
+  min-width: 1180px;
+}
+.jobs-table td {
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+.jobs-table td input,
+.jobs-table td select {
+  width: 100%;
+  min-width: 90px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+.jobs-table td input:hover,
+.jobs-table td select:hover {
+  border-color: #e0e1dc;
+  background: #fafaf7;
+}
+.jobs-table td input:focus,
+.jobs-table td select:focus {
+  outline: none;
+  border-color: var(--green);
+  background: #fff;
+}
+.jobs-table td input::placeholder {
+  color: #b9bbb4;
+}
+.jobs-table .job-notes {
+  min-width: 240px;
+}
+.jobs-table td:nth-child(11) input,
+.jobs-table td:nth-child(12) input {
+  min-width: 150px;
+}
+
+/* status "pill" select, tinted by workflow stage */
+.job-status {
+  font-weight: 700;
+  border-radius: 999px !important;
+  text-align: center;
+  cursor: pointer;
+}
+.job-status.is-start {
+  background: #eef1f6 !important;
+  color: #4a5568;
+}
+.job-status.is-mid {
+  background: #fff2d9 !important;
+  color: #8a5a00;
+}
+.job-status.is-done {
+  background: #e7f3d8 !important;
+  color: var(--green-dark);
+}
+.job-status.is-alert {
+  background: #fde4e1 !important;
+  color: #b02b2b;
+}
+
 /* ---------- Badges ---------- */
 .badge {
   display: inline-flex;

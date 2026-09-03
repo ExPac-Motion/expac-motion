@@ -16,6 +16,52 @@ export const QUOTE_MODES: QuoteMode[] = [
 ];
 export const MILESTONES: Milestone[] = ["Booked", "In Transit", "Customs", "Delivered"];
 
+/**
+ * Shipment status shown on the Active Jobs board. Free text in the DB
+ * (`jobs.shipment_status`) — edit this list as the workflow changes.
+ */
+export const SHIPMENT_STATUSES: string[] = [
+  "Booked",
+  "Loaded for Flight",
+  "Customs Cleared",
+  "Customs Detained",
+  "Arrived at Destination",
+  "Collected",
+  "Vessel Booked",
+  "Departed",
+  "In Transit",
+  "Vessel Arrived",
+  "Vessel Working",
+  "Container Unlanded",
+  "Collected from Port",
+  "Out on Delivery",
+  "Delivered",
+];
+
+/** Colour band for a status pill: 'start' | 'mid' | 'done' | 'alert'. */
+export function shipmentStatusTone(s: string | null | undefined): string {
+  switch (s) {
+    case "Customs Detained":
+      return "alert";
+    case "Customs Cleared":
+    case "Arrived at Destination":
+    case "Collected":
+    case "Vessel Arrived":
+    case "Collected from Port":
+    case "Delivered":
+      return "done";
+    case "Loaded for Flight":
+    case "Departed":
+    case "In Transit":
+    case "Vessel Working":
+    case "Container Unlanded":
+    case "Out on Delivery":
+      return "mid";
+    default: // Booked, Vessel Booked
+      return "start";
+  }
+}
+
 export type Commodity = "General Cargo" | "Hazardous Cargo" | "Sensitive Cargo";
 export const COMMODITIES: Commodity[] = [
   "General Cargo",
@@ -167,14 +213,38 @@ export interface Job {
   quote_id: string | null;
   reference: string;
   client_id: string | null;
+  supplier_id: string | null;
   origin: string | null;
   destination: string | null;
   mode: QuoteMode;
   milestone: Milestone;
+  /** Operational fields, editable on the Active Jobs board. */
+  po_no: string | null;
+  shipment_status: string | null;
+  notes: string | null;
+  awb_mbl: string | null;
+  etd: string | null;
+  eta: string | null;
   created_at: string;
   client?: Pick<Client, "id" | "company"> | null;
+  supplier?: Pick<Supplier, "id" | "company"> | null;
   job_events?: JobEvent[];
 }
+
+/** Fields on a Job that the Active Jobs board can edit inline. */
+export type JobPatch = Partial<
+  Pick<
+    Job,
+    | "po_no"
+    | "shipment_status"
+    | "notes"
+    | "awb_mbl"
+    | "etd"
+    | "eta"
+    | "origin"
+    | "destination"
+  >
+>;
 
 export interface JobEvent {
   id: string;

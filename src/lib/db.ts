@@ -3,6 +3,7 @@ import { insuranceAmount, packingTotals, resolveLine } from "./calc";
 import type {
   Client,
   Job,
+  JobPatch,
   Milestone,
   Quote,
   QuoteDraft,
@@ -191,7 +192,8 @@ export async function acceptQuote(quoteId: string): Promise<string> {
 }
 
 /* ---------- Jobs ---------- */
-const JOB_SELECT = "*, client:clients(id,company), job_events(*)";
+const JOB_SELECT =
+  "*, client:clients(id,company), supplier:suppliers(id,company), job_events(*)";
 
 export async function listJobs(): Promise<Job[]> {
   const rows = unwrap<Job[]>(
@@ -206,6 +208,15 @@ export async function listJobs(): Promise<Job[]> {
     );
     return j;
   });
+}
+
+/** Inline field edits on the Active Jobs board (empty string -> null). */
+export async function updateJob(id: string, patch: JobPatch): Promise<void> {
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    clean[k] = v === "" ? null : v;
+  }
+  unwrap(await supabase.from("jobs").update(clean).eq("id", id).select("id"));
 }
 
 export async function setJobMilestone(

@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import * as db from "./db";
-import type { Client, Milestone, QuoteDraft, Supplier } from "./types";
+import type { Client, JobPatch, Milestone, QuoteDraft, Supplier } from "./types";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -104,6 +104,14 @@ export function useAcceptQuote() {
 /* ---------- Jobs ---------- */
 export function useJobs() {
   return useQuery({ queryKey: ["jobs"], queryFn: db.listJobs });
+}
+export function useUpdateJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: JobPatch }) =>
+      db.updateJob(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
 }
 export function useSetJobMilestone() {
   const qc = useQueryClient();
