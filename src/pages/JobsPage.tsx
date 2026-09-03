@@ -172,7 +172,7 @@ export default function JobsPage() {
     <>
       <PageHeader eyebrow="Post-acceptance tracking" title="Active Jobs" />
 
-      <div className="panel">
+      <div className="panel jobs-panel">
         <div className="panel-head">
           <div>
             <h2>All jobs</h2>

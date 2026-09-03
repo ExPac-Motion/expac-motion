@@ -293,6 +293,14 @@ textarea {
   color: var(--muted);
   font-size: 0.82rem;
 }
+/* Active Jobs: subtitle sits at the heading size. */
+.jobs-panel .panel-head h2,
+.jobs-panel .panel-head p {
+  font-size: 1.15rem;
+}
+.jobs-panel .panel-head p {
+  margin-top: 0;
+}
 
 /* ---------- Tables ---------- */
 table {
