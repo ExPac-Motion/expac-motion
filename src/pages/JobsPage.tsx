@@ -202,8 +202,8 @@ export default function JobsPage() {
                 <tr>
                   <th>Created On</th>
                   <th>Job #</th>
-                  <th>Shipper Name</th>
-                  <th>Consignee Name</th>
+                  <th>Supplier</th>
+                  <th>Client</th>
                   <th>PO #</th>
                   <th>Shipment Status</th>
                   <th>Additional Notes</th>
