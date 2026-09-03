@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
 import { useJobs, useUpdateJob } from "../lib/hooks";
@@ -64,7 +65,13 @@ function JobRow({
     <tr>
       <td className="nowrap">{formatDate(job.created_at)}</td>
       <td className="nowrap">
-        <strong>{job.reference}</strong>
+        {job.quote_id ? (
+          <Link className="job-ref" to={`/quotes/${job.quote_id}`}>
+            {job.reference}
+          </Link>
+        ) : (
+          <strong>{job.reference}</strong>
+        )}
       </td>
       <td className="nowrap">{job.supplier?.company ?? "—"}</td>
       <td className="nowrap">{job.client?.company ?? "—"}</td>

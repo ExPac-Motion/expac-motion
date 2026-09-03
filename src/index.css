@@ -360,6 +360,15 @@ tr.clickable:hover {
   font-size: 0.76rem;
   white-space: nowrap;
 }
+/* Job # opens the source quote. */
+.jobs-table .job-ref {
+  font-weight: 700;
+  color: var(--green-dark);
+  text-decoration: none;
+}
+.jobs-table .job-ref:hover {
+  text-decoration: underline;
+}
 .jobs-table td {
   padding: 4px 6px;
   vertical-align: middle;
