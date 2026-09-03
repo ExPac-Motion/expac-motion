@@ -164,7 +164,7 @@ export default function DashboardPage() {
                       <th>Trade lane</th>
                       <th>Mode</th>
                       <th>Total Cost</th>
-                      <th>Value</th>
+                      <th>Total Value</th>
                       <th>Margin</th>
                       <th>Total Profit</th>
                       <th>Status</th>
