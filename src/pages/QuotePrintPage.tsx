@@ -214,11 +214,11 @@ export default function QuotePrintPage() {
                   const r = packingRow(p);
                   return (
                     <tr key={p.id ?? i}>
-                      <td>{Number(p.length_cm) || 0}</td>
-                      <td>{Number(p.width_cm) || 0}</td>
-                      <td>{Number(p.height_cm) || 0}</td>
+                      <td>{n2(p.length_cm)}</td>
+                      <td>{n2(p.width_cm)}</td>
+                      <td>{n2(p.height_cm)}</td>
                       <td>{n2(p.actual_kg)}</td>
-                      <td>{Number(p.qty_ctns) || 0}</td>
+                      <td>{n2(p.qty_ctns)}</td>
                       <td>{n2(r.cbm)}</td>
                       <td>{n2(r.volumeKg)}</td>
                       <td>{n2(r.totalCbm)}</td>
@@ -231,7 +231,7 @@ export default function QuotePrintPage() {
               <tfoot>
                 <tr>
                   <td colSpan={4}>Totals</td>
-                  <td>{pack.qty}</td>
+                  <td>{n2(pack.qty)}</td>
                   <td />
                   <td />
                   <td>{n2(pack.totalCbm)}</td>
