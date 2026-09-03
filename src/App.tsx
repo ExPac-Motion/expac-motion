@@ -13,6 +13,7 @@ import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
 import JobsPage from "./pages/JobsPage";
+import CompletedJobsPage from "./pages/CompletedJobsPage";
 import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import { isSupabaseConfigured } from "./lib/supabase";
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="quotes/new" element={<QuoteBuilderPage />} />
             <Route path="quotes/:id" element={<QuoteBuilderPage />} />
             <Route path="jobs" element={<JobsPage />} />
+            <Route path="jobs/completed" element={<CompletedJobsPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
           </Route>
