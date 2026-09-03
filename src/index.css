@@ -871,6 +871,12 @@ tr.clickable:hover {
 }
 .qs-sheet {
   width: 210mm;
+  /* fill the printable A4 height so the footer can sit at the bottom even on a
+     short quote (A4 297mm − 16mm @page margins ≈ 281mm; kept a few mm under so
+     a full page never spills a blank second sheet) */
+  min-height: 278mm;
+  display: flex;
+  flex-direction: column;
   margin: 0 auto;
   background: #fff;
   color: var(--ink);
@@ -882,6 +888,9 @@ tr.clickable:hover {
      --display for every descendant that uses it (title, port codes, bars) */
   font-family: Arial, Helvetica, sans-serif;
   --display: Arial, Helvetica, sans-serif;
+  /* keep the green bars / tints when "Background graphics" is off in Save-as-PDF */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .qs-sheet h1 {
   font-family: var(--display);
@@ -1211,7 +1220,9 @@ tr.clickable:hover {
   display: grid;
   grid-template-columns: 185px 1fr 195px;
   gap: 24px;
-  margin-top: 8px;
+  /* absorb the slack above so the footer stays pinned to the page bottom */
+  margin-top: auto;
+  padding-top: 12px;
 }
 .qs-foot > div {
   min-width: 0;
