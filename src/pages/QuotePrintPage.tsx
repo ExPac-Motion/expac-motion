@@ -265,13 +265,13 @@ export default function QuotePrintPage() {
         <div className="qs-bar">Charges</div>
         <table className="qs-charges">
           <colgroup>
-            <col style={{ width: "36%" }} />
+            <col style={{ width: "42%" }} />
             <col style={{ width: "9%" }} />
             <col style={{ width: "9%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "13%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
           </colgroup>
           <thead>
             <tr>
