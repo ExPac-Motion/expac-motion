@@ -1214,7 +1214,9 @@ tr.clickable:hover {
 }
 .qs-charges tr.group td {
   background: #eef4e3;
-  font-weight: 800;
+  /* the tint + rule already mark the category; bold (700, Arial has no
+     semibold) made these read far heavier than everything else */
+  font-weight: 400;
   font-family: var(--display);
   font-size: 12px;
   border-bottom: 1px solid #cdddb4;
