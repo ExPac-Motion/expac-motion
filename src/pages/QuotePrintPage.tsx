@@ -108,49 +108,26 @@ export default function QuotePrintPage() {
       </div>
 
       <div className="qs-sheet">
-        {/* company header */}
+        {/* company header: logo + "QUOTATION - <company>" + registration lines */}
         <div className="qs-companyhead">
-          <div className="name">{COMPANY.headerName}</div>
-          <div className="lines">{COMPANY.headerLine1}</div>
-          <div className="lines">{COMPANY.headerLine2}</div>
-        </div>
-
-        {/* QUOTATION + meta on the left, logo on the right */}
-        <div className="qs-head">
-          <div className="qs-metacol">
-            <h1>QUOTATION</h1>
-            <div className="qs-meta">
-              <b>Document Number</b>
-              <span>{q.reference}</span>
-              <b>Date</b>
-              <span>{formatDate(q.created_at)}</span>
-              <b>Due (or) Validity Date</b>
-              <span>{formatDate(q.valid_until)}</span>
-              <b>Page</b>
-              <span>1</span>
+          <img
+            className="logo"
+            src={COMPANY.logoPrint}
+            alt="ExPac"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+            }}
+          />
+          <div className="qs-companyhead-text">
+            <div className="name">QUOTATION - {COMPANY.headerName}</div>
+            <div className="lines">{COMPANY.headerLine1}</div>
+            <div className="lines">
+              {COMPANY.headerEmail}&nbsp; &middot; &nbsp;{COMPANY.headerLine2}
             </div>
           </div>
-          <div className="qs-logo">
-            <img
-              src={COMPANY.logoPrint}
-              alt="ExPac"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-                const wm =
-                  e.currentTarget.nextElementSibling as HTMLElement | null;
-                if (wm) wm.style.display = "block";
-              }}
-            />
-            <span style={{ display: "none" }}>
-              Ex<span className="dark">P</span>ac &raquo;
-              <small>FORWARDING</small>
-            </span>
-          </div>
         </div>
 
-        <hr className="rule" />
-
-        {/* client (TO) on the left, port codes on the right */}
+        {/* client (TO) on the left, port codes + document meta on the right */}
         <div className="qs-head">
           <div className="qs-client">
             <div className="qs-fromto">TO</div>
@@ -164,15 +141,27 @@ export default function QuotePrintPage() {
               ))}
             </div>
           </div>
-          <div className="qs-routebox">
-            <div>
-              <div className="qs-routelbl">FROM</div>
-              <div className="qs-port">{portCode(q.origin)}</div>
+          <div className="qs-routecol">
+            <div className="qs-routebox">
+              <div>
+                <div className="qs-routelbl">FROM</div>
+                <div className="qs-port">{portCode(q.origin)}</div>
+              </div>
+              <div className="arrow">➜</div>
+              <div>
+                <div className="qs-routelbl">TO</div>
+                <div className="qs-port">{portCode(q.destination)}</div>
+              </div>
             </div>
-            <div className="arrow">➜</div>
-            <div>
-              <div className="qs-routelbl">TO</div>
-              <div className="qs-port">{portCode(q.destination)}</div>
+            <div className="qs-meta">
+              <b>Document Number</b>
+              <span>{q.reference}</span>
+              <b>Date</b>
+              <span>{formatDate(q.created_at)}</span>
+              <b>Due (or) Validity Date</b>
+              <span>{formatDate(q.valid_until)}</span>
+              <b>Page</b>
+              <span>1</span>
             </div>
           </div>
         </div>
@@ -345,7 +334,7 @@ export default function QuotePrintPage() {
           </div>
           <div>
             <h4>{COMPANY.strapline}</h4>
-            <p style={{ margin: 0, fontSize: "9.5px", whiteSpace: "pre-line" }}>
+            <p style={{ margin: 0, fontSize: "10.5px", whiteSpace: "pre-line" }}>
               {COMPANY.blurb}
             </p>
           </div>

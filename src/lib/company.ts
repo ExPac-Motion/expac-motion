@@ -6,10 +6,12 @@ export const COMPANY = {
   legalName: "EXPAC FORWARDING CC",
   strapline: "Air & Ocean Freight Clearing & Forwarding",
   tagline: "Excellence in Motion",
-  // Centred header block at the very top of the quotation.
+  // Header block at the very top of the quotation: logo + "QUOTATION - <name>"
+  // with these two registration/contact lines underneath.
   headerName: "EXPAC FORWARDING CC",
   headerLine1:
-    "Reg No: 2010/110405/23  ·  Vat No: 4670306135  ·  Tel: +27 (0) 11 568 8281  ·  Email: support@expac.co.za",
+    "Reg No: 2010/110405/23  ·  Vat No: 4670306135  ·  Tel: +27 (0) 11 568 8281",
+  headerEmail: "Email: support@expac.co.za",
   headerLine2: "Postnet Suite 84, Private Bag X1015, Lyttelton, 0140",
   from: [
     ["Reg Number", "2010/110405/23"],
