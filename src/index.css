@@ -1212,15 +1212,15 @@ tr.clickable:hover {
 .qs-charges tbody tr:not(.group):not(.sub) td:nth-child(3) {
   text-align: center;
 }
+/* category rows styled like the column-header rows: small, uppercase, grey */
 .qs-charges tr.group td {
-  background: #eef4e3;
-  /* Arial has no semibold: full bold (700) read too heavy, plain 400 too
-     light — a hairline text stroke lands a "heading" weight in between */
-  font-weight: 400;
-  -webkit-text-stroke: 0.3px currentColor;
-  font-family: var(--display);
-  font-size: 12px;
-  border-bottom: 1px solid #cdddb4;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #444;
+  padding: 7px 6px 3px;
+  border-bottom: 1px solid var(--ink);
 }
 .qs-charges tr.sub td {
   border-bottom: 1px solid #cdddb4;
