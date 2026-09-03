@@ -354,10 +354,11 @@ tr.clickable:hover {
 /* ---------- Active Jobs: inline-editable grid ---------- */
 .jobs-table {
   min-width: 1180px;
+  font-size: 12px;
 }
 /* One text size across the board: headers match the cell content. */
 .jobs-table th {
-  font-size: 0.76rem;
+  font-size: 12px;
   white-space: nowrap;
 }
 /* Job # opens the source quote. */
