@@ -1023,15 +1023,18 @@ tr.clickable:hover {
 .qs-port {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 40px;
+  /* 5 wide caps each side + the arrow must clear the right column with margin
+     to spare — 40px crowded the sheet edge and clipped in Save-as-PDF */
+  font-size: 32px;
   letter-spacing: -0.02em;
   line-height: 1;
+  white-space: nowrap;
 }
 .qs-routebox .arrow {
   color: var(--green);
-  font-size: 34px;
+  font-size: 28px;
   line-height: 1;
-  padding-bottom: 3px;
+  padding-bottom: 2px;
 }
 .qs-terms {
   display: grid;
@@ -1161,7 +1164,7 @@ tr.clickable:hover {
 }
 .qs-pksum b {
   font-family: var(--display);
-  font-size: 12px;
+  font-size: 11px;
 }
 .qs-pksum .hl {
   color: var(--green-dark);
@@ -1281,19 +1284,19 @@ tr.clickable:hover {
   }
   .qs-sheet {
     box-shadow: none;
-    /* 100% (not a fixed 210mm) tracks the printer's real imageable width, so
-       the right edge — the big TO port code especially — is never clipped.
-       The visual page margins live in the sheet's own padding so @page can
-       stay margin:0, which is what drops Chrome's date/URL/page-number
-       header & footer. min-height ≈ one A4 page (kept a few mm under 297 so a
-       full page never spills a clipped second sheet). */
-    width: 100%;
-    min-height: 292mm;
-    padding: 8mm 12mm;
+    width: auto;
+    /* The @page margin owns the page margins, so content is physically
+       constrained to the imageable area and can't clip on any edge (the big
+       TO port code, the right-hand totals column). min-height fills the
+       printable height (A4 297 − 16mm @page margin ≈ 281mm; a couple mm under
+       so a full page never spills a clipped second sheet) so the footer sits
+       at the bottom on a short quote. */
+    min-height: 279mm;
+    padding: 0;
     margin: 0;
   }
   @page {
     size: A4;
-    margin: 0;
+    margin: 8mm 12mm;
   }
 }
