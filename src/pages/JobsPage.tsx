@@ -66,8 +66,8 @@ function JobRow({
       <td className="nowrap">
         <strong>{job.reference}</strong>
       </td>
-      <td>{job.supplier?.company ?? "—"}</td>
-      <td>{job.client?.company ?? "—"}</td>
+      <td className="nowrap">{job.supplier?.company ?? "—"}</td>
+      <td className="nowrap">{job.client?.company ?? "—"}</td>
       <td>
         <input
           value={row.po_no ?? ""}
