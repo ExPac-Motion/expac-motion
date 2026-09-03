@@ -50,9 +50,27 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
-/** Local reference generator, e.g. JOB462193. The DB is the source of truth for ids. */
-export function newReference(): string {
-  return "JOB" + Date.now().toString().slice(-6);
+/**
+ * Reference prefix by transport mode: AIR (air freight), SEA (FCL/LCL),
+ * RDX (road), CX (courier express).
+ */
+export function referencePrefix(mode: string | null | undefined): string {
+  const m = (mode ?? "").toLowerCase();
+  if (m.startsWith("sea")) return "SEA";
+  if (m.startsWith("road")) return "RDX";
+  if (m.startsWith("courier")) return "CX";
+  return "AIR";
+}
+
+/** Auto-pattern for a generated reference (mode prefix + 6 digits, or legacy JOB). */
+export const AUTO_REFERENCE = /^(AIR|SEA|RDX|CX|JOB)\d{6}$/;
+
+/**
+ * Local reference generator, e.g. AIR462193. The DB is the source of truth for
+ * ids; the 6-digit sequence is unchanged, only the mode prefix varies.
+ */
+export function newReference(mode?: string | null): string {
+  return referencePrefix(mode) + Date.now().toString().slice(-6);
 }
 
 export function todayPlusDays(days: number): string {

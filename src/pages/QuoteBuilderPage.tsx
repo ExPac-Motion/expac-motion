@@ -26,7 +26,14 @@ import {
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
 import { fetchLiveRates } from "../lib/fx";
-import { money, newReference, todayPlusDays } from "../lib/format";
+import {
+  AUTO_REFERENCE,
+  money,
+  newReference,
+  referencePrefix,
+  todayPlusDays,
+} from "../lib/format";
+import { LOCODE_OPTIONS } from "../lib/locodes";
 import {
   CHARGE_CATEGORIES,
   CHARGE_UNITS,
@@ -73,12 +80,13 @@ function newLine(category: ChargeCategory, position: number): QuoteLine {
 }
 
 function blankDraft(): QuoteDraft {
+  const mode: QuoteDraft["mode"] = "Air Freight (AIR)";
   return {
     id: null,
-    reference: newReference(),
+    reference: newReference(mode),
     client_id: "",
     supplier_id: "",
-    mode: "Air Freight (AIR)",
+    mode,
     commodity: "General Cargo",
     origin: "",
     destination: "",
@@ -259,6 +267,21 @@ export default function QuoteBuilderPage() {
 
   function set<K extends keyof QuoteDraft>(key: K, value: QuoteDraft[K]) {
     setDraft((d) => (d ? { ...d, [key]: value } : d));
+  }
+
+  // Mode change: on an unsaved quote, re-prefix an auto-generated reference so
+  // it tracks the mode (AIR/SEA/RDX/CX) while keeping the same 6-digit sequence.
+  // A hand-typed reference or a saved quote's reference is left untouched.
+  function setMode(mode: QuoteDraft["mode"]) {
+    setDraft((d) => {
+      if (!d) return d;
+      const next = { ...d, mode };
+      const ref = d.reference.trim();
+      if (d.id === null && AUTO_REFERENCE.test(ref)) {
+        next.reference = referencePrefix(mode) + ref.slice(-6);
+      }
+      return next;
+    });
   }
 
   function fxOfDraft(d: QuoteDraft): FxRates {
@@ -527,7 +550,7 @@ export default function QuoteBuilderPage() {
             <label>Mode</label>
             <select
               value={draft.mode}
-              onChange={(e) => set("mode", e.target.value as QuoteDraft["mode"])}
+              onChange={(e) => setMode(e.target.value as QuoteDraft["mode"])}
             >
               {QUOTE_MODES.map((m) => (
                 <option key={m}>{m}</option>
@@ -541,23 +564,34 @@ export default function QuoteBuilderPage() {
               onChange={(e) => set("delivery_terms", e.target.value)}
             />
           </div>
+          <datalist id="qb-locodes">
+            {LOCODE_OPTIONS.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
           <div className="field">
             <label>Origin/Port of Load</label>
             <input
+              list="qb-locodes"
               value={draft.origin}
               onChange={(e) => set("origin", e.target.value)}
-              placeholder="CNSNZ — Shenzhen, China"
+              placeholder="CNSHA — Shanghai, China"
             />
-            <span className="hint">Start with the UN/LOCODE (e.g. CNSNZ).</span>
+            <span className="hint">
+              Pick a UN/LOCODE or type your own (start with the 5-char code).
+            </span>
           </div>
           <div className="field">
             <label>Destination/Port of Discharge</label>
             <input
+              list="qb-locodes"
               value={draft.destination}
               onChange={(e) => set("destination", e.target.value)}
-              placeholder="ZAJNB — Johannesburg, South Africa"
+              placeholder="ZADUR — Durban, South Africa"
             />
-            <span className="hint">Start with the UN/LOCODE (e.g. ZAJNB).</span>
+            <span className="hint">
+              Pick a UN/LOCODE or type your own (start with the 5-char code).
+            </span>
           </div>
           <div className="field">
             <label>Vessel Name</label>
