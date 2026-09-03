@@ -1032,11 +1032,15 @@ tr.clickable:hover {
 }
 .qs-routebox .arrow {
   flex: none;
-  width: 42px;
+  display: block;
+  width: 34px;
   height: auto;
   color: var(--green);
-  /* sits between FROM/TO, vertically centred on the ~32px port codes */
-  margin-bottom: 3px;
+  /* shorter than the 32px port codes; align its bottom to theirs then lift
+     4px so it centres on the code, and keep hard side margins so it can
+     never touch CNSNZ / ZAJNB even with wide 5-letter codes */
+  align-self: flex-end;
+  margin: 0 8px 4px;
 }
 .qs-terms {
   display: grid;
