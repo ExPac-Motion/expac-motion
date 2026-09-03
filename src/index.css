@@ -1147,7 +1147,7 @@ tr.clickable:hover {
   padding-right: 0;
 }
 .qs-pk tfoot td {
-  font-weight: 800;
+  font-weight: 700;
   border-bottom: 0;
   border-top: 1.5px solid var(--ink);
 }
