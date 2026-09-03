@@ -1031,10 +1031,12 @@ tr.clickable:hover {
   white-space: nowrap;
 }
 .qs-routebox .arrow {
+  flex: none;
+  width: 42px;
+  height: auto;
   color: var(--green);
-  font-size: 28px;
-  line-height: 1;
-  padding-bottom: 2px;
+  /* sits between FROM/TO, vertically centred on the ~32px port codes */
+  margin-bottom: 3px;
 }
 .qs-terms {
   display: grid;

@@ -157,7 +157,16 @@ export default function QuotePrintPage() {
                 <div className="qs-routelbl">FROM</div>
                 <div className="qs-port">{portCode(q.origin)}</div>
               </div>
-              <div className="arrow">➜</div>
+              <svg
+                className="arrow"
+                viewBox="0 0 40 28"
+                aria-hidden="true"
+              >
+                <path
+                  fill="currentColor"
+                  d="M0 9h22V0l18 14-18 14v-9H0z"
+                />
+              </svg>
               <div>
                 <div className="qs-routelbl">TO</div>
                 <div className="qs-port">{portCode(q.destination)}</div>
