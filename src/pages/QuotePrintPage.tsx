@@ -154,13 +154,13 @@ export default function QuotePrintPage() {
               </div>
             </div>
             <div className="qs-meta">
-              <b>Document Number</b>
+              <b>Document Number:</b>
               <span>{q.reference}</span>
-              <b>Date</b>
+              <b>Date:</b>
               <span>{formatDate(q.created_at)}</span>
-              <b>Due (or) Validity Date</b>
+              <b>Due (or) Validity Date:</b>
               <span>{formatDate(q.valid_until)}</span>
-              <b>Page</b>
+              <b>Page:</b>
               <span>1</span>
             </div>
           </div>
