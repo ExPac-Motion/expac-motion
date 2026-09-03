@@ -388,8 +388,8 @@ tr.clickable:hover {
   min-width: 240px;
 }
 /* POL / POD hold just a 5-char code */
-.jobs-table td:nth-child(11) input,
-.jobs-table td:nth-child(12) input {
+.jobs-table td:nth-child(12) input,
+.jobs-table td:nth-child(13) input {
   min-width: 64px;
   text-transform: uppercase;
 }

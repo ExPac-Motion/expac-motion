@@ -76,6 +76,7 @@ function JobRow({
           placeholder="—"
         />
       </td>
+      <td className="nowrap">{job.mode}</td>
       <td>
         <select
           className={`job-status is-${shipmentStatusTone(row.shipment_status)}`}
@@ -205,6 +206,7 @@ export default function JobsPage() {
                   <th>Supplier</th>
                   <th>Client</th>
                   <th>PO #</th>
+                  <th>Mode</th>
                   <th>Shipment Status</th>
                   <th>Additional Notes</th>
                   <th>AWB/MBL No</th>
