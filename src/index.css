@@ -385,7 +385,11 @@ tr.clickable:hover {
   color: #b9bbb4;
 }
 .jobs-table .job-notes {
-  min-width: 240px;
+  min-width: 170px;
+}
+/* AWB/MBL No: keep it snug against Additional Notes */
+.jobs-table td:nth-child(9) input {
+  min-width: 96px;
 }
 /* POL / POD hold just a 5-char code */
 .jobs-table td:nth-child(12) input,
