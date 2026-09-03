@@ -1165,9 +1165,11 @@ tr.clickable:hover {
 .qs-pksum b {
   font-family: var(--display);
   font-size: 11px;
+  color: var(--ink);
 }
+/* all four figures read the same — bold black, no green highlight */
 .qs-pksum .hl {
-  color: var(--green-dark);
+  color: var(--ink);
 }
 .qs-charges {
   width: 100%;
