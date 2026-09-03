@@ -2,8 +2,8 @@ import { useState } from "react";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
 import { useJobs, useUpdateJob } from "../lib/hooks";
-import { formatDate } from "../lib/format";
-import { LOCODE_OPTIONS } from "../lib/locodes";
+import { formatDate, portCode } from "../lib/format";
+import { LOCODES } from "../lib/locodes";
 import {
   SHIPMENT_STATUSES,
   shipmentStatusTone,
@@ -16,6 +16,14 @@ function docLabel(mode: string): string {
   if (mode.startsWith("Air") || mode.startsWith("Courier")) return "AWB No";
   if (mode.startsWith("Sea")) return "MBL No";
   return "Ref No";
+}
+
+/** Port fields on a job hold just the UN/LOCODE (e.g. "ZADUR"), not the
+ *  "CODE — City, Country" string used on the quote. */
+function codeOf(s: string | null | undefined): string {
+  if (!s || !s.trim()) return "";
+  const c = portCode(s);
+  return c === "—" ? "" : c;
 }
 
 function JobRow({
@@ -34,8 +42,8 @@ function JobRow({
     awb_mbl: job.awb_mbl ?? "",
     etd: job.etd ?? "",
     eta: job.eta ?? "",
-    origin: job.origin ?? "",
-    destination: job.destination ?? "",
+    origin: codeOf(job.origin),
+    destination: codeOf(job.destination),
   });
 
   function set<K extends keyof JobPatch>(key: K, value: JobPatch[K]) {
@@ -44,6 +52,12 @@ function JobRow({
   function commit<K extends keyof JobPatch>(key: K, initial: string) {
     const next = (row[key] ?? "") as string;
     if (next !== (initial ?? "")) onSave(job.id, { [key]: next } as JobPatch);
+  }
+  // Port fields: normalise whatever was typed/picked to a bare code on blur.
+  function commitPort(key: "origin" | "destination") {
+    const code = codeOf(row[key] as string);
+    set(key, code);
+    if (code !== codeOf(job[key])) onSave(job.id, { [key]: code } as JobPatch);
   }
 
   return (
@@ -121,8 +135,8 @@ function JobRow({
           list="job-locodes"
           value={row.origin ?? ""}
           onChange={(e) => set("origin", e.target.value)}
-          onBlur={() => commit("origin", job.origin ?? "")}
-          placeholder="Port of Load"
+          onBlur={() => commitPort("origin")}
+          placeholder="POL"
         />
       </td>
       <td>
@@ -130,8 +144,8 @@ function JobRow({
           list="job-locodes"
           value={row.destination ?? ""}
           onChange={(e) => set("destination", e.target.value)}
-          onBlur={() => commit("destination", job.destination ?? "")}
-          placeholder="Port of Discharge"
+          onBlur={() => commitPort("destination")}
+          placeholder="POD"
         />
       </td>
     </tr>
@@ -177,8 +191,10 @@ export default function JobsPage() {
         ) : (
           <div className="table-wrap">
             <datalist id="job-locodes">
-              {LOCODE_OPTIONS.map((o) => (
-                <option key={o} value={o} />
+              {LOCODES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.city}, {l.country}
+                </option>
               ))}
             </datalist>
             <table className="table--compact jobs-table">

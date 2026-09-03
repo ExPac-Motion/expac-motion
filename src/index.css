@@ -379,9 +379,11 @@ tr.clickable:hover {
 .jobs-table .job-notes {
   min-width: 240px;
 }
+/* POL / POD hold just a 5-char code */
 .jobs-table td:nth-child(11) input,
 .jobs-table td:nth-child(12) input {
-  min-width: 150px;
+  min-width: 64px;
+  text-transform: uppercase;
 }
 
 /* status "pill" select, tinted by workflow stage */
