@@ -1147,10 +1147,16 @@ tr.clickable:hover {
   padding-right: 0;
 }
 .qs-pk tfoot td {
-  font-weight: 700;
+  /* Arial has no semibold, so bold (700) reads much heavier than the data
+     rows — keep the figures normal weight and let the rule above mark the
+     total. Only the "Totals" label stays bold. */
+  font-weight: 400;
   color: var(--ink);
   border-bottom: 0;
   border-top: 1.5px solid var(--ink);
+}
+.qs-pk tfoot td:first-child {
+  font-weight: 700;
 }
 .qs-pksum {
   display: flex;
