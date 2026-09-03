@@ -1281,11 +1281,14 @@ tr.clickable:hover {
   }
   .qs-sheet {
     box-shadow: none;
-    width: 210mm;
-    /* one exact A4 page. The visual page margins live in the sheet's own
-       padding so @page can stay margin:0 — which is also what makes Chrome
-       drop its date/URL/page-number header & footer from the PDF. */
-    min-height: 296mm;
+    /* 100% (not a fixed 210mm) tracks the printer's real imageable width, so
+       the right edge — the big TO port code especially — is never clipped.
+       The visual page margins live in the sheet's own padding so @page can
+       stay margin:0, which is what drops Chrome's date/URL/page-number
+       header & footer. min-height ≈ one A4 page (kept a few mm under 297 so a
+       full page never spills a clipped second sheet). */
+    width: 100%;
+    min-height: 292mm;
     padding: 8mm 12mm;
     margin: 0;
   }
