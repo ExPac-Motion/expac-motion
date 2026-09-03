@@ -355,6 +355,10 @@ tr.clickable:hover {
 .jobs-table {
   min-width: 1180px;
 }
+/* One text size across the board: headers match the cell content. */
+.jobs-table th {
+  font-size: 0.76rem;
+}
 .jobs-table td {
   padding: 4px 6px;
   vertical-align: middle;
