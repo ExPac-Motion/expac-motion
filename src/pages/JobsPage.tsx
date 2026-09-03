@@ -210,8 +210,8 @@ export default function JobsPage() {
                   <th>AWB/MBL No</th>
                   <th>ETD</th>
                   <th>ETA</th>
-                  <th>Port of Load</th>
-                  <th>Port of Discharge</th>
+                  <th>POL</th>
+                  <th>POD</th>
                 </tr>
               </thead>
               <tbody>
