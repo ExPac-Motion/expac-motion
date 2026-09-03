@@ -4,7 +4,7 @@ import { ErrorNote, Loading, PageHeader, StatusBadge } from "../components/commo
 import QuoteDetailModal from "./QuoteDetailModal";
 import { useJobs, useQuotes } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
-import { money } from "../lib/format";
+import { money, portCode } from "../lib/format";
 import { STATUS_LABEL, STATUS_ORDER } from "../lib/types";
 
 export default function DashboardPage() {
@@ -97,7 +97,7 @@ export default function DashboardPage() {
           <div className="panel">
             <div className="panel-head">
               <div>
-                <h2>Quotation pipeline</h2>
+                <h2>Quotation Pipeline</h2>
                 <p>Value by stage, from your actual saved quotes</p>
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
           <div className="panel">
             <div className="panel-head">
               <div>
-                <h2>Recent quotations</h2>
+                <h2>Recent Quotations</h2>
                 <p>Your five most recently created quotes</p>
               </div>
             </div>
@@ -155,13 +155,18 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="table-wrap">
-                <table>
+                <table className="table--compact">
                   <thead>
                     <tr>
                       <th>Reference</th>
                       <th>Client</th>
+                      <th>Supplier</th>
                       <th>Trade lane</th>
+                      <th>Mode</th>
+                      <th>Total Cost</th>
                       <th>Value</th>
+                      <th>Margin</th>
+                      <th>Total Profit</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -178,10 +183,15 @@ export default function DashboardPage() {
                             <strong>{q.reference}</strong>
                           </td>
                           <td>{q.client?.company ?? "—"}</td>
+                          <td>{q.supplier?.company ?? "—"}</td>
                           <td className="nowrap">
-                            {q.origin || "—"} → {q.destination || "—"}
+                            {portCode(q.origin)} → {portCode(q.destination)}
                           </td>
+                          <td>{q.mode}</td>
+                          <td>{money(t.cost)}</td>
                           <td>{money(t.sell)}</td>
+                          <td>{t.margin.toFixed(1)}%</td>
+                          <td>{money(t.gp)}</td>
                           <td>
                             <StatusBadge status={q.status} />
                           </td>
