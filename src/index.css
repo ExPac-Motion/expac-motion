@@ -1487,7 +1487,6 @@ tr.clickable:hover {
   min-height: 138px;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
-  animation: kpi-in 0.4s ease both;
 }
 .kpi:hover {
   transform: translateY(-2px);
@@ -1507,12 +1506,6 @@ tr.clickable:hover {
 .kpi.static:hover {
   transform: none;
   box-shadow: var(--shadow);
-}
-@keyframes kpi-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
 }
 .kpi-top {
   display: flex;

@@ -199,7 +199,6 @@ export default function DashboardPage() {
               selected={modeFilter === "All"}
               onClick={() => setModeFilter("All")}
               foot={<span>{jobs.length} all-time</span>}
-              delay={0}
             />
             <Kpi
               icon={Icon.approval}
@@ -207,9 +206,8 @@ export default function DashboardPage() {
               value={dueForApproval.length}
               onClick={() => navigate("/quotes")}
               foot={<span>{money(dueValue)} in play</span>}
-              delay={0.05}
             />
-            {MODE_META.slice(0, 3).map((m, i) => (
+            {MODE_META.slice(0, 3).map((m) => (
               <Kpi
                 key={m.key}
                 icon={
@@ -242,7 +240,6 @@ export default function DashboardPage() {
                     <span>of {activeJobs.length}</span>
                   </>
                 }
-                delay={0.1 + i * 0.05}
               />
             ))}
           </div>
@@ -519,7 +516,6 @@ function Kpi({
   foot,
   onClick,
   selected,
-  delay,
 }: {
   icon: ReactNode;
   label: string;
@@ -527,13 +523,11 @@ function Kpi({
   foot: ReactNode;
   onClick: () => void;
   selected?: boolean;
-  delay: number;
 }) {
   return (
     <button
       className={`kpi${selected ? " selected" : ""}`}
       onClick={onClick}
-      style={{ animationDelay: `${delay}s` }}
     >
       <div className="kpi-top">
         <span className="kpi-icon">{icon}</span>
