@@ -164,6 +164,19 @@ function JobRow({
 }
 
 type BoardMode = "active" | "completed";
+type ModeTab = "All" | "Air" | "Sea" | "Road";
+
+const MODE_TABS: { key: ModeTab; label: string }[] = [
+  { key: "All", label: "All Shipments" },
+  { key: "Air", label: "Air Freight" },
+  { key: "Sea", label: "Sea Freight" },
+  { key: "Road", label: "Road Freight" },
+];
+
+/** A job's transport mode label starts with "Air (AIR)", "Sea (FCL)"… */
+function matchesModeTab(mode: string, tab: ModeTab): boolean {
+  return tab === "All" || (mode ?? "").startsWith(tab);
+}
 
 const COPY: Record<
   BoardMode,
@@ -202,12 +215,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const { data: jobs, isLoading, isError, error } = useJobs();
   const updateJob = useUpdateJob();
   const { toast, error: toastError } = useToast();
+  const [modeTab, setModeTab] = useState<ModeTab>("All");
 
-  const rows = (jobs ?? []).filter((j) =>
+  const stageRows = (jobs ?? []).filter((j) =>
     mode === "completed"
       ? j.shipment_status === DELIVERED_STATUS
       : j.shipment_status !== DELIVERED_STATUS,
   );
+  const rows = stageRows.filter((j) => matchesModeTab(j.mode, modeTab));
+  const modeLabel = MODE_TABS.find((t) => t.key === modeTab)?.label ?? "";
 
   function save(id: string, patch: JobPatch) {
     const toDone = patch.shipment_status === DELIVERED_STATUS;
@@ -236,13 +252,32 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   return (
     <>
-      <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
+      <PageHeader
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        actions={
+          <div className="chips">
+            {MODE_TABS.map((t) => (
+              <button
+                key={t.key}
+                className={`chip${modeTab === t.key ? " on" : ""}`}
+                onClick={() => setModeTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       <div className="panel jobs-panel">
         <div className="panel-head">
           <div>
             <h2>{copy.heading}</h2>
-            <p>{copy.sub(rows.length)}</p>
+            <p>
+              {copy.sub(rows.length)}
+              {modeTab !== "All" ? ` · ${modeLabel} only` : ""}
+            </p>
           </div>
         </div>
 
@@ -251,7 +286,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         ) : isError ? (
           <ErrorNote error={error} />
         ) : rows.length === 0 ? (
-          <EmptyState>{copy.empty}</EmptyState>
+          <EmptyState>
+            {modeTab !== "All" && stageRows.length > 0
+              ? `No ${modeLabel} jobs in this view.`
+              : copy.empty}
+          </EmptyState>
         ) : (
           <div className="table-wrap">
             <datalist id="job-locodes">
