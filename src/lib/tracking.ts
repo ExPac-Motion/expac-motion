@@ -119,17 +119,27 @@ function normaliseMovements(raw: unknown): TrackingMovement[] {
   return raw.map((m) => {
     const o = asDict(m);
     return {
-      code: String(pick(o, "code", "event", "eventCode", "movementCode", "type") ?? ""),
-      description: str(
-        pick(o, "description", "eventDescription", "name", "event", "status"),
+      code: String(
+        pick(o, "code", "event", "eventCode", "event_code", "movementCode",
+          "movement_code", "type", "status_code") ?? "",
       ),
-      date: dateOnly(pick(o, "date", "eventDate", "timestamp", "actualDate", "time")),
-      location: str(pick(o, "location", "port", "portName", "locationName", "place")),
-      vessel: str(pick(o, "vessel", "vesselName", "ship")),
-      voyage: str(pick(o, "voyage", "voyageNumber", "voyageNo")),
+      description: str(
+        pick(o, "description", "eventDescription", "event_description", "name",
+          "event", "status", "event_name", "location_event_description"),
+      ),
+      date: dateOnly(
+        pick(o, "date", "eventDate", "event_date", "timestamp", "actualDate",
+          "actual_date", "time", "actual_time", "estimated_time", "datetime"),
+      ),
+      location: str(
+        pick(o, "location", "port", "portName", "port_name", "locationName",
+          "location_name", "place", "location_locode"),
+      ),
+      vessel: str(pick(o, "vessel", "vesselName", "vessel_name", "ship")),
+      voyage: str(pick(o, "voyage", "voyageNumber", "voyage_number", "voyageNo")),
       done: Boolean(
-        pick(o, "actual", "isActual", "completed", "done") ??
-          pick(o, "actualDate", "eventDate"),
+        pick(o, "actual", "is_actual", "isActual", "completed", "done") ??
+          pick(o, "actualDate", "actual_date", "eventDate", "event_date"),
       ),
     };
   });
@@ -148,41 +158,52 @@ export function normaliseShipsGo(payload: unknown): NormalisedTracking {
   if (s.shipment) s = asDict(s.shipment);
   if (s.result) s = asDict(s.result);
 
-  const route = asDict(pick(s, "route", "routeData"));
-  const pol = asDict(pick(route, "pol", "portOfLoading", "origin") ?? pick(s, "pol", "origin"));
+  const route = asDict(pick(s, "route", "routeData", "route_data"));
+  const pol = asDict(
+    pick(route, "pol", "port_of_loading", "portOfLoading", "origin", "loading") ??
+      pick(s, "pol", "port_of_loading", "origin"),
+  );
   const pod = asDict(
-    pick(route, "pod", "portOfDischarge", "destination") ?? pick(s, "pod", "destination"),
+    pick(route, "pod", "port_of_discharge", "portOfDischarge", "destination", "discharge") ??
+      pick(s, "pod", "port_of_discharge", "destination"),
   );
 
   const movements = normaliseMovements(
-    pick(s, "movements", "events", "milestones", "timeline", "trackingEvents"),
+    pick(s, "movements", "events", "milestones", "timeline", "trackingEvents",
+      "tracking_events", "container_movements", "vessels"),
   );
 
   return {
-    shipsgo_id: str(pick(s, "id", "shipmentId", "referenceId", "uuid")),
-    status: str(pick(s, "status", "shipmentStatus", "currentStatus", "state")),
+    shipsgo_id: str(
+      pick(s, "id", "shipmentId", "shipment_id", "referenceId", "reference_id", "uuid"),
+    ),
+    status: str(
+      pick(s, "status", "shipmentStatus", "shipment_status", "currentStatus",
+        "current_status", "state", "status_name"),
+    ),
     carrier: str(
-      pick(s, "carrier", "carrierName", "shippingLine", "airline", "scac"),
+      pick(s, "carrier", "carrierName", "carrier_name", "shippingLine",
+        "shipping_line", "airline", "airline_name", "scac"),
     ),
     pol:
-      str(pick(pol, "locode", "code", "unlocode", "port", "name")) ??
-      str(pick(s, "polLocode", "originPort")),
+      str(pick(pol, "locode", "unlocode", "code", "port", "name", "port_name")) ??
+      str(pick(s, "polLocode", "pol_locode", "originPort", "origin_port")),
     pod:
-      str(pick(pod, "locode", "code", "unlocode", "port", "name")) ??
-      str(pick(s, "podLocode", "destinationPort")),
+      str(pick(pod, "locode", "unlocode", "code", "port", "name", "port_name")) ??
+      str(pick(s, "podLocode", "pod_locode", "destinationPort", "destination_port")),
     etd: dateOnly(
-      pick(s, "etd", "departureDate", "estimatedDeparture", "atd") ??
-        pick(pol, "date", "etd"),
+      pick(s, "etd", "departureDate", "departure_date", "estimatedDeparture",
+        "estimated_departure", "atd") ?? pick(pol, "date", "etd"),
     ),
     eta: dateOnly(
-      pick(s, "eta", "arrivalDate", "estimatedArrival", "ata") ??
-        pick(pod, "date", "eta"),
+      pick(s, "eta", "arrivalDate", "arrival_date", "estimatedArrival",
+        "estimated_arrival", "ata") ?? pick(pod, "date", "eta"),
     ),
     last_event:
       movements.length > 0
         ? movements[movements.length - 1].description ??
           movements[movements.length - 1].code
-        : str(pick(s, "lastEvent", "lastMovement")),
+        : str(pick(s, "lastEvent", "last_event", "lastMovement")),
     movements,
   };
 }
@@ -212,14 +233,22 @@ export async function fetchTracking(
   shipsgoId: string | null,
 ): Promise<NormalisedTracking> {
   const basePath = SHIPSGO_PATH[ref.type];
-  const numberField = ref.label === "AWB" ? "awb" : ref.label === "MBL" ? "bl" : "number";
+  // ShipsGo v2 create body — snake_case, confirmed from a 422:
+  //   ocean: container_number | booking_number | bill_of_lading_number
+  //   air:   awb_number
+  const numberField =
+    ref.type === "air"
+      ? "awb_number"
+      : ref.label === "MBL"
+        ? "bill_of_lading_number"
+        : "container_number";
 
   const body: ProxyRequest = shipsgoId
     ? { path: `${basePath}/${encodeURIComponent(shipsgoId)}`, method: "GET" }
     : {
         path: basePath,
         method: "POST",
-        body: { [numberField]: ref.value, number: ref.value },
+        body: { [numberField]: ref.value },
       };
 
   const res = await fetch("/api/track", {
