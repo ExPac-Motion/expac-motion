@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 const NAV = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/quotes", label: "Quotations", end: false },
+  { to: "/import-vat-duty", label: "Import VAT / Duty", end: false },
   { to: "/jobs", label: "Active Jobs", end: true },
   { to: "/jobs/completed", label: "Completed Jobs", end: false },
   { to: "/clients", label: "Customers", end: false },

@@ -12,6 +12,7 @@ import DashboardPage from "./pages/DashboardPage";
 import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
+import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import JobsPage from "./pages/JobsPage";
 import CompletedJobsPage from "./pages/CompletedJobsPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -75,6 +76,7 @@ export default function App() {
           <Route element={<Protected />}>
             <Route index element={<DashboardPage />} />
             <Route path="quotes" element={<QuotesListPage />} />
+            <Route path="import-vat-duty" element={<ImportVatDutyPage />} />
             <Route path="quotes/new" element={<QuoteBuilderPage />} />
             <Route path="quotes/:id" element={<QuoteBuilderPage />} />
             <Route path="jobs" element={<JobsPage />} />

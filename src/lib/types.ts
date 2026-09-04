@@ -230,6 +230,45 @@ export interface Quote {
   clearing_agent?: Pick<ClearingAgent, "id" | "company"> | null;
 }
 
+/* ---------- Import VAT / Duty Output ---------- */
+
+export interface ImportDutyLine {
+  id?: string;
+  ivd_id?: string;
+  position: number;
+  description: string;
+  qty_pcs: number | string;
+  unit_price: number | string;
+  cur: string;
+  /** Rate of exchange to ZAR. */
+  roe: number | string;
+  /** Customs duty rate for this line, as a percentage (e.g. 15 = 15%). */
+  duty_rate_pct: number | string;
+}
+
+export interface ImportVatDuty {
+  id: string;
+  quote_id: string;
+  po_no: string | null;
+  /** Statutory VAT uplift on customs value (SARS: 10%). */
+  vat_uplift_pct: number;
+  /** Import VAT rate (SARS: 15%). */
+  vat_rate_pct: number;
+  created_at: string;
+  updated_at: string;
+  import_vat_duty_lines: ImportDutyLine[];
+}
+
+/** Editable shape used by the Import VAT/Duty page before/after a row exists. */
+export interface ImportDutyDraft {
+  id: string | null;
+  quote_id: string;
+  po_no: string;
+  vat_uplift_pct: number | string;
+  vat_rate_pct: number | string;
+  lines: ImportDutyLine[];
+}
+
 export interface Job {
   id: string;
   quote_id: string | null;

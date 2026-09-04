@@ -7,6 +7,7 @@ import * as db from "./db";
 import type {
   Client,
   Contact,
+  ImportDutyDraft,
   JobPatch,
   Milestone,
   QuoteDraft,
@@ -190,6 +191,37 @@ export function useAcceptQuote() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
+    },
+  });
+}
+
+/* ---------- Import VAT / Duty Output ---------- */
+export function useImportVatDuty(quoteId: string | undefined) {
+  return useQuery({
+    queryKey: ["import_vat_duty", quoteId],
+    queryFn: () => db.getImportVatDuty(quoteId as string),
+    enabled: Boolean(quoteId),
+  });
+}
+export function useSaveImportVatDuty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (draft: ImportDutyDraft) => db.saveImportVatDuty(draft),
+    onSuccess: (_id, draft) =>
+      qc.invalidateQueries({ queryKey: ["import_vat_duty", draft.quote_id] }),
+  });
+}
+export function useAddCustomsLineToQuote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      quoteId: string;
+      code: "CU-02" | "CU-03";
+      amount: number;
+    }) => db.addCustomsLineToQuote(input.quoteId, input.code, input.amount),
+    onSuccess: (_v, input) => {
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["quotes", input.quoteId] });
     },
   });
 }

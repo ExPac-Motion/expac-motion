@@ -3,6 +3,8 @@ import { insuranceAmount, packingTotals, resolveLine } from "./calc";
 import type {
   Client,
   Contact,
+  ImportDutyDraft,
+  ImportVatDuty,
   Job,
   JobPatch,
   Milestone,
@@ -278,6 +280,64 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
 
 export async function deleteQuote(id: string): Promise<void> {
   unwrap(await supabase.from("quotes").delete().eq("id", id));
+}
+
+/* ---------- Import VAT / Duty Output ---------- */
+
+/** The worksheet for a quote, or null if none has been saved yet. */
+export async function getImportVatDuty(
+  quoteId: string,
+): Promise<ImportVatDuty | null> {
+  const { data, error } = await supabase
+    .from("import_vat_duty")
+    .select("*, import_vat_duty_lines(*)")
+    .eq("quote_id", quoteId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const row = data as ImportVatDuty;
+  row.import_vat_duty_lines = [...(row.import_vat_duty_lines || [])].sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0),
+  );
+  return row;
+}
+
+export async function saveImportVatDuty(
+  draft: ImportDutyDraft,
+): Promise<string> {
+  const lines = draft.lines.map((l, i) => ({
+    position: i,
+    description: (l.description ?? "").toString(),
+    qty_pcs: Number(l.qty_pcs) || 0,
+    unit_price: Number(l.unit_price) || 0,
+    cur: l.cur || "USD",
+    roe: Number(l.roe) || 0,
+    duty_rate_pct: Number(l.duty_rate_pct) || 0,
+  }));
+  return unwrap<string>(
+    await supabase.rpc("save_import_vat_duty", {
+      p_quote_id: draft.quote_id,
+      p_po_no: draft.po_no.trim() || null,
+      p_vat_uplift_pct: Number(draft.vat_uplift_pct) || 0,
+      p_vat_rate_pct: Number(draft.vat_rate_pct) || 0,
+      p_lines: lines,
+    }),
+  );
+}
+
+/** Push a computed customs total onto the quote as its CU-02 / CU-03 line. */
+export async function addCustomsLineToQuote(
+  quoteId: string,
+  code: "CU-02" | "CU-03",
+  amount: number,
+): Promise<void> {
+  unwrap(
+    await supabase.rpc("add_customs_line_to_quote", {
+      p_quote_id: quoteId,
+      p_code: code,
+      p_amount: amount,
+    }),
+  );
 }
 
 /** Marks the quote accepted and creates the linked job (idempotent). Returns the job id. */
