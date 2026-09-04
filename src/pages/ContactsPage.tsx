@@ -30,6 +30,11 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
       email: String(fd.get("email") || "").trim() || null,
       phone: String(fd.get("phone") || "").trim() || null,
     };
+    if (kind === "client") {
+      values.vat_no = String(fd.get("vat_no") || "").trim() || null;
+      values.import_code = String(fd.get("import_code") || "").trim() || null;
+      values.address = String(fd.get("address") || "").trim() || null;
+    }
     if (!values.company) {
       error("Company name is required");
       return;
@@ -146,6 +151,31 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                 <input name="phone" defaultValue={current?.phone ?? ""} />
               </div>
             </div>
+            {kind === "client" && (
+              <>
+                <div className="grid2">
+                  <div className="field">
+                    <label>Customer VAT No</label>
+                    <input name="vat_no" defaultValue={current?.vat_no ?? ""} />
+                  </div>
+                  <div className="field">
+                    <label>Customer Import Code</label>
+                    <input
+                      name="import_code"
+                      defaultValue={current?.import_code ?? ""}
+                    />
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Address</label>
+                  <textarea
+                    name="address"
+                    rows={2}
+                    defaultValue={current?.address ?? ""}
+                  />
+                </div>
+              </>
+            )}
             <div
               style={{
                 display: "flex",

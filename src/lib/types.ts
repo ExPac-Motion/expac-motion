@@ -139,6 +139,10 @@ export interface Contact {
   contact: string | null;
   email: string | null;
   phone: string | null;
+  /** Customer-only trade details (stored on the clients table). */
+  vat_no?: string | null;
+  import_code?: string | null;
+  address?: string | null;
   created_at: string;
 }
 export type Client = Contact;
