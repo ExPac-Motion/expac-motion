@@ -16,6 +16,7 @@ interface Props {
 
 export default function ContactsPage({ kind, query, save, remove }: Props) {
   const label = kind === "client" ? "customer" : "shipper";
+  const Label = label[0].toUpperCase() + label.slice(1);
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
 
@@ -30,11 +31,9 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
       email: String(fd.get("email") || "").trim() || null,
       phone: String(fd.get("phone") || "").trim() || null,
     };
-    if (kind === "client") {
-      values.vat_no = String(fd.get("vat_no") || "").trim() || null;
-      values.import_code = String(fd.get("import_code") || "").trim() || null;
-      values.address = String(fd.get("address") || "").trim() || null;
-    }
+    values.vat_no = String(fd.get("vat_no") || "").trim() || null;
+    values.import_code = String(fd.get("import_code") || "").trim() || null;
+    values.address = String(fd.get("address") || "").trim() || null;
     if (!values.company) {
       error("Company name is required");
       return;
@@ -55,7 +54,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
     if (!window.confirm(`Remove ${row.company}?`)) return;
     try {
       await remove.mutateAsync(row.id);
-      toast(`${label[0].toUpperCase() + label.slice(1)} removed`);
+      toast(`${Label} removed`);
     } catch (e2) {
       error(e2 instanceof Error ? e2.message : "Could not remove");
     }
@@ -91,13 +90,9 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                   <th>Contact</th>
                   <th>Email</th>
                   <th>Phone</th>
-                  {kind === "client" && (
-                    <>
-                      <th>VAT No</th>
-                      <th>Import Code</th>
-                      <th>Address</th>
-                    </>
-                  )}
+                  <th>VAT No</th>
+                  <th>Import Code</th>
+                  <th>Address</th>
                   <th />
                 </tr>
               </thead>
@@ -110,13 +105,9 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                     <td>{r.contact || "—"}</td>
                     <td>{r.email || "—"}</td>
                     <td>{r.phone || "—"}</td>
-                    {kind === "client" && (
-                      <>
-                        <td>{r.vat_no || "—"}</td>
-                        <td>{r.import_code || "—"}</td>
-                        <td>{r.address || "—"}</td>
-                      </>
-                    )}
+                    <td>{r.vat_no || "—"}</td>
+                    <td>{r.import_code || "—"}</td>
+                    <td>{r.address || "—"}</td>
                     <td>
                       <div className="row-actions">
                         <button
@@ -165,31 +156,27 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                 <input name="phone" defaultValue={current?.phone ?? ""} />
               </div>
             </div>
-            {kind === "client" && (
-              <>
-                <div className="grid2">
-                  <div className="field">
-                    <label>Customer VAT No</label>
-                    <input name="vat_no" defaultValue={current?.vat_no ?? ""} />
-                  </div>
-                  <div className="field">
-                    <label>Customer Import Code</label>
-                    <input
-                      name="import_code"
-                      defaultValue={current?.import_code ?? ""}
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Address</label>
-                  <textarea
-                    name="address"
-                    rows={2}
-                    defaultValue={current?.address ?? ""}
-                  />
-                </div>
-              </>
-            )}
+            <div className="grid2">
+              <div className="field">
+                <label>{Label} VAT No</label>
+                <input name="vat_no" defaultValue={current?.vat_no ?? ""} />
+              </div>
+              <div className="field">
+                <label>{Label} Import Code</label>
+                <input
+                  name="import_code"
+                  defaultValue={current?.import_code ?? ""}
+                />
+              </div>
+            </div>
+            <div className="field">
+              <label>Address</label>
+              <textarea
+                name="address"
+                rows={2}
+                defaultValue={current?.address ?? ""}
+              />
+            </div>
             <div
               style={{
                 display: "flex",
