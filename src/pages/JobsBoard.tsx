@@ -241,14 +241,14 @@ const COPY: Record<
   active: {
     eyebrow: "Post-acceptance tracking",
     title: "Active Shipments",
-    heading: "All shipments",
+    heading: "All Shipments",
     sub: (n) => `${n} in progress · every field edits in place`,
     empty: "No active shipments. Accept a quote to create one automatically.",
   },
   completed: {
     eyebrow: "Closed out",
     title: "Completed Shipments",
-    heading: "Delivered shipments",
+    heading: "Delivered Shipments",
     sub: (n) => `${n} delivered`,
     empty:
       "No completed shipments yet. A shipment lands here the moment its Shipment Status is set to Delivered.",
