@@ -735,7 +735,7 @@ tr.clickable:hover {
   padding: 26px;
 }
 .modal--wide {
-  max-width: 1040px;
+  max-width: min(1400px, 94vw);
 }
 .modal-head {
   display: flex;
