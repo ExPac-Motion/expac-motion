@@ -12,7 +12,7 @@ import {
   type Job,
   type JobPatch,
 } from "../lib/types";
-import CommsDrawer from "./shipments/CommsDrawer";
+import CommsRail from "./shipments/CommsRail";
 
 /** "AWB" for air/courier, "MBL" for sea, "Ref" otherwise. */
 function docLabel(mode: string): string {
@@ -266,6 +266,12 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const { toast, error: toastError } = useToast();
   const [modeTab, setModeTab] = useState<ModeTab>("All");
   const [commsJob, setCommsJob] = useState<Job | null>(null);
+  const [railOpen, setRailOpen] = useState(false);
+
+  function openComms(j: Job) {
+    setCommsJob(j);
+    setRailOpen(true);
+  }
 
   const stageRows = (jobs ?? []).filter((j) =>
     mode === "completed"
@@ -302,6 +308,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   return (
     <>
+      <div className={railOpen ? "board-shift" : ""}>
       <PageHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -379,7 +386,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                     key={j.id}
                     job={j}
                     onSave={save}
-                    onOpenComms={setCommsJob}
+                    onOpenComms={openComms}
                   />
                 ))}
               </tbody>
@@ -387,10 +394,13 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           </div>
         )}
       </div>
+      </div>
 
-      {commsJob && (
-        <CommsDrawer job={commsJob} onClose={() => setCommsJob(null)} />
-      )}
+      <CommsRail
+        job={commsJob}
+        open={railOpen}
+        onToggle={() => setRailOpen((o) => !o)}
+      />
     </>
   );
 }

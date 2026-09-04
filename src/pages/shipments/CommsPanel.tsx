@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import Drawer from "../../components/Drawer";
 import { Loading } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useAddNote, useMessages, useSendMessage } from "../../lib/hooks";
@@ -19,13 +18,9 @@ interface Recipient {
   email: string;
 }
 
-export default function CommsDrawer({
-  job,
-  onClose,
-}: {
-  job: Job;
-  onClose: () => void;
-}) {
+/** The activity/comms body for one shipment — compose + full message thread.
+ *  Hosted by CommsRail (docked panel) on the Shipments board. */
+export default function CommsPanel({ job }: { job: Job }) {
   const { toast, error } = useToast();
   const msgsQ = useMessages(job.id);
   const send = useSendMessage();
@@ -107,17 +102,7 @@ export default function CommsDrawer({
   }
 
   return (
-    <Drawer
-      title={
-        <>
-          <strong>{job.reference}</strong> · Comms
-        </>
-      }
-      onClose={onClose}
-      belowTitle={
-        <span className="muted">{job.client?.company ?? "—"}</span>
-      }
-    >
+    <>
       <div className="comms-actions">
         <button
           className={`chip${tab === "email" ? " on" : ""}`}
@@ -169,10 +154,7 @@ export default function CommsDrawer({
               rows={4}
             />
           </div>
-          <button
-            className="link-btn"
-            onClick={() => setShowPreview((v) => !v)}
-          >
+          <button className="link-btn" onClick={() => setShowPreview((v) => !v)}>
             {showPreview ? "Hide" : "Preview"} email
           </button>
           {showPreview && <pre className="msg-preview">{preview}</pre>}
@@ -262,6 +244,6 @@ export default function CommsDrawer({
           ))
         )}
       </div>
-    </Drawer>
+    </>
   );
 }
