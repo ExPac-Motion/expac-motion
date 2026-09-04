@@ -75,7 +75,7 @@ export default function LiveTracking() {
       <div className="panel">
         <div className="mini-stats">
           <div>
-            <div className="k">Trackable jobs</div>
+            <div className="k">Trackable shipments</div>
             <div className="v">{trackable.length}</div>
           </div>
           <div>
@@ -102,14 +102,14 @@ export default function LiveTracking() {
       <div className="panel">
         {trackable.length === 0 ? (
           <EmptyState>
-            No active job carries an AWB, MBL or container number yet.
+            No active shipment carries an AWB, MBL or container number yet.
           </EmptyState>
         ) : (
           <div className="table-wrap">
             <table className="trk-table">
               <thead>
                 <tr>
-                  <th>Job</th>
+                  <th>Shipment</th>
                   <th>Mode</th>
                   <th>Lane</th>
                   <th>Reference</th>
@@ -192,7 +192,7 @@ export default function LiveTracking() {
             <h3>Not trackable yet</h3>
             <p className="hint">
               Add an AWB / MBL or container number on the{" "}
-              <Link to="/jobs">Active Jobs</Link> board.
+              <Link to="/jobs">Active Shipments</Link> board.
             </p>
             <ul>
               {noNumber.map((j) => (

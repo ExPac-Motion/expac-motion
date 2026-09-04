@@ -191,7 +191,7 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
 
       <div className="grid2">
         <div className="field">
-          <label>Link to job</label>
+          <label>Link to shipment</label>
           <select value={f.job_id} onChange={(e) => set("job_id", e.target.value)}>
             <option value="">—</option>
             {jobs.map((j) => (

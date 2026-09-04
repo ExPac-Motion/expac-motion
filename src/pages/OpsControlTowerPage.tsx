@@ -92,8 +92,8 @@ export default function OpsControlTowerPage() {
     return [
       { label: "Tasks overdue", n: overdue, alert: true, go: () => setTab("tasks", { focus: "overdue" }) },
       { label: "Tasks due today", n: dueToday, go: () => setTab("tasks", { focus: "today" }) },
-      { label: "Jobs without status", n: noStatus, go: () => navigate("/jobs") },
-      { label: "Jobs without a tracking no.", n: noNumber, go: () => navigate("/jobs") },
+      { label: "Shipments without status", n: noStatus, go: () => navigate("/jobs") },
+      { label: "Shipments without a tracking no.", n: noNumber, go: () => navigate("/jobs") },
       { label: "Arriving ≤ 7 days", n: arriving, go: () => setTab("tracking") },
       { label: "Tracking exceptions", n: exceptions, alert: true, go: () => setTab("tracking") },
       { label: "Quotes expiring ≤ 7 days", n: expiring, alert: true, go: () => navigate("/quotes") },

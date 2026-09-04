@@ -66,7 +66,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
     if (!q) return;
     try {
       await accept.mutateAsync(q.id);
-      toast("Job created — check Active Jobs");
+      toast("Shipment created — check Active Shipments");
       onClose();
       navigate("/jobs");
     } catch (e) {
@@ -108,10 +108,10 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
           </button>
           {q.status !== "accepted" ? (
             <button className="btn" onClick={onAccept} disabled={accept.isPending}>
-              {accept.isPending ? "Working…" : "Accept & create job"}
+              {accept.isPending ? "Working…" : "Accept & create shipment"}
             </button>
           ) : (
-            <span className="btn status">Job created</span>
+            <span className="btn status">Shipment created</span>
           )}
         </>
       }

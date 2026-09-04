@@ -1,19 +1,83 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 
-const NAV = [
+interface NavLeaf {
+  to: string;
+  label: string;
+  end?: boolean;
+}
+interface NavGroup {
+  label: string;
+  children: NavLeaf[];
+}
+type NavItem = NavLeaf | NavGroup;
+
+const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", end: true },
-  { to: "/ops", label: "Control Tower", end: false },
-  { to: "/quotes", label: "Quotations", end: false },
-  { to: "/import-vat-duty", label: "Customs Charges", end: false },
-  { to: "/jobs", label: "Active Jobs", end: true },
-  { to: "/jobs/completed", label: "Completed Jobs", end: false },
-  { to: "/clients", label: "Customers", end: false },
-  { to: "/suppliers", label: "Shippers", end: false },
-  { to: "/agents", label: "Agents", end: false },
-  { to: "/transporters", label: "Transporters", end: false },
-  { to: "/clearing-agents", label: "Clearing Agents", end: false },
+  { to: "/ops", label: "Control Tower" },
+  { to: "/quotes", label: "Quotations" },
+  { to: "/import-vat-duty", label: "Customs Charges" },
+  { to: "/jobs", label: "Active Shipments", end: true },
+  { to: "/jobs/completed", label: "Completed Shipments" },
+  { to: "/clients", label: "Customers" },
+  {
+    label: "Suppliers",
+    children: [
+      { to: "/suppliers", label: "Shippers" },
+      { to: "/agents", label: "Agents" },
+      { to: "/transporters", label: "Transporters" },
+      { to: "/clearing-agents", label: "Clearing Agents" },
+    ],
+  },
 ];
+
+function isGroup(n: NavItem): n is NavGroup {
+  return "children" in n;
+}
+
+function Leaf({ to, label, end }: NavLeaf) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => (isActive ? "active" : "")}
+    >
+      <span className="nav-dot" />
+      {label}
+    </NavLink>
+  );
+}
+
+function Group({ group }: { group: NavGroup }) {
+  const { pathname } = useLocation();
+  const hasActiveChild = group.children.some((c) => pathname.startsWith(c.to));
+  const [open, setOpen] = useState(hasActiveChild);
+  const show = open || hasActiveChild;
+
+  return (
+    <div className={`nav-group${show ? " open" : ""}`}>
+      <button
+        className="nav-group-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={show}
+      >
+        <span className="nav-dot" />
+        {group.label}
+        <span className="nav-caret" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      {show && (
+        <div className="nav-children">
+          {group.children.map((c) => (
+            <Leaf key={c.to} {...c} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Layout() {
   const { user, signOut } = useAuth();
@@ -38,17 +102,13 @@ export default function Layout() {
           </div>
         </div>
         <nav className="nav">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) => (isActive ? "active" : "")}
-            >
-              <span className="nav-dot" />
-              {n.label}
-            </NavLink>
-          ))}
+          {NAV.map((n) =>
+            isGroup(n) ? (
+              <Group key={n.label} group={n} />
+            ) : (
+              <Leaf key={n.to} {...n} />
+            ),
+          )}
         </nav>
         <div className="footer-user">
           <div className="who">{name}</div>

@@ -214,7 +214,7 @@ export default function ImportVatDutyPage() {
         </div>
         <div className="grid4">
           <div className="field">
-            <label>Job Number (quotation)</label>
+            <label>Shipment (quotation)</label>
             <select
               value={quoteId}
               onChange={(e) => setQuoteId(e.target.value)}
@@ -500,12 +500,12 @@ export default function ImportVatDutyPage() {
             </div>
             <ul className="hint" style={{ margin: 0, paddingLeft: 18 }}>
               <li>
-                Job Number is taken from the quotation builder. Once VAT / duties
-                are calculated they are pushed to that specific quote.
+                The shipment reference is taken from the quotation builder. Once
+                VAT / duties are calculated they are pushed to that specific quote.
               </li>
               <li>
-                After pushing, the worksheet is saved under the Job Number here
-                for later editing or amendment.
+                After pushing, the worksheet is saved under the shipment
+                reference here for later editing or amendment.
               </li>
             </ul>
           </div>

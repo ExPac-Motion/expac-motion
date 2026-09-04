@@ -262,7 +262,7 @@ export function useRefreshTracking() {
   return useMutation({
     mutationFn: async (input: { job: Job; shipsgoId: string | null }) => {
       const ref = trackableRef(input.job);
-      if (!ref) throw new Error("This job has no AWB / MBL / container number.");
+      if (!ref) throw new Error("This shipment has no AWB / MBL / container number.");
       const normalised = await fetchTracking(ref, input.shipsgoId);
       return db.upsertJobTracking(
         trackingRowFrom(input.job.id, ref, normalised),

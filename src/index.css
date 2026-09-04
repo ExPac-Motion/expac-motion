@@ -152,6 +152,48 @@ textarea {
   opacity: 0.5;
   flex-shrink: 0;
 }
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: 0;
+  color: #c7cdc7;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nav-group-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.nav-caret {
+  margin-left: auto;
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+.nav-group.open .nav-caret {
+  transform: rotate(180deg);
+}
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 14px;
+}
+.nav-children a {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
 .footer-user {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 14px;
@@ -995,9 +1037,20 @@ tr.clickable:hover {
   }
   .nav {
     flex-direction: row;
+    flex-wrap: wrap;
   }
   .nav a {
     white-space: nowrap;
+  }
+  /* Flatten the collapsible group into the row on small screens. */
+  .nav-group {
+    display: contents;
+  }
+  .nav-group-toggle {
+    display: none;
+  }
+  .nav-children {
+    display: contents;
   }
   .footer-user {
     display: none;

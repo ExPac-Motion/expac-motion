@@ -58,7 +58,7 @@ export interface CalEvent {
 
 export type CalSource = "jobs" | "tasks" | "quotes" | "tracking";
 export const CAL_SOURCES: { key: CalSource; label: string }[] = [
-  { key: "jobs", label: "Jobs ETD / ETA" },
+  { key: "jobs", label: "Shipments ETD / ETA" },
   { key: "tasks", label: "Tasks & notes" },
   { key: "quotes", label: "Quote expiry" },
   { key: "tracking", label: "Tracking ETA" },

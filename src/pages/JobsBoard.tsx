@@ -190,18 +190,18 @@ const COPY: Record<
 > = {
   active: {
     eyebrow: "Post-acceptance tracking",
-    title: "Active Jobs",
-    heading: "All jobs",
+    title: "Active Shipments",
+    heading: "All shipments",
     sub: (n) => `${n} in progress · every field edits in place`,
-    empty: "No active jobs. Accept a quote to create one automatically.",
+    empty: "No active shipments. Accept a quote to create one automatically.",
   },
   completed: {
     eyebrow: "Closed out",
-    title: "Completed Jobs",
-    heading: "Delivered jobs",
+    title: "Completed Shipments",
+    heading: "Delivered shipments",
     sub: (n) => `${n} delivered`,
     empty:
-      "No completed jobs yet. A job lands here the moment its Shipment Status is set to Delivered.",
+      "No completed shipments yet. A shipment lands here the moment its Shipment Status is set to Delivered.",
   },
 };
 
@@ -237,10 +237,10 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         onSuccess: () =>
           toast(
             toDone
-              ? "Job delivered — moved to Completed Jobs"
+              ? "Shipment delivered — moved to Completed Shipments"
               : fromDone
-                ? "Job reopened — moved to Active Jobs"
-                : "Job updated",
+                ? "Shipment reopened — moved to Active Shipments"
+                : "Shipment updated",
           ),
         onError: (e) =>
           toastError(e instanceof Error ? e.message : "Could not save"),
@@ -288,7 +288,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         ) : rows.length === 0 ? (
           <EmptyState>
             {modeTab !== "All" && stageRows.length > 0
-              ? `No ${modeLabel} jobs in this view.`
+              ? `No ${modeLabel} shipments in this view.`
               : copy.empty}
           </EmptyState>
         ) : (
@@ -304,7 +304,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               <thead>
                 <tr>
                   <th>Created On</th>
-                  <th>Job #</th>
+                  <th>Shipment #</th>
                   <th>Shipper</th>
                   <th>Customer</th>
                   <th>PO #</th>

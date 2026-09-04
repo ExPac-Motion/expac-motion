@@ -194,7 +194,7 @@ export default function DashboardPage() {
           <div className="dash-kpis">
             <Kpi
               icon={Icon.jobs}
-              label="Total Active Jobs"
+              label="Total Active Shipments"
               value={activeJobs.length}
               selected={modeFilter === "All"}
               onClick={() => setModeFilter("All")}
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                       ? Icon.plane
                       : Icon.truck
                 }
-                label={`Total ${m.label} Jobs`}
+                label={`Total ${m.label} Shipments`}
                 value={modeCounts[m.key]}
                 selected={modeFilter === m.key}
                 onClick={() => toggleMode(m.key)}
@@ -249,7 +249,7 @@ export default function DashboardPage() {
             <div className="panel">
               <div className="panel-head">
                 <div>
-                  <h2>Active Jobs by Mode</h2>
+                  <h2>Active Shipments by Mode</h2>
                   <p>Click a segment to filter the list below</p>
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function DashboardPage() {
               <div className="panel-head">
                 <div>
                   <h2>Operational Funnel</h2>
-                  <p>Every job by milestone, all-time</p>
+                  <p>Every shipment by milestone, all-time</p>
                 </div>
               </div>
               <div className="funnel">
@@ -358,7 +358,7 @@ export default function DashboardPage() {
           <div className="panel">
             <div className="panel-head">
               <div>
-                <h2>Active Jobs</h2>
+                <h2>Active Shipments</h2>
                 <p>
                   {shownJobs.length} shown
                   {modeFilter !== "All" ? ` · ${modeFilter} only` : ""}
@@ -379,7 +379,7 @@ export default function DashboardPage() {
                 <button
                   className="chip"
                   onClick={() => navigate("/jobs")}
-                  title="Open the Active Jobs board"
+                  title="Open the Active Shipments board"
                 >
                   Board →
                 </button>
@@ -388,8 +388,8 @@ export default function DashboardPage() {
             {shownJobs.length === 0 ? (
               <div className="empty">
                 {activeJobs.length === 0
-                  ? "No active jobs. Accept a quotation to create one."
-                  : `No active ${modeFilter} jobs.`}
+                  ? "No active shipments. Accept a quotation to create one."
+                  : `No active ${modeFilter} shipments.`}
               </div>
             ) : (
               <div className="table-wrap">
@@ -604,7 +604,7 @@ function ModeDonut({
         <div className="donut-center">
           <div>
             <b>{total}</b>
-            <span>ACTIVE JOBS</span>
+            <span>ACTIVE SHIPMENTS</span>
           </div>
         </div>
       </div>
