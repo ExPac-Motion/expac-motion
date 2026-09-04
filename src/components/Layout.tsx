@@ -3,7 +3,7 @@ import { useAuth } from "../auth/AuthProvider";
 
 const NAV = [
   { to: "/", label: "Dashboard", end: true },
-  { to: "/ops", label: "Operations Control Tower", end: false },
+  { to: "/ops", label: "Control Tower", end: false },
   { to: "/quotes", label: "Quotations", end: false },
   { to: "/import-vat-duty", label: "Import VAT / Duty", end: false },
   { to: "/jobs", label: "Active Jobs", end: true },

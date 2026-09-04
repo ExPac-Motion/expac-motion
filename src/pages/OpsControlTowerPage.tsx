@@ -103,7 +103,7 @@ export default function OpsControlTowerPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Command centre" title="Operations Control Tower" />
+      <PageHeader eyebrow="Command centre" title="Control Tower" />
 
       {chips.length > 0 && (
         <div className="ct-band">
