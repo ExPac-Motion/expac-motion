@@ -2524,6 +2524,13 @@ tr.clickable:hover {
   max-height: 260px;
   overflow: auto;
 }
+.comms-send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
 .msg-thread {
   display: flex;
   flex-direction: column;

@@ -154,18 +154,18 @@ export default function CommsPanel({ job }: { job: Job }) {
               rows={4}
             />
           </div>
-          <button className="link-btn" onClick={() => setShowPreview((v) => !v)}>
-            {showPreview ? "Hide" : "Preview"} email
-          </button>
           {showPreview && <pre className="msg-preview">{preview}</pre>}
-          <button
-            className="btn"
-            onClick={onSend}
-            disabled={send.isPending}
-            style={{ marginTop: 10 }}
-          >
-            {send.isPending ? "Sending…" : "Send Message"}
-          </button>
+          <div className="comms-send-row">
+            <button
+              className="link-btn"
+              onClick={() => setShowPreview((v) => !v)}
+            >
+              {showPreview ? "Hide" : "Preview"} email
+            </button>
+            <button className="btn" onClick={onSend} disabled={send.isPending}>
+              {send.isPending ? "Sending…" : "Send Message"}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="comms-compose">
