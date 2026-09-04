@@ -243,6 +243,13 @@ textarea {
   padding: 6px 10px;
   font-size: 0.78rem;
 }
+/* Non-interactive status pill that keeps the .btn box (size/shape). */
+.btn.status {
+  background: #eef4e3;
+  border-color: var(--green);
+  color: var(--green-dark);
+  cursor: default;
+}
 
 /* ---------- Cards ---------- */
 .cards {

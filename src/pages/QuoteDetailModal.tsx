@@ -109,7 +109,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
               {accept.isPending ? "Working…" : "Accept & create job"}
             </button>
           ) : (
-            <span className="badge accepted">Job created</span>
+            <span className="btn status">Job created</span>
           )}
         </>
       }
