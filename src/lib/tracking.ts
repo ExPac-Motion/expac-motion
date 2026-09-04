@@ -220,6 +220,18 @@ interface ProxyResult {
   ok?: boolean;
   data?: unknown;
   error?: string;
+  status?: number;
+  payload?: unknown;
+}
+
+/** Dig an existing ShipsGo shipment id out of a 409 ALREADY_EXISTS body. */
+function existingIdFrom(payload: unknown): string | null {
+  const p = asDict(payload);
+  const id =
+    pick(asDict(p.shipment), "id", "shipment_id") ??
+    pick(asDict(p.data), "id", "shipment_id") ??
+    pick(p, "id", "shipment_id");
+  return id != null ? String(id) : null;
 }
 
 /**
@@ -259,6 +271,11 @@ export async function fetchTracking(
 
   const raw = (await res.json().catch(() => ({}))) as ProxyResult;
   if (!res.ok || raw.error) {
+    // 409 = ShipsGo already tracks this reference; fetch the existing shipment.
+    if (!shipsgoId && res.status === 409) {
+      const existing = existingIdFrom(raw.payload);
+      if (existing) return fetchTracking(ref, existing);
+    }
     if (res.status === 404) {
       throw new Error("Live refresh runs on the deployed site (no API here in dev).");
     }
