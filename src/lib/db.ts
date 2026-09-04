@@ -97,9 +97,75 @@ export async function deleteAgent(id: string): Promise<void> {
   unwrap(await supabase.from("agents").delete().eq("id", id));
 }
 
+/* ---------- Transporters ---------- */
+export async function listTransporters(): Promise<Contact[]> {
+  return unwrap(
+    await supabase
+      .from("transporters")
+      .select("*")
+      .order("company", { ascending: true }),
+  );
+}
+export async function createTransporter(
+  input: Omit<Contact, "id" | "created_at">,
+): Promise<Contact> {
+  return unwrap(
+    await supabase.from("transporters").insert(input).select("*").single(),
+  );
+}
+export async function updateTransporter(
+  id: string,
+  input: Partial<Omit<Contact, "id" | "created_at">>,
+): Promise<Contact> {
+  return unwrap(
+    await supabase
+      .from("transporters")
+      .update(input)
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
+}
+export async function deleteTransporter(id: string): Promise<void> {
+  unwrap(await supabase.from("transporters").delete().eq("id", id));
+}
+
+/* ---------- Clearing agents ---------- */
+export async function listClearingAgents(): Promise<Contact[]> {
+  return unwrap(
+    await supabase
+      .from("clearing_agents")
+      .select("*")
+      .order("company", { ascending: true }),
+  );
+}
+export async function createClearingAgent(
+  input: Omit<Contact, "id" | "created_at">,
+): Promise<Contact> {
+  return unwrap(
+    await supabase.from("clearing_agents").insert(input).select("*").single(),
+  );
+}
+export async function updateClearingAgent(
+  id: string,
+  input: Partial<Omit<Contact, "id" | "created_at">>,
+): Promise<Contact> {
+  return unwrap(
+    await supabase
+      .from("clearing_agents")
+      .update(input)
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
+}
+export async function deleteClearingAgent(id: string): Promise<void> {
+  unwrap(await supabase.from("clearing_agents").delete().eq("id", id));
+}
+
 /* ---------- Quotes ---------- */
 const QUOTE_SELECT =
-  "*, quote_lines(*), packing_list_items(*), client:clients(id,company), supplier:suppliers(id,company), agent:agents(id,company)";
+  "*, quote_lines(*), packing_list_items(*), client:clients(id,company), supplier:suppliers(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
 
 function sortLines(q: Quote): Quote {
   q.quote_lines = [...(q.quote_lines || [])].sort(
@@ -173,6 +239,8 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_client_id: draft.client_id || null,
       p_supplier_id: draft.supplier_id || null,
       p_agent_id: draft.agent_id || null,
+      p_transporter_id: draft.transporter_id || null,
+      p_clearing_agent_id: draft.clearing_agent_id || null,
       p_mode: draft.mode,
       p_commodity: draft.commodity.trim() || null,
       p_origin: draft.origin.trim() || null,

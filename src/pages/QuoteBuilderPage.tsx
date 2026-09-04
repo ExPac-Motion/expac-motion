@@ -4,10 +4,12 @@ import { ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
 import {
   useAgents,
+  useClearingAgents,
   useClients,
   useQuote,
   useSaveQuote,
   useSuppliers,
+  useTransporters,
 } from "../lib/hooks";
 import {
   autoQty,
@@ -88,6 +90,8 @@ function blankDraft(): QuoteDraft {
     client_id: "",
     supplier_id: "",
     agent_id: "",
+    transporter_id: "",
+    clearing_agent_id: "",
     mode,
     commodity: "General Cargo",
     origin: "",
@@ -123,6 +127,8 @@ function draftFromQuote(q: Quote): QuoteDraft {
     client_id: q.client_id ?? "",
     supplier_id: q.supplier_id ?? "",
     agent_id: q.agent_id ?? "",
+    transporter_id: q.transporter_id ?? "",
+    clearing_agent_id: q.clearing_agent_id ?? "",
     mode: q.mode,
     commodity: q.commodity ?? "",
     origin: q.origin ?? "",
@@ -200,6 +206,8 @@ export default function QuoteBuilderPage() {
   const clientsQ = useClients();
   const suppliersQ = useSuppliers();
   const agentsQ = useAgents();
+  const transportersQ = useTransporters();
+  const clearingAgentsQ = useClearingAgents();
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
 
@@ -412,6 +420,8 @@ export default function QuoteBuilderPage() {
   const clients = clientsQ.data ?? [];
   const suppliers = suppliersQ.data ?? [];
   const agents = agentsQ.data ?? [];
+  const transporters = transportersQ.data ?? [];
+  const clearingAgents = clearingAgentsQ.data ?? [];
 
   return (
     <>
@@ -482,6 +492,36 @@ export default function QuoteBuilderPage() {
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
+          </div>
+          <div className="field">
+            <label>Transporter (internal only)</label>
+            <select
+              value={draft.transporter_id}
+              onChange={(e) => set("transporter_id", e.target.value)}
+            >
+              <option value="">Select transporter</option>
+              {transporters.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
+          </div>
+          <div className="field">
+            <label>Clearing Agent (internal only)</label>
+            <select
+              value={draft.clearing_agent_id}
+              onChange={(e) => set("clearing_agent_id", e.target.value)}
+            >
+              <option value="">Select clearing agent</option>
+              {clearingAgents.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company}
                 </option>
               ))}
             </select>

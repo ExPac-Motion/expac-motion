@@ -148,6 +148,8 @@ export interface Contact {
 export type Client = Contact;
 export type Supplier = Contact;
 export type Agent = Contact;
+export type Transporter = Contact;
+export type ClearingAgent = Contact;
 
 export interface PackingItem {
   id?: string;
@@ -182,8 +184,10 @@ export interface Quote {
   reference: string;
   client_id: string | null;
   supplier_id: string | null;
-  /** Clearing / forwarding agent — internal only, never shown to the customer. */
+  /** Agent / transporter / clearing agent — internal only, never shown to the customer. */
   agent_id: string | null;
+  transporter_id: string | null;
+  clearing_agent_id: string | null;
   mode: QuoteMode;
   commodity: string | null;
   origin: string | null;
@@ -214,6 +218,8 @@ export interface Quote {
   client?: Pick<Client, "id" | "company"> | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
   agent?: Pick<Agent, "id" | "company"> | null;
+  transporter?: Pick<Transporter, "id" | "company"> | null;
+  clearing_agent?: Pick<ClearingAgent, "id" | "company"> | null;
 }
 
 export interface Job {
@@ -269,6 +275,8 @@ export interface QuoteDraft {
   client_id: string;
   supplier_id: string;
   agent_id: string;
+  transporter_id: string;
+  clearing_agent_id: string;
   mode: QuoteMode;
   commodity: string;
   origin: string;

@@ -9,6 +9,8 @@ const NAV = [
   { to: "/clients", label: "Customers", end: false },
   { to: "/suppliers", label: "Shippers", end: false },
   { to: "/agents", label: "Agents", end: false },
+  { to: "/transporters", label: "Transporters", end: false },
+  { to: "/clearing-agents", label: "Clearing Agents", end: false },
 ];
 
 export default function Layout() {

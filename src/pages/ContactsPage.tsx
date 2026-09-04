@@ -7,7 +7,7 @@ import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
 
-type Kind = "client" | "supplier" | "agent";
+type Kind = "client" | "supplier" | "agent" | "transporter" | "clearing_agent";
 
 const COPY: Record<Kind, { label: string; title: string; eyebrow: string }> = {
   client: {
@@ -23,9 +23,23 @@ const COPY: Record<Kind, { label: string; title: string; eyebrow: string }> = {
   agent: {
     label: "agent",
     title: "Agents",
-    eyebrow: "Clearing & forwarding agents",
+    eyebrow: "Forwarding agents",
+  },
+  transporter: {
+    label: "transporter",
+    title: "Transporters",
+    eyebrow: "Road & rail carriers",
+  },
+  clearing_agent: {
+    label: "clearing agent",
+    title: "Clearing Agents",
+    eyebrow: "Customs clearing agents",
   },
 };
+
+/** Title-case every word: "clearing agent" -> "Clearing Agent". */
+const titleCase = (s: string) =>
+  s.replace(/\b\w/g, (c) => c.toUpperCase());
 
 interface Props {
   kind: Kind;
@@ -36,7 +50,7 @@ interface Props {
 
 export default function ContactsPage({ kind, query, save, remove }: Props) {
   const { label, title, eyebrow } = COPY[kind];
-  const Label = label[0].toUpperCase() + label.slice(1);
+  const Label = titleCase(label);
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
 

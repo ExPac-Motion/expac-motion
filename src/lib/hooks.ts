@@ -94,6 +94,62 @@ export function useDeleteAgent() {
   });
 }
 
+/* ---------- Transporters ---------- */
+export function useTransporters() {
+  return useQuery({
+    queryKey: ["transporters"],
+    queryFn: db.listTransporters,
+  });
+}
+export function useSaveTransporter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id?: string;
+      values: Omit<Contact, "id" | "created_at">;
+    }) =>
+      input.id
+        ? db.updateTransporter(input.id, input.values)
+        : db.createTransporter(input.values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transporters"] }),
+  });
+}
+export function useDeleteTransporter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteTransporter,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transporters"] }),
+  });
+}
+
+/* ---------- Clearing agents ---------- */
+export function useClearingAgents() {
+  return useQuery({
+    queryKey: ["clearing_agents"],
+    queryFn: db.listClearingAgents,
+  });
+}
+export function useSaveClearingAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id?: string;
+      values: Omit<Contact, "id" | "created_at">;
+    }) =>
+      input.id
+        ? db.updateClearingAgent(input.id, input.values)
+        : db.createClearingAgent(input.values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clearing_agents"] }),
+  });
+}
+export function useDeleteClearingAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteClearingAgent,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clearing_agents"] }),
+  });
+}
+
 /* ---------- Quotes ---------- */
 export function useQuotes() {
   return useQuery({ queryKey: ["quotes"], queryFn: db.listQuotes });
