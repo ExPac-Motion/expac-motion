@@ -737,6 +737,32 @@ tr.clickable:hover {
 .modal--wide {
   max-width: min(1400px, 94vw);
 }
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+/* Sticky-header variant: title row + sub-row stay pinned while the body scrolls. */
+.modal--stickyhead {
+  padding: 0;
+}
+.modal--stickyhead .modal-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+  padding: 20px 26px 12px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 18px 18px 0 0;
+}
+.modal--stickyhead .modal-head {
+  margin-bottom: 0;
+}
+.modal--stickyhead .modal-body {
+  padding: 16px 26px 26px;
+}
 .modal-head {
   display: flex;
   justify-content: space-between;

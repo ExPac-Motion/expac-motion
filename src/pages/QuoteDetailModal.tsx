@@ -77,7 +77,8 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
       title={q.reference}
       onClose={onClose}
       wide
-      footer={
+      stickyHeader
+      headerActions={
         <>
           <button className="btn outline" onClick={onClose}>
             Close
@@ -112,12 +113,13 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
           )}
         </>
       }
+      belowHeader={
+        <p className="muted" style={{ margin: "6px 0 0" }}>
+          {q.mode}: {q.origin || "—"} → {q.destination || "—"}
+        </p>
+      }
     >
-      <p className="muted" style={{ marginTop: -8 }}>
-        {q.mode}: {q.origin || "—"} → {q.destination || "—"}
-      </p>
-
-      <div className="grid4" style={{ margin: "14px 0" }}>
+      <div className="grid4" style={{ margin: "4px 0 14px" }}>
         <Field label="Customer/Importer" value={q.client?.company ?? "—"} />
         <Field label="Shipper/Exporter" value={q.supplier?.company ?? "—"} />
         <Field label="Agent (internal)" value={q.agent?.company ?? "—"} />
