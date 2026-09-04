@@ -284,6 +284,8 @@ export interface Job {
   shipment_status: string | null;
   notes: string | null;
   awb_mbl: string | null;
+  /** Ocean container number (air jobs track on awb_mbl). */
+  container_no: string | null;
   etd: string | null;
   eta: string | null;
   created_at: string;
@@ -312,6 +314,83 @@ export interface JobEvent {
   job_id: string;
   milestone: Milestone;
   note: string | null;
+  created_at: string;
+}
+
+/* ---------- Operations Control Tower ---------- */
+
+export type OpsTaskKind = "task" | "note";
+export type OpsTaskStatus = "open" | "doing" | "done";
+export type OpsTaskPriority = "low" | "normal" | "high";
+
+export const OPS_TASK_STATUSES: OpsTaskStatus[] = ["open", "doing", "done"];
+export const OPS_TASK_PRIORITIES: OpsTaskPriority[] = ["low", "normal", "high"];
+
+export interface OpsTask {
+  id: string;
+  kind: OpsTaskKind;
+  title: string;
+  body: string | null;
+  status: OpsTaskStatus;
+  priority: OpsTaskPriority;
+  due_date: string | null;
+  job_id: string | null;
+  quote_id: string | null;
+  client_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  done_at: string | null;
+  /** Joined for display. */
+  job?: Pick<Job, "id" | "reference"> | null;
+  quote?: Pick<Quote, "id" | "reference"> | null;
+  client?: Pick<Client, "id" | "company"> | null;
+}
+
+export type OpsTaskPatch = Partial<
+  Pick<
+    OpsTask,
+    | "kind"
+    | "title"
+    | "body"
+    | "status"
+    | "priority"
+    | "due_date"
+    | "job_id"
+    | "quote_id"
+    | "client_id"
+    | "done_at"
+  >
+>;
+
+/** One normalised movement/event on a shipment's timeline. */
+export interface TrackingMovement {
+  code: string;
+  description: string | null;
+  date: string | null;
+  location: string | null;
+  vessel: string | null;
+  voyage: string | null;
+  done: boolean;
+}
+
+/** Cached ShipsGo pull for a job (row in job_tracking). */
+export interface JobTracking {
+  id: string;
+  job_id: string;
+  ref_type: "ocean" | "air" | null;
+  ref_value: string | null;
+  carrier: string | null;
+  shipsgo_id: string | null;
+  status: string | null;
+  pol: string | null;
+  pod: string | null;
+  etd: string | null;
+  eta: string | null;
+  last_event: string | null;
+  movements: TrackingMovement[];
+  raw: unknown;
+  synced_at: string | null;
   created_at: string;
 }
 

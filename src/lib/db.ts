@@ -7,7 +7,10 @@ import type {
   ImportVatDuty,
   Job,
   JobPatch,
+  JobTracking,
   Milestone,
+  OpsTask,
+  OpsTaskPatch,
   Quote,
   QuoteDraft,
   Supplier,
@@ -386,5 +389,63 @@ export async function setJobMilestone(
       p_milestone: milestone,
       p_note: note ?? null,
     }),
+  );
+}
+
+/* ---------- Operations Control Tower: Tasks & Notes ---------- */
+const OPS_TASK_SELECT =
+  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company)";
+
+export async function listOpsTasks(): Promise<OpsTask[]> {
+  return unwrap<OpsTask[]>(
+    await supabase
+      .from("ops_tasks")
+      .select(OPS_TASK_SELECT)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function createOpsTask(
+  input: OpsTaskPatch & { title: string },
+): Promise<OpsTask> {
+  return unwrap<OpsTask>(
+    await supabase.from("ops_tasks").insert(input).select(OPS_TASK_SELECT).single(),
+  );
+}
+
+export async function updateOpsTask(
+  id: string,
+  patch: OpsTaskPatch,
+): Promise<OpsTask> {
+  return unwrap<OpsTask>(
+    await supabase
+      .from("ops_tasks")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select(OPS_TASK_SELECT)
+      .single(),
+  );
+}
+
+export async function deleteOpsTask(id: string): Promise<void> {
+  unwrap(await supabase.from("ops_tasks").delete().eq("id", id));
+}
+
+/* ---------- Operations Control Tower: Live Tracking ---------- */
+export async function listJobTracking(): Promise<JobTracking[]> {
+  return unwrap<JobTracking[]>(
+    await supabase.from("job_tracking").select("*"),
+  );
+}
+
+export async function upsertJobTracking(
+  row: Partial<JobTracking> & { job_id: string },
+): Promise<JobTracking> {
+  return unwrap<JobTracking>(
+    await supabase
+      .from("job_tracking")
+      .upsert(row, { onConflict: "job_id" })
+      .select("*")
+      .single(),
   );
 }

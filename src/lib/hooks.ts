@@ -8,11 +8,14 @@ import type {
   Client,
   Contact,
   ImportDutyDraft,
+  Job,
   JobPatch,
   Milestone,
+  OpsTaskPatch,
   QuoteDraft,
   Supplier,
 } from "./types";
+import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -223,6 +226,49 @@ export function useAddCustomsLineToQuote() {
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["quotes", input.quoteId] });
     },
+  });
+}
+
+/* ---------- Ops Control Tower: Tasks & Notes ---------- */
+export function useOpsTasks() {
+  return useQuery({ queryKey: ["ops_tasks"], queryFn: db.listOpsTasks });
+}
+export function useSaveOpsTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; values: OpsTaskPatch & { title?: string } }) =>
+      input.id
+        ? db.updateOpsTask(input.id, input.values)
+        : db.createOpsTask(
+            input.values as OpsTaskPatch & { title: string },
+          ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ops_tasks"] }),
+  });
+}
+export function useDeleteOpsTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteOpsTask,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ops_tasks"] }),
+  });
+}
+
+/* ---------- Ops Control Tower: Live Tracking ---------- */
+export function useJobTracking() {
+  return useQuery({ queryKey: ["job_tracking"], queryFn: db.listJobTracking });
+}
+export function useRefreshTracking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { job: Job; shipsgoId: string | null }) => {
+      const ref = trackableRef(input.job);
+      if (!ref) throw new Error("This job has no AWB / MBL / container number.");
+      const normalised = await fetchTracking(ref, input.shipsgoId);
+      return db.upsertJobTracking(
+        trackingRowFrom(input.job.id, ref, normalised),
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["job_tracking"] }),
   });
 }
 

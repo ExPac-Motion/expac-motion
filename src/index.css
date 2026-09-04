@@ -1824,6 +1824,514 @@ tr.clickable:hover {
   font-size: 1.05rem;
 }
 
+/* ===== Operations Control Tower ===== */
+.ct-band {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ct-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px 6px 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.ct-chip:hover {
+  border-color: var(--green);
+}
+.ct-chip.alert {
+  border-color: #f0c9c4;
+}
+.ct-chip-n {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #eef4e3;
+  color: var(--green-dark);
+  font-family: var(--display);
+  font-weight: 800;
+}
+.ct-chip.alert .ct-chip-n {
+  background: #fdecea;
+  color: #b3261e;
+}
+.ct-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ct-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 10px 14px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ct-tab:hover {
+  color: var(--ink);
+}
+.ct-tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--green);
+}
+
+/* --- Tasks & Notes --- */
+.ct-quickadd {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.ct-quickadd select {
+  border: 1px solid #d8d9d4;
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: #fafaf7;
+}
+.ct-quickadd input {
+  flex: 1;
+  min-width: 200px;
+  border: 1px solid #d8d9d4;
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: #fafaf7;
+}
+.ct-taskbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ct-taskbar .chips {
+  align-items: center;
+}
+.ct-search {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  min-width: 120px;
+}
+.chip.sm {
+  padding: 2px 10px;
+  font-size: 0.72rem;
+}
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.task-row:last-child {
+  border-bottom: 0;
+}
+.task-row.done .task-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.task-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 2px solid #c3c8bf;
+  background: #fff;
+  flex: none;
+  cursor: pointer;
+  padding: 0;
+}
+.task-check.is-doing {
+  border-color: var(--green);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--green),
+    var(--green) 3px,
+    #fff 3px,
+    #fff 6px
+  );
+}
+.task-check.is-done {
+  border-color: var(--green-dark);
+  background: var(--green-dark);
+}
+.task-check.is-note {
+  border-radius: 999px;
+  border-style: dotted;
+  cursor: default;
+}
+.prio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+  background: #c3c8bf;
+}
+.prio-dot.normal {
+  background: var(--green);
+}
+.prio-dot.high {
+  background: #d9534f;
+}
+.task-title {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+.task-body {
+  color: var(--muted);
+}
+.due-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef1ec;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.due-badge.over {
+  background: #fdecea;
+  color: #b3261e;
+}
+
+/* --- Calendar --- */
+.cal-toolbar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.cal-nav {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.cal-nav strong {
+  font-family: var(--display);
+  min-width: 150px;
+  text-align: center;
+}
+.cal-wrap {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.cal-grid {
+  flex: 1;
+  min-width: 560px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-dow {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4px 6px;
+}
+.cal-cell {
+  min-height: 92px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.cal-cell.dim {
+  background: #faf9f5;
+  color: var(--muted);
+}
+.cal-cell.today {
+  border-color: var(--green);
+}
+.cal-cell.sel {
+  box-shadow: 0 0 0 2px var(--green) inset;
+}
+.cal-daynum {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.cal-ev {
+  font-size: 0.66rem;
+  padding: 1px 5px;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #eef1ec;
+}
+.cal-more {
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+.cal-ev.k-etd,
+.cal-tag.k-etd {
+  background: #fff4e0;
+  color: #b9791b;
+}
+.cal-ev.k-eta,
+.cal-tag.k-eta,
+.cal-ev.k-track-eta,
+.cal-tag.k-track-eta {
+  background: #e6f3d9;
+  color: var(--green-dark);
+}
+.cal-ev.k-task,
+.cal-tag.k-task {
+  background: #e6eef7;
+  color: #1d5ba8;
+}
+.cal-ev.k-note,
+.cal-tag.k-note {
+  background: #eee;
+  color: #555;
+}
+.cal-ev.k-quote-expiry,
+.cal-tag.k-quote-expiry {
+  background: #fdecea;
+  color: #b3261e;
+}
+.cal-daypanel {
+  width: 320px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+.cal-daylist,
+.cal-agenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cal-daylist li,
+.cal-agrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.cal-agrow {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cal-agdate {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.76rem;
+  min-width: 92px;
+}
+.cal-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.cal-daylink {
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+
+/* --- Live Tracking --- */
+.trk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.trk-table th {
+  text-align: left;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.trk-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.ref-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #eef1ec;
+  color: var(--ink);
+}
+.ms-tag.tone-alert {
+  background: #fdecea;
+  color: #b3261e;
+}
+.ms-tag.tone-mid {
+  background: #fff4e0;
+  color: #b9791b;
+}
+.ms-tag.tone-done {
+  background: #e6f3d9;
+  color: var(--green-dark);
+}
+.ms-tag.tone-start {
+  background: #eef1ec;
+  color: var(--ink);
+}
+.eta-slip {
+  color: #b3261e;
+  font-weight: 700;
+}
+.trk-detail {
+  background: #faf9f5;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 4px 0;
+}
+.trk-detail-head {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+}
+.trk-detail-head b {
+  color: var(--muted);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.trk-route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.trk-port {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.trk-line {
+  flex: 1;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--green-dark));
+}
+.trk-timeline {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  border-left: 2px solid var(--line);
+}
+.trk-timeline li {
+  display: grid;
+  grid-template-columns: 64px 96px 1fr 20px;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 0 6px 12px;
+  position: relative;
+}
+.trk-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid #c3c8bf;
+}
+.trk-timeline li.done::before {
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+}
+.trk-code {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.74rem;
+}
+.trk-when {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.trk-tick {
+  text-align: right;
+  color: var(--green-dark);
+}
+.trk-nonum {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.trk-nonum ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .cal-grid {
+    min-width: 640px;
+  }
+  .cal-wrap {
+    overflow-x: auto;
+  }
+  .cal-daypanel {
+    width: 100%;
+  }
+}
+
 @media print {
   /* Isolate the quotation: hide the app chrome AND anything a browser
      extension (Apollo, Grammarly, …) injected at the <body> level. */

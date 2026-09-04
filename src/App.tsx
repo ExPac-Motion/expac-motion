@@ -13,6 +13,7 @@ import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
+import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
 import CompletedJobsPage from "./pages/CompletedJobsPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -75,6 +76,7 @@ export default function App() {
           </Route>
           <Route element={<Protected />}>
             <Route index element={<DashboardPage />} />
+            <Route path="ops" element={<OpsControlTowerPage />} />
             <Route path="quotes" element={<QuotesListPage />} />
             <Route path="import-vat-duty" element={<ImportVatDutyPage />} />
             <Route path="quotes/new" element={<QuoteBuilderPage />} />
