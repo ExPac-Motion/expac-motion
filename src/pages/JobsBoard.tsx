@@ -12,6 +12,7 @@ import {
   type Job,
   type JobPatch,
 } from "../lib/types";
+import CommsDrawer from "./shipments/CommsDrawer";
 
 /** "AWB" for air/courier, "MBL" for sea, "Ref" otherwise. */
 function docLabel(mode: string): string {
@@ -31,9 +32,11 @@ function codeOf(s: string | null | undefined): string {
 function JobRow({
   job,
   onSave,
+  onOpenComms,
 }: {
   job: Job;
   onSave: (id: string, patch: JobPatch) => void;
+  onOpenComms: (job: Job) => void;
 }) {
   // Row owns its edit state; seeded once from the job. Each field saves to the
   // server on blur / change, so a refetch never has to clobber what's typed.
@@ -42,6 +45,10 @@ function JobRow({
     shipment_status: job.shipment_status ?? "",
     notes: job.notes ?? "",
     awb_mbl: job.awb_mbl ?? "",
+    container_no: job.container_no ?? "",
+    shipping_line: job.shipping_line ?? "",
+    vessel_name: job.vessel_name ?? "",
+    provisional_delivery_date: job.provisional_delivery_date ?? "",
     etd: job.etd ?? "",
     eta: job.eta ?? "",
     origin: codeOf(job.origin),
@@ -121,6 +128,41 @@ function JobRow({
       </td>
       <td>
         <input
+          value={row.container_no ?? ""}
+          onChange={(e) => set("container_no", e.target.value)}
+          onBlur={() => commit("container_no", job.container_no ?? "")}
+          placeholder="Container"
+        />
+      </td>
+      <td>
+        <input
+          value={row.shipping_line ?? ""}
+          onChange={(e) => set("shipping_line", e.target.value)}
+          onBlur={() => commit("shipping_line", job.shipping_line ?? "")}
+          placeholder="Shipping line"
+        />
+      </td>
+      <td>
+        <input
+          value={row.vessel_name ?? ""}
+          onChange={(e) => set("vessel_name", e.target.value)}
+          onBlur={() => commit("vessel_name", job.vessel_name ?? "")}
+          placeholder="Vessel"
+        />
+      </td>
+      <td>
+        <input
+          type="date"
+          value={row.provisional_delivery_date ?? ""}
+          onChange={(e) => {
+            set("provisional_delivery_date", e.target.value);
+            onSave(job.id, { provisional_delivery_date: e.target.value });
+          }}
+          title="Provisional delivery date"
+        />
+      </td>
+      <td>
+        <input
           type="date"
           value={row.etd ?? ""}
           onChange={(e) => {
@@ -156,6 +198,15 @@ function JobRow({
           onBlur={() => commitPort("destination")}
           placeholder="POD"
         />
+      </td>
+      <td>
+        <button
+          className="btn ghost small"
+          onClick={() => onOpenComms(job)}
+          title="Messages / email the customer"
+        >
+          ✉ Messages
+        </button>
       </td>
     </tr>
   );
@@ -214,6 +265,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const updateJob = useUpdateJob();
   const { toast, error: toastError } = useToast();
   const [modeTab, setModeTab] = useState<ModeTab>("All");
+  const [commsJob, setCommsJob] = useState<Job | null>(null);
 
   const stageRows = (jobs ?? []).filter((j) =>
     mode === "completed"
@@ -310,21 +362,35 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>Shipment Status</th>
                   <th>Additional Notes</th>
                   <th>AWB/MBL No</th>
+                  <th>Container No</th>
+                  <th>Shipping Line</th>
+                  <th>Vessel Name</th>
+                  <th>Prov. Delivery</th>
                   <th>ETD</th>
                   <th>ETA</th>
                   <th>POL</th>
                   <th>POD</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((j) => (
-                  <JobRow key={j.id} job={j} onSave={save} />
+                  <JobRow
+                    key={j.id}
+                    job={j}
+                    onSave={save}
+                    onOpenComms={setCommsJob}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {commsJob && (
+        <CommsDrawer job={commsJob} onClose={() => setCommsJob(null)} />
+      )}
     </>
   );
 }

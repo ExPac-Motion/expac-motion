@@ -16,6 +16,8 @@ import type {
   Supplier,
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
+import { buildShipmentEmail } from "./mailTemplates";
+import { sendMail } from "./mail";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -269,6 +271,88 @@ export function useRefreshTracking() {
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["job_tracking"] }),
+  });
+}
+
+/* ---------- Shipment Comms ---------- */
+export function useMessages(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["messages", jobId],
+    queryFn: () => db.listMessages(jobId as string),
+    enabled: Boolean(jobId),
+  });
+}
+
+export function useSendMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      job: Job;
+      remarks: string;
+      to: string[];
+      cc: string[];
+    }) => {
+      const { job, remarks, to, cc } = input;
+      const mail = buildShipmentEmail(job, undefined, remarks);
+      try {
+        const { id } = await sendMail({
+          jobId: job.id,
+          to,
+          cc,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+        });
+        return db.createMessage({
+          job_id: job.id,
+          kind: "email",
+          direction: "out",
+          to_emails: to,
+          cc_emails: cc,
+          subject: mail.subject,
+          body: mail.text,
+          remarks,
+          status: "sent",
+          provider_id: id,
+          sent_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        // Still record the attempt so the thread shows it failed.
+        await db.createMessage({
+          job_id: job.id,
+          kind: "email",
+          direction: "out",
+          to_emails: to,
+          cc_emails: cc,
+          subject: mail.subject,
+          body: mail.text,
+          remarks,
+          status: "failed",
+          error: e instanceof Error ? e.message : String(e),
+        });
+        throw e;
+      }
+    },
+    onSuccess: (_m, input) =>
+      qc.invalidateQueries({ queryKey: ["messages", input.job.id] }),
+    onError: (_e, input) =>
+      qc.invalidateQueries({ queryKey: ["messages", input.job.id] }),
+  });
+}
+
+export function useAddNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { jobId: string; body: string }) =>
+      db.createMessage({
+        job_id: input.jobId,
+        kind: "note",
+        direction: "out",
+        body: input.body,
+        status: "sent",
+      }),
+    onSuccess: (_m, input) =>
+      qc.invalidateQueries({ queryKey: ["messages", input.jobId] }),
   });
 }
 

@@ -404,7 +404,7 @@ tr.clickable:hover {
 
 /* ---------- Active Jobs: inline-editable grid ---------- */
 .jobs-table {
-  min-width: 1180px;
+  min-width: 1560px;
   font-size: 12px;
 }
 /* One text size across the board: headers match the cell content. */
@@ -2393,6 +2393,156 @@ tr.clickable:hover {
   .cal-daypanel {
     width: 100%;
   }
+}
+
+/* ===== Shipment comms drawer ===== */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(32, 36, 38, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 60;
+}
+.drawer {
+  width: 460px;
+  max-width: 94vw;
+  height: 100%;
+  background: var(--white);
+  box-shadow: -12px 0 40px rgba(32, 36, 38, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: drawer-in 0.18s ease;
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0.4;
+  }
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 10px;
+}
+.drawer-title {
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+.drawer-subhead {
+  padding: 0 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.drawer .x {
+  background: none;
+  border: 0;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 24px;
+}
+.comms-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.comms-compose {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.comms-compose .field {
+  margin-bottom: 10px;
+}
+.comms-recipients {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+}
+.comms-recipients .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.msg-preview {
+  background: #faf9f5;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--body);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  margin: 8px 0 0;
+  max-height: 260px;
+  overflow: auto;
+}
+.msg-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msg {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+.msg.note {
+  background: #faf9f5;
+  border-style: dashed;
+}
+.msg.in {
+  border-left: 3px solid var(--green);
+}
+.msg-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+.msg-kind {
+  font-family: var(--display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.msg-when {
+  margin-left: auto;
+  color: var(--muted);
+}
+.msg-subject {
+  font-weight: 700;
+  margin: 4px 0 2px;
+}
+.msg-err {
+  color: #b3261e;
+  font-size: 0.76rem;
+  margin: 2px 0;
+}
+.msg-body {
+  font-family: var(--body);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  margin: 6px 0 0;
+  max-height: 180px;
+  overflow: auto;
+}
+.msg-foot {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+.msg-foot .link-btn {
+  font-size: 0.74rem;
 }
 
 @media print {

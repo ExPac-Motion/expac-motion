@@ -8,6 +8,8 @@ import type {
   Job,
   JobPatch,
   JobTracking,
+  Message,
+  MessagePatch,
   Milestone,
   OpsTask,
   OpsTaskPatch,
@@ -352,7 +354,7 @@ export async function acceptQuote(quoteId: string): Promise<string> {
 
 /* ---------- Jobs ---------- */
 const JOB_SELECT =
-  "*, client:clients(id,company), supplier:suppliers(id,company), job_events(*)";
+  "*, client:clients(id,company,email), supplier:suppliers(id,company,email), job_events(*)";
 
 export async function listJobs(): Promise<Job[]> {
   const rows = unwrap<Job[]>(
@@ -447,5 +449,33 @@ export async function upsertJobTracking(
       .upsert(row, { onConflict: "job_id" })
       .select("*")
       .single(),
+  );
+}
+
+/* ---------- Shipment Comms (messages) ---------- */
+export async function listMessages(jobId: string): Promise<Message[]> {
+  return unwrap<Message[]>(
+    await supabase
+      .from("messages")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function createMessage(
+  row: Partial<Message> & { job_id: string; kind: Message["kind"] },
+): Promise<Message> {
+  return unwrap<Message>(
+    await supabase.from("messages").insert(row).select("*").single(),
+  );
+}
+
+export async function updateMessage(
+  id: string,
+  patch: MessagePatch,
+): Promise<Message> {
+  return unwrap<Message>(
+    await supabase.from("messages").update(patch).eq("id", id).select("*").single(),
   );
 }

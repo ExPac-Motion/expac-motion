@@ -286,11 +286,15 @@ export interface Job {
   awb_mbl: string | null;
   /** Ocean container number (air jobs track on awb_mbl). */
   container_no: string | null;
+  /** Sea Freight details for the customer update email; persist on the board. */
+  shipping_line: string | null;
+  vessel_name: string | null;
+  provisional_delivery_date: string | null;
   etd: string | null;
   eta: string | null;
   created_at: string;
-  client?: Pick<Client, "id" | "company"> | null;
-  supplier?: Pick<Supplier, "id" | "company"> | null;
+  client?: (Pick<Client, "id" | "company"> & { email?: string | null }) | null;
+  supplier?: (Pick<Supplier, "id" | "company"> & { email?: string | null }) | null;
   job_events?: JobEvent[];
 }
 
@@ -316,11 +320,50 @@ export type JobPatch = Partial<
     | "shipment_status"
     | "notes"
     | "awb_mbl"
+    | "container_no"
+    | "shipping_line"
+    | "vessel_name"
+    | "provisional_delivery_date"
     | "etd"
     | "eta"
     | "origin"
     | "destination"
   >
+>;
+
+/* ---------- Shipment Comms (messages) ---------- */
+
+export type MessageKind = "email" | "note";
+export type MessageStatus =
+  | "draft"
+  | "sent"
+  | "failed"
+  | "delivered"
+  | "opened"
+  | "bounced";
+
+export interface Message {
+  id: string;
+  job_id: string;
+  kind: MessageKind;
+  direction: "out" | "in";
+  to_emails: string[];
+  cc_emails: string[];
+  from_email: string | null;
+  subject: string | null;
+  body: string;
+  remarks: string | null;
+  status: MessageStatus;
+  provider_id: string | null;
+  error: string | null;
+  meta: unknown;
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+
+export type MessagePatch = Partial<
+  Pick<Message, "status" | "provider_id" | "error" | "sent_at">
 >;
 
 export interface JobEvent {
