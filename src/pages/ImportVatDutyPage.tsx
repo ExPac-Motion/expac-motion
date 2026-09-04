@@ -15,6 +15,7 @@ import {
   importDutyTotals,
   newImportDutyLine,
 } from "../lib/importDuty";
+import { fetchZarRates } from "../lib/fx";
 import { money } from "../lib/format";
 import type {
   ImportDutyDraft,
@@ -70,6 +71,8 @@ export default function ImportVatDutyPage() {
   const [draft, setDraft] = useState<ImportDutyDraft | null>(null);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [roeLoading, setRoeLoading] = useState(false);
+  const [roeAsOf, setRoeAsOf] = useState("");
 
   const ivdQ = useImportVatDuty(quoteId || undefined);
 
@@ -121,6 +124,37 @@ export default function ImportVatDutyPage() {
   }
   function removeLine(index: number) {
     edit((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== index) }));
+  }
+
+  // Fill every line's ROE from a single live-rate fetch, keyed on its currency.
+  async function getLiveRoe() {
+    if (!draft) return;
+    setRoeLoading(true);
+    try {
+      const { rate, asOf } = await fetchZarRates();
+      const missing: string[] = [];
+      edit((d) => ({
+        ...d,
+        lines: d.lines.map((l) => {
+          const r = rate(l.cur);
+          if (!r) {
+            if (l.cur && !missing.includes(l.cur)) missing.push(l.cur);
+            return l;
+          }
+          return { ...l, roe: Number(r.toFixed(4)) };
+        }),
+      }));
+      setRoeAsOf(asOf);
+      toast(
+        missing.length
+          ? `Live ROE applied — no rate for ${missing.join(", ")}`
+          : "Live ROE applied",
+      );
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not fetch live rates");
+    } finally {
+      setRoeLoading(false);
+    }
   }
 
   async function onSave(): Promise<boolean> {
@@ -253,11 +287,22 @@ export default function ImportVatDutyPage() {
                   ROE. Customs value = Local + {n2(draft.vat_uplift_pct)}%. Duty =
                   Customs value × Duty rate. Taxable value = Customs value + Duty.
                   Import VAT = Taxable value × {n2(draft.vat_rate_pct)}%.
+                  {roeAsOf && ` Live ROE as at ${roeAsOf}.`}
                 </p>
               </div>
-              <button className="btn small outline" onClick={addLine}>
-                + Add line
-              </button>
+              <div className="row-actions" style={{ alignItems: "center" }}>
+                <button
+                  type="button"
+                  className="btn small outline"
+                  onClick={getLiveRoe}
+                  disabled={roeLoading}
+                >
+                  {roeLoading ? "Fetching…" : "Get live ROE"}
+                </button>
+                <button className="btn small outline" onClick={addLine}>
+                  + Add line
+                </button>
+              </div>
             </div>
 
             <div className="table-wrap">
