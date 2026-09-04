@@ -47,7 +47,7 @@ function JobRow({
     awb_mbl: job.awb_mbl ?? "",
     container_no: job.container_no ?? "",
     shipping_line: job.shipping_line ?? "",
-    vessel_name: job.vessel_name ?? "",
+    carrier_name: job.carrier_name ?? "",
     provisional_delivery_date: job.provisional_delivery_date ?? "",
     etd: job.etd ?? "",
     eta: job.eta ?? "",
@@ -154,10 +154,10 @@ function JobRow({
       </td>
       <td>
         <input
-          value={row.vessel_name ?? ""}
-          onChange={(e) => set("vessel_name", e.target.value)}
-          onBlur={() => commit("vessel_name", job.vessel_name ?? "")}
-          placeholder="Vessel"
+          value={row.carrier_name ?? ""}
+          onChange={(e) => set("carrier_name", e.target.value)}
+          onBlur={() => commit("carrier_name", job.carrier_name ?? "")}
+          placeholder="Carrier/Airline"
         />
       </td>
       <td>
@@ -373,7 +373,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>AWB/MBL No</th>
                   <th>Container No</th>
                   <th>Shipping Line</th>
-                  <th>Vessel Name</th>
+                  <th>Carrier/Airline</th>
                   <th>Prov. Delivery</th>
                   <th>ETD</th>
                   <th>ETA</th>

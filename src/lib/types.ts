@@ -290,6 +290,8 @@ export interface Job {
   shipping_line: string | null;
   vessel_name: string | null;
   provisional_delivery_date: string | null;
+  /** Carrier / airline name, seeded from the quote; shown on the board. */
+  carrier_name: string | null;
   etd: string | null;
   eta: string | null;
   created_at: string;
@@ -323,6 +325,7 @@ export type JobPatch = Partial<
     | "container_no"
     | "shipping_line"
     | "vessel_name"
+    | "carrier_name"
     | "provisional_delivery_date"
     | "etd"
     | "eta"
