@@ -221,6 +221,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       qty: Number(r.qty) || 0,
       buy: Number(r.buy) || 0,
       margin: Number(r.margin) || 0,
+      vat_pct: Number(r.vat_pct) || 0,
       sell: Number(r.sell) || 0,
     };
   });

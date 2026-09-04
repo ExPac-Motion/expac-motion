@@ -78,6 +78,7 @@ function newLine(category: ChargeCategory, position: number): QuoteLine {
     qty: 1,
     buy: 0,
     margin: 0,
+    vat_pct: 0,
     sell: 0,
   };
 }
@@ -191,6 +192,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
         qty: l.qty ?? 0,
         buy,
         margin,
+        vat_pct: l.vat_pct ?? 0,
         sell: sellFromBuy(buy, margin, cur, fx),
       };
     }),
@@ -1022,6 +1024,7 @@ export default function QuoteBuilderPage() {
                       <th className="num">Qty</th>
                       <th className="num">Buy ($)</th>
                       <th className="num">Margin (%)</th>
+                      <th className="num">VAT (%)</th>
                       <th className="num">Sell ($)</th>
                       <th className="num">Sell (R)</th>
                       <th className="num">Line total (R)</th>
@@ -1156,6 +1159,15 @@ export default function QuoteBuilderPage() {
                         <td className="num">
                           <input
                             type="number"
+                            step="any"
+                            value={String(l.vat_pct ?? "")}
+                            onChange={(e) => setLine(i, "vat_pct", e.target.value)}
+                            title="VAT % on this line's ZAR total (0 = zero-rated)"
+                          />
+                        </td>
+                        <td className="num">
+                          <input
+                            type="number"
                             readOnly
                             value={sellInCur(l.buy, l.margin).toFixed(2)}
                             title={`Buy + margin, in ${l.cur} (before ZAR conversion)`}
@@ -1196,6 +1208,12 @@ export default function QuoteBuilderPage() {
             {g.lines.length > 0 && (
               <div className="charge-group-subtotal">
                 Section subtotal:&nbsp;<strong>{money(g.subtotal)}</strong>
+                {g.vat > 0 && (
+                  <>
+                    &nbsp;·&nbsp;VAT:&nbsp;<strong>{money(g.vat)}</strong>
+                    &nbsp;·&nbsp;Incl. VAT:&nbsp;<strong>{money(g.subtotalIncl)}</strong>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1215,9 +1233,17 @@ export default function QuoteBuilderPage() {
             <div className="val">{totals.margin.toFixed(1)}%</div>
           </div>
           <div className="t">
-            <div className="label">Customer total</div>
+            <div className="label">Customer total (excl. VAT)</div>
+            <div className="val">{money(totals.sell)}</div>
+          </div>
+          <div className="t">
+            <div className="label">VAT</div>
+            <div className="val">{money(totals.vat)}</div>
+          </div>
+          <div className="t">
+            <div className="label">Customer total (incl. VAT)</div>
             <div className="val" style={{ color: "var(--green-dark)" }}>
-              {money(totals.sell)}
+              {money(totals.sellIncl)}
             </div>
           </div>
         </div>

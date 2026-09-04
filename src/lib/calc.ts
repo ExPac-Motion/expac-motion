@@ -15,13 +15,20 @@ export function insuranceAmount(commercialValue: number | string): number {
   return (Number(commercialValue) || 0) * INSURANCE_RATE;
 }
 
+/** South African standard VAT rate (%). Per-line vat_pct defaults to 0. */
+export const VAT_RATE = 15;
+
 export interface ChargeTotals {
   /** Internal buy cost, converted to ZAR using the quote's FX rates. */
   cost: number;
-  /** Client-facing sell total, always ZAR. */
+  /** Client-facing sell total, always ZAR (VAT-exclusive). */
   sell: number;
   gp: number;
   margin: number;
+  /** VAT on the sell total, always ZAR (sum of per-line VAT). */
+  vat: number;
+  /** Client-facing sell total including VAT, always ZAR. */
+  sellIncl: number;
 }
 
 export interface FxRates {
@@ -78,9 +85,24 @@ export function impliedMargin(
   return (s / (b * rate) - 1) * 100;
 }
 
-/** ZAR line total the client sees: qty x sell. */
+/** ZAR line total the client sees, VAT-exclusive: qty x sell. */
 export function lineTotal(l: QuoteLine): number {
   return (Number(l.qty) || 0) * (Number(l.sell) || 0);
+}
+
+/** VAT % applied to a line (0 when unset / zero-rated). */
+export function lineVatPct(l: Pick<QuoteLine, "vat_pct">): number {
+  return Number(l.vat_pct) || 0;
+}
+
+/** ZAR VAT amount on a line: lineTotal x vat_pct/100. */
+export function lineVat(l: QuoteLine): number {
+  return lineTotal(l) * (lineVatPct(l) / 100);
+}
+
+/** ZAR line total including VAT. */
+export function lineTotalIncl(l: QuoteLine): number {
+  return lineTotal(l) + lineVat(l);
 }
 
 /* ---------- Unit-driven quantity ---------- */
@@ -176,19 +198,26 @@ export function chargeTotals(
 ): ChargeTotals {
   let cost = 0;
   let sell = 0;
+  let vat = 0;
   (lines || []).forEach((l) => {
     cost += lineCostZar(l, fx);
     sell += lineTotal(l);
+    vat += lineVat(l);
   });
   const gp = sell - cost;
   const margin = sell > 0 ? (gp / sell) * 100 : 0;
-  return { cost, sell, gp, margin };
+  return { cost, sell, gp, margin, vat, sellIncl: sell + vat };
 }
 
 export interface CategoryGroup {
   category: ChargeCategory;
   lines: { line: QuoteLine; index: number }[];
+  /** VAT-exclusive section subtotal (ZAR). */
   subtotal: number;
+  /** VAT on the section (ZAR). */
+  vat: number;
+  /** Section subtotal including VAT (ZAR). */
+  subtotalIncl: number;
 }
 
 /* ---------- Packing list ---------- */
@@ -256,10 +285,14 @@ export function groupByCategory(lines: QuoteLine[]): CategoryGroup[] {
     const groupLines = lines
       .map((line, index) => ({ line, index }))
       .filter((x) => (x.line.category ?? CHARGE_CATEGORIES[0]) === category);
+    const subtotal = groupLines.reduce((s, x) => s + lineTotal(x.line), 0);
+    const vat = groupLines.reduce((s, x) => s + lineVat(x.line), 0);
     return {
       category,
       lines: groupLines,
-      subtotal: groupLines.reduce((s, x) => s + lineTotal(x.line), 0),
+      subtotal,
+      vat,
+      subtotalIncl: subtotal + vat,
     };
   });
 }

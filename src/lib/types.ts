@@ -181,6 +181,8 @@ export interface QuoteLine {
   buy: number | string;
   /** Markup % added to buy before converting to the ZAR sell rate. */
   margin: number | string;
+  /** VAT % charged on this line's ZAR total. 0 = no / zero-rated VAT. */
+  vat_pct: number | string;
   /** Computed: buy x (1 + margin/100) x fx(cur). Stored for list/report math. */
   sell: number | string;
 }

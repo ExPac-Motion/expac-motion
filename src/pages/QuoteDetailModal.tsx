@@ -8,6 +8,8 @@ import {
   fxOf,
   groupByCategory,
   lineTotal,
+  lineTotalIncl,
+  lineVatPct,
   packingRow,
   packingTotals,
   resolveLine,
@@ -246,9 +248,11 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                       <th style={{ textAlign: "right" }}>Qty</th>
                       <th style={{ textAlign: "right" }}>Buy</th>
                       <th style={{ textAlign: "right" }}>Margin %</th>
+                      <th style={{ textAlign: "right" }}>VAT %</th>
                       <th style={{ textAlign: "right" }}>Sell ($)</th>
                       <th style={{ textAlign: "right" }}>Sell (R)</th>
                       <th style={{ textAlign: "right" }}>Line total (R)</th>
+                      <th style={{ textAlign: "right" }}>Incl. VAT (R)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,22 +270,31 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                           {(Number(l.margin) || 0).toFixed(1)}%
                         </td>
                         <td style={{ textAlign: "right" }}>
+                          {lineVatPct(l).toFixed(1)}%
+                        </td>
+                        <td style={{ textAlign: "right" }}>
                           {l.cur} {sellInCur(l.buy, l.margin).toFixed(2)}
                         </td>
                         <td style={{ textAlign: "right" }}>{money(l.sell)}</td>
                         <td style={{ textAlign: "right", fontWeight: 700 }}>
                           {money(lineTotal(l))}
                         </td>
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                          {money(lineTotalIncl(l))}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={9} style={{ textAlign: "right" }} className="muted">
-                        Section subtotal
+                      <td colSpan={10} style={{ textAlign: "right" }} className="muted">
+                        Section subtotal{g.vat > 0 ? " (excl. VAT · incl. VAT)" : ""}
                       </td>
                       <td style={{ textAlign: "right", fontWeight: 700 }}>
                         {money(g.subtotal)}
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 700 }}>
+                        {money(g.subtotalIncl)}
                       </td>
                     </tr>
                   </tfoot>
@@ -304,7 +317,12 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         }}
       >
         <div>
-          <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>Total quotation</div>
+          <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>
+            Total quotation (incl. VAT)
+          </div>
+          <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>
+            Excl. VAT: {money(t.sell)} · VAT: {money(t.vat)}
+          </div>
           <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>
             Cost (ZAR): {money(t.cost)} · GP: {money(t.gp)} · Margin:{" "}
             {t.margin.toFixed(1)}%
@@ -322,7 +340,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
             color: "var(--green)",
           }}
         >
-          {money(t.sell)}
+          {money(t.sellIncl)}
         </div>
       </div>
     </Modal>

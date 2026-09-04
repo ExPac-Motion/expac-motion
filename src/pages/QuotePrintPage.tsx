@@ -5,6 +5,9 @@ import {
   fxOf,
   groupByCategory,
   lineTotal,
+  lineTotalIncl,
+  lineVat,
+  lineVatPct,
   packingRow,
   packingTotals,
   resolveLine,
@@ -63,15 +66,16 @@ export default function QuotePrintPage() {
 
   const clientRec = clients?.find((c) => c.id === q.client_id);
 
-  // Grand total (VAT is 0 until the per-line VAT field is added).
+  // Grand total. VAT is the sum of each line's qty x sell x vat_pct%.
   let exclusive = 0;
+  let vatTotal = 0;
   groups.forEach((g) =>
     g.lines.forEach((x) => {
       exclusive += lineTotal(x.line);
+      vatTotal += lineVat(x.line);
     }),
   );
   const discountTotal = 0;
-  const vatTotal = 0;
   const subTotal = exclusive + vatTotal;
   const grand = subTotal - discountTotal;
 
@@ -114,7 +118,7 @@ export default function QuotePrintPage() {
       </div>
       <div className="qs-note">
         Customer quotation. Sell prices are in ZAR — internal buy cost, margin and
-        FX are not shown. VAT is 0 until the per-line VAT field is added.
+        FX are not shown. VAT is charged per line at the rate set on the quotation.
       </div>
 
       <div className="qs-sheet">
@@ -308,9 +312,12 @@ export default function QuotePrintPage() {
           <tbody>
             {groups.map((g) => {
               let gEx = 0;
+              let gIncl = 0;
               const rows = g.lines.map(({ line: l }, i) => {
                 const ex = lineTotal(l);
+                const incl = lineTotalIncl(l);
                 gEx += ex;
+                gIncl += incl;
                 return (
                   <tr key={i}>
                     <td>
@@ -320,9 +327,9 @@ export default function QuotePrintPage() {
                     <td>{l.unit || "—"}</td>
                     <td className="n">{n2(l.qty)}</td>
                     <td className="n">{money(l.sell)}</td>
-                    <td className="n">0.00%</td>
+                    <td className="n">{n2(lineVatPct(l))}%</td>
                     <td className="n">{money(ex)}</td>
-                    <td className="n">{money(ex)}</td>
+                    <td className="n">{money(incl)}</td>
                   </tr>
                 );
               });
@@ -337,7 +344,7 @@ export default function QuotePrintPage() {
                       Subtotal
                     </td>
                     <td className="n">{money(gEx)}</td>
-                    <td className="n">{money(gEx)}</td>
+                    <td className="n">{money(gIncl)}</td>
                   </tr>
                 </Fragment>
               );
