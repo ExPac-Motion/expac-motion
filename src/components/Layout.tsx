@@ -5,7 +5,7 @@ const NAV = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/ops", label: "Control Tower", end: false },
   { to: "/quotes", label: "Quotations", end: false },
-  { to: "/import-vat-duty", label: "Import VAT / Duty", end: false },
+  { to: "/import-vat-duty", label: "Customs Charges", end: false },
   { to: "/jobs", label: "Active Jobs", end: true },
   { to: "/jobs/completed", label: "Completed Jobs", end: false },
   { to: "/clients", label: "Customers", end: false },
