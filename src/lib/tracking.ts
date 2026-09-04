@@ -86,8 +86,16 @@ export function etaSlipped(
 
 type Dict = Record<string, unknown>;
 const asDict = (v: unknown): Dict => (v && typeof v === "object" ? (v as Dict) : {});
-const str = (v: unknown): string | null =>
-  v === null || v === undefined || v === "" ? null : String(v);
+const str = (v: unknown): string | null => {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "object") {
+    // ShipsGo sometimes nests { name, code, scac, ... } — dig out a label.
+    const o = v as Record<string, unknown>;
+    const label = o.name ?? o.title ?? o.label ?? o.value ?? o.code ?? o.scac;
+    return label != null && label !== "" ? String(label) : null;
+  }
+  return String(v);
+};
 const pick = (o: Dict, ...keys: string[]): unknown => {
   for (const k of keys) if (o[k] !== undefined && o[k] !== null && o[k] !== "") return o[k];
   return undefined;
