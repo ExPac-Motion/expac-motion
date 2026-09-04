@@ -5,9 +5,17 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** Roomier dialog for dense content (e.g. the quotation detail view). */
+  wide?: boolean;
 }
 
-export default function Modal({ title, onClose, children, footer }: ModalProps) {
+export default function Modal({
+  title,
+  onClose,
+  children,
+  footer,
+  wide,
+}: ModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -18,7 +26,10 @@ export default function Modal({ title, onClose, children, footer }: ModalProps) 
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={wide ? "modal modal--wide" : "modal"}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-head">
           <h3>{title}</h3>
           <button className="x" onClick={onClose} aria-label="Close">

@@ -734,6 +734,9 @@ tr.clickable:hover {
   overflow: auto;
   padding: 26px;
 }
+.modal--wide {
+  max-width: 1040px;
+}
 .modal-head {
   display: flex;
   justify-content: space-between;

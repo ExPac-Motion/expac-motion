@@ -29,7 +29,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
 
   if (isLoading || !q) {
     return (
-      <Modal title="Quotation" onClose={onClose}>
+      <Modal title="Quotation" onClose={onClose} wide>
         <Loading />
       </Modal>
     );
@@ -76,6 +76,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
     <Modal
       title={q.reference}
       onClose={onClose}
+      wide
       footer={
         <>
           <button className="btn outline" onClick={onClose}>
