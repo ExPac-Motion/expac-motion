@@ -71,6 +71,16 @@ function JobRow({
 
   return (
     <tr>
+      <td>
+        <button
+          className="btn ghost small icon-only"
+          onClick={() => onOpenComms(job)}
+          title="Messages / email the customer"
+          aria-label="Messages"
+        >
+          ✉
+        </button>
+      </td>
       <td className="nowrap">{formatDate(job.created_at)}</td>
       <td className="nowrap">
         {job.quote_id ? (
@@ -198,15 +208,6 @@ function JobRow({
           onBlur={() => commitPort("destination")}
           placeholder="POD"
         />
-      </td>
-      <td>
-        <button
-          className="btn ghost small"
-          onClick={() => onOpenComms(job)}
-          title="Messages / email the customer"
-        >
-          ✉ Messages
-        </button>
       </td>
     </tr>
   );
@@ -360,6 +361,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             <table className="table--compact jobs-table">
               <thead>
                 <tr>
+                  <th />
                   <th>Created On</th>
                   <th>Shipment #</th>
                   <th>Shipper</th>
@@ -377,7 +379,6 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>ETA</th>
                   <th>POL</th>
                   <th>POD</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>

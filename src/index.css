@@ -287,6 +287,11 @@ textarea {
   padding: 6px 10px;
   font-size: 0.78rem;
 }
+.btn.icon-only {
+  padding: 4px 6px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
 /* Non-interactive status pill that keeps the .btn box (size/shape). */
 .btn.status {
   background: #eef4e3;
