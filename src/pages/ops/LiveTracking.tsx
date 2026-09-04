@@ -1,10 +1,16 @@
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import { useJobTracking, useJobs, useRefreshTracking } from "../../lib/hooks";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
-import { etaSlipped, trackableRef, trackingTone } from "../../lib/tracking";
+import {
+  etaSlipped,
+  shipsgoEmbedUrl,
+  trackableRef,
+  trackingTone,
+} from "../../lib/tracking";
 import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
 
 export default function LiveTracking() {
@@ -12,7 +18,7 @@ export default function LiveTracking() {
   const jobsQ = useJobs();
   const trackQ = useJobTracking();
   const refresh = useRefreshTracking();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [mapJob, setMapJob] = useState<Job | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const activeJobs = useMemo(
@@ -95,7 +101,8 @@ export default function LiveTracking() {
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
           Data is pulled from ShipsGo on demand. The live pull runs on the
-          deployed site; here in dev the last saved result is shown.
+          deployed site; here in dev the last saved result is shown. Click a row
+          for the live map.
         </p>
       </div>
 
@@ -127,59 +134,50 @@ export default function LiveTracking() {
                   const status = t?.status ?? j.shipment_status ?? "—";
                   const eta = t?.eta ?? j.eta;
                   const slipped = etaSlipped(j.eta, t?.eta);
-                  const open = openId === j.id;
                   return (
-                    <Fragment key={j.id}>
-                      <tr
-                        className="trk-row clickable"
-                        onClick={() => setOpenId(open ? null : j.id)}
-                      >
-                        <td>
-                          <strong>{j.reference}</strong>
-                        </td>
-                        <td>
-                          <span className="mode-tag">{j.mode}</span>
-                        </td>
-                        <td className="nowrap">
-                          {portCode(j.origin)} → {portCode(j.destination)}
-                        </td>
-                        <td className="nowrap">
-                          <span className="ref-badge">{ref.label}</span> {ref.value}
-                        </td>
-                        <td>
-                          <span className={`ms-tag tone-${trackingTone(status)}`}>
-                            {status}
-                          </span>
-                        </td>
-                        <td>{t?.carrier ?? "—"}</td>
-                        <td className={slipped ? "eta-slip" : ""}>
-                          {eta ? formatDate(eta) : "—"}
-                          {slipped && <span title="Later than planned ETA"> ▲</span>}
-                        </td>
-                        <td className="hint">
-                          {t?.synced_at ? formatDateTime(t.synced_at) : "never"}
-                        </td>
-                        <td>
-                          <button
-                            className="btn small outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRefresh(j);
-                            }}
-                            disabled={busyId === j.id}
-                          >
-                            {busyId === j.id ? "…" : "Refresh"}
-                          </button>
-                        </td>
-                      </tr>
-                      {open && (
-                        <tr>
-                          <td colSpan={9}>
-                            <TrackDetail job={j} tracking={t} refValue={ref.value} />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
+                    <tr
+                      key={j.id}
+                      className="trk-row clickable"
+                      onClick={() => setMapJob(j)}
+                    >
+                      <td>
+                        <strong>{j.reference}</strong>
+                      </td>
+                      <td>
+                        <span className="mode-tag">{j.mode}</span>
+                      </td>
+                      <td className="nowrap">
+                        {portCode(j.origin)} → {portCode(j.destination)}
+                      </td>
+                      <td className="nowrap">
+                        <span className="ref-badge">{ref.label}</span> {ref.value}
+                      </td>
+                      <td>
+                        <span className={`ms-tag tone-${trackingTone(status)}`}>
+                          {status}
+                        </span>
+                      </td>
+                      <td>{t?.carrier ?? "—"}</td>
+                      <td className={slipped ? "eta-slip" : ""}>
+                        {eta ? formatDate(eta) : "—"}
+                        {slipped && <span title="Later than planned ETA"> ▲</span>}
+                      </td>
+                      <td className="hint">
+                        {t?.synced_at ? formatDateTime(t.synced_at) : "never"}
+                      </td>
+                      <td>
+                        <button
+                          className="btn small outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRefresh(j);
+                          }}
+                          disabled={busyId === j.id}
+                        >
+                          {busyId === j.id ? "…" : "Refresh"}
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -205,7 +203,61 @@ export default function LiveTracking() {
           </div>
         )}
       </div>
+
+      {mapJob && (
+        <TrackMapModal
+          job={mapJob}
+          tracking={trackingByJob.get(mapJob.id)}
+          onClose={() => setMapJob(null)}
+        />
+      )}
     </>
+  );
+}
+
+function TrackMapModal({
+  job,
+  tracking,
+  onClose,
+}: {
+  job: Job;
+  tracking: JobTracking | undefined;
+  onClose: () => void;
+}) {
+  const ref = trackableRef(job);
+  return (
+    <Modal
+      title={`${job.reference} — live tracking`}
+      onClose={onClose}
+      wide
+      belowHeader={
+        <p className="muted" style={{ margin: "6px 0 0" }}>
+          {tracking?.carrier ?? job.mode}
+          {ref ? ` · ${ref.label} ${ref.value}` : ""}
+          {tracking?.status ? ` · ${tracking.status}` : ""}
+        </p>
+      }
+    >
+      <iframe
+        className="trk-map"
+        src={shipsgoEmbedUrl()}
+        title="ShipsGo live map"
+        loading="lazy"
+      />
+      {ref && (
+        <p className="hint" style={{ margin: "8px 0 0" }}>
+          Open the panel (top-right of the map) and search{" "}
+          <strong>{ref.value}</strong> under{" "}
+          <strong>{ref.type === "air" ? "AIR" : "OCEAN"}</strong> to plot this
+          shipment.
+        </p>
+      )}
+      <TrackDetail
+        job={job}
+        tracking={tracking}
+        refValue={ref?.value ?? ""}
+      />
+    </Modal>
   );
 }
 
@@ -274,14 +326,6 @@ function TrackDetail({
           ))}
         </ol>
       )}
-      <a
-        className="btn small outline"
-        href="https://expac.co.za/live-tracking/"
-        target="_blank"
-        rel="noreferrer"
-      >
-        Open live map ↗
-      </a>
     </div>
   );
 }

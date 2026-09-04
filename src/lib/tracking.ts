@@ -18,6 +18,19 @@ const SHIPSGO_PATH = {
   air: "/air/shipments",
 };
 
+/**
+ * Public ShipsGo *embed* token (the widget on expac.co.za/live-tracking) — not
+ * the secret API user token. Safe in the client; override per deploy with
+ * VITE_SHIPSGO_EMBED_TOKEN.
+ */
+export const SHIPSGO_EMBED_TOKEN =
+  (import.meta.env.VITE_SHIPSGO_EMBED_TOKEN as string | undefined) ??
+  "e92958ae-5092-41b7-88c1-9da6c04eb585";
+
+export function shipsgoEmbedUrl(): string {
+  return `https://embed.shipsgo.com/?token=${SHIPSGO_EMBED_TOKEN}`;
+}
+
 export interface TrackableRef {
   type: "ocean" | "air";
   value: string;
