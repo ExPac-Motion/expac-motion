@@ -6,6 +6,7 @@ import { useJobs, useQuotes } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
 import { formatDate, money, portCode } from "../lib/format";
 import {
+  isShipmentComplete,
   MILESTONES,
   STATUS_LABEL,
   STATUS_ORDER,
@@ -93,7 +94,7 @@ export default function DashboardPage() {
   const jobs = useMemo(() => jobsQ.data ?? [], [jobsQ.data]);
 
   const activeJobs = useMemo(
-    () => jobs.filter((j) => j.milestone !== "Delivered"),
+    () => jobs.filter((j) => !isShipmentComplete(j)),
     [jobs],
   );
 

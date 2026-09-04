@@ -5,7 +5,7 @@ import { useToast } from "../../components/Toast";
 import { useJobTracking, useJobs, useRefreshTracking } from "../../lib/hooks";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import { etaSlipped, trackableRef, trackingTone } from "../../lib/tracking";
-import type { Job, JobTracking } from "../../lib/types";
+import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
 
 export default function LiveTracking() {
   const { error } = useToast();
@@ -16,7 +16,7 @@ export default function LiveTracking() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const activeJobs = useMemo(
-    () => (jobsQ.data ?? []).filter((j) => j.milestone !== "Delivered"),
+    () => (jobsQ.data ?? []).filter((j) => !isShipmentComplete(j)),
     [jobsQ.data],
   );
   const trackingByJob = useMemo(() => {

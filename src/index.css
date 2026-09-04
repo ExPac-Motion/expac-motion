@@ -59,7 +59,7 @@ textarea {
 /* ---------- App shell ---------- */
 .app {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 248px 1fr;
   min-height: 100vh;
 }
 .sidebar {
@@ -135,6 +135,7 @@ textarea {
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
 }
 .nav a:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -171,6 +172,7 @@ textarea {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 .nav-group-toggle:hover {
   background: rgba(255, 255, 255, 0.06);

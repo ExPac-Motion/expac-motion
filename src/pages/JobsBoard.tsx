@@ -6,14 +6,12 @@ import { useJobs, useUpdateJob } from "../lib/hooks";
 import { formatDate, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import {
+  DELIVERED_STATUS,
   SHIPMENT_STATUSES,
   shipmentStatusTone,
   type Job,
   type JobPatch,
 } from "../lib/types";
-
-/** A job counts as finished once its shipment status reaches this value. */
-export const DELIVERED_STATUS = "Delivered";
 
 /** "AWB" for air/courier, "MBL" for sea, "Ref" otherwise. */
 function docLabel(mode: string): string {

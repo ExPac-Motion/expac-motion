@@ -294,6 +294,20 @@ export interface Job {
   job_events?: JobEvent[];
 }
 
+/** The shipment_status value that files a shipment under Completed Shipments. */
+export const DELIVERED_STATUS = "Delivered";
+
+/**
+ * A shipment is finished — belongs on Completed Shipments and drops off the
+ * dashboard, Control Tower and Live Tracking — once its shipment status or its
+ * milestone reads Delivered.
+ */
+export function isShipmentComplete(
+  job: Pick<Job, "shipment_status" | "milestone">,
+): boolean {
+  return job.shipment_status === DELIVERED_STATUS || job.milestone === "Delivered";
+}
+
 /** Fields on a Job that the Active Jobs board can edit inline. */
 export type JobPatch = Partial<
   Pick<

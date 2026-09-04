@@ -9,6 +9,7 @@ import {
 } from "../lib/hooks";
 import { todayIso } from "../lib/opsCalendar";
 import { trackableRef, trackingTone } from "../lib/tracking";
+import { isShipmentComplete } from "../lib/types";
 import TasksNotes from "./ops/TasksNotes";
 import CalendarBoard from "./ops/CalendarBoard";
 import LiveTracking from "./ops/LiveTracking";
@@ -54,7 +55,7 @@ export default function OpsControlTowerPage() {
     const in7 = new Date(new Date().getTime() + 7 * 86_400_000)
       .toISOString()
       .slice(0, 10);
-    const activeJobs = jobs.filter((j) => j.milestone !== "Delivered");
+    const activeJobs = jobs.filter((j) => !isShipmentComplete(j));
     const trackByJob = new Map(trackings.map((t) => [t.job_id, t]));
 
     const openTasks = tasks.filter((t) => t.kind === "task" && t.status !== "done");
