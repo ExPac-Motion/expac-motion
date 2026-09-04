@@ -4,7 +4,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import * as db from "./db";
-import type { Client, JobPatch, Milestone, QuoteDraft, Supplier } from "./types";
+import type {
+  Client,
+  Contact,
+  JobPatch,
+  Milestone,
+  QuoteDraft,
+  Supplier,
+} from "./types";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -59,6 +66,31 @@ export function useDeleteSupplier() {
       qc.invalidateQueries({ queryKey: ["suppliers"] });
       qc.invalidateQueries({ queryKey: ["quotes"] });
     },
+  });
+}
+
+/* ---------- Agents ---------- */
+export function useAgents() {
+  return useQuery({ queryKey: ["agents"], queryFn: db.listAgents });
+}
+export function useSaveAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id?: string;
+      values: Omit<Contact, "id" | "created_at">;
+    }) =>
+      input.id
+        ? db.updateAgent(input.id, input.values)
+        : db.createAgent(input.values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agents"] }),
+  });
+}
+export function useDeleteAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteAgent,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agents"] }),
   });
 }
 

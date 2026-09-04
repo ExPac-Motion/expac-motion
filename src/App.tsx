@@ -16,6 +16,7 @@ import JobsPage from "./pages/JobsPage";
 import CompletedJobsPage from "./pages/CompletedJobsPage";
 import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import AgentsPage from "./pages/AgentsPage";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 function RequireAuth() {
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="jobs/completed" element={<CompletedJobsPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
+            <Route path="agents" element={<AgentsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

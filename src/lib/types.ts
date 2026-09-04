@@ -147,6 +147,7 @@ export interface Contact {
 }
 export type Client = Contact;
 export type Supplier = Contact;
+export type Agent = Contact;
 
 export interface PackingItem {
   id?: string;

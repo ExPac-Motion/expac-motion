@@ -7,15 +7,35 @@ import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
 
+type Kind = "client" | "supplier" | "agent";
+
+const COPY: Record<Kind, { label: string; title: string; eyebrow: string }> = {
+  client: {
+    label: "customer",
+    title: "Customers",
+    eyebrow: "Company & contact records",
+  },
+  supplier: {
+    label: "shipper",
+    title: "Shippers",
+    eyebrow: "Vendor & carrier records",
+  },
+  agent: {
+    label: "agent",
+    title: "Agents",
+    eyebrow: "Clearing & forwarding agents",
+  },
+};
+
 interface Props {
-  kind: "client" | "supplier";
+  kind: Kind;
   query: UseQueryResult<Contact[]>;
   save: UseMutationResult<Contact, Error, { id?: string; values: ContactValues }>;
   remove: UseMutationResult<void, Error, string>;
 }
 
 export default function ContactsPage({ kind, query, save, remove }: Props) {
-  const label = kind === "client" ? "customer" : "shipper";
+  const { label, title, eyebrow } = COPY[kind];
   const Label = label[0].toUpperCase() + label.slice(1);
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
@@ -65,8 +85,8 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
   return (
     <>
       <PageHeader
-        eyebrow={kind === "client" ? "Company & contact records" : "Vendor & carrier records"}
-        title={kind === "client" ? "Customers" : "Shippers"}
+        eyebrow={eyebrow}
+        title={title}
         actions={
           <button className="btn" onClick={() => setEditing("new")}>
             + Add {label}

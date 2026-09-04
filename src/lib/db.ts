@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { insuranceAmount, packingTotals, resolveLine } from "./calc";
 import type {
   Client,
+  Contact,
   Job,
   JobPatch,
   Milestone,
@@ -69,6 +70,31 @@ export async function updateSupplier(
 }
 export async function deleteSupplier(id: string): Promise<void> {
   unwrap(await supabase.from("suppliers").delete().eq("id", id));
+}
+
+/* ---------- Agents ---------- */
+export async function listAgents(): Promise<Contact[]> {
+  return unwrap(
+    await supabase.from("agents").select("*").order("company", { ascending: true }),
+  );
+}
+export async function createAgent(
+  input: Omit<Contact, "id" | "created_at">,
+): Promise<Contact> {
+  return unwrap(
+    await supabase.from("agents").insert(input).select("*").single(),
+  );
+}
+export async function updateAgent(
+  id: string,
+  input: Partial<Omit<Contact, "id" | "created_at">>,
+): Promise<Contact> {
+  return unwrap(
+    await supabase.from("agents").update(input).eq("id", id).select("*").single(),
+  );
+}
+export async function deleteAgent(id: string): Promise<void> {
+  unwrap(await supabase.from("agents").delete().eq("id", id));
 }
 
 /* ---------- Quotes ---------- */
