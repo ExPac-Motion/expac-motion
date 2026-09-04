@@ -182,6 +182,8 @@ export interface Quote {
   reference: string;
   client_id: string | null;
   supplier_id: string | null;
+  /** Clearing / forwarding agent — internal only, never shown to the customer. */
+  agent_id: string | null;
   mode: QuoteMode;
   commodity: string | null;
   origin: string | null;
@@ -211,6 +213,7 @@ export interface Quote {
   packing_list_items: PackingItem[];
   client?: Pick<Client, "id" | "company"> | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
+  agent?: Pick<Agent, "id" | "company"> | null;
 }
 
 export interface Job {
@@ -265,6 +268,7 @@ export interface QuoteDraft {
   reference: string;
   client_id: string;
   supplier_id: string;
+  agent_id: string;
   mode: QuoteMode;
   commodity: string;
   origin: string;

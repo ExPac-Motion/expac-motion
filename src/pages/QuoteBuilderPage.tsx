@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
 import {
+  useAgents,
   useClients,
   useQuote,
   useSaveQuote,
@@ -86,6 +87,7 @@ function blankDraft(): QuoteDraft {
     reference: newReference(mode),
     client_id: "",
     supplier_id: "",
+    agent_id: "",
     mode,
     commodity: "General Cargo",
     origin: "",
@@ -120,6 +122,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     reference: q.reference,
     client_id: q.client_id ?? "",
     supplier_id: q.supplier_id ?? "",
+    agent_id: q.agent_id ?? "",
     mode: q.mode,
     commodity: q.commodity ?? "",
     origin: q.origin ?? "",
@@ -196,6 +199,7 @@ export default function QuoteBuilderPage() {
 
   const clientsQ = useClients();
   const suppliersQ = useSuppliers();
+  const agentsQ = useAgents();
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
 
@@ -407,6 +411,7 @@ export default function QuoteBuilderPage() {
 
   const clients = clientsQ.data ?? [];
   const suppliers = suppliersQ.data ?? [];
+  const agents = agentsQ.data ?? [];
 
   return (
     <>
@@ -466,6 +471,21 @@ export default function QuoteBuilderPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="field">
+            <label>Agent (internal only)</label>
+            <select
+              value={draft.agent_id}
+              onChange={(e) => set("agent_id", e.target.value)}
+            >
+              <option value="">Select agent</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
           </div>
           <div className="field">
             <label>Reference</label>

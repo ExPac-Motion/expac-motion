@@ -99,7 +99,7 @@ export async function deleteAgent(id: string): Promise<void> {
 
 /* ---------- Quotes ---------- */
 const QUOTE_SELECT =
-  "*, quote_lines(*), packing_list_items(*), client:clients(id,company), supplier:suppliers(id,company)";
+  "*, quote_lines(*), packing_list_items(*), client:clients(id,company), supplier:suppliers(id,company), agent:agents(id,company)";
 
 function sortLines(q: Quote): Quote {
   q.quote_lines = [...(q.quote_lines || [])].sort(
@@ -172,6 +172,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_reference: draft.reference.trim(),
       p_client_id: draft.client_id || null,
       p_supplier_id: draft.supplier_id || null,
+      p_agent_id: draft.agent_id || null,
       p_mode: draft.mode,
       p_commodity: draft.commodity.trim() || null,
       p_origin: draft.origin.trim() || null,

@@ -120,6 +120,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
       <div className="grid4" style={{ margin: "14px 0" }}>
         <Field label="Customer/Importer" value={q.client?.company ?? "—"} />
         <Field label="Shipper/Exporter" value={q.supplier?.company ?? "—"} />
+        <Field label="Agent (internal)" value={q.agent?.company ?? "—"} />
         <Field label="Reference" value={q.reference} />
         <Field label="Valid Until" value={formatDate(q.valid_until)} />
         <Field label="Commercial Value ($)" value={usd(q.commercial_value)} />
