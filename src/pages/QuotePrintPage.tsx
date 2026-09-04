@@ -175,6 +175,8 @@ export default function QuotePrintPage() {
             <div className="qs-meta">
               <b>Document Number:</b>
               <span>{q.reference}</span>
+              <b>Shipping Mode:</b>
+              <span>{q.mode}</span>
               <b>Date:</b>
               <span>{formatDate(q.created_at)}</span>
               <b>Due (or) Validity Date:</b>
