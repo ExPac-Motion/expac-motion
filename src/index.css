@@ -1936,8 +1936,8 @@ tr.clickable:hover {
   margin-bottom: -2px;
   padding: 10px 14px;
   font-family: var(--display);
-  font-weight: 800;
-  font-size: 0.92rem;
+  font-weight: 600;
+  font-size: 0.9rem;
   color: var(--muted);
   cursor: pointer;
 }
@@ -1946,6 +1946,7 @@ tr.clickable:hover {
 }
 .ct-tab.on {
   color: var(--ink);
+  font-weight: 700;
   border-bottom-color: var(--green);
 }
 
