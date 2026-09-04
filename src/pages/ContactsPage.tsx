@@ -91,6 +91,13 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                   <th>Contact</th>
                   <th>Email</th>
                   <th>Phone</th>
+                  {kind === "client" && (
+                    <>
+                      <th>VAT No</th>
+                      <th>Import Code</th>
+                      <th>Address</th>
+                    </>
+                  )}
                   <th />
                 </tr>
               </thead>
@@ -103,6 +110,13 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                     <td>{r.contact || "—"}</td>
                     <td>{r.email || "—"}</td>
                     <td>{r.phone || "—"}</td>
+                    {kind === "client" && (
+                      <>
+                        <td>{r.vat_no || "—"}</td>
+                        <td>{r.import_code || "—"}</td>
+                        <td>{r.address || "—"}</td>
+                      </>
+                    )}
                     <td>
                       <div className="row-actions">
                         <button
