@@ -67,8 +67,8 @@ export default function QuotesListPage() {
               <thead>
                 <tr>
                   <th>Reference</th>
-                  <th>Client</th>
-                  <th>Supplier</th>
+                  <th>Customer</th>
+                  <th>Shipper</th>
                   <th>Trade lane</th>
                   <th>Mode</th>
                   <th>Total Cost</th>

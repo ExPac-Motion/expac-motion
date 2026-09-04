@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function ContactsPage({ kind, query, save, remove }: Props) {
-  const label = kind === "client" ? "client" : "supplier";
+  const label = kind === "client" ? "customer" : "shipper";
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
 
@@ -62,7 +62,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
     <>
       <PageHeader
         eyebrow={kind === "client" ? "Company & contact records" : "Vendor & carrier records"}
-        title={kind === "client" ? "Clients" : "Suppliers"}
+        title={kind === "client" ? "Customers" : "Shippers"}
         actions={
           <button className="btn" onClick={() => setEditing("new")}>
             + Add {label}

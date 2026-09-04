@@ -389,7 +389,7 @@ export default function QuoteBuilderPage() {
   async function onSave() {
     if (!draft) return;
     if (!draft.client_id) {
-      error("Please select a client");
+      error("Please select a customer");
       return;
     }
     if (!draft.reference.trim()) {
@@ -435,12 +435,12 @@ export default function QuoteBuilderPage() {
         </div>
         <div className="grid4">
           <div className="field">
-            <label>Client/Importer</label>
+            <label>Customer/Importer</label>
             <select
               value={draft.client_id}
               onChange={(e) => set("client_id", e.target.value)}
             >
-              <option value="">Select client</option>
+              <option value="">Select customer</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.company}
@@ -449,17 +449,17 @@ export default function QuoteBuilderPage() {
             </select>
             {clients.length === 0 && (
               <span className="hint">
-                No clients yet — add one on the Clients page first.
+                No customers yet — add one on the Customers page first.
               </span>
             )}
           </div>
           <div className="field">
-            <label>Supplier/Exporter</label>
+            <label>Shipper/Exporter</label>
             <select
               value={draft.supplier_id}
               onChange={(e) => set("supplier_id", e.target.value)}
             >
-              <option value="">Select supplier</option>
+              <option value="">Select shipper</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.company}
@@ -896,7 +896,7 @@ export default function QuoteBuilderPage() {
         <div className="panel-head">
           <div>
             <h2>Charges</h2>
-            <p>Buy cost stays internal — sell price is what your client sees</p>
+            <p>Buy cost stays internal — sell price is what your customer sees</p>
           </div>
         </div>
 
@@ -1155,7 +1155,7 @@ export default function QuoteBuilderPage() {
             <div className="val">{totals.margin.toFixed(1)}%</div>
           </div>
           <div className="t">
-            <div className="label">Client total</div>
+            <div className="label">Customer total</div>
             <div className="val" style={{ color: "var(--green-dark)" }}>
               {money(totals.sell)}
             </div>

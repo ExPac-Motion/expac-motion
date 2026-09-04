@@ -266,8 +266,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                 <tr>
                   <th>Created On</th>
                   <th>Job #</th>
-                  <th>Supplier</th>
-                  <th>Client</th>
+                  <th>Shipper</th>
+                  <th>Customer</th>
                   <th>PO #</th>
                   <th>Mode</th>
                   <th>Shipment Status</th>
