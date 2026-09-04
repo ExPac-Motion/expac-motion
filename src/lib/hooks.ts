@@ -73,6 +73,11 @@ export function useDeleteSupplier() {
 export function useAgents() {
   return useQuery({ queryKey: ["agents"], queryFn: db.listAgents });
 }
+/** Saving / deleting an agent may add or drop a mirror clearing-agent row. */
+function invalidateAgentPair(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["agents"] });
+  qc.invalidateQueries({ queryKey: ["clearing_agents"] });
+}
 export function useSaveAgent() {
   const qc = useQueryClient();
   return useMutation({
@@ -83,14 +88,14 @@ export function useSaveAgent() {
       input.id
         ? db.updateAgent(input.id, input.values)
         : db.createAgent(input.values),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agents"] }),
+    onSuccess: () => invalidateAgentPair(qc),
   });
 }
 export function useDeleteAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.deleteAgent,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["agents"] }),
+    onSuccess: () => invalidateAgentPair(qc),
   });
 }
 
@@ -139,14 +144,14 @@ export function useSaveClearingAgent() {
       input.id
         ? db.updateClearingAgent(input.id, input.values)
         : db.createClearingAgent(input.values),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clearing_agents"] }),
+    onSuccess: () => invalidateAgentPair(qc),
   });
 }
 export function useDeleteClearingAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.deleteClearingAgent,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clearing_agents"] }),
+    onSuccess: () => invalidateAgentPair(qc),
   });
 }
 

@@ -68,6 +68,12 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
     values.vat_no = String(fd.get("vat_no") || "").trim() || null;
     values.import_code = String(fd.get("import_code") || "").trim() || null;
     values.address = String(fd.get("address") || "").trim() || null;
+    if (kind === "agent") {
+      values.also_clearing_agent = fd.get("also_clearing_agent") === "on";
+    }
+    if (kind === "clearing_agent") {
+      values.also_agent = fd.get("also_agent") === "on";
+    }
     if (!values.company) {
       error("Company name is required");
       return;
@@ -95,6 +101,13 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
   }
 
   const current = editing === "new" ? null : editing;
+
+  // A mirror row: managed from the other contact book, read-only here.
+  function mirrorOf(r: Contact): Kind | null {
+    if (kind === "agent" && r.source_clearing_agent_id) return "clearing_agent";
+    if (kind === "clearing_agent" && r.source_agent_id) return "agent";
+    return null;
+  }
 
   return (
     <>
@@ -131,35 +144,48 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <strong>{r.company}</strong>
-                    </td>
-                    <td>{r.contact || "—"}</td>
-                    <td>{r.email || "—"}</td>
-                    <td>{r.phone || "—"}</td>
-                    <td>{r.vat_no || "—"}</td>
-                    <td>{r.import_code || "—"}</td>
-                    <td>{r.address || "—"}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="btn ghost small"
-                          onClick={() => setEditing(r)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn ghost small"
-                          onClick={() => onDelete(r)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((r) => {
+                  const mirror = mirrorOf(r);
+                  return (
+                    <tr key={r.id}>
+                      <td>
+                        <strong>{r.company}</strong>
+                        {r.also_clearing_agent && (
+                          <span className="tag">also clearing agent</span>
+                        )}
+                        {r.also_agent && <span className="tag">also agent</span>}
+                      </td>
+                      <td>{r.contact || "—"}</td>
+                      <td>{r.email || "—"}</td>
+                      <td>{r.phone || "—"}</td>
+                      <td>{r.vat_no || "—"}</td>
+                      <td>{r.import_code || "—"}</td>
+                      <td>{r.address || "—"}</td>
+                      <td>
+                        {mirror ? (
+                          <span className="muted small">
+                            Synced from {COPY[mirror].title}
+                          </span>
+                        ) : (
+                          <div className="row-actions">
+                            <button
+                              className="btn ghost small"
+                              onClick={() => setEditing(r)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn ghost small"
+                              onClick={() => onDelete(r)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -211,6 +237,26 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                 defaultValue={current?.address ?? ""}
               />
             </div>
+            {kind === "agent" && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="also_clearing_agent"
+                  defaultChecked={Boolean(current?.also_clearing_agent)}
+                />
+                Is also Clearing Agent
+              </label>
+            )}
+            {kind === "clearing_agent" && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="also_agent"
+                  defaultChecked={Boolean(current?.also_agent)}
+                />
+                Is also Agent
+              </label>
+            )}
             <div
               style={{
                 display: "flex",

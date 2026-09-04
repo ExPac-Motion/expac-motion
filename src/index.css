@@ -509,6 +509,34 @@ tr.clickable:hover {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+/* Inline checkbox row in a form */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 2px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--green);
+}
+/* Small pill after a table cell value */
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #eef4e3;
+  color: var(--green-dark);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
 .grid3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

@@ -143,6 +143,12 @@ export interface Contact {
   vat_no?: string | null;
   import_code?: string | null;
   address?: string | null;
+  /** Agent <-> Clearing Agent cross-listing (agents / clearing_agents only). */
+  also_clearing_agent?: boolean | null;
+  also_agent?: boolean | null;
+  /** Non-null on a row that mirrors a record in the other table (read-only here). */
+  source_agent_id?: string | null;
+  source_clearing_agent_id?: string | null;
   created_at: string;
 }
 export type Client = Contact;
