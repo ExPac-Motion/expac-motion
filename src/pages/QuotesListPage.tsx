@@ -1,17 +1,23 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader, StatusBadge } from "../components/common";
 import QuoteDetailModal from "./QuoteDetailModal";
 import { useQuotes } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
 import { money, portCode } from "../lib/format";
-import { STATUS_LABEL, STATUS_ORDER, type QuoteStatus } from "../lib/types";
+import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
+
+function isQuoteStatus(v: string | null): v is QuoteStatus {
+  return v === "open" || v === "sent" || v === "accepted" || v === "lost";
+}
 
 export default function QuotesListPage() {
   const navigate = useNavigate();
   const { data: quotes, isLoading, isError, error } = useQuotes();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<QuoteStatus | "all">("all");
+  const [params] = useSearchParams();
+  const status = params.get("status");
+  const filter: QuoteStatus | "all" = isQuoteStatus(status) ? status : "all";
 
   const rows = useMemo(() => {
     const list = quotes ?? [];
@@ -33,21 +39,8 @@ export default function QuotesListPage() {
       <div className="panel">
         <div className="panel-head">
           <div>
-            <h2>All quotations</h2>
-            <p>{(quotes ?? []).length} total</p>
-          </div>
-          <div className="field" style={{ margin: 0, minWidth: 180 }}>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as QuoteStatus | "all")}
-            >
-              <option value="all">All statuses</option>
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
+            <h2>{filter === "all" ? "All Quotes" : `${STATUS_LABEL[filter]} Quotes`}</h2>
+            <p>{rows.length} total</p>
           </div>
         </div>
 

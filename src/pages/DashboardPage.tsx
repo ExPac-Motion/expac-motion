@@ -108,8 +108,7 @@ export default function DashboardPage() {
   }, [activeJobs]);
 
   const dueForApproval = useMemo(
-    () =>
-      quotes.filter((q) => q.status === "sent" || q.status === "followup"),
+    () => quotes.filter((q) => q.status === "sent"),
     [quotes],
   );
   const dueValue = useMemo(
@@ -205,7 +204,7 @@ export default function DashboardPage() {
               icon={Icon.approval}
               label="Due for Approval Quotations"
               value={dueForApproval.length}
-              onClick={() => navigate("/quotes")}
+              onClick={() => navigate("/quotes?status=sent")}
               foot={<span>{money(dueValue)} in play</span>}
             />
             {MODE_META.slice(0, 3).map((m) => (
@@ -314,12 +313,12 @@ export default function DashboardPage() {
             </div>
             <div className="pipe">
               {pipeline.rows.map((p) => {
-                const accent = p.st === "sent" || p.st === "followup";
+                const accent = p.st === "sent";
                 return (
                   <button
                     key={p.st}
                     className={`pipe-row${accent ? " accent" : ""}`}
-                    onClick={() => navigate("/quotes")}
+                    onClick={() => navigate(`/quotes?status=${p.st}`)}
                   >
                     <span className="nm">
                       {accent && (

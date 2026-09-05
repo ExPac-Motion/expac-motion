@@ -541,7 +541,7 @@ tr.clickable:hover {
   font-weight: 700;
   white-space: nowrap;
 }
-.badge.draft {
+.badge.open {
   background: #eee;
   color: #555;
 }
@@ -549,13 +549,13 @@ tr.clickable:hover {
   background: #e6f0fb;
   color: #1d5ba8;
 }
-.badge.followup {
-  background: #fff2d9;
-  color: #8a5a00;
-}
 .badge.accepted {
   background: #e5f3d9;
   color: var(--green-dark);
+}
+.badge.lost {
+  background: #fdecea;
+  color: #b3261e;
 }
 
 /* ---------- Forms ---------- */

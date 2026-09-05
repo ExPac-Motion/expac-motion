@@ -77,13 +77,12 @@ export default function OpsControlTowerPage() {
     const expiring = quotes.filter(
       (q) =>
         q.status !== "accepted" &&
+        q.status !== "lost" &&
         q.valid_until &&
         q.valid_until >= today &&
         q.valid_until <= in7,
     ).length;
-    const awaiting = quotes.filter(
-      (q) => q.status === "sent" || q.status === "followup",
-    ).length;
+    const awaiting = quotes.filter((q) => q.status === "sent").length;
 
     return [
       { label: "Tasks overdue", n: overdue, alert: true, go: () => setTab("tasks", { focus: "overdue" }) },
@@ -93,7 +92,7 @@ export default function OpsControlTowerPage() {
       { label: "Arriving ≤ 7 days", n: arriving, go: () => setTab("tracking") },
       { label: "Tracking exceptions", n: exceptions, alert: true, go: () => setTab("tracking") },
       { label: "Quotes expiring ≤ 7 days", n: expiring, alert: true, go: () => navigate("/quotes") },
-      { label: "Quotes awaiting approval", n: awaiting, go: () => navigate("/quotes") },
+      { label: "Quotes awaiting approval", n: awaiting, go: () => navigate("/quotes?status=sent") },
     ].filter((c) => c.n > 0);
   }, [jobs, quotes, tasks, trackings, navigate, setTab]);
 

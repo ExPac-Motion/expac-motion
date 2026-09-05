@@ -99,7 +99,7 @@ function blankDraft(): QuoteDraft {
     destination: "",
     delivery_terms: "Door to Door",
     valid_until: todayPlusDays(14),
-    status: "draft",
+    status: "open",
     commercial_value: "",
     insurance_amount: "",
     vessel_name: "",

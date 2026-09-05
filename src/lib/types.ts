@@ -1,4 +1,4 @@
-export type QuoteStatus = "draft" | "sent" | "followup" | "accepted";
+export type QuoteStatus = "open" | "sent" | "accepted" | "lost";
 export type QuoteMode =
   | "Air Freight (AIR)"
   | "Courier Express (CX)"
@@ -126,12 +126,12 @@ export const CHARGE_UNITS: string[] = [
 ];
 
 export const STATUS_LABEL: Record<QuoteStatus, string> = {
-  draft: "Draft",
-  sent: "Quote Sent",
-  followup: "Follow-up",
+  open: "Open",
+  sent: "Sent",
   accepted: "Accepted",
+  lost: "Lost",
 };
-export const STATUS_ORDER: QuoteStatus[] = ["draft", "sent", "followup", "accepted"];
+export const STATUS_ORDER: QuoteStatus[] = ["open", "sent", "accepted", "lost"];
 
 export interface Contact {
   id: string;
