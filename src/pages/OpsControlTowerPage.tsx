@@ -15,11 +15,6 @@ import CalendarBoard from "./ops/CalendarBoard";
 import LiveTracking from "./ops/LiveTracking";
 
 type Tab = "tasks" | "calendar" | "tracking";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "tasks", label: "Tasks & Notes" },
-  { key: "calendar", label: "Calendar" },
-  { key: "tracking", label: "Live Tracking" },
-];
 
 interface Chip {
   label: string;
@@ -120,18 +115,6 @@ export default function OpsControlTowerPage() {
           ))}
         </div>
       )}
-
-      <div className="ct-tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`ct-tab${tab === t.key ? " on" : ""}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {tab === "tasks" && <TasksNotes focus={focus} />}
       {tab === "calendar" && <CalendarBoard />}
