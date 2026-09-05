@@ -180,6 +180,39 @@ export interface ShipmentDocument {
   created_at: string;
 }
 
+/* ---------- Sales CRM: Leads ---------- */
+
+export interface LeadStatus {
+  id: string;
+  name: string;
+  promotes_to_customer: boolean;
+  sort_order: number;
+  created_at: string;
+}
+export type LeadStatusPatch = Partial<Omit<LeadStatus, "id" | "created_at">>;
+
+export interface Lead {
+  id: string;
+  company: string;
+  contact: string | null;
+  email: string | null;
+  phone: string | null;
+  source: string | null;
+  notes: string | null;
+  lead_status_id: string | null;
+  sales_person_id: string | null;
+  promoted_client_id: string | null;
+  promoted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Joined for display. */
+  lead_status?: Pick<LeadStatus, "id" | "name" | "promotes_to_customer"> | null;
+  sales_person?: Pick<Profile, "id" | "full_name"> | null;
+}
+export type LeadPatch = Partial<
+  Omit<Lead, "id" | "created_at" | "updated_at" | "promoted_client_id" | "promoted_at">
+>;
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",
@@ -387,6 +420,8 @@ export interface Quote {
   id: string;
   reference: string;
   client_id: string | null;
+  /** Set instead of client_id when the customer is a not-yet-promoted lead. */
+  lead_id: string | null;
   supplier_id: string | null;
   /** Agent / transporter / clearing agent — internal only, never shown to the customer. */
   agent_id: string | null;
@@ -660,6 +695,8 @@ export interface QuoteDraft {
   id: string | null;
   reference: string;
   client_id: string;
+  /** Set instead of client_id when the customer is a not-yet-promoted lead. */
+  lead_id: string;
   supplier_id: string;
   agent_id: string;
   transporter_id: string;

@@ -17,6 +17,8 @@ import type {
   ProfilePatch,
   QuoteDraft,
   RateSheetPatch,
+  LeadPatch,
+  LeadStatusPatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -430,6 +432,54 @@ export function useDeleteRateSheetItem() {
   return useMutation({
     mutationFn: db.deleteRateSheetItem,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["rate_sheet"] }),
+  });
+}
+
+/* ---------- Sales CRM: Leads ---------- */
+export function useLeadStatuses() {
+  return useQuery({ queryKey: ["lead_statuses"], queryFn: db.listLeadStatuses });
+}
+export function useSaveLeadStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: LeadStatusPatch }) =>
+      db.saveLeadStatus(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead_statuses"] }),
+  });
+}
+export function useDeleteLeadStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteLeadStatus,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead_statuses"] }),
+  });
+}
+export function useLeads() {
+  return useQuery({ queryKey: ["leads"], queryFn: db.listLeads });
+}
+export function useSaveLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: LeadPatch }) =>
+      db.saveLead(input.id, input.patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+export function useDeleteLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteLead,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+}
+export function useCreateLeadsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.createLeadsBulk,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
   });
 }
 

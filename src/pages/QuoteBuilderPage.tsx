@@ -8,6 +8,7 @@ import {
   useClearingAgents,
   useClients,
   useCompanySettings,
+  useLeads,
   useQuote,
   useRateSheet,
   useSaveQuote,
@@ -93,6 +94,7 @@ function blankDraft(): QuoteDraft {
     id: null,
     reference: newReference(mode),
     client_id: "",
+    lead_id: "",
     supplier_id: "",
     agent_id: "",
     transporter_id: "",
@@ -130,6 +132,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     id: q.id,
     reference: q.reference,
     client_id: q.client_id ?? "",
+    lead_id: q.lead_id ?? "",
     supplier_id: q.supplier_id ?? "",
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
@@ -210,6 +213,7 @@ export default function QuoteBuilderPage() {
   const { toast, error } = useToast();
 
   const clientsQ = useClients();
+  const leadsQ = useLeads();
   const suppliersQ = useSuppliers();
   const agentsQ = useAgents();
   const transportersQ = useTransporters();
@@ -448,8 +452,8 @@ export default function QuoteBuilderPage() {
 
   async function onSave() {
     if (!draft) return;
-    if (!draft.client_id) {
-      error("Please select a customer");
+    if (!draft.client_id && !draft.lead_id) {
+      error("Please select a customer or lead");
       return;
     }
     if (!draft.reference.trim()) {
@@ -466,6 +470,7 @@ export default function QuoteBuilderPage() {
   }
 
   const clients = clientsQ.data ?? [];
+  const unpromotedLeads = (leadsQ.data ?? []).filter((l) => !l.promoted_client_id);
   const suppliers = suppliersQ.data ?? [];
   const agents = agentsQ.data ?? [];
   const transporters = transportersQ.data ?? [];
@@ -500,19 +505,46 @@ export default function QuoteBuilderPage() {
           <div className="field">
             <label>Customer/Importer</label>
             <select
-              value={draft.client_id}
-              onChange={(e) => set("client_id", e.target.value)}
+              value={draft.client_id ? `c:${draft.client_id}` : draft.lead_id ? `l:${draft.lead_id}` : ""}
+              onChange={(e) => {
+                const [kind, id] = e.target.value.split(":");
+                setDraft((d) =>
+                  d
+                    ? {
+                        ...d,
+                        client_id: kind === "c" ? id : "",
+                        lead_id: kind === "l" ? id : "",
+                      }
+                    : d,
+                );
+              }}
             >
               <option value="">Select customer</option>
               {clients.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={`c:${c.id}`}>
                   {c.company}
                 </option>
               ))}
+              {unpromotedLeads.length > 0 && (
+                <optgroup label="Leads (not yet a customer)">
+                  {unpromotedLeads.map((l) => (
+                    <option key={l.id} value={`l:${l.id}`}>
+                      {l.company}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
-            {clients.length === 0 && (
+            {clients.length === 0 && unpromotedLeads.length === 0 && (
               <span className="hint">
-                No customers yet — add one on the Customers page first.
+                No customers or leads yet — add one on the Customers or Leads page
+                first.
+              </span>
+            )}
+            {draft.lead_id && (
+              <span className="hint">
+                Accepting this quote will automatically create a real customer
+                record for this lead.
               </span>
             )}
           </div>

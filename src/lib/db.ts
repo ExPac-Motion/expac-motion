@@ -30,6 +30,10 @@ import type {
   RateSheetPatch,
   ShipmentDocument,
   Supplier,
+  Lead,
+  LeadPatch,
+  LeadStatus,
+  LeadStatusPatch,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -259,6 +263,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_id: draft.id,
       p_reference: draft.reference.trim(),
       p_client_id: draft.client_id || null,
+      p_lead_id: draft.lead_id || null,
       p_supplier_id: draft.supplier_id || null,
       p_agent_id: draft.agent_id || null,
       p_transporter_id: draft.transporter_id || null,
@@ -679,6 +684,66 @@ export async function saveRateSheetItem(
 
 export async function deleteRateSheetItem(id: string): Promise<void> {
   unwrap(await supabase.from("rate_sheet").delete().eq("id", id));
+}
+
+/* ---------- Sales CRM: Leads ---------- */
+const LEAD_SELECT =
+  "*, lead_status:lead_statuses(id,name,promotes_to_customer), sales_person:profiles(id,full_name)";
+
+export async function listLeadStatuses(): Promise<LeadStatus[]> {
+  return unwrap<LeadStatus[]>(
+    await supabase.from("lead_statuses").select("*").order("sort_order"),
+  );
+}
+
+export async function saveLeadStatus(
+  id: string | undefined,
+  patch: LeadStatusPatch,
+): Promise<LeadStatus> {
+  return unwrap<LeadStatus>(
+    id
+      ? await supabase.from("lead_statuses").update(patch).eq("id", id).select("*").single()
+      : await supabase.from("lead_statuses").insert(patch).select("*").single(),
+  );
+}
+
+export async function deleteLeadStatus(id: string): Promise<void> {
+  unwrap(await supabase.from("lead_statuses").delete().eq("id", id));
+}
+
+export async function listLeads(): Promise<Lead[]> {
+  return unwrap<Lead[]>(
+    await supabase
+      .from("leads")
+      .select(LEAD_SELECT)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function saveLead(
+  id: string | undefined,
+  patch: LeadPatch,
+): Promise<Lead> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<Lead>(
+    id
+      ? await supabase.from("leads").update(row).eq("id", id).select(LEAD_SELECT).single()
+      : await supabase.from("leads").insert(row).select(LEAD_SELECT).single(),
+  );
+}
+
+export async function deleteLead(id: string): Promise<void> {
+  unwrap(await supabase.from("leads").delete().eq("id", id));
+}
+
+/** Bulk create from a CSV/Excel import — bad rows are skipped, not fatal. */
+export async function createLeadsBulk(
+  rows: Array<Pick<LeadPatch, "company" | "contact" | "email" | "phone" | "source">>,
+): Promise<Lead[]> {
+  if (rows.length === 0) return [];
+  return unwrap<Lead[]>(
+    await supabase.from("leads").insert(rows).select(LEAD_SELECT),
+  );
 }
 
 /* ---------- Document Vault ---------- */

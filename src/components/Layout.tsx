@@ -65,7 +65,18 @@ const NAV: NavModule[] = [
       { to: "/clearing-agents", label: "Clearing Agents" },
     ],
   },
-  { to: "/crm", label: "Sales CRM" },
+  {
+    to: "/crm",
+    label: "Sales CRM",
+    children: [
+      { to: "/crm", label: "Dashboard" },
+      { to: "/crm?tab=leads", label: "Leads" },
+      { to: "/crm?tab=opportunities", label: "Opportunities" },
+      { to: "/crm?tab=statuses", label: "Lead Statuses" },
+      { to: "/crm?tab=team", label: "Sales Person" },
+      { to: "/crm?tab=templates", label: "Templates" },
+    ],
+  },
 ];
 
 function basePath(to: string): string {
