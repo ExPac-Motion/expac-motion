@@ -38,6 +38,7 @@ import type {
   OpportunityPatch,
   MailTemplate,
   MailTemplatePatch,
+  MediaAsset,
   MailCampaign,
   MailCampaignPatch,
   MailCampaignRecipient,
@@ -832,6 +833,31 @@ export async function deleteMailTemplate(id: string): Promise<void> {
  *  from an external recipient's inbox, with no Supabase auth of its own. */
 const MAIL_ASSETS_BUCKET = "mail-assets";
 
+/** Optional CDN host fronting the public `mail-assets` bucket on an
+ *  expac.co.za subdomain (e.g. https://cdn.expac.co.za/mail-assets), so
+ *  `<img>` src values in emails align with the sending domain and don't
+ *  trip Outlook/SmartScreen's domain-misalignment phishing signal. Set
+ *  `VITE_MAIL_CDN_BASE` in the Cloudflare Pages env once the custom domain
+ *  is live; until then this is empty and the raw supabase.co URL is used. */
+const MAIL_CDN_BASE = (
+  (import.meta.env.VITE_MAIL_CDN_BASE as string | undefined) ?? ""
+).replace(/\/+$/, "");
+
+/** Public URL for a `mail-assets` object, routed through the CDN domain
+ *  when one is configured. Guarded so it degrades to the Supabase public
+ *  URL if `VITE_MAIL_CDN_BASE` is unset. */
+export function publicMailAssetUrl(storagePath: string): string {
+  const { data } = supabase.storage
+    .from(MAIL_ASSETS_BUCKET)
+    .getPublicUrl(storagePath);
+  if (!MAIL_CDN_BASE) return data.publicUrl;
+  const marker = `/object/public/${MAIL_ASSETS_BUCKET}/`;
+  const i = data.publicUrl.indexOf(marker);
+  return i === -1
+    ? data.publicUrl
+    : `${MAIL_CDN_BASE}/${data.publicUrl.slice(i + marker.length)}`;
+}
+
 export async function uploadMailAsset(
   file: File,
 ): Promise<{ name: string; url: string; size: number }> {
@@ -839,8 +865,100 @@ export async function uploadMailAsset(
   const path = `${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
   const up = await supabase.storage.from(MAIL_ASSETS_BUCKET).upload(path, file);
   if (up.error) throw up.error;
-  const { data } = supabase.storage.from(MAIL_ASSETS_BUCKET).getPublicUrl(path);
-  return { name: file.name, url: data.publicUrl, size: file.size };
+  return { name: file.name, url: publicMailAssetUrl(path), size: file.size };
+}
+
+/* ---------- Sales CRM: Media library ---------- */
+
+export async function listMediaAssets(): Promise<MediaAsset[]> {
+  return unwrap<MediaAsset[]>(
+    await supabase
+      .from("media_assets")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** Uploads into the shared public `mail-assets` bucket (under a `media/`
+ *  prefix) and records a reusable `media_assets` row in the given folder. */
+export async function uploadMediaAsset(
+  file: File,
+  folder: string,
+): Promise<MediaAsset> {
+  const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
+  const storagePath = `media/${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
+  const up = await supabase.storage
+    .from(MAIL_ASSETS_BUCKET)
+    .upload(storagePath, file, { contentType: file.type || undefined });
+  if (up.error) throw up.error;
+  return unwrap<MediaAsset>(
+    await supabase
+      .from("media_assets")
+      .insert({
+        folder: folder.trim() || "General",
+        name: file.name,
+        url: publicMailAssetUrl(storagePath),
+        storage_path: storagePath,
+        size_bytes: file.size,
+        mime: file.type || null,
+      })
+      .select("*")
+      .single(),
+  );
+}
+
+/** Records a `media_assets` row for a file that has already been uploaded
+ *  to the `mail-assets` bucket (e.g. by the rich-text editor's own image
+ *  upload path), so it becomes reusable from the Media gallery. */
+export async function recordMediaAsset(input: {
+  folder: string;
+  name: string;
+  url: string;
+  storage_path: string;
+  size_bytes?: number | null;
+  mime?: string | null;
+}): Promise<MediaAsset> {
+  return unwrap<MediaAsset>(
+    await supabase
+      .from("media_assets")
+      .insert({
+        folder: input.folder.trim() || "General",
+        name: input.name,
+        url: input.url,
+        storage_path: input.storage_path,
+        size_bytes: input.size_bytes ?? null,
+        mime: input.mime ?? null,
+      })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function deleteMediaAsset(id: string): Promise<void> {
+  const row = unwrap<{ storage_path: string }>(
+    await supabase
+      .from("media_assets")
+      .select("storage_path")
+      .eq("id", id)
+      .single(),
+  );
+  // Best-effort object cleanup; the row delete is the source of truth.
+  await supabase.storage.from(MAIL_ASSETS_BUCKET).remove([row.storage_path]);
+  unwrap(await supabase.from("media_assets").delete().eq("id", id));
+}
+
+export async function renameMediaAsset(
+  id: string,
+  name: string,
+): Promise<MediaAsset> {
+  return unwrap<MediaAsset>(
+    await supabase
+      .from("media_assets")
+      .update({ name: name.trim() || "Untitled" })
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
 }
 
 /* ---------- Sales CRM: Mail Campaigns ---------- */

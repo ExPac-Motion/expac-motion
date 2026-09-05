@@ -24,7 +24,12 @@ import {
   type WebFormPatch,
 } from "../../lib/types";
 
-const SITE_URL = "https://expac-motion.pages.dev";
+/** Staff always open the Share tab on the app's own origin, so the hosted
+ *  form link + iframe embed are built from that — no hard-coded deploy URL.
+ *  The pages.dev value is only a fallback for a non-browser context. */
+const SITE_URL =
+  (typeof window !== "undefined" && window.location.origin) ||
+  "https://expac-motion.pages.dev";
 
 function newField(type: WebFormFieldType): WebFormField {
   const id = `f_${Math.random().toString(36).slice(2, 8)}`;

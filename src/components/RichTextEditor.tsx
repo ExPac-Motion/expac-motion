@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useToast } from "./Toast";
 import { rewriteCopy, type RewriteAction, type RewriteTone } from "../lib/ai";
+import { useMediaAssets, useRecordMediaAsset } from "../lib/hooks";
 
 const MERGE_TAGS = [
   { label: "Contact Name", value: "{{ contact.name }}" },
   { label: "Contact Company", value: "{{ contact.company }}" },
 ];
+
+const DEFAULT_FOLDER = "General";
 
 const AI_ACTIONS: {
   label: string;
@@ -19,12 +22,23 @@ const AI_ACTIONS: {
   { label: "More casual", action: "tone", tone: "casual" },
 ];
 
+/** `mail-assets` storage path out of a public/CDN URL, for recording an
+ *  editor-uploaded image into the reusable Media gallery. */
+function storagePathFromUrl(url: string): string | null {
+  const m = url.match(/\/mail-assets\/(.+?)(?:\?|$)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 /** Body + bottom action bar — bold/italic/underline/lists, a link, inline
- *  images, merge-tag insertion, an unsubscribe-link insert, and a raw-HTML
- *  code view. Deliberately hand-rolled (execCommand) rather than a
- *  component library, to match the rest of this app's UI. `trailing`
- *  lets the caller append its own controls (e.g. Attachments/Save) onto
- *  the same bottom bar. */
+ *  images (via the shared Media gallery), merge-tag insertion, an
+ *  unsubscribe-link insert, and a raw-HTML code view. Deliberately
+ *  hand-rolled (execCommand) rather than a component library, to match
+ *  the rest of this app's UI. `trailing` lets the caller append its own
+ *  controls (e.g. Attachments/Save) onto the same bottom bar.
+ *
+ *  `onUploadImage` is the raw file→storage upload used by the gallery's
+ *  "Upload new" option; the uploaded image is also recorded as a reusable
+ *  `media_assets` row so it shows up in the Media tab. */
 export default function RichTextEditor({
   value,
   onChange,
@@ -37,14 +51,28 @@ export default function RichTextEditor({
   trailing?: ReactNode;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const aiRef = useRef<HTMLDivElement>(null);
   const [codeView, setCodeView] = useState(false);
   const [codeText, setCodeText] = useState(value);
   const [uploading, setUploading] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  // "" = all folders; a folder name also becomes the target for "Upload new".
+  const [galleryFolder, setGalleryFolder] = useState("");
   const { error: toastError } = useToast();
+
+  const mediaAssets = useMediaAssets();
+  const recordMedia = useRecordMediaAsset();
+
+  const assets = useMemo(() => mediaAssets.data ?? [], [mediaAssets.data]);
+  const folders = useMemo(() => {
+    const set = new Set<string>([DEFAULT_FOLDER]);
+    for (const a of assets) set.add(a.folder || DEFAULT_FOLDER);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [assets]);
+  const galleryShown =
+    galleryFolder === "" ? assets : assets.filter((a) => (a.folder || DEFAULT_FOLDER) === galleryFolder);
 
   useEffect(() => {
     if (!codeView && editorRef.current && editorRef.current.innerHTML !== value) {
@@ -110,6 +138,10 @@ export default function RichTextEditor({
     emit();
   }
 
+  function insertImage(url: string) {
+    insertHtml(`<img src="${url}" alt="" style="max-width:100%" />`);
+  }
+
   function onPickTag(e: ChangeEvent<HTMLSelectElement>) {
     const tag = e.target.value;
     e.target.value = "";
@@ -122,6 +154,8 @@ export default function RichTextEditor({
     if (pick) insertHtml('<a href="{{ unsubscribe_link }}">Unsubscribe</a>');
   }
 
+  /** "Upload new" inside the gallery: raw upload via the caller's uploader,
+   *  then record it as a reusable media_assets row (best-effort) and insert. */
   async function onPickImage(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -129,7 +163,25 @@ export default function RichTextEditor({
     setUploading(true);
     try {
       const { url } = await onUploadImage(file);
-      insertHtml(`<img src="${url}" alt="" style="max-width:100%" />`);
+      const path = storagePathFromUrl(url);
+      if (path) {
+        try {
+          await recordMedia.mutateAsync({
+            folder: galleryFolder || DEFAULT_FOLDER,
+            name: file.name,
+            url,
+            storage_path: path,
+            size_bytes: file.size,
+            mime: file.type || null,
+          });
+        } catch {
+          /* the gallery record is a convenience; the image still inserts */
+        }
+      }
+      insertImage(url);
+      setGalleryOpen(false);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not upload image");
     } finally {
       setUploading(false);
     }
@@ -257,19 +309,12 @@ export default function RichTextEditor({
         </button>
         <button
           type="button"
-          title="Add an image"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          title="Insert image from gallery"
+          onClick={() => setGalleryOpen(true)}
+          disabled={uploading || codeView}
         >
           {uploading ? "…" : "🖼"}
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={onPickImage}
-        />
         <select
           className="rte-icon-select"
           title="Insert template tag"
@@ -308,6 +353,77 @@ export default function RichTextEditor({
           </>
         )}
       </div>
+
+      {galleryOpen && (
+        <div
+          className="rte-gallery-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setGalleryOpen(false);
+          }}
+        >
+          <div className="rte-gallery" role="dialog" aria-label="Media gallery">
+            <div className="rte-gallery-head">
+              <strong>Insert an image</strong>
+              <select
+                value={galleryFolder}
+                onChange={(e) => setGalleryFolder(e.target.value)}
+              >
+                <option value="">All folders</option>
+                {folders.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <label className="btn outline btn-sm">
+                {uploading ? "Uploading…" : "Upload new"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={uploading}
+                  onChange={onPickImage}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => setGalleryOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="rte-gallery-body">
+              {mediaAssets.isLoading ? (
+                <p className="muted">Loading…</p>
+              ) : galleryShown.length === 0 ? (
+                <p className="muted">
+                  No images{galleryFolder ? " in this folder" : ""} yet. Use
+                  “Upload new”, or add images in the Media tab.
+                </p>
+              ) : (
+                <div className="rte-gallery-grid">
+                  {galleryShown.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className="rte-gallery-item"
+                      title={a.name}
+                      onClick={() => {
+                        insertImage(a.url);
+                        setGalleryOpen(false);
+                      }}
+                    >
+                      <img src={a.url} alt={a.name} loading="lazy" />
+                      <span>{a.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

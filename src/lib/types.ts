@@ -287,6 +287,23 @@ export type MailTemplatePatch = Partial<
   Omit<MailTemplate, "id" | "created_at" | "updated_at">
 >;
 
+/* ---------- Sales CRM: Media library ---------- */
+
+/** A reusable image in the Media gallery. Files live in the shared public
+ *  `mail-assets` storage bucket; `url` is already routed through the CDN
+ *  domain when one is configured (VITE_MAIL_CDN_BASE). */
+export interface MediaAsset {
+  id: string;
+  folder: string;
+  name: string;
+  url: string;
+  storage_path: string;
+  size_bytes: number | null;
+  mime: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 
 export type MailCampaignStatus = "draft" | "sending" | "sent" | "failed";

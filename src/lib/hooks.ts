@@ -541,6 +541,41 @@ export function useUploadMailAsset() {
   return useMutation({ mutationFn: db.uploadMailAsset });
 }
 
+/* ---------- Sales CRM: Media library ---------- */
+export function useMediaAssets() {
+  return useQuery({ queryKey: ["media_assets"], queryFn: db.listMediaAssets });
+}
+export function useUploadMediaAsset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { file: File; folder: string }) =>
+      db.uploadMediaAsset(input.file, input.folder),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
+  });
+}
+export function useRecordMediaAsset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.recordMediaAsset,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
+  });
+}
+export function useDeleteMediaAsset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteMediaAsset,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
+  });
+}
+export function useRenameMediaAsset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; name: string }) =>
+      db.renameMediaAsset(input.id, input.name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
+  });
+}
+
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 export function useMailCampaigns() {
   return useQuery({ queryKey: ["mail_campaigns"], queryFn: db.listMailCampaigns });

@@ -4,6 +4,7 @@ import CampaignsPage from "./crm/CampaignsPage";
 import FollowUpsPage from "./crm/FollowUpsPage";
 import FormsPage from "./crm/FormsPage";
 import LeadsPage from "./crm/LeadsPage";
+import MediaPage from "./crm/MediaPage";
 import LeadStatusesPage from "./crm/LeadStatusesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
 import SalesDashboardTab from "./crm/SalesDashboardTab";
@@ -19,7 +20,8 @@ type Tab =
   | "templates"
   | "campaigns"
   | "followups"
-  | "forms";
+  | "forms"
+  | "media";
 
 const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   dashboard: { eyebrow: "Sales performance", title: "Sales CRM" },
@@ -31,6 +33,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   campaigns: { eyebrow: "Outreach", title: "Campaigns" },
   followups: { eyebrow: "Outreach", title: "Follow-ups" },
   forms: { eyebrow: "Outreach", title: "Forms" },
+  media: { eyebrow: "Outreach", title: "Media" },
 };
 
 /**
@@ -55,6 +58,7 @@ export default function CrmPage() {
       {tab === "campaigns" && <CampaignsPage />}
       {tab === "followups" && <FollowUpsPage />}
       {tab === "forms" && <FormsPage />}
+      {tab === "media" && <MediaPage />}
     </>
   );
 }
