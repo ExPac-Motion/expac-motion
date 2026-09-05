@@ -4,6 +4,7 @@ import ComingSoonTab from "./crm/ComingSoonTab";
 import LeadsPage from "./crm/LeadsPage";
 import LeadStatusesPage from "./crm/LeadStatusesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
+import SalesDashboardTab from "./crm/SalesDashboardTab";
 
 type Tab = "dashboard" | "leads" | "opportunities" | "statuses" | "team" | "templates";
 
@@ -29,12 +30,7 @@ export default function CrmPage() {
   return (
     <>
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
-      {tab === "dashboard" && (
-        <ComingSoonTab
-          title="Sales Dashboard"
-          body="Revenue, Gross Profit, Open Enquiries and target widgets — phase 2 of the Sales CRM brief."
-        />
-      )}
+      {tab === "dashboard" && <SalesDashboardTab />}
       {tab === "leads" && <LeadsPage />}
       {tab === "opportunities" && <OpportunitiesTab />}
       {tab === "statuses" && <LeadStatusesPage />}

@@ -38,6 +38,9 @@ export interface CompanySettings {
   default_fx_cny_zar: number;
   default_vat_pct: number;
   default_incoterm: string;
+  sales_revenue_target: number;
+  sales_gp_target: number;
+  sales_new_leads_target: number;
   updated_at: string;
 }
 export type CompanySettingsPatch = Partial<
@@ -434,6 +437,7 @@ export interface Quote {
   delivery_terms: string | null;
   valid_until: string | null;
   status: QuoteStatus;
+  accepted_at: string | null;
   commercial_value: number | null;
   insurance_amount: number | null;
   vessel_name: string | null;
