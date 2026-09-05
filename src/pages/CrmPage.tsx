@@ -1,11 +1,11 @@
 import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "../components/common";
-import ComingSoonTab from "./crm/ComingSoonTab";
 import LeadsPage from "./crm/LeadsPage";
 import LeadStatusesPage from "./crm/LeadStatusesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
 import SalesDashboardTab from "./crm/SalesDashboardTab";
 import SalesPersonPage from "./crm/SalesPersonPage";
+import TemplatesPage from "./crm/TemplatesPage";
 
 type Tab = "dashboard" | "leads" | "opportunities" | "statuses" | "team" | "templates";
 
@@ -36,12 +36,7 @@ export default function CrmPage() {
       {tab === "opportunities" && <OpportunitiesTab />}
       {tab === "statuses" && <LeadStatusesPage />}
       {tab === "team" && <SalesPersonPage />}
-      {tab === "templates" && (
-        <ComingSoonTab
-          title="Templates"
-          body="Reusable outreach message templates — phase 3 of the Sales CRM brief."
-        />
-      )}
+      {tab === "templates" && <TemplatesPage />}
     </>
   );
 }

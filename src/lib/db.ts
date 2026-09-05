@@ -36,6 +36,8 @@ import type {
   LeadStatusPatch,
   Opportunity,
   OpportunityPatch,
+  MailTemplate,
+  MailTemplatePatch,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -791,6 +793,29 @@ export async function updateOpportunity(
 
 export async function deleteOpportunity(id: string): Promise<void> {
   unwrap(await supabase.from("opportunities").delete().eq("id", id));
+}
+
+/* ---------- Sales CRM: Mail Templates ---------- */
+export async function listMailTemplates(): Promise<MailTemplate[]> {
+  return unwrap<MailTemplate[]>(
+    await supabase.from("mail_templates").select("*").order("name"),
+  );
+}
+
+export async function saveMailTemplate(
+  id: string | undefined,
+  patch: MailTemplatePatch,
+): Promise<MailTemplate> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<MailTemplate>(
+    id
+      ? await supabase.from("mail_templates").update(row).eq("id", id).select("*").single()
+      : await supabase.from("mail_templates").insert(row).select("*").single(),
+  );
+}
+
+export async function deleteMailTemplate(id: string): Promise<void> {
+  unwrap(await supabase.from("mail_templates").delete().eq("id", id));
 }
 
 /* ---------- Document Vault ---------- */

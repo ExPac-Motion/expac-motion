@@ -20,6 +20,7 @@ import type {
   LeadPatch,
   LeadStatusPatch,
   OpportunityPatch,
+  MailTemplatePatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -508,6 +509,26 @@ export function useDeleteOpportunity() {
   return useMutation({
     mutationFn: db.deleteOpportunity,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
+  });
+}
+
+/* ---------- Sales CRM: Mail Templates ---------- */
+export function useMailTemplates() {
+  return useQuery({ queryKey: ["mail_templates"], queryFn: db.listMailTemplates });
+}
+export function useSaveMailTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: MailTemplatePatch }) =>
+      db.saveMailTemplate(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_templates"] }),
+  });
+}
+export function useDeleteMailTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteMailTemplate,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_templates"] }),
   });
 }
 

@@ -263,6 +263,20 @@ export type OpportunityPatch = Partial<
   Omit<Opportunity, "id" | "created_at" | "updated_at" | "lead" | "client" | "quote" | "job" | "sales_person">
 >;
 
+/* ---------- Sales CRM: Mail Templates ---------- */
+
+export interface MailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+export type MailTemplatePatch = Partial<
+  Omit<MailTemplate, "id" | "created_at" | "updated_at">
+>;
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",
