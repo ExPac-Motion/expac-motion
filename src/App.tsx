@@ -22,6 +22,7 @@ import AgentsPage from "./pages/AgentsPage";
 import TransportersPage from "./pages/TransportersPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
+import DeliveryInstructionPrintPage from "./pages/DeliveryInstructionPrintPage";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 function RequireAuth() {
@@ -74,6 +75,10 @@ export default function App() {
           <Route path="/login" element={<LoginRoute />} />
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />
+            <Route
+              path="jobs/:id/documents/delivery-instruction/print"
+              element={<DeliveryInstructionPrintPage />}
+            />
           </Route>
           <Route element={<Protected />}>
             <Route index element={<DashboardPage />} />

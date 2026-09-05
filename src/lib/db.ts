@@ -20,6 +20,7 @@ import type {
   ProfilePatch,
   Quote,
   QuoteDraft,
+  ShipmentDocument,
   Supplier,
 } from "./types";
 
@@ -529,4 +530,59 @@ export async function updateProfile(
   return unwrap<Profile>(
     await supabase.from("profiles").update(patch).eq("id", id).select("*").single(),
   );
+}
+
+/* ---------- Document Vault ---------- */
+const DOCS_BUCKET = "shipment-documents";
+
+export async function listShipmentDocuments(
+  jobId: string,
+): Promise<ShipmentDocument[]> {
+  return unwrap<ShipmentDocument[]>(
+    await supabase
+      .from("shipment_documents")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function uploadShipmentDocument(
+  jobId: string,
+  file: File,
+): Promise<ShipmentDocument> {
+  const path = `${jobId}/${Date.now()}-${file.name}`;
+  const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
+  if (up.error) throw up.error;
+  return unwrap<ShipmentDocument>(
+    await supabase
+      .from("shipment_documents")
+      .insert({
+        job_id: jobId,
+        name: file.name,
+        storage_path: path,
+        kind: "upload",
+        size_bytes: file.size,
+      })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function deleteShipmentDocument(
+  doc: ShipmentDocument,
+): Promise<void> {
+  await supabase.storage.from(DOCS_BUCKET).remove([doc.storage_path]);
+  unwrap(await supabase.from("shipment_documents").delete().eq("id", doc.id));
+}
+
+/** Private bucket — a short-lived signed URL is needed to view/download. */
+export async function getShipmentDocumentUrl(
+  storagePath: string,
+): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(DOCS_BUCKET)
+    .createSignedUrl(storagePath, 300);
+  if (error || !data) throw error ?? new Error("Could not create download link");
+  return data.signedUrl;
 }

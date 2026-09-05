@@ -42,6 +42,22 @@ export type CompanySettingsPatch = Partial<
   Omit<CompanySettings, "id" | "updated_at">
 >;
 
+/* ---------- Document Vault ---------- */
+
+export type DocumentKind = "upload" | "generated";
+
+export interface ShipmentDocument {
+  id: string;
+  job_id: string;
+  name: string;
+  storage_path: string;
+  kind: DocumentKind;
+  doc_type: string | null;
+  size_bytes: number | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",

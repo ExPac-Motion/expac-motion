@@ -16,6 +16,7 @@ import type {
   OpsTaskPatch,
   ProfilePatch,
   QuoteDraft,
+  ShipmentDocument,
   Supplier,
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
@@ -382,6 +383,32 @@ export function useUpdateProfile() {
     mutationFn: (input: { id: string; patch: ProfilePatch }) =>
       db.updateProfile(input.id, input.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }),
+  });
+}
+
+/* ---------- Document Vault ---------- */
+export function useShipmentDocuments(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["shipment_documents", jobId],
+    queryFn: () => db.listShipmentDocuments(jobId as string),
+    enabled: Boolean(jobId),
+  });
+}
+export function useUploadShipmentDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { jobId: string; file: File }) =>
+      db.uploadShipmentDocument(input.jobId, input.file),
+    onSuccess: (_d, input) =>
+      qc.invalidateQueries({ queryKey: ["shipment_documents", input.jobId] }),
+  });
+}
+export function useDeleteShipmentDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (doc: ShipmentDocument) => db.deleteShipmentDocument(doc),
+    onSuccess: (_v, doc) =>
+      qc.invalidateQueries({ queryKey: ["shipment_documents", doc.job_id] }),
   });
 }
 

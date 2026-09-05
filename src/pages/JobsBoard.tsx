@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import {
@@ -13,10 +13,14 @@ import { useToast } from "../components/Toast";
 import {
   useCreateJob,
   useDeleteJob,
+  useDeleteShipmentDocument,
   useJobs,
   useSetJobMilestone,
+  useShipmentDocuments,
   useUpdateJob,
+  useUploadShipmentDocument,
 } from "../lib/hooks";
+import { getShipmentDocumentUrl } from "../lib/db";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import {
@@ -26,6 +30,7 @@ import {
   shipmentStatusTone,
   type Job,
   type JobPatch,
+  type ShipmentDocument,
 } from "../lib/types";
 import CommsRail from "./shipments/CommsRail";
 
@@ -549,7 +554,137 @@ function JobViewModal({
           </Link>
         </p>
       )}
+
+      <DocumentsSection job={job} />
     </Modal>
+  );
+}
+
+function bytesLabel(n: number | null): string {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function DocumentsSection({ job }: { job: Job }) {
+  const { data, isLoading } = useShipmentDocuments(job.id);
+  const upload = useUploadShipmentDocument();
+  const del = useDeleteShipmentDocument();
+  const { toast, error: toastError } = useToast();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  async function onPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      await upload.mutateAsync({ jobId: job.id, file });
+      toast("Document uploaded");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not upload");
+    }
+  }
+
+  async function onDownload(doc: ShipmentDocument) {
+    // Open the tab synchronously (still inside the click gesture) so the
+    // browser doesn't block it as a popup once the signed URL is awaited.
+    const tab = window.open("", "_blank", "noopener");
+    try {
+      const url = await getShipmentDocumentUrl(doc.storage_path);
+      if (tab) tab.location.href = url;
+      else window.open(url, "_blank", "noopener");
+    } catch (err) {
+      tab?.close();
+      toastError(err instanceof Error ? err.message : "Could not open document");
+    }
+  }
+
+  async function onDelete(doc: ShipmentDocument) {
+    if (!window.confirm(`Delete "${doc.name}"?`)) return;
+    try {
+      await del.mutateAsync(doc);
+      toast("Document deleted");
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not delete");
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 18, borderTop: "1px solid #e8e7e0", paddingTop: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 10,
+        }}
+      >
+        <strong>Documents</strong>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link
+            className="btn outline small"
+            to={`/jobs/${job.id}/documents/delivery-instruction/print`}
+          >
+            Delivery Instructions
+          </Link>
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => fileInput.current?.click()}
+            disabled={upload.isPending}
+          >
+            {upload.isPending ? "Uploading…" : "+ Upload"}
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            style={{ display: "none" }}
+            onChange={onPick}
+          />
+        </div>
+      </div>
+      {isLoading ? (
+        <Loading />
+      ) : (data ?? []).length === 0 ? (
+        <p className="muted small">No documents yet.</p>
+      ) : (
+        <div className="stack-sm">
+          {(data ?? []).map((doc) => (
+            <div
+              key={doc.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "6px 0",
+              }}
+            >
+              <button
+                className="btn ghost small"
+                style={{ textAlign: "left" }}
+                onClick={() => onDownload(doc)}
+                title="Open / download"
+              >
+                {doc.name}
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className="muted small">
+                  {bytesLabel(doc.size_bytes)} · {formatDate(doc.created_at)}
+                </span>
+                <button
+                  className="row-icon-btn danger"
+                  title="Delete"
+                  onClick={() => onDelete(doc)}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
