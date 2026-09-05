@@ -632,6 +632,37 @@ tr.clickable:hover {
 .rte-icon-select {
   max-width: 40px;
 }
+.rte-ai {
+  position: relative;
+  display: inline-flex;
+}
+.rte-ai-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid #d8d9d4;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+}
+.rte-ai-menu button {
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+}
+.rte-ai-menu button:hover {
+  background: #eef4e3;
+}
 .rte-toolbar button,
 .rte-toolbar select {
   border: 1px solid transparent;
