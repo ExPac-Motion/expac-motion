@@ -306,6 +306,7 @@ export function useSendMessage() {
     }) => {
       const { job, remarks, to, cc } = input;
       const mail = buildShipmentEmail(job, undefined, remarks);
+      const settings = await db.getCompanySettings().catch(() => null);
       try {
         const { id } = await sendMail({
           jobId: job.id,
@@ -314,6 +315,8 @@ export function useSendMessage() {
           subject: mail.subject,
           html: mail.html,
           text: mail.text,
+          fromName: settings?.mail_sender_name || undefined,
+          replyTo: settings?.mail_reply_to || undefined,
         });
         return db.createMessage({
           job_id: job.id,
@@ -638,6 +641,13 @@ export function useSendCampaign() {
   return useMutation({
     mutationFn: async (input: SendCampaignInput) => {
       const { templateId, name, subject, body, recipients, onProgress } = input;
+      const settings = await db.getCompanySettings().catch(() => null);
+      const fromName = settings?.mail_sender_name || undefined;
+      const replyTo = settings?.mail_reply_to || undefined;
+      const bodyWithSig =
+        settings && settings.mail_signature_html.trim()
+          ? `${body}<br><br>${settings.mail_signature_html}`
+          : body;
       const campaign = await db.createMailCampaign({
         template_id: templateId,
         name,
@@ -669,7 +679,7 @@ export function useSendCampaign() {
             company: recipient?.company || "",
             unsubscribeUrl,
           };
-          const html = resolveMergeFields(body, mergeCtx);
+          const html = resolveMergeFields(bodyWithSig, mergeCtx);
           const finalSubject = resolveMergeFields(subject, mergeCtx);
           try {
             const { id } = await sendMail({
@@ -677,6 +687,8 @@ export function useSendCampaign() {
               subject: finalSubject,
               html,
               text: htmlToText(html),
+              fromName,
+              replyTo,
             });
             await db.updateMailCampaignRecipient(row.id, {
               status: "sent",

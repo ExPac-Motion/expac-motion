@@ -46,6 +46,9 @@ export interface CompanySettings {
   sales_revenue_target: number;
   sales_gp_target: number;
   sales_new_leads_target: number;
+  mail_sender_name: string;
+  mail_reply_to: string;
+  mail_signature_html: string;
   updated_at: string;
 }
 export type CompanySettingsPatch = Partial<

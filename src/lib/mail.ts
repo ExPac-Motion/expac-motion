@@ -7,6 +7,9 @@ export interface SendMailInput {
   subject: string;
   html: string;
   text: string;
+  /** Overrides the sender display name (address stays the verified domain). */
+  fromName?: string;
+  replyTo?: string;
 }
 
 interface SendMailResult {

@@ -11,7 +11,7 @@
  *      `x-cron-key` header instead of a user JWT)
  *
  * Request (POST /api/send-mail):
- *   { jobId, to: string[], cc?: string[], subject, html, text }
+ *   { jobId, to: string[], cc?: string[], subject, html, text, fromName?, replyTo? }
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
@@ -62,13 +62,28 @@ export async function onRequestPost(context) {
     return json({ error: "subject and html/text are required." }, 400);
   }
 
+  // Sender display name / reply-to can be overridden per request (from the
+  // configurable email identity in Settings); the address itself stays the
+  // verified domain from MAIL_FROM.
+  const baseFrom = env.MAIL_FROM || "EXPAC Forwarding <support@expac.co.za>";
+  const fromName = typeof body.fromName === "string" ? body.fromName.trim() : "";
+  let from = baseFrom;
+  if (fromName) {
+    const m = String(baseFrom).match(/<([^>]+)>/);
+    from = fromName + " <" + (m ? m[1] : baseFrom) + ">";
+  }
+  const replyTo =
+    (typeof body.replyTo === "string" && body.replyTo.trim()) ||
+    env.MAIL_REPLY_TO ||
+    "support@expac.co.za";
+
   const payload = {
-    from: env.MAIL_FROM || "EXPAC Forwarding <support@expac.co.za>",
+    from,
     to,
     subject: String(body.subject),
     html: body.html || undefined,
     text: body.text || undefined,
-    reply_to: env.MAIL_REPLY_TO || "support@expac.co.za",
+    reply_to: replyTo,
     headers: body.jobId ? { "X-Shipment-Id": String(body.jobId) } : undefined,
   };
   if (cc.length) payload.cc = cc;

@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
+import RichTextEditor from "../components/RichTextEditor";
 import { useToast } from "../components/Toast";
 import {
   useCompanySettings,
   useProfiles,
   useUpdateCompanySettings,
   useUpdateProfile,
+  useUploadMailAsset,
 } from "../lib/hooks";
 import type { CompanySettingsPatch, Profile, UserRole } from "../lib/types";
 
@@ -300,11 +302,75 @@ function TeamTab() {
 }
 
 function EmailTab() {
+  const { data, isLoading, isError, error } = useCompanySettings();
+  const update = useUpdateCompanySettings();
+  const uploadAsset = useUploadMailAsset();
+  const { toast, error: toastError } = useToast();
+  const [sig, setSig] = useState<string | null>(null);
+
+  if (isLoading) return <Loading />;
+  if (isError || !data) return <ErrorNote error={error} />;
+
+  const signature = sig ?? data.mail_signature_html;
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const patch: CompanySettingsPatch = {
+      mail_sender_name: String(fd.get("mail_sender_name") || "").trim(),
+      mail_reply_to: String(fd.get("mail_reply_to") || "").trim(),
+      mail_signature_html: signature,
+    };
+    try {
+      await update.mutateAsync(patch);
+      toast("Email settings saved");
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not save");
+    }
+  }
+
   return (
     <>
-      <p className="muted" style={{ marginTop: 0 }}>
-        Outbound customer email (Shipment Comms) is connected.
-      </p>
+      <form onSubmit={onSubmit}>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Applied to campaigns, follow-up emails and form notifications. The
+          sending address stays the verified domain — only the display name
+          and reply-to change.
+        </p>
+        <div className="grid2">
+          <div className="field">
+            <label>Sent-as name</label>
+            <input name="mail_sender_name" defaultValue={data.mail_sender_name} />
+          </div>
+          <div className="field">
+            <label>Reply-to address</label>
+            <input
+              name="mail_reply_to"
+              type="email"
+              defaultValue={data.mail_reply_to}
+            />
+          </div>
+        </div>
+        <div className="field">
+          <label>Email signature</label>
+          <RichTextEditor
+            value={signature}
+            onChange={setSig}
+            onUploadImage={(file) => uploadAsset.mutateAsync(file)}
+          />
+          <span className="hint">
+            Added to the bottom of every campaign and follow-up email.
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <button type="submit" className="btn" disabled={update.isPending}>
+            {update.isPending ? "Saving…" : "Save Email Settings"}
+          </button>
+        </div>
+      </form>
+
+      <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "20px 0" }} />
+
       <div className="field">
         <label>Active provider</label>
         <div className="grid2" style={{ alignItems: "start" }}>
