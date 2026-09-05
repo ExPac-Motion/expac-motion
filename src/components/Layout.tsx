@@ -55,7 +55,6 @@ const NAV: NavModule[] = [
   { to: "/import-vat-duty", label: "Customs Charges" },
   { to: "/rates", label: "Rates & Tariff" },
   { to: "/clients", label: "Customers" },
-  { to: "/crm", label: "CRM" },
   {
     to: "/suppliers",
     label: "Suppliers",
@@ -66,6 +65,7 @@ const NAV: NavModule[] = [
       { to: "/clearing-agents", label: "Clearing Agents" },
     ],
   },
+  { to: "/crm", label: "Sales CRM" },
 ];
 
 function basePath(to: string): string {

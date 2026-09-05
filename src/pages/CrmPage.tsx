@@ -58,7 +58,7 @@ export default function CrmPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Client relationships" title="CRM" />
+      <PageHeader eyebrow="Client relationships" title="Sales CRM" />
       <div className="panel">
         <div className="panel-head">
           <div>
