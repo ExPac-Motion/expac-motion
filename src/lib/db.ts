@@ -6,6 +6,7 @@ import type {
   ImportDutyDraft,
   ImportVatDuty,
   Job,
+  JobInsert,
   JobPatch,
   JobTracking,
   Message,
@@ -378,6 +379,17 @@ export async function updateJob(id: string, patch: JobPatch): Promise<void> {
     clean[k] = v === "" ? null : v;
   }
   unwrap(await supabase.from("jobs").update(clean).eq("id", id).select("id"));
+}
+
+export async function deleteJob(id: string): Promise<void> {
+  unwrap(await supabase.from("jobs").delete().eq("id", id));
+}
+
+/** Inserts a standalone job row (Duplicate on the board) — not tied to a quote. */
+export async function createJob(values: JobInsert): Promise<Job> {
+  return unwrap<Job>(
+    await supabase.from("jobs").insert(values).select(JOB_SELECT).single(),
+  );
 }
 
 export async function setJobMilestone(

@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
+import Modal from "../components/Modal";
+import {
+  EmptyState,
+  ErrorNote,
+  Loading,
+  PageHeader,
+  RowActions,
+  RowActionsHead,
+} from "../components/common";
 import { useToast } from "../components/Toast";
-import { useJobs, useUpdateJob } from "../lib/hooks";
-import { formatDate, portCode } from "../lib/format";
+import { useCreateJob, useDeleteJob, useJobs, useUpdateJob } from "../lib/hooks";
+import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import {
   DELIVERED_STATUS,
@@ -33,10 +41,18 @@ function JobRow({
   job,
   onSave,
   onOpenComms,
+  onView,
+  onEdit,
+  onDelete,
+  onDuplicate,
 }: {
   job: Job;
   onSave: (id: string, patch: JobPatch) => void;
   onOpenComms: (job: Job) => void;
+  onView: (job: Job) => void;
+  onEdit: (job: Job) => void;
+  onDelete: (job: Job) => void;
+  onDuplicate: (job: Job) => void;
 }) {
   // Row owns its edit state; seeded once from the job. Each field saves to the
   // server on blur / change, so a refetch never has to clobber what's typed.
@@ -72,14 +88,14 @@ function JobRow({
   return (
     <tr>
       <td>
-        <button
-          className="btn ghost small icon-only"
-          onClick={() => onOpenComms(job)}
-          title="Messages / email the customer"
-          aria-label="Messages"
-        >
-          ✉
-        </button>
+        <RowActions
+          onMail={() => onOpenComms(job)}
+          mailTitle="Messages / email the customer"
+          onView={() => onView(job)}
+          onEdit={() => onEdit(job)}
+          onDelete={() => onDelete(job)}
+          onDuplicate={() => onDuplicate(job)}
+        />
       </td>
       <td className="nowrap">{formatDate(job.created_at)}</td>
       <td className="nowrap">
@@ -274,15 +290,49 @@ const COPY: Record<
 export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const { data: jobs, isLoading, isError, error } = useJobs();
   const updateJob = useUpdateJob();
+  const deleteJob = useDeleteJob();
+  const createJob = useCreateJob();
   const { toast, error: toastError } = useToast();
   const [params] = useSearchParams();
   const modeTab = modeTabFromParam(params.get("mode"));
   const [commsJob, setCommsJob] = useState<Job | null>(null);
   const [railOpen, setRailOpen] = useState(false);
+  const [viewing, setViewing] = useState<Job | null>(null);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   function openComms(j: Job) {
     setCommsJob(j);
     setRailOpen(true);
+  }
+
+  async function onDeleteJob(j: Job) {
+    if (!window.confirm(`Delete shipment ${j.reference}? This cannot be undone.`))
+      return;
+    try {
+      await deleteJob.mutateAsync(j.id);
+      toast("Shipment deleted");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not delete shipment");
+    }
+  }
+
+  async function onDuplicateJob(j: Job) {
+    try {
+      const created = await createJob.mutateAsync({
+        reference: newReference(j.mode),
+        mode: j.mode,
+        client_id: j.client_id,
+        supplier_id: j.supplier_id,
+        origin: j.origin,
+        destination: j.destination,
+        shipping_line: j.shipping_line,
+        carrier_name: j.carrier_name,
+      });
+      toast("Shipment duplicated");
+      setEditingJob(created);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not duplicate shipment");
+    }
   }
 
   const stageRows = (jobs ?? []).filter((j) =>
@@ -356,7 +406,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             <table className="table--compact jobs-table">
               <thead>
                 <tr>
-                  <th />
+                  <th>
+                    <RowActionsHead />
+                  </th>
                   <th>Created On</th>
                   <th>Shipment #</th>
                   <th>Shipper</th>
@@ -383,6 +435,10 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                     job={j}
                     onSave={save}
                     onOpenComms={openComms}
+                    onView={setViewing}
+                    onEdit={setEditingJob}
+                    onDelete={onDeleteJob}
+                    onDuplicate={onDuplicateJob}
                   />
                 ))}
               </tbody>
@@ -397,6 +453,220 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         open={railOpen}
         onToggle={() => setRailOpen((o) => !o)}
       />
+
+      {viewing && (
+        <JobViewModal
+          job={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={() => {
+            setEditingJob(viewing);
+            setViewing(null);
+          }}
+        />
+      )}
+
+      {editingJob && (
+        <JobEditModal
+          job={editingJob}
+          onClose={() => setEditingJob(null)}
+          onSave={(patch) => {
+            save(editingJob.id, patch);
+            setEditingJob(null);
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function JobViewModal({
+  job,
+  onClose,
+  onEdit,
+}: {
+  job: Job;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <Modal
+      title={job.reference}
+      onClose={onClose}
+      wide
+      headerActions={
+        <button className="btn outline" onClick={onEdit}>
+          Edit
+        </button>
+      }
+    >
+      <div className="grid2">
+        <ViewField label="Customer" value={job.client?.company ?? "—"} />
+        <ViewField label="Shipper" value={job.supplier?.company ?? "—"} />
+        <ViewField label="Mode" value={job.mode} />
+        <ViewField label="Milestone" value={job.milestone} />
+        <ViewField label="Shipment Status" value={job.shipment_status || "—"} />
+        <ViewField label="PO #" value={job.po_no || "—"} />
+        <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
+        <ViewField label="Container No" value={job.container_no || "—"} />
+        <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
+        <ViewField label="Carrier/Airline" value={job.carrier_name || "—"} />
+        <ViewField label="POL" value={codeOf(job.origin) || "—"} />
+        <ViewField label="POD" value={codeOf(job.destination) || "—"} />
+        <ViewField label="ETD" value={formatDate(job.etd)} />
+        <ViewField label="ETA" value={formatDate(job.eta)} />
+        <ViewField
+          label="Prov. Delivery"
+          value={formatDate(job.provisional_delivery_date)}
+        />
+        <ViewField label="Created On" value={formatDate(job.created_at)} />
+      </div>
+      <ViewField label="Additional Notes" value={job.notes || "—"} />
+      {job.quote_id && (
+        <p style={{ marginTop: 8 }}>
+          <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
+            View originating quotation →
+          </Link>
+        </p>
+      )}
+    </Modal>
+  );
+}
+
+function JobEditModal({
+  job,
+  onClose,
+  onSave,
+}: {
+  job: Job;
+  onClose: () => void;
+  onSave: (patch: JobPatch) => void;
+}) {
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    onSave({
+      po_no: String(fd.get("po_no") || ""),
+      shipment_status: String(fd.get("shipment_status") || ""),
+      notes: String(fd.get("notes") || ""),
+      awb_mbl: String(fd.get("awb_mbl") || ""),
+      container_no: String(fd.get("container_no") || ""),
+      shipping_line: String(fd.get("shipping_line") || ""),
+      carrier_name: String(fd.get("carrier_name") || ""),
+      provisional_delivery_date: String(fd.get("provisional_delivery_date") || ""),
+      etd: String(fd.get("etd") || ""),
+      eta: String(fd.get("eta") || ""),
+      origin: codeOf(String(fd.get("origin") || "")),
+      destination: codeOf(String(fd.get("destination") || "")),
+    });
+  }
+
+  return (
+    <Modal title={`Edit ${job.reference}`} onClose={onClose} wide>
+      <form onSubmit={onSubmit}>
+        <div className="grid2">
+          <div className="field">
+            <label>PO #</label>
+            <input name="po_no" defaultValue={job.po_no ?? ""} autoFocus />
+          </div>
+          <div className="field">
+            <label>Shipment Status</label>
+            <select name="shipment_status" defaultValue={job.shipment_status ?? ""}>
+              <option value="">— set status —</option>
+              {SHIPMENT_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>{docLabel(job.mode)}</label>
+            <input name="awb_mbl" defaultValue={job.awb_mbl ?? ""} />
+          </div>
+          <div className="field">
+            <label>Container No</label>
+            <input name="container_no" defaultValue={job.container_no ?? ""} />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>Shipping Line</label>
+            <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
+          </div>
+          <div className="field">
+            <label>Carrier/Airline</label>
+            <input name="carrier_name" defaultValue={job.carrier_name ?? ""} />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>POL</label>
+            <input
+              name="origin"
+              list="job-locodes"
+              defaultValue={codeOf(job.origin)}
+            />
+          </div>
+          <div className="field">
+            <label>POD</label>
+            <input
+              name="destination"
+              list="job-locodes"
+              defaultValue={codeOf(job.destination)}
+            />
+          </div>
+        </div>
+        <div className="grid3">
+          <div className="field">
+            <label>ETD</label>
+            <input type="date" name="etd" defaultValue={job.etd ?? ""} />
+          </div>
+          <div className="field">
+            <label>ETA</label>
+            <input type="date" name="eta" defaultValue={job.eta ?? ""} />
+          </div>
+          <div className="field">
+            <label>Prov. Delivery</label>
+            <input
+              type="date"
+              name="provisional_delivery_date"
+              defaultValue={job.provisional_delivery_date ?? ""}
+            />
+          </div>
+        </div>
+        <div className="field">
+          <label>Additional Notes</label>
+          <textarea name="notes" rows={2} defaultValue={job.notes ?? ""} />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            marginTop: 8,
+          }}
+        >
+          <button type="button" className="btn outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn">
+            Save
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ViewField({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div className="hint" style={{ marginBottom: 4 }}>
+        {label}
+      </div>
+      <strong>{value}</strong>
+    </div>
   );
 }

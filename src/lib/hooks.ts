@@ -9,6 +9,7 @@ import type {
   Contact,
   ImportDutyDraft,
   Job,
+  JobInsert,
   JobPatch,
   Milestone,
   OpsTaskPatch,
@@ -365,6 +366,20 @@ export function useUpdateJob() {
   return useMutation({
     mutationFn: (input: { id: string; patch: JobPatch }) =>
       db.updateJob(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+}
+export function useDeleteJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteJob,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+}
+export function useCreateJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: JobInsert) => db.createJob(values),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 }

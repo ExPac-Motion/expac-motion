@@ -334,6 +334,11 @@ export type JobPatch = Partial<
   >
 >;
 
+/** Shape for inserting a new job row directly (e.g. Duplicate on the board). */
+export type JobInsert = Pick<Job, "reference" | "mode"> & JobPatch & Partial<
+  Pick<Job, "quote_id" | "client_id" | "supplier_id">
+>;
+
 /* ---------- Shipment Comms (messages) ---------- */
 
 export type MessageKind = "email" | "note";

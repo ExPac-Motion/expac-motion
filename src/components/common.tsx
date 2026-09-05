@@ -43,11 +43,16 @@ const ROW_ICON = {
  * propagation since these rows are often themselves clickable (opens View).
  */
 export function RowActions({
+  onMail,
+  mailTitle = "Send a message",
   onView,
   onEdit,
   onDelete,
   onDuplicate,
 }: {
+  /** When set, a mail icon is shown first (after the checkbox). */
+  onMail?: () => void;
+  mailTitle?: string;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -60,6 +65,11 @@ export function RowActions({
   return (
     <div className="row-icons">
       <input type="checkbox" onClick={(e) => e.stopPropagation()} />
+      {onMail && (
+        <button className="row-icon-btn" title={mailTitle} onClick={stop(onMail)}>
+          {ROW_ICON.mail}
+        </button>
+      )}
       <button className="row-icon-btn" title="View" onClick={stop(onView)}>
         {ROW_ICON.view}
       </button>
