@@ -716,6 +716,169 @@ tr.clickable:hover {
   font-size: 0.8rem;
   background: #fff;
 }
+/* Web contact forms — builder */
+.wf-name-input {
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ink);
+  padding: 4px 6px;
+  border-radius: 6px;
+  min-width: 220px;
+}
+.wf-name-input:hover,
+.wf-name-input:focus {
+  border-color: var(--line);
+  background: #fff;
+  outline: none;
+}
+.wf-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.wf-tab {
+  border: 0;
+  background: transparent;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.wf-tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--green);
+}
+.wf-builder {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .wf-builder {
+    grid-template-columns: 1fr;
+  }
+}
+.wf-preview h2 {
+  margin: 0 0 4px;
+}
+.wf-fieldwrap {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px dashed transparent;
+  border-radius: 10px;
+  padding: 6px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.wf-fieldwrap:hover {
+  border-color: var(--line);
+}
+.wf-fieldwrap.sel {
+  border-color: var(--green);
+  background: #f6faef;
+}
+.wf-fieldwrap .field {
+  margin-bottom: 0;
+}
+.wf-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+.wf-thanks-preview {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #faf9f5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.wf-inspect .check {
+  margin: 4px 0 12px;
+}
+.wf-field-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.wf-add-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wf-hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 16px 0;
+}
+.wf-copy-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.wf-err {
+  background: #fdecea;
+  color: #b3261e;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+.wf-req {
+  color: #b3261e;
+}
+
+/* Web contact forms — public hosted page */
+.wf-page {
+  min-height: 100vh;
+  background: #f4f3ee;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px;
+}
+.wf-page.wf-embed {
+  min-height: auto;
+  background: transparent;
+  padding: 8px;
+}
+.wf-card {
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px;
+}
+.wf-card h1 {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+}
+.wf-card .sub {
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+.wf-card .wf-submit {
+  margin-top: 14px;
+}
+.wf-thanks {
+  text-align: center;
+}
+
 /* Campaign recipient picker */
 .lead-picker {
   display: flex;

@@ -44,6 +44,10 @@ import type {
   FollowUpRule,
   FollowUpRulePatch,
   FollowUpLogEntry,
+  WebForm,
+  WebFormPatch,
+  WebFormSubmission,
+  PublicWebForm,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -926,6 +930,62 @@ export async function updateMailCampaignRecipient(
 export async function unsubscribeLead(recipientId: string): Promise<boolean> {
   return unwrap<boolean>(
     await supabase.rpc("unsubscribe_lead", { p_recipient_id: recipientId }),
+  );
+}
+
+/* ---------- Sales CRM: Web contact forms ---------- */
+export async function listWebForms(): Promise<WebForm[]> {
+  return unwrap<WebForm[]>(
+    await supabase
+      .from("web_forms")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function saveWebForm(
+  id: string | undefined,
+  patch: WebFormPatch,
+): Promise<WebForm> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<WebForm>(
+    id
+      ? await supabase.from("web_forms").update(row).eq("id", id).select("*").single()
+      : await supabase.from("web_forms").insert(row).select("*").single(),
+  );
+}
+
+export async function deleteWebForm(id: string): Promise<void> {
+  unwrap(await supabase.from("web_forms").delete().eq("id", id));
+}
+
+export async function listWebFormSubmissions(
+  formId: string,
+): Promise<WebFormSubmission[]> {
+  return unwrap<WebFormSubmission[]>(
+    await supabase
+      .from("web_form_submissions")
+      .select("*")
+      .eq("form_id", formId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** Public hosted form page -- callable with no session (anon role). */
+export async function getPublicWebForm(id: string): Promise<PublicWebForm | null> {
+  const data = unwrap<PublicWebForm | null>(
+    await supabase.rpc("get_web_form", { p_id: id }),
+  );
+  return data ?? null;
+}
+
+export async function submitWebForm(
+  id: string,
+  data: Record<string, string>,
+  utm: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  return unwrap<{ ok: boolean; error?: string }>(
+    await supabase.rpc("submit_web_form", { p_id: id, p_data: data, p_utm: utm }),
   );
 }
 

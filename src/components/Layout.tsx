@@ -77,6 +77,7 @@ const NAV: NavModule[] = [
       { to: "/crm?tab=templates", label: "Templates" },
       { to: "/crm?tab=campaigns", label: "Campaigns" },
       { to: "/crm?tab=followups", label: "Follow-ups" },
+      { to: "/crm?tab=forms", label: "Forms" },
     ],
   },
 ];

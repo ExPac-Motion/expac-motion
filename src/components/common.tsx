@@ -53,9 +53,9 @@ export function RowActions({
   /** When set, a mail icon is shown first (after the checkbox). */
   onMail?: () => void;
   mailTitle?: string;
-  onView: () => void;
   /** Each icon is omitted when its handler isn't passed (e.g. config lists
    *  that are view + edit only, or a sent campaign that can't be edited). */
+  onView?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -72,9 +72,11 @@ export function RowActions({
           {ROW_ICON.mail}
         </button>
       )}
-      <button className="row-icon-btn" title="View" onClick={stop(onView)}>
-        {ROW_ICON.view}
-      </button>
+      {onView && (
+        <button className="row-icon-btn" title="View" onClick={stop(onView)}>
+          {ROW_ICON.view}
+        </button>
+      )}
       {onEdit && (
         <button className="row-icon-btn" title="Edit" onClick={stop(onEdit)}>
           {ROW_ICON.edit}

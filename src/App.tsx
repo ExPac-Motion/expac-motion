@@ -30,6 +30,7 @@ import PortalSignupPage from "./pages/portal/PortalSignupPage";
 import PortalDashboardPage from "./pages/portal/PortalDashboardPage";
 import PortalShipmentPage from "./pages/portal/PortalShipmentPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
+import FormPublicPage from "./pages/FormPublicPage";
 import { isSupabaseConfigured } from "./lib/supabase";
 import { useMyProfile } from "./lib/hooks";
 
@@ -99,6 +100,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginRoute />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
+          <Route path="/forms/:id" element={<FormPublicPage />} />
           <Route path="/portal/signup" element={<PortalSignupPage />} />
           <Route element={<PortalProtected />}>
             <Route path="portal" element={<PortalDashboardPage />} />

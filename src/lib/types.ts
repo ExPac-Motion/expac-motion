@@ -393,6 +393,89 @@ export interface FollowUpLogEntry {
   rule?: Pick<FollowUpRule, "id" | "name"> | null;
 }
 
+/* ---------- Sales CRM: Web contact forms ---------- */
+
+export type WebFormFieldType =
+  | "text"
+  | "email"
+  | "phone"
+  | "textarea"
+  | "dropdown";
+export type WebFormFieldMap =
+  | "company"
+  | "contact"
+  | "email"
+  | "phone"
+  | "notes"
+  | "none";
+
+export const WEB_FORM_FIELD_TYPES: { type: WebFormFieldType; label: string }[] = [
+  { type: "text", label: "Short text" },
+  { type: "email", label: "Email" },
+  { type: "phone", label: "Phone" },
+  { type: "textarea", label: "Long text" },
+  { type: "dropdown", label: "Dropdown" },
+];
+
+export const WEB_FORM_FIELD_MAPS: { value: WebFormFieldMap; label: string }[] = [
+  { value: "none", label: "Don't map" },
+  { value: "company", label: "Lead · Company" },
+  { value: "contact", label: "Lead · Contact name" },
+  { value: "email", label: "Lead · Email" },
+  { value: "phone", label: "Lead · Phone" },
+  { value: "notes", label: "Lead · Notes (appended)" },
+];
+
+export interface WebFormField {
+  id: string;
+  type: WebFormFieldType;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  choices?: string[];
+  mapTo: WebFormFieldMap;
+}
+
+export interface WebForm {
+  id: string;
+  name: string;
+  heading: string;
+  subtitle: string;
+  fields: WebFormField[];
+  submit_label: string;
+  thankyou_title: string;
+  thankyou_body: string;
+  notify_email: string | null;
+  track_url_params: boolean;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+export type WebFormPatch = Partial<
+  Omit<WebForm, "id" | "created_at" | "updated_at">
+>;
+
+/** The render-safe subset returned by the public get_web_form RPC. */
+export interface PublicWebForm {
+  id: string;
+  heading: string;
+  subtitle: string;
+  fields: WebFormField[];
+  submit_label: string;
+  thankyou_title: string;
+  thankyou_body: string;
+  track_url_params: boolean;
+}
+
+export interface WebFormSubmission {
+  id: string;
+  form_id: string;
+  lead_id: string | null;
+  data: Record<string, string>;
+  utm: Record<string, string>;
+  created_at: string;
+}
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",

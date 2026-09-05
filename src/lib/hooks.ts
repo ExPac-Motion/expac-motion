@@ -22,6 +22,7 @@ import type {
   OpportunityPatch,
   MailTemplatePatch,
   FollowUpRulePatch,
+  WebFormPatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -589,6 +590,33 @@ export function useRunDueFollowUps() {
   return useMutation({
     mutationFn: db.runDueFollowUps,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["follow_up_log"] }),
+  });
+}
+
+/* ---------- Sales CRM: Web contact forms ---------- */
+export function useWebForms() {
+  return useQuery({ queryKey: ["web_forms"], queryFn: db.listWebForms });
+}
+export function useSaveWebForm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: WebFormPatch }) =>
+      db.saveWebForm(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["web_forms"] }),
+  });
+}
+export function useDeleteWebForm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteWebForm,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["web_forms"] }),
+  });
+}
+export function useWebFormSubmissions(formId: string | undefined) {
+  return useQuery({
+    queryKey: ["web_form_submissions", formId],
+    queryFn: () => db.listWebFormSubmissions(formId as string),
+    enabled: !!formId,
   });
 }
 
