@@ -10,11 +10,18 @@ import {
   RowActionsHead,
 } from "../components/common";
 import { useToast } from "../components/Toast";
-import { useCreateJob, useDeleteJob, useJobs, useUpdateJob } from "../lib/hooks";
+import {
+  useCreateJob,
+  useDeleteJob,
+  useJobs,
+  useSetJobMilestone,
+  useUpdateJob,
+} from "../lib/hooks";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import {
   DELIVERED_STATUS,
+  MILESTONE_BY_STATUS,
   SHIPMENT_STATUSES,
   shipmentStatusTone,
   type Job,
@@ -292,6 +299,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const updateJob = useUpdateJob();
   const deleteJob = useDeleteJob();
   const createJob = useCreateJob();
+  const setMilestone = useSetJobMilestone();
   const { toast, error: toastError } = useToast();
   const [params] = useSearchParams();
   const modeTab = modeTabFromParam(params.get("mode"));
@@ -364,6 +372,19 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           toastError(e instanceof Error ? e.message : "Could not save"),
       },
     );
+
+    // Advance the milestone funnel (+ log a job_events row) whenever the
+    // Shipment Status moves into a different stage — nothing else does this.
+    if (patch.shipment_status) {
+      const milestone = MILESTONE_BY_STATUS[patch.shipment_status];
+      if (milestone) {
+        setMilestone.mutate({
+          jobId: id,
+          milestone,
+          note: `Shipment Status set to "${patch.shipment_status}"`,
+        });
+      }
+    }
   }
 
   const copy = COPY[mode];

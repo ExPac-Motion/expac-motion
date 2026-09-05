@@ -62,6 +62,29 @@ export function shipmentStatusTone(s: string | null | undefined): string {
   }
 }
 
+/**
+ * Maps the free-text Shipment Status (board dropdown) to the 4-stage
+ * Milestone funnel (Dashboard's Operational Funnel + future CRM timeline).
+ * Statuses not listed here leave the milestone unchanged.
+ */
+export const MILESTONE_BY_STATUS: Record<string, Milestone> = {
+  Booked: "Booked",
+  "Vessel Booked": "Booked",
+  "Loaded for Flight": "In Transit",
+  Departed: "In Transit",
+  "In Transit": "In Transit",
+  "Vessel Arrived": "In Transit",
+  "Vessel Working": "In Transit",
+  "Container Unlanded": "In Transit",
+  "Customs Cleared": "Customs",
+  "Customs Detained": "Customs",
+  "Arrived at Destination": "Customs",
+  "Collected from Port": "Customs",
+  Collected: "Delivered",
+  "Out on Delivery": "Delivered",
+  Delivered: "Delivered",
+};
+
 export type Commodity = "General Cargo" | "Hazardous Cargo" | "Sensitive Cargo";
 export const COMMODITIES: Commodity[] = [
   "General Cargo",
