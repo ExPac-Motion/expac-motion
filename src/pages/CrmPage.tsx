@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
+import { useToast } from "../components/Toast";
 import {
   useClients,
+  useCreateClientInvite,
   useJobs,
   useMessagesForJobs,
   useOpsTasks,
@@ -130,8 +132,27 @@ function CrmClientModal({
   const tasksQ = useOpsTasks();
   const messagesQ = useMessagesForJobs(jobIds);
   const docsQ = useShipmentDocumentsForJobs(jobIds);
+  const createInvite = useCreateClientInvite();
+  const { toast, error: toastError } = useToast();
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   const tasks = (tasksQ.data ?? []).filter((t) => t.client_id === client.id);
+
+  async function onInvite() {
+    try {
+      const invite = await createInvite.mutateAsync(client.id);
+      const link = `${window.location.origin}/portal/signup?token=${invite.token}`;
+      setInviteLink(link);
+      try {
+        await navigator.clipboard.writeText(link);
+        toast("Invite link copied to clipboard");
+      } catch {
+        toast("Invite link created");
+      }
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not create invite");
+    }
+  }
 
   const pipeline = STATUS_ORDER.map((st) => {
     const rows = quotes.filter((q) => q.status === st);
@@ -176,7 +197,35 @@ function CrmClientModal({
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
-    <Modal title={client.company} onClose={onClose} wide stickyHeader>
+    <Modal
+      title={client.company}
+      onClose={onClose}
+      wide
+      stickyHeader
+      headerActions={
+        <button
+          className="btn outline"
+          onClick={onInvite}
+          disabled={createInvite.isPending}
+        >
+          {createInvite.isPending ? "Creating…" : "Invite to Portal"}
+        </button>
+      }
+    >
+      {inviteLink && (
+        <div
+          className="hint"
+          style={{
+            marginBottom: 14,
+            padding: 10,
+            background: "#f5f4ef",
+            borderRadius: 8,
+            wordBreak: "break-all",
+          }}
+        >
+          Share this link with the customer (copied to clipboard): {inviteLink}
+        </div>
+      )}
       <div className="grid2" style={{ marginBottom: 18 }}>
         <div>
           <h4 style={{ margin: "0 0 8px" }}>Deal Pipeline</h4>

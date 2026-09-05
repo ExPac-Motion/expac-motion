@@ -361,6 +361,58 @@ export function useAddNote() {
   });
 }
 
+/* ---------- Customer Portal ---------- */
+export function useMyProfile() {
+  return useQuery({ queryKey: ["my_profile"], queryFn: db.getMyProfile });
+}
+export function useCreateClientInvite() {
+  return useMutation({ mutationFn: (clientId: string) => db.createClientInvite(clientId) });
+}
+export function useInvite(token: string | undefined) {
+  return useQuery({
+    queryKey: ["invite", token],
+    queryFn: () => db.getInvite(token as string),
+    enabled: Boolean(token),
+    retry: false,
+  });
+}
+export function useMyQuotes() {
+  return useQuery({ queryKey: ["my_quotes"], queryFn: db.listMyQuotes });
+}
+export function useMyQuoteLines(quoteId: string | undefined) {
+  return useQuery({
+    queryKey: ["my_quote_lines", quoteId],
+    queryFn: () => db.listMyQuoteLines(quoteId as string),
+    enabled: Boolean(quoteId),
+  });
+}
+export function useMyJobs() {
+  return useQuery({ queryKey: ["my_jobs"], queryFn: db.listMyJobs });
+}
+export function useMyMessages(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["my_messages", jobId],
+    queryFn: () => db.listMyMessages(jobId as string),
+    enabled: Boolean(jobId),
+  });
+}
+export function useSendMyMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { jobId: string; body: string }) =>
+      db.sendMyMessage(input.jobId, input.body),
+    onSuccess: (_v, input) =>
+      qc.invalidateQueries({ queryKey: ["my_messages", input.jobId] }),
+  });
+}
+export function useMyDocuments(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["my_documents", jobId],
+    queryFn: () => db.listMyDocuments(jobId as string),
+    enabled: Boolean(jobId),
+  });
+}
+
 /* ---------- Rates & Tariff Sheet ---------- */
 export function useRateSheet() {
   return useQuery({ queryKey: ["rate_sheet"], queryFn: db.listRateSheet });

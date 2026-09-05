@@ -25,7 +25,12 @@ import SettingsPage from "./pages/SettingsPage";
 import DeliveryInstructionPrintPage from "./pages/DeliveryInstructionPrintPage";
 import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
+import PortalLayout from "./pages/portal/PortalLayout";
+import PortalSignupPage from "./pages/portal/PortalSignupPage";
+import PortalDashboardPage from "./pages/portal/PortalDashboardPage";
+import PortalShipmentPage from "./pages/portal/PortalShipmentPage";
 import { isSupabaseConfigured } from "./lib/supabase";
+import { useMyProfile } from "./lib/hooks";
 
 function RequireAuth() {
   const { session, loading } = useAuth();
@@ -34,11 +39,28 @@ function RequireAuth() {
   return <Outlet />;
 }
 
+/** Staff-only app shell — a client-role login is bounced to /portal. */
 function Protected() {
   const { session, loading } = useAuth();
-  if (loading) return <div className="center-note">Loading…</div>;
+  const profileQ = useMyProfile();
+  if (loading || (session && profileQ.isLoading)) {
+    return <div className="center-note">Loading…</div>;
+  }
   if (!session) return <Navigate to="/login" replace />;
+  if (profileQ.data?.role === "client") return <Navigate to="/portal" replace />;
   return <Layout />;
+}
+
+/** Customer-facing shell — a staff login is bounced back to the main app. */
+function PortalProtected() {
+  const { session, loading } = useAuth();
+  const profileQ = useMyProfile();
+  if (loading || (session && profileQ.isLoading)) {
+    return <div className="center-note">Loading…</div>;
+  }
+  if (!session) return <Navigate to="/login" replace />;
+  if (profileQ.data?.role !== "client") return <Navigate to="/" replace />;
+  return <PortalLayout />;
 }
 
 function LoginRoute() {
@@ -75,6 +97,11 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginRoute />} />
+          <Route path="/portal/signup" element={<PortalSignupPage />} />
+          <Route element={<PortalProtected />}>
+            <Route path="portal" element={<PortalDashboardPage />} />
+            <Route path="portal/shipments/:id" element={<PortalShipmentPage />} />
+          </Route>
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />
             <Route

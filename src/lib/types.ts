@@ -9,12 +9,14 @@ export type Milestone = "Booked" | "In Transit" | "Customs" | "Delivered";
 
 /* ---------- Settings ---------- */
 
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "user" | "client";
 
 export interface Profile {
   id: string;
   full_name: string | null;
   role: UserRole;
+  /** Set only for role='client' — which customer this portal login belongs to. */
+  client_id: string | null;
   created_at: string;
   /** Not on the profiles table — filled in from the current session for "me". */
   email?: string | null;
@@ -64,6 +66,103 @@ export interface RateSheetItem {
 export type RateSheetPatch = Partial<
   Omit<RateSheetItem, "id" | "created_at" | "updated_at">
 >;
+
+/* ---------- Customer Portal (safe subsets — see client_* views) ---------- */
+
+export interface ClientInvite {
+  token: string;
+  client_id: string;
+  email: string | null;
+  claimed_at: string | null;
+  created_at: string;
+}
+
+export interface ClientQuote {
+  id: string;
+  reference: string;
+  client_id: string;
+  mode: QuoteMode;
+  commodity: string | null;
+  origin: string | null;
+  destination: string | null;
+  delivery_terms: string | null;
+  valid_until: string | null;
+  status: QuoteStatus;
+  commercial_value: number | null;
+  insurance_amount: number | null;
+  vessel_name: string | null;
+  mbl_no: string | null;
+  hbl_no: string | null;
+  container_no: string | null;
+  etd: string | null;
+  eta: string | null;
+  incoterms: string | null;
+  mawb_no: string | null;
+  hawb_no: string | null;
+  flight_no: string | null;
+  flight_date: string | null;
+  carrier_name: string | null;
+  created_at: string;
+  supplier_company: string | null;
+}
+
+export interface ClientQuoteLine {
+  id: string;
+  quote_id: string;
+  position: number;
+  category: ChargeCategory;
+  code: string | null;
+  description: string;
+  unit: string | null;
+  qty: number;
+  cur: LineCurrency;
+  vat_pct: number;
+  sell: number;
+}
+
+export interface ClientJob {
+  id: string;
+  reference: string;
+  client_id: string;
+  mode: QuoteMode;
+  milestone: Milestone;
+  shipment_status: string | null;
+  awb_mbl: string | null;
+  container_no: string | null;
+  shipping_line: string | null;
+  vessel_name: string | null;
+  carrier_name: string | null;
+  provisional_delivery_date: string | null;
+  etd: string | null;
+  eta: string | null;
+  origin: string | null;
+  destination: string | null;
+  created_at: string;
+  supplier_company: string | null;
+}
+
+export interface ClientMessage {
+  id: string;
+  job_id: string;
+  direction: "out" | "in";
+  to_emails: string[];
+  cc_emails: string[];
+  subject: string | null;
+  body: string;
+  status: MessageStatus;
+  created_at: string;
+}
+
+export interface ClientDocument {
+  id: string;
+  job_id: string;
+  name: string;
+  storage_path: string;
+  kind: DocumentKind;
+  doc_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+}
 
 /* ---------- Document Vault ---------- */
 

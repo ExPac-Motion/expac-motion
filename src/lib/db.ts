@@ -16,6 +16,12 @@ import type {
   Milestone,
   OpsTask,
   OpsTaskPatch,
+  ClientDocument,
+  ClientInvite,
+  ClientJob,
+  ClientMessage,
+  ClientQuote,
+  ClientQuoteLine,
   Profile,
   ProfilePatch,
   Quote,
@@ -523,6 +529,98 @@ export async function listShipmentDocumentsForJobs(
       .in("job_id", jobIds)
       .order("created_at", { ascending: false }),
   );
+}
+
+/* ---------- Customer Portal ---------- */
+export async function getMyProfile(): Promise<Profile | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return null;
+  const row = unwrap<Profile | null>(
+    await supabase.from("profiles").select("*").eq("id", auth.user.id).maybeSingle(),
+  );
+  return row ? { ...row, email: auth.user.email } : null;
+}
+
+export async function createClientInvite(clientId: string): Promise<ClientInvite> {
+  return unwrap<ClientInvite>(
+    await supabase
+      .from("client_invites")
+      .insert({ client_id: clientId })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function getInvite(token: string): Promise<ClientInvite> {
+  return unwrap<ClientInvite>(
+    await supabase.from("client_invites").select("*").eq("token", token).single(),
+  );
+}
+
+export async function claimClientInvite(token: string): Promise<void> {
+  unwrap(await supabase.rpc("claim_client_invite", { p_token: token }));
+}
+
+export async function listMyQuotes(): Promise<ClientQuote[]> {
+  return unwrap<ClientQuote[]>(
+    await supabase
+      .from("client_quotes")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function listMyQuoteLines(quoteId: string): Promise<ClientQuoteLine[]> {
+  return unwrap<ClientQuoteLine[]>(
+    await supabase
+      .from("client_quote_lines")
+      .select("*")
+      .eq("quote_id", quoteId)
+      .order("position"),
+  );
+}
+
+export async function listMyJobs(): Promise<ClientJob[]> {
+  return unwrap<ClientJob[]>(
+    await supabase
+      .from("client_jobs")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function listMyMessages(jobId: string): Promise<ClientMessage[]> {
+  return unwrap<ClientMessage[]>(
+    await supabase
+      .from("client_messages")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function sendMyMessage(jobId: string, body: string): Promise<void> {
+  unwrap(
+    await supabase.rpc("client_send_message", { p_job_id: jobId, p_body: body }),
+  );
+}
+
+export async function listMyDocuments(jobId: string): Promise<ClientDocument[]> {
+  return unwrap<ClientDocument[]>(
+    await supabase
+      .from("client_documents")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function getMyDocumentUrl(storagePath: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(DOCS_BUCKET)
+    .createSignedUrl(storagePath, 300);
+  if (error || !data) throw error ?? new Error("Could not create download link");
+  return data.signedUrl;
 }
 
 /* ---------- Settings ---------- */
