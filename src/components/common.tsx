@@ -54,9 +54,10 @@ export function RowActions({
   onMail?: () => void;
   mailTitle?: string;
   onView: () => void;
-  onEdit: () => void;
+  /** Omit for records that can't be edited or duplicated (e.g. a sent campaign). */
+  onEdit?: () => void;
   onDelete: () => void;
-  onDuplicate: () => void;
+  onDuplicate?: () => void;
 }) {
   const stop = (fn: () => void) => (e: MouseEvent) => {
     e.stopPropagation();
@@ -73,9 +74,11 @@ export function RowActions({
       <button className="row-icon-btn" title="View" onClick={stop(onView)}>
         {ROW_ICON.view}
       </button>
-      <button className="row-icon-btn" title="Edit" onClick={stop(onEdit)}>
-        {ROW_ICON.edit}
-      </button>
+      {onEdit && (
+        <button className="row-icon-btn" title="Edit" onClick={stop(onEdit)}>
+          {ROW_ICON.edit}
+        </button>
+      )}
       <button
         className="row-icon-btn danger"
         title="Delete"
@@ -83,13 +86,15 @@ export function RowActions({
       >
         {ROW_ICON.delete}
       </button>
-      <button
-        className="row-icon-btn"
-        title="Duplicate"
-        onClick={stop(onDuplicate)}
-      >
-        {ROW_ICON.duplicate}
-      </button>
+      {onDuplicate && (
+        <button
+          className="row-icon-btn"
+          title="Duplicate"
+          onClick={stop(onDuplicate)}
+        >
+          {ROW_ICON.duplicate}
+        </button>
+      )}
     </div>
   );
 }

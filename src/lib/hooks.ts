@@ -26,6 +26,7 @@ import type {
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
 import { buildShipmentEmail } from "./mailTemplates";
+import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail } from "./mail";
 
 /* ---------- Clients ---------- */
@@ -533,6 +534,116 @@ export function useDeleteMailTemplate() {
 }
 export function useUploadMailAsset() {
   return useMutation({ mutationFn: db.uploadMailAsset });
+}
+
+/* ---------- Sales CRM: Mail Campaigns ---------- */
+export function useMailCampaigns() {
+  return useQuery({ queryKey: ["mail_campaigns"], queryFn: db.listMailCampaigns });
+}
+export function useMailCampaignRecipients(campaignId: string | undefined) {
+  return useQuery({
+    queryKey: ["mail_campaign_recipients", campaignId],
+    queryFn: () => db.listMailCampaignRecipients(campaignId as string),
+    enabled: !!campaignId,
+  });
+}
+export function useDeleteMailCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteMailCampaign,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_campaigns"] }),
+  });
+}
+
+interface SendCampaignInput {
+  templateId: string | null;
+  name: string;
+  subject: string;
+  body: string;
+  recipients: Array<{ leadId: string; email: string; name: string; company: string }>;
+  onProgress?: (sent: number, total: number) => void;
+}
+
+/** Creates the campaign + recipient rows, then sends one email per
+ *  recipient (small concurrency window) through the same Resend proxy
+ *  Shipment Comms uses. Runs entirely from the browser -- the tab must
+ *  stay open until it finishes; there's no server-side queue yet. */
+export function useSendCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: SendCampaignInput) => {
+      const { templateId, name, subject, body, recipients, onProgress } = input;
+      const campaign = await db.createMailCampaign({
+        template_id: templateId,
+        name,
+        subject,
+        body,
+        status: "sending",
+        recipient_filter: {},
+      });
+      const rows = await db.createMailCampaignRecipients(
+        recipients.map((r) => ({
+          campaign_id: campaign.id,
+          lead_id: r.leadId,
+          email: r.email,
+        })),
+      );
+
+      let sentCount = 0;
+      let failedCount = 0;
+      const CONCURRENCY = 5;
+      let cursor = 0;
+      async function worker() {
+        while (cursor < rows.length) {
+          const i = cursor++;
+          const row = rows[i];
+          const recipient = recipients.find((r) => r.leadId === row.lead_id);
+          const unsubscribeUrl = `${window.location.origin}/unsubscribe?r=${row.id}`;
+          const mergeCtx = {
+            name: recipient?.name || "",
+            company: recipient?.company || "",
+            unsubscribeUrl,
+          };
+          const html = resolveMergeFields(body, mergeCtx);
+          const finalSubject = resolveMergeFields(subject, mergeCtx);
+          try {
+            const { id } = await sendMail({
+              to: [row.email],
+              subject: finalSubject,
+              html,
+              text: htmlToText(html),
+            });
+            await db.updateMailCampaignRecipient(row.id, {
+              status: "sent",
+              provider_id: id,
+              sent_at: new Date().toISOString(),
+            });
+          } catch (e) {
+            failedCount++;
+            await db.updateMailCampaignRecipient(row.id, {
+              status: "failed",
+              error: e instanceof Error ? e.message : "Send failed",
+            });
+          }
+          sentCount++;
+          onProgress?.(sentCount, rows.length);
+        }
+      }
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, rows.length) }, worker),
+      );
+
+      // "failed" only when NOTHING went out -- a partial failure still
+      // means real mail was sent, so the campaign counts as sent overall
+      // (the per-recipient breakdown in the detail view shows the rest).
+      await db.updateMailCampaign(campaign.id, {
+        status: failedCount === rows.length ? "failed" : "sent",
+        sent_at: new Date().toISOString(),
+      });
+      return campaign;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_campaigns"] }),
+  });
 }
 
 /* ---------- CRM ---------- */

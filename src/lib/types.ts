@@ -211,6 +211,7 @@ export interface Lead {
   sales_person_id: string | null;
   promoted_client_id: string | null;
   promoted_at: string | null;
+  unsubscribed_at: string | null;
   created_at: string;
   updated_at: string;
   /** Joined for display. */
@@ -282,6 +283,50 @@ export interface MailTemplate {
 export type MailTemplatePatch = Partial<
   Omit<MailTemplate, "id" | "created_at" | "updated_at">
 >;
+
+/* ---------- Sales CRM: Mail Campaigns ---------- */
+
+export type MailCampaignStatus = "draft" | "sending" | "sent" | "failed";
+export type MailRecipientStatus =
+  | "pending"
+  | "sent"
+  | "failed"
+  | "delivered"
+  | "opened"
+  | "clicked"
+  | "bounced";
+
+export interface MailCampaign {
+  id: string;
+  template_id: string | null;
+  name: string;
+  subject: string;
+  body: string;
+  status: MailCampaignStatus;
+  recipient_filter: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+export type MailCampaignPatch = Partial<
+  Omit<MailCampaign, "id" | "created_by" | "created_at">
+>;
+
+export interface MailCampaignRecipient {
+  id: string;
+  campaign_id: string;
+  lead_id: string | null;
+  email: string;
+  status: MailRecipientStatus;
+  provider_id: string | null;
+  error: string | null;
+  sent_at: string | null;
+  opened_at: string | null;
+  clicked_at: string | null;
+  created_at: string;
+  /** Joined for display. */
+  lead?: Pick<Lead, "id" | "company" | "contact"> | null;
+}
 
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",

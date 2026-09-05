@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "../components/common";
+import CampaignsPage from "./crm/CampaignsPage";
 import LeadsPage from "./crm/LeadsPage";
 import LeadStatusesPage from "./crm/LeadStatusesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
@@ -7,7 +8,14 @@ import SalesDashboardTab from "./crm/SalesDashboardTab";
 import SalesPersonPage from "./crm/SalesPersonPage";
 import TemplatesPage from "./crm/TemplatesPage";
 
-type Tab = "dashboard" | "leads" | "opportunities" | "statuses" | "team" | "templates";
+type Tab =
+  | "dashboard"
+  | "leads"
+  | "opportunities"
+  | "statuses"
+  | "team"
+  | "templates"
+  | "campaigns";
 
 const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   dashboard: { eyebrow: "Sales performance", title: "Sales CRM" },
@@ -16,6 +24,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   statuses: { eyebrow: "Configuration", title: "Lead Statuses" },
   team: { eyebrow: "Configuration", title: "Sales Person" },
   templates: { eyebrow: "Outreach", title: "Templates" },
+  campaigns: { eyebrow: "Outreach", title: "Campaigns" },
 };
 
 /**
@@ -37,6 +46,7 @@ export default function CrmPage() {
       {tab === "statuses" && <LeadStatusesPage />}
       {tab === "team" && <SalesPersonPage />}
       {tab === "templates" && <TemplatesPage />}
+      {tab === "campaigns" && <CampaignsPage />}
     </>
   );
 }

@@ -685,6 +685,22 @@ tr.clickable:hover {
   font-size: 0.8rem;
   background: #fff;
 }
+/* Campaign recipient picker */
+.lead-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #d8d9d4;
+  border-radius: 9px;
+  padding: 10px 12px;
+  background: #fafaf7;
+}
+.lead-picker .check {
+  margin: 0;
+  font-size: 0.84rem;
+}
 /* Template attachments */
 .attach-list {
   display: flex;

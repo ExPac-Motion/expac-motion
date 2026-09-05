@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 export interface SendMailInput {
-  jobId: string;
+  jobId?: string;
   to: string[];
   cc?: string[];
   subject: string;

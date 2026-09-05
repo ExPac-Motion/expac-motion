@@ -38,6 +38,9 @@ import type {
   OpportunityPatch,
   MailTemplate,
   MailTemplatePatch,
+  MailCampaign,
+  MailCampaignPatch,
+  MailCampaignRecipient,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -831,6 +834,85 @@ export async function uploadMailAsset(
   if (up.error) throw up.error;
   const { data } = supabase.storage.from(MAIL_ASSETS_BUCKET).getPublicUrl(path);
   return { name: file.name, url: data.publicUrl, size: file.size };
+}
+
+/* ---------- Sales CRM: Mail Campaigns ---------- */
+export async function listMailCampaigns(): Promise<MailCampaign[]> {
+  return unwrap<MailCampaign[]>(
+    await supabase
+      .from("mail_campaigns")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function createMailCampaign(
+  patch: MailCampaignPatch,
+): Promise<MailCampaign> {
+  return unwrap<MailCampaign>(
+    await supabase.from("mail_campaigns").insert(patch).select("*").single(),
+  );
+}
+
+export async function updateMailCampaign(
+  id: string,
+  patch: MailCampaignPatch,
+): Promise<MailCampaign> {
+  return unwrap<MailCampaign>(
+    await supabase
+      .from("mail_campaigns")
+      .update(patch)
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
+}
+
+export async function deleteMailCampaign(id: string): Promise<void> {
+  unwrap(await supabase.from("mail_campaigns").delete().eq("id", id));
+}
+
+const CAMPAIGN_RECIPIENT_SELECT = "*, lead:leads(id,company,contact)";
+
+export async function listMailCampaignRecipients(
+  campaignId: string,
+): Promise<MailCampaignRecipient[]> {
+  return unwrap<MailCampaignRecipient[]>(
+    await supabase
+      .from("mail_campaign_recipients")
+      .select(CAMPAIGN_RECIPIENT_SELECT)
+      .eq("campaign_id", campaignId)
+      .order("created_at"),
+  );
+}
+
+export async function createMailCampaignRecipients(
+  rows: Array<{ campaign_id: string; lead_id: string; email: string }>,
+): Promise<MailCampaignRecipient[]> {
+  return unwrap<MailCampaignRecipient[]>(
+    await supabase
+      .from("mail_campaign_recipients")
+      .insert(rows)
+      .select(CAMPAIGN_RECIPIENT_SELECT),
+  );
+}
+
+export async function updateMailCampaignRecipient(
+  id: string,
+  patch: Partial<
+    Pick<MailCampaignRecipient, "status" | "provider_id" | "error" | "sent_at">
+  >,
+): Promise<void> {
+  unwrap(
+    await supabase.from("mail_campaign_recipients").update(patch).eq("id", id),
+  );
+}
+
+/** Public unsubscribe page -- callable with no session (anon role). */
+export async function unsubscribeLead(recipientId: string): Promise<boolean> {
+  return unwrap<boolean>(
+    await supabase.rpc("unsubscribe_lead", { p_recipient_id: recipientId }),
+  );
 }
 
 /* ---------- Document Vault ---------- */

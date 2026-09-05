@@ -64,6 +64,7 @@ async function verifySvix(secret, headers, rawBody) {
 const STATUS_FROM_TYPE = {
   "email.delivered": "delivered",
   "email.opened": "opened",
+  "email.clicked": "clicked",
   "email.bounced": "bounced",
   "email.complained": "bounced",
 };
@@ -119,14 +120,22 @@ export async function onRequestPost(context) {
     return json({ error: "Bad JSON." }, 400);
   }
 
-  // ---- delivery status ----
+  // ---- delivery status (a shipment message or a campaign recipient --
+  //      whichever table has this provider_id; the other is a no-op) ----
   const status = STATUS_FROM_TYPE[evt.type];
   if (status && evt.data && evt.data.email_id) {
-    await sbPatch(
-      env,
-      `messages?provider_id=eq.${encodeURIComponent(evt.data.email_id)}`,
-      { status },
-    );
+    const id = evt.data.email_id;
+    const recipientPatch = { status };
+    if (status === "opened") recipientPatch.opened_at = new Date().toISOString();
+    if (status === "clicked") recipientPatch.clicked_at = new Date().toISOString();
+    await Promise.all([
+      sbPatch(env, `messages?provider_id=eq.${encodeURIComponent(id)}`, { status }),
+      sbPatch(
+        env,
+        `mail_campaign_recipients?provider_id=eq.${encodeURIComponent(id)}`,
+        recipientPatch,
+      ),
+    ]);
     return json({ ok: true });
   }
 
