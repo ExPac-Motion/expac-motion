@@ -1039,6 +1039,66 @@ tr.clickable:hover {
   text-align: center;
 }
 
+/* ---------- Row action icons (list tables) ---------- */
+.row-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.row-icons input[type="checkbox"] {
+  margin: 0 2px 0 0;
+  cursor: pointer;
+}
+.row-icons-head {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.row-icon-btn {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.row-icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.row-icon-btn:hover {
+  background: #f0efe8;
+  color: var(--ink);
+}
+.row-icon-btn.danger {
+  color: #b3261e;
+}
+.row-icon-btn.danger:hover {
+  background: #fdecea;
+}
+.email-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mail-inline {
+  color: var(--muted);
+  display: inline-flex;
+  flex: none;
+}
+.mail-inline svg {
+  width: 14px;
+  height: 14px;
+}
+.mail-inline:hover {
+  color: var(--green);
+}
+
 /* ---------- Utility ---------- */
 .row-actions {
   display: flex;
