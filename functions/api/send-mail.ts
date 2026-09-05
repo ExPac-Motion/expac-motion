@@ -6,7 +6,9 @@
  * returns the Resend message id. The browser writes the `messages` row itself
  * (RLS allows it) so this stays secret-only, matching functions/api/track.ts.
  *
- * Env: RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO, SUPABASE_URL, SUPABASE_ANON_KEY
+ * Env: RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO, SUPABASE_URL, SUPABASE_ANON_KEY,
+ *      CRON_SECRET (optional — lets the follow-up pg_cron job call this with an
+ *      `x-cron-key` header instead of a user JWT)
  *
  * Request (POST /api/send-mail):
  *   { jobId, to: string[], cc?: string[], subject, html, text }
@@ -39,8 +41,12 @@ export async function onRequestPost(context) {
     return json({ error: "RESEND_API_KEY is not configured on this deployment." }, 500);
   }
 
-  const ok = await verifyUser(env, context.request.headers.get("authorization"));
-  if (!ok) return json({ error: "Not authenticated." }, 401);
+  const cronKey = context.request.headers.get("x-cron-key");
+  const viaCron = !!cronKey && !!env.CRON_SECRET && cronKey === env.CRON_SECRET;
+  if (!viaCron) {
+    const ok = await verifyUser(env, context.request.headers.get("authorization"));
+    if (!ok) return json({ error: "Not authenticated." }, 401);
+  }
 
   let body;
   try {

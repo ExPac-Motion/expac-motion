@@ -41,6 +41,9 @@ import type {
   MailCampaign,
   MailCampaignPatch,
   MailCampaignRecipient,
+  FollowUpRule,
+  FollowUpRulePatch,
+  FollowUpLogEntry,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -913,6 +916,44 @@ export async function unsubscribeLead(recipientId: string): Promise<boolean> {
   return unwrap<boolean>(
     await supabase.rpc("unsubscribe_lead", { p_recipient_id: recipientId }),
   );
+}
+
+/* ---------- Sales CRM: Follow-up workflows ---------- */
+export async function listFollowUpRules(): Promise<FollowUpRule[]> {
+  return unwrap<FollowUpRule[]>(
+    await supabase.from("follow_up_rules").select("*").order("created_at"),
+  );
+}
+
+export async function saveFollowUpRule(
+  id: string | undefined,
+  patch: FollowUpRulePatch,
+): Promise<FollowUpRule> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<FollowUpRule>(
+    id
+      ? await supabase.from("follow_up_rules").update(row).eq("id", id).select("*").single()
+      : await supabase.from("follow_up_rules").insert(row).select("*").single(),
+  );
+}
+
+export async function deleteFollowUpRule(id: string): Promise<void> {
+  unwrap(await supabase.from("follow_up_rules").delete().eq("id", id));
+}
+
+export async function listFollowUpLog(): Promise<FollowUpLogEntry[]> {
+  return unwrap<FollowUpLogEntry[]>(
+    await supabase
+      .from("follow_up_log")
+      .select("*, rule:follow_up_rules(id,name)")
+      .order("created_at", { ascending: false })
+      .limit(100),
+  );
+}
+
+/** Runs the due-follow-up worker on demand; returns how many it dispatched. */
+export async function runDueFollowUps(): Promise<number> {
+  return unwrap<number>(await supabase.rpc("process_due_follow_ups"));
 }
 
 /* ---------- Document Vault ---------- */

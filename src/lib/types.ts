@@ -328,6 +328,71 @@ export interface MailCampaignRecipient {
   lead?: Pick<Lead, "id" | "company" | "contact"> | null;
 }
 
+/* ---------- Sales CRM: Follow-up workflows ---------- */
+
+export type FollowUpTrigger =
+  | "quote_quiet"
+  | "lead_no_quote"
+  | "campaign_no_open"
+  | "shipment_delivered";
+
+export const FOLLOW_UP_TRIGGERS: {
+  key: FollowUpTrigger;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    key: "quote_quiet",
+    label: "Quote gone quiet",
+    hint: "Quote still 'Sent' N days after it was last updated",
+  },
+  {
+    key: "lead_no_quote",
+    label: "New lead, no quote",
+    hint: "Lead added N days ago with no quote raised against it",
+  },
+  {
+    key: "campaign_no_open",
+    label: "Campaign not opened",
+    hint: "Campaign email still unopened N days after it was sent",
+  },
+  {
+    key: "shipment_delivered",
+    label: "Shipment delivered",
+    hint: "Shipment marked Delivered N days ago",
+  },
+];
+
+export interface FollowUpRule {
+  id: string;
+  name: string;
+  trigger: FollowUpTrigger;
+  delay_days: number;
+  template_id: string | null;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export type FollowUpRulePatch = Partial<
+  Omit<FollowUpRule, "id" | "created_by" | "created_at" | "updated_at">
+>;
+
+export interface FollowUpLogEntry {
+  id: string;
+  rule_id: string | null;
+  trigger: FollowUpTrigger;
+  subject_key: string;
+  lead_id: string | null;
+  email: string;
+  subject: string | null;
+  status: "sent" | "failed" | "skipped";
+  error: string | null;
+  created_at: string;
+  /** Joined for display. */
+  rule?: Pick<FollowUpRule, "id" | "name"> | null;
+}
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",

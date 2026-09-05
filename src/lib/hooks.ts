@@ -21,6 +21,7 @@ import type {
   LeadStatusPatch,
   OpportunityPatch,
   MailTemplatePatch,
+  FollowUpRulePatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -552,6 +553,36 @@ export function useDeleteMailCampaign() {
   return useMutation({
     mutationFn: db.deleteMailCampaign,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_campaigns"] }),
+  });
+}
+
+/* ---------- Sales CRM: Follow-up workflows ---------- */
+export function useFollowUpRules() {
+  return useQuery({ queryKey: ["follow_up_rules"], queryFn: db.listFollowUpRules });
+}
+export function useSaveFollowUpRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: FollowUpRulePatch }) =>
+      db.saveFollowUpRule(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["follow_up_rules"] }),
+  });
+}
+export function useDeleteFollowUpRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteFollowUpRule,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["follow_up_rules"] }),
+  });
+}
+export function useFollowUpLog() {
+  return useQuery({ queryKey: ["follow_up_log"], queryFn: db.listFollowUpLog });
+}
+export function useRunDueFollowUps() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.runDueFollowUps,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["follow_up_log"] }),
   });
 }
 
