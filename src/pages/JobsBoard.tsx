@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
 import { useJobs, useUpdateJob } from "../lib/hooks";
@@ -228,6 +228,14 @@ function matchesModeTab(mode: string, tab: ModeTab): boolean {
   return tab === "All" || (mode ?? "").startsWith(tab);
 }
 
+/** The mode filter is driven by the top nav's Shipments sub-links (?mode=). */
+function modeTabFromParam(v: string | null): ModeTab {
+  if (v === "air") return "Air";
+  if (v === "sea") return "Sea";
+  if (v === "road") return "Road";
+  return "All";
+}
+
 const COPY: Record<
   BoardMode,
   {
@@ -265,7 +273,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const { data: jobs, isLoading, isError, error } = useJobs();
   const updateJob = useUpdateJob();
   const { toast, error: toastError } = useToast();
-  const [modeTab, setModeTab] = useState<ModeTab>("All");
+  const [params] = useSearchParams();
+  const modeTab = modeTabFromParam(params.get("mode"));
   const [commsJob, setCommsJob] = useState<Job | null>(null);
   const [railOpen, setRailOpen] = useState(false);
 
@@ -310,23 +319,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   return (
     <>
       <div className={railOpen ? "board-shift" : ""}>
-      <PageHeader
-        eyebrow={copy.eyebrow}
-        title={copy.title}
-        actions={
-          <div className="chips">
-            {MODE_TABS.map((t) => (
-              <button
-                key={t.key}
-                className={`chip${modeTab === t.key ? " on" : ""}`}
-                onClick={() => setModeTab(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        }
-      />
+      <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
 
       <div className="panel jobs-panel">
         <div className="panel-head">

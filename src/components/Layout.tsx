@@ -34,6 +34,9 @@ const NAV: NavModule[] = [
     label: "Shipments",
     children: [
       { to: "/jobs", label: "Active Shipments" },
+      { to: "/jobs?mode=air", label: "Air Freight" },
+      { to: "/jobs?mode=sea", label: "Sea Freight" },
+      { to: "/jobs?mode=road", label: "Road Freight" },
       { to: "/jobs/completed", label: "Completed Shipments" },
     ],
   },
@@ -68,7 +71,7 @@ function isModuleActive(mod: NavModule, pathname: string): boolean {
 function isSubActive(sub: SubLink, pathname: string, search: string): boolean {
   const [base, qs] = sub.to.split("?");
   if (pathname !== base) return false;
-  if (!qs) return true;
+  if (!qs) return search === "";
   const want = new URLSearchParams(qs);
   const cur = new URLSearchParams(search);
   for (const [k, v] of want) {
