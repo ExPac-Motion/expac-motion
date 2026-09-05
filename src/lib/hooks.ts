@@ -6,6 +6,7 @@ import {
 import * as db from "./db";
 import type {
   Client,
+  CompanySettingsPatch,
   Contact,
   ImportDutyDraft,
   Job,
@@ -13,6 +14,7 @@ import type {
   JobPatch,
   Milestone,
   OpsTaskPatch,
+  ProfilePatch,
   QuoteDraft,
   Supplier,
 } from "./types";
@@ -354,6 +356,32 @@ export function useAddNote() {
       }),
     onSuccess: (_m, input) =>
       qc.invalidateQueries({ queryKey: ["messages", input.jobId] }),
+  });
+}
+
+/* ---------- Settings ---------- */
+export function useCompanySettings() {
+  return useQuery({
+    queryKey: ["company_settings"],
+    queryFn: db.getCompanySettings,
+  });
+}
+export function useUpdateCompanySettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: CompanySettingsPatch) => db.updateCompanySettings(patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["company_settings"] }),
+  });
+}
+export function useProfiles() {
+  return useQuery({ queryKey: ["profiles"], queryFn: db.listProfiles });
+}
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: ProfilePatch }) =>
+      db.updateProfile(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }),
   });
 }
 

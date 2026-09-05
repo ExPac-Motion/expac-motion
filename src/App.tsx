@@ -21,6 +21,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import AgentsPage from "./pages/AgentsPage";
 import TransportersPage from "./pages/TransportersPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
+import SettingsPage from "./pages/SettingsPage";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 function RequireAuth() {
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="agents" element={<AgentsPage />} />
             <Route path="transporters" element={<TransportersPage />} />
             <Route path="clearing-agents" element={<ClearingAgentsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

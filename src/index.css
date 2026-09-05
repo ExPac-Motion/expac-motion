@@ -145,6 +145,10 @@ textarea {
   background: none;
   color: #c7cdc7;
 }
+.icon-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
 .topbar-account {
   display: flex;
   align-items: center;

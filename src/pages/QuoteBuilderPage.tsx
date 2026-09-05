@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
@@ -6,6 +6,7 @@ import {
   useAgents,
   useClearingAgents,
   useClients,
+  useCompanySettings,
   useQuote,
   useSaveQuote,
   useSuppliers,
@@ -212,6 +213,7 @@ export default function QuoteBuilderPage() {
   const clearingAgentsQ = useClearingAgents();
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
+  const settingsQ = useCompanySettings();
 
   const [draft, setDraft] = useState<QuoteDraft | null>(isEdit ? null : blankDraft());
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
@@ -223,6 +225,25 @@ export default function QuoteBuilderPage() {
     setLoadedFor(existingQ.data.id);
     setDraft(draftFromQuote(existingQ.data));
   }
+
+  // Seed a brand-new quote's FX rates / incoterm from Settings > Quote Defaults,
+  // once, as soon as they load — never touches an existing (edit) quote.
+  const defaultsApplied = useRef(false);
+  useEffect(() => {
+    if (isEdit || defaultsApplied.current || !settingsQ.data) return;
+    defaultsApplied.current = true;
+    const s = settingsQ.data;
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            fx_usd_zar: String(s.default_fx_usd_zar),
+            fx_cny_zar: String(s.default_fx_cny_zar),
+            incoterms: d.incoterms || s.default_incoterm,
+          }
+        : d,
+    );
+  }, [isEdit, settingsQ.data]);
 
   const fx = useMemo(
     () => ({

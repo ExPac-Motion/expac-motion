@@ -7,6 +7,41 @@ export type QuoteMode =
   | "Road Freight (RDX)";
 export type Milestone = "Booked" | "In Transit" | "Customs" | "Delivered";
 
+/* ---------- Settings ---------- */
+
+export type UserRole = "admin" | "user";
+
+export interface Profile {
+  id: string;
+  full_name: string | null;
+  role: UserRole;
+  created_at: string;
+  /** Not on the profiles table — filled in from the current session for "me". */
+  email?: string | null;
+}
+export type ProfilePatch = Partial<Pick<Profile, "full_name" | "role">>;
+
+export interface CompanySettings {
+  id: number;
+  legal_name: string;
+  reg_no: string;
+  vat_no: string;
+  tel: string;
+  email: string;
+  postal_address: string;
+  strapline: string;
+  blurb: string;
+  bank_details: string;
+  default_fx_usd_zar: number;
+  default_fx_cny_zar: number;
+  default_vat_pct: number;
+  default_incoterm: string;
+  updated_at: string;
+}
+export type CompanySettingsPatch = Partial<
+  Omit<CompanySettings, "id" | "updated_at">
+>;
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",

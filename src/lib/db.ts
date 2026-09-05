@@ -2,6 +2,8 @@ import { supabase } from "./supabase";
 import { insuranceAmount, packingTotals, resolveLine } from "./calc";
 import type {
   Client,
+  CompanySettings,
+  CompanySettingsPatch,
   Contact,
   ImportDutyDraft,
   ImportVatDuty,
@@ -14,6 +16,8 @@ import type {
   Milestone,
   OpsTask,
   OpsTaskPatch,
+  Profile,
+  ProfilePatch,
   Quote,
   QuoteDraft,
   Supplier,
@@ -489,5 +493,40 @@ export async function updateMessage(
 ): Promise<Message> {
   return unwrap<Message>(
     await supabase.from("messages").update(patch).eq("id", id).select("*").single(),
+  );
+}
+
+/* ---------- Settings ---------- */
+export async function getCompanySettings(): Promise<CompanySettings> {
+  return unwrap<CompanySettings>(
+    await supabase.from("company_settings").select("*").eq("id", 1).single(),
+  );
+}
+
+export async function updateCompanySettings(
+  patch: CompanySettingsPatch,
+): Promise<CompanySettings> {
+  return unwrap<CompanySettings>(
+    await supabase
+      .from("company_settings")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", 1)
+      .select("*")
+      .single(),
+  );
+}
+
+export async function listProfiles(): Promise<Profile[]> {
+  return unwrap<Profile[]>(
+    await supabase.from("profiles").select("*").order("created_at"),
+  );
+}
+
+export async function updateProfile(
+  id: string,
+  patch: ProfilePatch,
+): Promise<Profile> {
+  return unwrap<Profile>(
+    await supabase.from("profiles").update(patch).eq("id", id).select("*").single(),
   );
 }

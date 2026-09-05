@@ -157,14 +157,14 @@ export default function Layout() {
           >
             {Icon.bell}
           </button>
-          <button
-            className="icon-btn"
-            title="Settings (coming soon)"
+          <Link
+            to="/settings"
+            className={`icon-btn${pathname.startsWith("/settings") ? " active" : ""}`}
+            title="Settings"
             aria-label="Settings"
-            disabled
           >
             {Icon.gear}
-          </button>
+          </Link>
           <div className="topbar-account">
             <span className="who">{name}</span>
             <button className="link-btn" onClick={() => signOut()}>

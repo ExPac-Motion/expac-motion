@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useClients, useQuote } from "../lib/hooks";
+import { useClients, useCompanySettings, useQuote } from "../lib/hooks";
 import {
   fxOf,
   groupByCategory,
@@ -27,6 +27,19 @@ export default function QuotePrintPage() {
   const navigate = useNavigate();
   const { data: q, isLoading, isError, error } = useQuote(id);
   const { data: clients } = useClients();
+  const { data: settings } = useCompanySettings();
+  const company = settings
+    ? {
+        logoPrint: COMPANY.logoPrint,
+        headerName: settings.legal_name,
+        headerLine1: `Reg No: ${settings.reg_no}  ·  Vat No: ${settings.vat_no}  ·  Tel: ${settings.tel}`,
+        headerEmail: `Email: ${settings.email}`,
+        headerLine2: settings.postal_address,
+        strapline: settings.strapline,
+        blurb: settings.blurb,
+        bank: settings.bank_details.split("\n").filter(Boolean),
+      }
+    : COMPANY;
 
   const fx = useMemo(() => (q ? fxOf(q) : { usd: 0, cny: 0 }), [q]);
   const pack = useMemo(
@@ -126,17 +139,17 @@ export default function QuotePrintPage() {
         <div className="qs-companyhead">
           <img
             className="logo"
-            src={COMPANY.logoPrint}
+            src={company.logoPrint}
             alt="ExPac"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
             }}
           />
           <div className="qs-companyhead-text">
-            <div className="name">QUOTATION - {COMPANY.headerName}</div>
-            <div className="lines">{COMPANY.headerLine1}</div>
+            <div className="name">QUOTATION - {company.headerName}</div>
+            <div className="lines">{company.headerLine1}</div>
             <div className="lines">
-              {COMPANY.headerEmail}&nbsp; &middot; &nbsp;{COMPANY.headerLine2}
+              {company.headerEmail}&nbsp; &middot; &nbsp;{company.headerLine2}
             </div>
           </div>
         </div>
@@ -356,14 +369,14 @@ export default function QuotePrintPage() {
         <div className="qs-foot">
           <div className="bank">
             <h4>Banking Details</h4>
-            {COMPANY.bank.map((b) => (
+            {company.bank.map((b) => (
               <div key={b}>{b}</div>
             ))}
           </div>
           <div>
-            <h4>{COMPANY.strapline}</h4>
+            <h4>{company.strapline}</h4>
             <p style={{ margin: 0, fontSize: "10.5px", whiteSpace: "pre-line" }}>
-              {COMPANY.blurb}
+              {company.blurb}
             </p>
           </div>
           <div className="qs-totals">
