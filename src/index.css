@@ -1652,7 +1652,7 @@ tr.clickable:hover {
   flex-wrap: wrap;
 }
 .bar3d {
-  flex: 1;
+  flex: 0 0 240px;
   min-width: 220px;
 }
 .bar3d svg {
