@@ -20,6 +20,8 @@ import type {
   ProfilePatch,
   Quote,
   QuoteDraft,
+  RateSheetItem,
+  RateSheetPatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -556,6 +558,29 @@ export async function updateProfile(
   return unwrap<Profile>(
     await supabase.from("profiles").update(patch).eq("id", id).select("*").single(),
   );
+}
+
+/* ---------- Rates & Tariff Sheet ---------- */
+export async function listRateSheet(): Promise<RateSheetItem[]> {
+  return unwrap<RateSheetItem[]>(
+    await supabase.from("rate_sheet").select("*").order("mode").order("description"),
+  );
+}
+
+export async function saveRateSheetItem(
+  id: string | undefined,
+  patch: RateSheetPatch,
+): Promise<RateSheetItem> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<RateSheetItem>(
+    id
+      ? await supabase.from("rate_sheet").update(row).eq("id", id).select("*").single()
+      : await supabase.from("rate_sheet").insert(row).select("*").single(),
+  );
+}
+
+export async function deleteRateSheetItem(id: string): Promise<void> {
+  unwrap(await supabase.from("rate_sheet").delete().eq("id", id));
 }
 
 /* ---------- Document Vault ---------- */

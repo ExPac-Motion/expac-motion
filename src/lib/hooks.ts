@@ -16,6 +16,7 @@ import type {
   OpsTaskPatch,
   ProfilePatch,
   QuoteDraft,
+  RateSheetPatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -357,6 +358,26 @@ export function useAddNote() {
       }),
     onSuccess: (_m, input) =>
       qc.invalidateQueries({ queryKey: ["messages", input.jobId] }),
+  });
+}
+
+/* ---------- Rates & Tariff Sheet ---------- */
+export function useRateSheet() {
+  return useQuery({ queryKey: ["rate_sheet"], queryFn: db.listRateSheet });
+}
+export function useSaveRateSheetItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: RateSheetPatch }) =>
+      db.saveRateSheetItem(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rate_sheet"] }),
+  });
+}
+export function useDeleteRateSheetItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteRateSheetItem,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rate_sheet"] }),
   });
 }
 

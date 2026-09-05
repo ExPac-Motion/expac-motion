@@ -42,6 +42,29 @@ export type CompanySettingsPatch = Partial<
   Omit<CompanySettings, "id" | "updated_at">
 >;
 
+/* ---------- Rates & Tariff Sheet ---------- */
+
+export interface RateSheetItem {
+  id: string;
+  mode: QuoteMode;
+  origin: string | null;
+  destination: string | null;
+  carrier: string | null;
+  category: ChargeCategory;
+  code: string | null;
+  description: string;
+  unit: string | null;
+  cur: LineCurrency;
+  buy: number;
+  margin: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export type RateSheetPatch = Partial<
+  Omit<RateSheetItem, "id" | "created_at" | "updated_at">
+>;
+
 /* ---------- Document Vault ---------- */
 
 export type DocumentKind = "upload" | "generated";

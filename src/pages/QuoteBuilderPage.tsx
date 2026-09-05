@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Modal from "../components/Modal";
 import { ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
 import {
@@ -8,6 +9,7 @@ import {
   useClients,
   useCompanySettings,
   useQuote,
+  useRateSheet,
   useSaveQuote,
   useSuppliers,
   useTransporters,
@@ -55,6 +57,7 @@ import {
   type Quote,
   type QuoteDraft,
   type QuoteLine,
+  type RateSheetItem,
 } from "../lib/types";
 
 function newPackingItem(position: number): PackingItem {
@@ -214,11 +217,13 @@ export default function QuoteBuilderPage() {
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
   const settingsQ = useCompanySettings();
+  const ratesQ = useRateSheet();
 
   const [draft, setDraft] = useState<QuoteDraft | null>(isEdit ? null : blankDraft());
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
   const [fxAsOf, setFxAsOf] = useState("");
+  const [ratePickerFor, setRatePickerFor] = useState<ChargeCategory | null>(null);
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
   if (isEdit && existingQ.data && loadedFor !== existingQ.data.id) {
@@ -413,6 +418,26 @@ export default function QuoteBuilderPage() {
     setDraft((d) =>
       d ? { ...d, lines: [...d.lines, newLine(category, d.lines.length)] } : d,
     );
+  }
+
+  function addLineFromRate(rate: RateSheetItem) {
+    setDraft((d) => {
+      if (!d) return d;
+      const line: QuoteLine = {
+        position: d.lines.length,
+        category: rate.category,
+        code: rate.code ?? "",
+        description: rate.description,
+        cur: rate.cur,
+        unit: rate.unit ?? "",
+        qty: 1,
+        buy: rate.buy,
+        margin: rate.margin,
+        vat_pct: 0,
+        sell: 0,
+      };
+      return { ...d, lines: [...d.lines, line] };
+    });
   }
 
   function removeLine(index: number) {
@@ -1021,12 +1046,20 @@ export default function QuoteBuilderPage() {
           <div className="charge-group" key={g.category}>
             <div className="charge-group-head">
               <h3>{g.category.toUpperCase()}</h3>
-              <button
-                className="btn small outline"
-                onClick={() => addLine(g.category)}
-              >
-                + Add line
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="btn small outline"
+                  onClick={() => setRatePickerFor(g.category)}
+                >
+                  From Rate Sheet
+                </button>
+                <button
+                  className="btn small outline"
+                  onClick={() => addLine(g.category)}
+                >
+                  + Add line
+                </button>
+              </div>
             </div>
 
             {g.lines.length === 0 ? (
@@ -1269,6 +1302,75 @@ export default function QuoteBuilderPage() {
           </div>
         </div>
       </div>
+
+      {ratePickerFor && (
+        <RatePickerModal
+          category={ratePickerFor}
+          mode={draft.mode}
+          rates={ratesQ.data ?? []}
+          onPick={(rate) => {
+            addLineFromRate(rate);
+            setRatePickerFor(null);
+          }}
+          onClose={() => setRatePickerFor(null)}
+        />
+      )}
     </>
+  );
+}
+
+function RatePickerModal({
+  category,
+  mode,
+  rates,
+  onPick,
+  onClose,
+}: {
+  category: ChargeCategory;
+  mode: QuoteDraft["mode"];
+  rates: RateSheetItem[];
+  onPick: (rate: RateSheetItem) => void;
+  onClose: () => void;
+}) {
+  const matches = rates.filter(
+    (r) => r.category === category && r.mode === mode,
+  );
+  return (
+    <Modal title={`${category} — Rate Sheet`} onClose={onClose}>
+      {matches.length === 0 ? (
+        <p className="muted">
+          No {mode} rates saved for this category yet. Add them under Rates &
+          Tariff in the nav.
+        </p>
+      ) : (
+        <div className="stack-sm">
+          {matches.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className="btn ghost small"
+              style={{
+                width: "100%",
+                textAlign: "left",
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+              onClick={() => onPick(r)}
+            >
+              <span>
+                {r.code ? `${r.code} - ` : ""}
+                {r.description}
+                {r.carrier ? ` (${r.carrier})` : ""}
+                {(r.origin || r.destination) &&
+                  ` — ${r.origin || "Any"} → ${r.destination || "Any"}`}
+              </span>
+              <span className="muted">
+                {r.cur} {r.buy.toFixed(2)} · {r.margin}%
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 }

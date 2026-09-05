@@ -53,6 +53,7 @@ const NAV: NavModule[] = [
     ],
   },
   { to: "/import-vat-duty", label: "Customs Charges" },
+  { to: "/rates", label: "Rates & Tariff" },
   { to: "/clients", label: "Customers" },
   { to: "/crm", label: "CRM" },
   {
