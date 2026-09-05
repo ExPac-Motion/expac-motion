@@ -531,6 +531,9 @@ export function useDeleteMailTemplate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_templates"] }),
   });
 }
+export function useUploadMailAsset() {
+  return useMutation({ mutationFn: db.uploadMailAsset });
+}
 
 /* ---------- CRM ---------- */
 export function useMessagesForJobs(jobIds: string[]) {

@@ -265,11 +265,17 @@ export type OpportunityPatch = Partial<
 
 /* ---------- Sales CRM: Mail Templates ---------- */
 
+export interface MailTemplateAttachment {
+  name: string;
+  url: string;
+  size: number;
+}
 export interface MailTemplate {
   id: string;
   name: string;
   subject: string;
   body: string;
+  attachments: MailTemplateAttachment[];
   created_at: string;
   updated_at: string;
 }

@@ -818,6 +818,21 @@ export async function deleteMailTemplate(id: string): Promise<void> {
   unwrap(await supabase.from("mail_templates").delete().eq("id", id));
 }
 
+/** Public bucket -- inline images/attachments must be reachable by URL
+ *  from an external recipient's inbox, with no Supabase auth of its own. */
+const MAIL_ASSETS_BUCKET = "mail-assets";
+
+export async function uploadMailAsset(
+  file: File,
+): Promise<{ name: string; url: string; size: number }> {
+  const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
+  const path = `${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
+  const up = await supabase.storage.from(MAIL_ASSETS_BUCKET).upload(path, file);
+  if (up.error) throw up.error;
+  const { data } = supabase.storage.from(MAIL_ASSETS_BUCKET).getPublicUrl(path);
+  return { name: file.name, url: data.publicUrl, size: file.size };
+}
+
 /* ---------- Document Vault ---------- */
 const DOCS_BUCKET = "shipment-documents";
 

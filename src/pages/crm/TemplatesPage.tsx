@@ -1,5 +1,6 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import Modal from "../../components/Modal";
+import RichTextEditor from "../../components/RichTextEditor";
 import {
   EmptyState,
   ErrorNote,
@@ -12,17 +13,151 @@ import {
   useDeleteMailTemplate,
   useMailTemplates,
   useSaveMailTemplate,
+  useUploadMailAsset,
 } from "../../lib/hooks";
 import { formatDate } from "../../lib/format";
-import type { MailTemplate, MailTemplatePatch } from "../../lib/types";
+import type {
+  MailTemplate,
+  MailTemplateAttachment,
+  MailTemplatePatch,
+} from "../../lib/types";
 
-/** Fills {{ contact.name }} / {{ contact.company }} with sample values for
- *  a quick preview — the real merge happens wherever a template is
- *  actually used to send mail (a later phase). */
-function previewMerge(text: string): string {
-  return text
+/** Fills {{ contact.name }} / {{ contact.company }} / the unsubscribe
+ *  link with sample values for a quick preview — the real merge happens
+ *  wherever a template is actually used to send mail (a later phase). */
+function previewMerge(html: string): string {
+  return html
     .replaceAll("{{ contact.name }}", "Jane Smith")
-    .replaceAll("{{ contact.company }}", "Acme Imports");
+    .replaceAll("{{ contact.company }}", "Acme Imports")
+    .replaceAll("{{ unsubscribe_link }}", "#");
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentList({
+  attachments,
+  onRemove,
+}: {
+  attachments: MailTemplateAttachment[];
+  onRemove?: (url: string) => void;
+}) {
+  if (attachments.length === 0) return null;
+  return (
+    <div className="attach-list">
+      {attachments.map((a) =>
+        onRemove ? (
+          <span key={a.url} className="attach-chip">
+            📎 {a.name}{" "}
+            <span style={{ color: "var(--muted)" }}>{formatBytes(a.size)}</span>
+            <button type="button" title="Remove attachment" onClick={() => onRemove(a.url)}>
+              ×
+            </button>
+          </span>
+        ) : (
+          <a key={a.url} className="attach-chip" href={a.url} target="_blank" rel="noreferrer">
+            📎 {a.name}{" "}
+            <span style={{ color: "var(--muted)" }}>{formatBytes(a.size)}</span>
+          </a>
+        ),
+      )}
+    </div>
+  );
+}
+
+/** Fresh-mounted per template (keyed by id/"new" in the parent) so its
+ *  body/attachments state initializes directly from props with no effect. */
+function TemplateEditForm({
+  template,
+  onCancel,
+  onSave,
+  saving,
+}: {
+  template: MailTemplate | null;
+  onCancel: () => void;
+  onSave: (patch: MailTemplatePatch) => void;
+  saving: boolean;
+}) {
+  const uploadAsset = useUploadMailAsset();
+  const { error: toastError } = useToast();
+  const [bodyHtml, setBodyHtml] = useState(template?.body ?? "");
+  const [attachments, setAttachments] = useState<MailTemplateAttachment[]>(
+    template?.attachments ?? [],
+  );
+  const [attaching, setAttaching] = useState(false);
+
+  async function onAttachFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAttaching(true);
+    try {
+      const asset = await uploadAsset.mutateAsync(file);
+      setAttachments((prev) => [...prev, asset]);
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not attach file");
+    } finally {
+      setAttaching(false);
+    }
+  }
+
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const name = String(fd.get("name") || "").trim();
+    const subject = String(fd.get("subject") || "").trim() || name;
+    if (!name) {
+      toastError("Template name is required");
+      return;
+    }
+    onSave({ name, subject, body: bodyHtml, attachments });
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <div className="field">
+        <label>Template Name</label>
+        <input name="name" defaultValue={template?.name ?? ""} autoFocus />
+      </div>
+      <div className="field">
+        <label>Subject (defaults to the template name if left blank)</label>
+        <input name="subject" defaultValue={template?.subject ?? ""} />
+      </div>
+      <div className="field">
+        <label>Body</label>
+        <RichTextEditor
+          value={bodyHtml}
+          onChange={setBodyHtml}
+          onUploadImage={(file) => uploadAsset.mutateAsync(file)}
+          trailing={
+            <>
+              <span className="rte-label">Attachments</span>
+              <AttachmentList
+                attachments={attachments}
+                onRemove={(url) =>
+                  setAttachments((prev) => prev.filter((a) => a.url !== url))
+                }
+              />
+              <label className="btn outline btn-sm">
+                {attaching ? "Uploading…" : "📎 Attach a file"}
+                <input type="file" hidden disabled={attaching} onChange={onAttachFile} />
+              </label>
+              <span className="rte-sep" />
+              <button type="button" className="btn outline btn-sm" onClick={onCancel}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-sm" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </>
+          }
+        />
+      </div>
+    </form>
+  );
 }
 
 export default function TemplatesPage() {
@@ -47,20 +182,7 @@ export default function TemplatesPage() {
 
   const current = editing === "new" ? null : editing;
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const name = String(fd.get("name") || "").trim();
-    const subject = String(fd.get("subject") || "").trim() || name;
-    if (!name) {
-      toastError("Template name is required");
-      return;
-    }
-    const patch: MailTemplatePatch = {
-      name,
-      subject,
-      body: String(fd.get("body") || ""),
-    };
+  async function onSave(patch: MailTemplatePatch) {
     try {
       await save.mutateAsync({
         id: editing && editing !== "new" ? editing.id : undefined,
@@ -90,6 +212,7 @@ export default function TemplatesPage() {
           name: `${row.name} (Copy)`,
           subject: row.subject,
           body: row.body,
+          attachments: row.attachments,
         },
       });
       toast("Template duplicated");
@@ -199,13 +322,17 @@ export default function TemplatesPage() {
                 border: "1px solid var(--line)",
                 borderRadius: 8,
                 padding: 12,
-                whiteSpace: "pre-line",
                 background: "#faf9f5",
               }}
-            >
-              {previewMerge(viewing.body)}
-            </div>
+              dangerouslySetInnerHTML={{ __html: previewMerge(viewing.body) }}
+            />
           </div>
+          {viewing.attachments.length > 0 && (
+            <div className="field">
+              <label>Attachments</label>
+              <AttachmentList attachments={viewing.attachments} />
+            </div>
+          )}
         </Modal>
       )}
 
@@ -215,39 +342,13 @@ export default function TemplatesPage() {
           onClose={() => setEditing(null)}
           wide
         >
-          <form onSubmit={onSubmit}>
-            <div className="field">
-              <label>Template Name</label>
-              <input name="name" defaultValue={current?.name ?? ""} autoFocus />
-            </div>
-            <div className="field">
-              <label>Subject (defaults to the template name if left blank)</label>
-              <input name="subject" defaultValue={current?.subject ?? ""} />
-            </div>
-            <div className="field">
-              <label>Body — use {"{{ contact.name }}"} / {"{{ contact.company }}"}</label>
-              <textarea name="body" rows={12} defaultValue={current?.body ?? ""} />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 8,
-                marginTop: 8,
-              }}
-            >
-              <button
-                type="button"
-                className="btn outline"
-                onClick={() => setEditing(null)}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="btn" disabled={save.isPending}>
-                {save.isPending ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </form>
+          <TemplateEditForm
+            key={current?.id ?? "new"}
+            template={current}
+            onCancel={() => setEditing(null)}
+            onSave={onSave}
+            saving={save.isPending}
+          />
         </Modal>
       )}
     </>
