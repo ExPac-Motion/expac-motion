@@ -264,6 +264,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_reference: draft.reference.trim(),
       p_client_id: draft.client_id || null,
       p_lead_id: draft.lead_id || null,
+      p_sales_person_id: draft.sales_person_id || null,
       p_supplier_id: draft.supplier_id || null,
       p_agent_id: draft.agent_id || null,
       p_transporter_id: draft.transporter_id || null,

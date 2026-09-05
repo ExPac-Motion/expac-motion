@@ -17,11 +17,16 @@ export interface Profile {
   role: UserRole;
   /** Set only for role='client' — which customer this portal login belongs to. */
   client_id: string | null;
+  /** Monthly Sales CRM targets, tracked against quotes.sales_person_id. */
+  sales_revenue_target: number;
+  sales_gp_target: number;
   created_at: string;
   /** Not on the profiles table — filled in from the current session for "me". */
   email?: string | null;
 }
-export type ProfilePatch = Partial<Pick<Profile, "full_name" | "role">>;
+export type ProfilePatch = Partial<
+  Pick<Profile, "full_name" | "role" | "sales_revenue_target" | "sales_gp_target">
+>;
 
 export interface CompanySettings {
   id: number;
@@ -425,6 +430,8 @@ export interface Quote {
   client_id: string | null;
   /** Set instead of client_id when the customer is a not-yet-promoted lead. */
   lead_id: string | null;
+  /** Attributed sales rep — a Sales CRM concept, independent of lead_id. */
+  sales_person_id: string | null;
   supplier_id: string | null;
   /** Agent / transporter / clearing agent — internal only, never shown to the customer. */
   agent_id: string | null;
@@ -701,6 +708,7 @@ export interface QuoteDraft {
   client_id: string;
   /** Set instead of client_id when the customer is a not-yet-promoted lead. */
   lead_id: string;
+  sales_person_id: string;
   supplier_id: string;
   agent_id: string;
   transporter_id: string;

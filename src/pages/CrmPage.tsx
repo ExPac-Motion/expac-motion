@@ -5,6 +5,7 @@ import LeadsPage from "./crm/LeadsPage";
 import LeadStatusesPage from "./crm/LeadStatusesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
 import SalesDashboardTab from "./crm/SalesDashboardTab";
+import SalesPersonPage from "./crm/SalesPersonPage";
 
 type Tab = "dashboard" | "leads" | "opportunities" | "statuses" | "team" | "templates";
 
@@ -34,12 +35,7 @@ export default function CrmPage() {
       {tab === "leads" && <LeadsPage />}
       {tab === "opportunities" && <OpportunitiesTab />}
       {tab === "statuses" && <LeadStatusesPage />}
-      {tab === "team" && (
-        <ComingSoonTab
-          title="Sales Person"
-          body="Per-salesperson targets against their leads/deals — phase 2 of the Sales CRM brief."
-        />
-      )}
+      {tab === "team" && <SalesPersonPage />}
       {tab === "templates" && (
         <ComingSoonTab
           title="Templates"

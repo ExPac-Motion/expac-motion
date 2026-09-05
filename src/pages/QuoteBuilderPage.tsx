@@ -9,6 +9,7 @@ import {
   useClients,
   useCompanySettings,
   useLeads,
+  useProfiles,
   useQuote,
   useRateSheet,
   useSaveQuote,
@@ -95,6 +96,7 @@ function blankDraft(): QuoteDraft {
     reference: newReference(mode),
     client_id: "",
     lead_id: "",
+    sales_person_id: "",
     supplier_id: "",
     agent_id: "",
     transporter_id: "",
@@ -133,6 +135,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     reference: q.reference,
     client_id: q.client_id ?? "",
     lead_id: q.lead_id ?? "",
+    sales_person_id: q.sales_person_id ?? "",
     supplier_id: q.supplier_id ?? "",
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
@@ -214,6 +217,7 @@ export default function QuoteBuilderPage() {
 
   const clientsQ = useClients();
   const leadsQ = useLeads();
+  const profilesQ = useProfiles();
   const suppliersQ = useSuppliers();
   const agentsQ = useAgents();
   const transportersQ = useTransporters();
@@ -471,6 +475,7 @@ export default function QuoteBuilderPage() {
 
   const clients = clientsQ.data ?? [];
   const unpromotedLeads = (leadsQ.data ?? []).filter((l) => !l.promoted_client_id);
+  const salesPeople = profilesQ.data ?? [];
   const suppliers = suppliersQ.data ?? [];
   const agents = agentsQ.data ?? [];
   const transporters = transportersQ.data ?? [];
@@ -508,12 +513,14 @@ export default function QuoteBuilderPage() {
               value={draft.client_id ? `c:${draft.client_id}` : draft.lead_id ? `l:${draft.lead_id}` : ""}
               onChange={(e) => {
                 const [kind, id] = e.target.value.split(":");
+                const pickedLead = kind === "l" ? unpromotedLeads.find((l) => l.id === id) : null;
                 setDraft((d) =>
                   d
                     ? {
                         ...d,
                         client_id: kind === "c" ? id : "",
                         lead_id: kind === "l" ? id : "",
+                        sales_person_id: pickedLead?.sales_person_id || d.sales_person_id,
                       }
                     : d,
                 );
@@ -547,6 +554,20 @@ export default function QuoteBuilderPage() {
                 record for this lead.
               </span>
             )}
+          </div>
+          <div className="field">
+            <label>Sales Person</label>
+            <select
+              value={draft.sales_person_id}
+              onChange={(e) => set("sales_person_id", e.target.value)}
+            >
+              <option value="">— unassigned —</option>
+              {salesPeople.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name || "—"}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Shipper/Exporter</label>
