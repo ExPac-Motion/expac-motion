@@ -1,16 +1,22 @@
 import { useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import {
+  EmptyState,
+  ErrorNote,
+  Loading,
+  RowActions,
+  RowActionsHead,
+} from "../../components/common";
 import { useToast } from "../../components/Toast";
-import { useDeleteLeadStatus, useLeadStatuses, useSaveLeadStatus } from "../../lib/hooks";
+import { useLeadStatuses, useSaveLeadStatus } from "../../lib/hooks";
 import type { LeadStatus, LeadStatusPatch } from "../../lib/types";
 
 export default function LeadStatusesPage() {
   const { data, isLoading, isError, error } = useLeadStatuses();
   const save = useSaveLeadStatus();
-  const remove = useDeleteLeadStatus();
   const { toast, error: toastError } = useToast();
   const [editing, setEditing] = useState<LeadStatus | "new" | null>(null);
+  const [viewing, setViewing] = useState<LeadStatus | null>(null);
 
   const rows = data ?? [];
   const current = editing === "new" ? null : editing;
@@ -37,16 +43,6 @@ export default function LeadStatusesPage() {
       toast("Saved");
     } catch (e2) {
       toastError(e2 instanceof Error ? e2.message : "Could not save");
-    }
-  }
-
-  async function onDelete(row: LeadStatus) {
-    if (!window.confirm(`Remove status "${row.name}"?`)) return;
-    try {
-      await remove.mutateAsync(row.id);
-      toast("Status removed");
-    } catch (e2) {
-      toastError(e2 instanceof Error ? e2.message : "Could not remove — leads may still use it");
     }
   }
 
@@ -77,36 +73,28 @@ export default function LeadStatusesPage() {
             <table className="table--compact">
               <thead>
                 <tr>
+                  <th className="actions-col">
+                    <RowActionsHead />
+                  </th>
                   <th>Order</th>
                   <th>Name</th>
                   <th>Promotes to Customer</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((s) => (
                   <tr key={s.id}>
+                    <td>
+                      <RowActions
+                        onView={() => setViewing(s)}
+                        onEdit={() => setEditing(s)}
+                      />
+                    </td>
                     <td>{s.sort_order}</td>
                     <td>
                       <strong>{s.name}</strong>
                     </td>
                     <td>{s.promotes_to_customer ? "Yes" : "—"}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="btn ghost small"
-                          onClick={() => setEditing(s)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn ghost small"
-                          onClick={() => onDelete(s)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -114,6 +102,19 @@ export default function LeadStatusesPage() {
           </div>
         )}
       </div>
+
+      {viewing && (
+        <Modal title={viewing.name} onClose={() => setViewing(null)}>
+          <div className="field">
+            <label>Sort order</label>
+            <strong>{viewing.sort_order}</strong>
+          </div>
+          <div className="field">
+            <label>Promotes a lead to a Customer</label>
+            <strong>{viewing.promotes_to_customer ? "Yes" : "No"}</strong>
+          </div>
+        </Modal>
+      )}
 
       {editing !== null && (
         <Modal

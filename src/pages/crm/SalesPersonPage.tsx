@@ -1,6 +1,12 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import {
+  EmptyState,
+  ErrorNote,
+  Loading,
+  RowActions,
+  RowActionsHead,
+} from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useProfiles, useQuotes, useUpdateProfile } from "../../lib/hooks";
 import { chargeTotals, fxOf } from "../../lib/calc";
@@ -18,6 +24,7 @@ export default function SalesPersonPage() {
   const profilesQ = useProfiles();
   const quotesQ = useQuotes();
   const [editing, setEditing] = useState<Profile | null>(null);
+  const [viewing, setViewing] = useState<Profile | null>(null);
 
   const people = (profilesQ.data ?? []).filter((p) => p.role !== "client");
 
@@ -63,12 +70,14 @@ export default function SalesPersonPage() {
           <table className="table--compact">
             <thead>
               <tr>
+                <th className="actions-col">
+                  <RowActionsHead />
+                </th>
                 <th>Name</th>
                 <th>Revenue (This Month)</th>
                 <th>Revenue Target</th>
                 <th>Gross Profit (This Month)</th>
                 <th>GP Target</th>
-                <th />
               </tr>
             </thead>
             <tbody>
@@ -76,6 +85,12 @@ export default function SalesPersonPage() {
                 const s = stats.get(p.id) ?? { revenue: 0, gp: 0 };
                 return (
                   <tr key={p.id}>
+                    <td>
+                      <RowActions
+                        onView={() => setViewing(p)}
+                        onEdit={() => setEditing(p)}
+                      />
+                    </td>
                     <td>
                       <strong>{p.full_name || "—"}</strong>
                     </td>
@@ -87,20 +102,45 @@ export default function SalesPersonPage() {
                     </td>
                     <td>{money(s.gp)}</td>
                     <td>{p.sales_gp_target > 0 ? money(p.sales_gp_target) : "—"}</td>
-                    <td>
-                      <button
-                        className="btn ghost small"
-                        onClick={() => setEditing(p)}
-                      >
-                        Edit Targets
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {viewing && (
+        <Modal
+          title={`${viewing.full_name || "Team member"} — Targets`}
+          onClose={() => setViewing(null)}
+          headerActions={
+            <button
+              className="btn outline"
+              onClick={() => {
+                setEditing(viewing);
+                setViewing(null);
+              }}
+            >
+              Edit
+            </button>
+          }
+        >
+          <div className="field">
+            <label>Revenue Target</label>
+            <strong>
+              {viewing.sales_revenue_target > 0
+                ? money(viewing.sales_revenue_target)
+                : "Not set"}
+            </strong>
+          </div>
+          <div className="field">
+            <label>Gross Profit Target</label>
+            <strong>
+              {viewing.sales_gp_target > 0 ? money(viewing.sales_gp_target) : "Not set"}
+            </strong>
+          </div>
+        </Modal>
       )}
 
       {editing && (

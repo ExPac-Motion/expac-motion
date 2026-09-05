@@ -50,6 +50,23 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
+export function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const secs = Math.round((Date.now() - d.getTime()) / 1000);
+  if (secs < 60) return "just now";
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.round(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return formatDate(iso);
+}
+
 /**
  * Reference prefix by transport mode: AIR (air freight), SEA (FCL/LCL),
  * RDX (road), CX (courier express).

@@ -889,6 +889,17 @@ export async function listMailCampaignRecipients(
   );
 }
 
+/** Lightweight cross-campaign recipient rows, for dashboard aggregates. */
+export async function listAllCampaignRecipients(): Promise<
+  Pick<MailCampaignRecipient, "campaign_id" | "status" | "sent_at">[]
+> {
+  return unwrap(
+    await supabase
+      .from("mail_campaign_recipients")
+      .select("campaign_id,status,sent_at"),
+  );
+}
+
 export async function createMailCampaignRecipients(
   rows: Array<{ campaign_id: string; lead_id: string; email: string }>,
 ): Promise<MailCampaignRecipient[]> {

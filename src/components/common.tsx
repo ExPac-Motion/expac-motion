@@ -54,9 +54,10 @@ export function RowActions({
   onMail?: () => void;
   mailTitle?: string;
   onView: () => void;
-  /** Omit for records that can't be edited or duplicated (e.g. a sent campaign). */
+  /** Each icon is omitted when its handler isn't passed (e.g. config lists
+   *  that are view + edit only, or a sent campaign that can't be edited). */
   onEdit?: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onDuplicate?: () => void;
 }) {
   const stop = (fn: () => void) => (e: MouseEvent) => {
@@ -79,13 +80,15 @@ export function RowActions({
           {ROW_ICON.edit}
         </button>
       )}
-      <button
-        className="row-icon-btn danger"
-        title="Delete"
-        onClick={stop(onDelete)}
-      >
-        {ROW_ICON.delete}
-      </button>
+      {onDelete && (
+        <button
+          className="row-icon-btn danger"
+          title="Delete"
+          onClick={stop(onDelete)}
+        >
+          {ROW_ICON.delete}
+        </button>
+      )}
       {onDuplicate && (
         <button
           className="row-icon-btn"

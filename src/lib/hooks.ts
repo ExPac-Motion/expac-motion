@@ -548,6 +548,12 @@ export function useMailCampaignRecipients(campaignId: string | undefined) {
     enabled: !!campaignId,
   });
 }
+export function useAllCampaignRecipients() {
+  return useQuery({
+    queryKey: ["mail_campaign_recipients", "all"],
+    queryFn: db.listAllCampaignRecipients,
+  });
+}
 export function useDeleteMailCampaign() {
   const qc = useQueryClient();
   return useMutation({

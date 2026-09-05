@@ -1866,6 +1866,70 @@ tr.clickable:hover {
   gap: 18px;
   margin-bottom: 18px;
 }
+/* Sales CRM dashboard */
+.sales-kpis {
+  grid-template-columns: repeat(6, 1fr);
+}
+@media (max-width: 1200px) {
+  .sales-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .sales-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.lb-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+.mini-bar {
+  height: 5px;
+  border-radius: 5px;
+  background: #ececec;
+  overflow: hidden;
+}
+.mini-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+.act-feed {
+  display: flex;
+  flex-direction: column;
+}
+.act-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.act-row:last-child {
+  border-bottom: none;
+}
+.act-row .ms-tag {
+  flex: none;
+  min-width: 86px;
+  text-align: center;
+}
+.act-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.act-when {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
 @media (max-width: 900px) {
   .dash-2 {
     grid-template-columns: 1fr;
