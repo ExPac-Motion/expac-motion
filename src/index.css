@@ -469,7 +469,7 @@ tr.clickable:hover {
   padding: 4px 6px;
   vertical-align: middle;
 }
-.jobs-table td input,
+.jobs-table td input:not([type="checkbox"]),
 .jobs-table td select {
   width: 100%;
   min-width: 90px;
@@ -480,12 +480,12 @@ tr.clickable:hover {
   color: var(--ink);
   font: inherit;
 }
-.jobs-table td input:hover,
+.jobs-table td input:not([type="checkbox"]):hover,
 .jobs-table td select:hover {
   border-color: #e0e1dc;
   background: #fafaf7;
 }
-.jobs-table td input:focus,
+.jobs-table td input:not([type="checkbox"]):focus,
 .jobs-table td select:focus {
   outline: none;
   border-color: var(--green);
