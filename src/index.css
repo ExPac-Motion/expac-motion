@@ -716,6 +716,20 @@ tr.clickable:hover {
   font-size: 0.8rem;
   background: #fff;
 }
+/* Campaign tracking cell */
+.track-cell {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1px 14px;
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.track-cell b {
+  color: var(--ink);
+  font-weight: 800;
+}
+
 /* Web contact forms — builder */
 .wf-name-input {
   border: 1px solid transparent;

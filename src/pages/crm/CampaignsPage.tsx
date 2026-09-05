@@ -10,6 +10,7 @@ import {
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
+  useAllCampaignRecipients,
   useDeleteMailCampaign,
   useLeadStatuses,
   useLeads,
@@ -37,6 +38,36 @@ function recipientTone(s: MailRecipientStatus): string {
   if (s === "delivered" || s === "opened" || s === "clicked") return "done";
   if (s === "sent") return "mid";
   return "start";
+}
+
+interface Tracking {
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+}
+/** Cumulative funnel: an opened email also counts as sent + delivered. */
+function funnel(statuses: MailRecipientStatus[]): Tracking {
+  const t = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+  for (const s of statuses) {
+    if (s !== "pending" && s !== "failed") t.sent += 1;
+    if (s === "delivered" || s === "opened" || s === "clicked") t.delivered += 1;
+    if (s === "opened" || s === "clicked") t.opened += 1;
+    if (s === "clicked") t.clicked += 1;
+  }
+  return t;
+}
+
+function TrackingCell({ t }: { t: Tracking | undefined }) {
+  if (!t) return <span className="hint">—</span>;
+  return (
+    <div className="track-cell">
+      <span>Sent <b>{t.sent}</b></span>
+      <span>Delivered <b>{t.delivered}</b></span>
+      <span>Opened <b>{t.opened}</b></span>
+      <span>Clicked <b>{t.clicked}</b></span>
+    </div>
+  );
 }
 
 function CampaignDetailModal({
@@ -310,6 +341,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
 
 export default function CampaignsPage() {
   const { data, isLoading, isError, error } = useMailCampaigns();
+  const recipientsQ = useAllCampaignRecipients();
   const remove = useDeleteMailCampaign();
   const { toast, error: toastError } = useToast();
 
@@ -317,6 +349,18 @@ export default function CampaignsPage() {
   const [viewing, setViewing] = useState<MailCampaign | null>(null);
 
   const rows = data ?? [];
+
+  const trackingByCampaign = useMemo(() => {
+    const grouped = new Map<string, MailRecipientStatus[]>();
+    for (const r of recipientsQ.data ?? []) {
+      const arr = grouped.get(r.campaign_id) ?? [];
+      arr.push(r.status);
+      grouped.set(r.campaign_id, arr);
+    }
+    const out = new Map<string, Tracking>();
+    for (const [id, statuses] of grouped) out.set(id, funnel(statuses));
+    return out;
+  }, [recipientsQ.data]);
 
   async function onDelete(row: MailCampaign) {
     if (
@@ -367,6 +411,7 @@ export default function CampaignsPage() {
                   <th>Name</th>
                   <th>Subject</th>
                   <th>Status</th>
+                  <th>Tracking</th>
                   <th>Sent</th>
                 </tr>
               </thead>
@@ -387,6 +432,9 @@ export default function CampaignsPage() {
                       <span className={`ms-tag tone-${campaignTone(c.status)}`}>
                         {c.status}
                       </span>
+                    </td>
+                    <td>
+                      <TrackingCell t={trackingByCampaign.get(c.id)} />
                     </td>
                     <td className="nowrap">
                       {c.sent_at ? formatDateTime(c.sent_at) : "—"}
