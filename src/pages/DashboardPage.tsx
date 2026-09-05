@@ -253,7 +253,7 @@ export default function DashboardPage() {
                   <p>Click a segment to filter the list below</p>
                 </div>
               </div>
-              <ModeDonut
+              <ModeBar3D
                 counts={modeCounts}
                 total={activeJobs.length}
                 selected={modeFilter}
@@ -539,7 +539,19 @@ function Kpi({
   );
 }
 
-function ModeDonut({
+/** Lighten (amt > 0) or darken (amt < 0) a "#rrggbb" colour. */
+function shade(hex: string, amt: number): string {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const f = (c: number) =>
+    Math.max(0, Math.min(255, Math.round(amt >= 0 ? c + (255 - c) * amt : c * (1 + amt))));
+  return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
+}
+
+function ModeBar3D({
   counts,
   total,
   selected,
@@ -550,62 +562,74 @@ function ModeDonut({
   selected: ModeFilter;
   onPick: (k: ModeKey) => void;
 }) {
-  const R = 62;
-  const SW = 22;
-  const C = 2 * Math.PI * R;
-  const gap = total > 1 ? 3 : 0;
-
-  let acc = 0;
-  const segs = MODE_META.map((m) => {
-    const v = counts[m.key];
-    const frac = total > 0 ? v / total : 0;
-    const len = Math.max(0, frac * C - gap);
-    const seg = { ...m, v, offset: acc, len };
-    acc += frac * C;
-    return seg;
-  });
+  const W = 300;
+  const H = 176;
+  const DX = 11;
+  const DY = -9;
+  const baseY = 140;
+  const maxBarH = 92;
+  const barW = 32;
+  const slot = W / MODE_META.length;
+  const maxCount = Math.max(1, ...MODE_META.map((m) => counts[m.key]));
 
   return (
     <div className="donut-wrap">
-      <div className="donut">
-        <svg viewBox="0 0 160 160" width="160" height="160">
-          <circle
-            cx="80"
-            cy="80"
-            r={R}
-            fill="none"
-            stroke="#f0efe9"
-            strokeWidth={SW}
-          />
-          {total > 0 &&
-            segs
-              .filter((s) => s.v > 0)
-              .map((s) => (
-                <circle
-                  key={s.key}
-                  className="donut-seg"
-                  cx="80"
-                  cy="80"
-                  r={R}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth={SW}
-                  strokeDasharray={`${s.len} ${C - s.len}`}
-                  strokeDashoffset={-s.offset}
-                  strokeLinecap={gap ? "round" : "butt"}
-                  onClick={() => onPick(s.key)}
-                >
-                  <title>
-                    {s.label}: {s.v}
-                  </title>
-                </circle>
-              ))}
+      <div className="bar3d">
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+          <line x1={0} y1={baseY} x2={W} y2={baseY} stroke="#e3e1d8" />
+          {MODE_META.map((m, i) => {
+            const v = counts[m.key];
+            const h = (v / maxCount) * maxBarH;
+            const x0 = i * slot + (slot - barW) / 2;
+            const yTop = baseY - h;
+            const dim = selected !== "All" && selected !== m.key;
+            return (
+              <g
+                key={m.key}
+                className="bar3d-seg"
+                style={{ opacity: dim ? 0.45 : 1 }}
+                onClick={() => onPick(m.key)}
+              >
+                <title>
+                  {m.label}: {v}
+                </title>
+                {v > 0 && (
+                  <>
+                    <polygon
+                      points={`${x0},${yTop} ${x0 + barW},${yTop} ${x0 + barW + DX},${yTop + DY} ${x0 + DX},${yTop + DY}`}
+                      fill={shade(m.color, 0.32)}
+                    />
+                    <polygon
+                      points={`${x0 + barW},${yTop} ${x0 + barW + DX},${yTop + DY} ${x0 + barW + DX},${baseY + DY} ${x0 + barW},${baseY}`}
+                      fill={shade(m.color, -0.26)}
+                    />
+                  </>
+                )}
+                <rect
+                  x={x0}
+                  y={yTop}
+                  width={barW}
+                  height={Math.max(0, baseY - yTop)}
+                  fill={m.color}
+                />
+                {v > 0 && (
+                  <text
+                    x={x0 + barW / 2}
+                    y={yTop - 8}
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="800"
+                    fill="#202426"
+                  >
+                    {v}
+                  </text>
+                )}
+              </g>
+            );
+          })}
         </svg>
-        <div className="donut-center">
-          <div>
-            <b>{total}</b>
-            <span>ACTIVE SHIPMENTS</span>
-          </div>
+        <div className="bar3d-total">
+          <b>{total}</b> ACTIVE SHIPMENTS
         </div>
       </div>
       <div className="donut-legend">

@@ -1651,39 +1651,34 @@ tr.clickable:hover {
   gap: 20px;
   flex-wrap: wrap;
 }
-.donut {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  flex: none;
+.bar3d {
+  flex: 1;
+  min-width: 220px;
 }
-.donut svg {
-  transform: rotate(-90deg);
+.bar3d svg {
   display: block;
+  overflow: visible;
 }
-.donut-center {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  text-align: center;
-}
-.donut-center b {
-  font-family: var(--display);
-  font-size: 1.7rem;
-  font-weight: 800;
-  display: block;
-}
-.donut-center span {
-  color: var(--muted);
-  font-size: 0.66rem;
-}
-.donut-seg {
+.bar3d-seg {
   cursor: pointer;
   transition: opacity 0.12s ease;
 }
-.donut-seg:hover {
-  opacity: 0.8;
+.bar3d-seg:hover {
+  opacity: 0.85;
+}
+.bar3d-total {
+  margin-top: 6px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+.bar3d-total b {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin-right: 4px;
 }
 .donut-legend {
   display: flex;
