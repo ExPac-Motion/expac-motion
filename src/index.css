@@ -2053,7 +2053,7 @@ tr.clickable:hover {
 }
 .pipe-row {
   display: grid;
-  grid-template-columns: 120px 1fr auto;
+  grid-template-columns: 132px 1fr auto;
   align-items: center;
   gap: 12px;
   background: none;
@@ -2074,6 +2074,10 @@ tr.clickable:hover {
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .pipe-row .track {
   height: 10px;

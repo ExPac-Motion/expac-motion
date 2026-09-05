@@ -150,7 +150,13 @@ export default function SalesDashboardTab() {
     const rows = OPPORTUNITY_STAGES.map((stage) => {
       const inStage = opps.filter((o) => o.status === stage.key);
       const value = inStage.reduce((s, o) => s + (o.value || 0), 0);
-      return { key: stage.key, label: stage.label, count: inStage.length, value };
+      // Short label (before the " - ") so the pipeline row never wraps.
+      return {
+        key: stage.key,
+        label: stage.label.split(" - ")[0],
+        count: inStage.length,
+        value,
+      };
     });
     const max = Math.max(1, ...rows.map((r) => r.value));
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
