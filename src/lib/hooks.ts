@@ -360,6 +360,22 @@ export function useAddNote() {
   });
 }
 
+/* ---------- CRM ---------- */
+export function useMessagesForJobs(jobIds: string[]) {
+  return useQuery({
+    queryKey: ["messages", "byJobs", jobIds],
+    queryFn: () => db.listMessagesForJobs(jobIds),
+    enabled: jobIds.length > 0,
+  });
+}
+export function useShipmentDocumentsForJobs(jobIds: string[]) {
+  return useQuery({
+    queryKey: ["shipment_documents", "byJobs", jobIds],
+    queryFn: () => db.listShipmentDocumentsForJobs(jobIds),
+    enabled: jobIds.length > 0,
+  });
+}
+
 /* ---------- Settings ---------- */
 export function useCompanySettings() {
   return useQuery({

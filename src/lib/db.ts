@@ -497,6 +497,32 @@ export async function updateMessage(
   );
 }
 
+/** Bulk fetch for the CRM activity timeline (a client's messages across all their jobs). */
+export async function listMessagesForJobs(jobIds: string[]): Promise<Message[]> {
+  if (jobIds.length === 0) return [];
+  return unwrap<Message[]>(
+    await supabase
+      .from("messages")
+      .select("*")
+      .in("job_id", jobIds)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** Bulk fetch for the CRM activity timeline (a client's documents across all their jobs). */
+export async function listShipmentDocumentsForJobs(
+  jobIds: string[],
+): Promise<ShipmentDocument[]> {
+  if (jobIds.length === 0) return [];
+  return unwrap<ShipmentDocument[]>(
+    await supabase
+      .from("shipment_documents")
+      .select("*")
+      .in("job_id", jobIds)
+      .order("created_at", { ascending: false }),
+  );
+}
+
 /* ---------- Settings ---------- */
 export async function getCompanySettings(): Promise<CompanySettings> {
   return unwrap<CompanySettings>(

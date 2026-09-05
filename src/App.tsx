@@ -23,6 +23,7 @@ import TransportersPage from "./pages/TransportersPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import DeliveryInstructionPrintPage from "./pages/DeliveryInstructionPrintPage";
+import CrmPage from "./pages/CrmPage";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 function RequireAuth() {
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="jobs" element={<JobsPage />} />
             <Route path="jobs/completed" element={<CompletedJobsPage />} />
             <Route path="clients" element={<ClientsPage />} />
+            <Route path="crm" element={<CrmPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="transporters" element={<TransportersPage />} />
