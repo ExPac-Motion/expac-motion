@@ -130,7 +130,7 @@ export default function QuotesListPage() {
             <table className="table--compact">
               <thead>
                 <tr>
-                  <th>
+                  <th className="actions-col">
                     <RowActionsHead />
                   </th>
                   <th>Reference</th>

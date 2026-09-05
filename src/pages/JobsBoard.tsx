@@ -406,7 +406,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             <table className="table--compact jobs-table">
               <thead>
                 <tr>
-                  <th>
+                  <th className="actions-col">
                     <RowActionsHead />
                   </th>
                   <th>Created On</th>

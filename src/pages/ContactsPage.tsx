@@ -163,7 +163,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
             <table>
               <thead>
                 <tr>
-                  <th>
+                  <th className="actions-col">
                     <RowActionsHead />
                   </th>
                   <th>Company</th>

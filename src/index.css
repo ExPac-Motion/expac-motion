@@ -1049,6 +1049,10 @@ tr.clickable:hover {
   margin: 0 2px 0 0;
   cursor: pointer;
 }
+.actions-col {
+  width: 1%;
+  white-space: nowrap;
+}
 .row-icons-head {
   color: var(--muted);
   font-size: 0.72rem;
