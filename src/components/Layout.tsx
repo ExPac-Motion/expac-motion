@@ -35,6 +35,7 @@ const NAV: NavModule[] = [
     children: [
       { to: "/jobs", label: "Active Shipments" },
       { to: "/jobs?mode=air", label: "Air Freight" },
+      { to: "/jobs?mode=courier", label: "Courier Express" },
       { to: "/jobs?mode=sea", label: "Sea Freight" },
       { to: "/jobs?mode=road", label: "Road Freight" },
       { to: "/jobs/completed", label: "Completed Shipments" },

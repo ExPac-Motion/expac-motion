@@ -214,11 +214,12 @@ function JobRow({
 }
 
 type BoardMode = "active" | "completed";
-type ModeTab = "All" | "Air" | "Sea" | "Road";
+type ModeTab = "All" | "Air" | "Sea" | "Road" | "Courier";
 
 const MODE_TABS: { key: ModeTab; label: string }[] = [
   { key: "All", label: "All Shipments" },
   { key: "Air", label: "Air Freight" },
+  { key: "Courier", label: "Courier Express" },
   { key: "Sea", label: "Sea Freight" },
   { key: "Road", label: "Road Freight" },
 ];
@@ -233,6 +234,7 @@ function modeTabFromParam(v: string | null): ModeTab {
   if (v === "air") return "Air";
   if (v === "sea") return "Sea";
   if (v === "road") return "Road";
+  if (v === "courier") return "Courier";
   return "All";
 }
 
