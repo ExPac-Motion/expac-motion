@@ -1,299 +1,441 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import Modal from "../../components/Modal";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import { EmptyState, Loading, MailLink } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
   useClients,
-  useCreateClientInvite,
+  useDeleteOpportunity,
+  useCreateOpportunity,
   useJobs,
-  useMessagesForJobs,
-  useOpsTasks,
+  useLeads,
+  useOpportunities,
+  useProfiles,
   useQuotes,
-  useShipmentDocumentsForJobs,
+  useUpdateOpportunity,
 } from "../../lib/hooks";
-import { chargeTotals, fxOf } from "../../lib/calc";
-import { formatDate, money } from "../../lib/format";
+import { money } from "../../lib/format";
 import {
-  isShipmentComplete,
-  STATUS_LABEL,
-  STATUS_ORDER,
-  type Client,
-  type Job,
-  type Quote,
+  OPPORTUNITY_STAGES,
+  type Opportunity,
+  type OpportunityPatch,
+  type OpportunityStatus,
 } from "../../lib/types";
 
-/**
- * "Opportunities" — a customer's deal pipeline + activity timeline + open
- * tasks. This is the original Sales CRM page, relocated under its own
- * sub-nav tab; it already reuses the Quotation Pipeline concept, which is
- * exactly what the brief asked for instead of a second, parallel pipeline.
- */
+const Icon = {
+  edit: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  ),
+  delete: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+    </svg>
+  ),
+};
+
 export default function OpportunitiesTab() {
-  const clientsQ = useClients();
-  const quotesQ = useQuotes();
-  const jobsQ = useJobs();
-  const [openClient, setOpenClient] = useState<Client | null>(null);
+  const oppsQ = useOpportunities();
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Opportunity | null>(null);
+  const del = useDeleteOpportunity();
+  const { toast, error: toastError } = useToast();
 
-  const quotes = quotesQ.data ?? [];
-  const jobs = jobsQ.data ?? [];
+  const opps = oppsQ.data ?? [];
 
-  const rows = useMemo(() => {
-    const clients = clientsQ.data ?? [];
-    const quotes = quotesQ.data ?? [];
-    const jobs = jobsQ.data ?? [];
-    return clients.map((c) => {
-      const cQuotes = quotes.filter((q) => q.client_id === c.id);
-      const cJobs = jobs.filter((j) => j.client_id === c.id);
-      const activeShipments = cJobs.filter((j) => !isShipmentComplete(j));
-      const lastActivity = [
-        ...cQuotes.map((q) => q.created_at),
-        ...cJobs.map((j) => j.created_at),
-      ].sort()[cQuotes.length + cJobs.length - 1];
-      return {
-        client: c,
-        openQuotes: cQuotes.filter((q) => q.status === "open" || q.status === "sent")
-          .length,
-        activeShipments: activeShipments.length,
-        lastActivity,
-      };
-    });
-  }, [clientsQ.data, quotesQ.data, jobsQ.data]);
+  async function onDelete(o: Opportunity) {
+    const name = o.lead?.company ?? o.client?.company ?? "this opportunity";
+    if (!window.confirm(`Remove "${name}" from the pipeline?`)) return;
+    try {
+      await del.mutateAsync(o.id);
+      toast("Opportunity removed");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not remove");
+    }
+  }
 
-  const isLoading = clientsQ.isLoading || quotesQ.isLoading || jobsQ.isLoading;
-  const isError = clientsQ.isError || quotesQ.isError || jobsQ.isError;
+  if (oppsQ.isLoading) {
+    return (
+      <div className="panel">
+        <Loading />
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Customers</h2>
-            <p>{rows.length} total · pipeline, activity and tasks per client</p>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <Loading />
-        ) : isError ? (
-          <ErrorNote error={clientsQ.error ?? quotesQ.error ?? jobsQ.error} />
-        ) : rows.length === 0 ? (
-          <EmptyState>No customers yet.</EmptyState>
-        ) : (
-          <div className="table-wrap">
-            <table className="table--compact">
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Open Quotes</th>
-                  <th>Active Shipments</th>
-                  <th>Last Activity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.client.id}
-                    className="clickable"
-                    onClick={() => setOpenClient(r.client)}
-                  >
-                    <td>
-                      <strong>{r.client.company}</strong>
-                    </td>
-                    <td>{r.openQuotes}</td>
-                    <td>{r.activeShipments}</td>
-                    <td>{r.lastActivity ? formatDate(r.lastActivity) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 14,
+        }}
+      >
+        <p className="muted" style={{ margin: 0 }}>
+          Move a card to a new stage with its status dropdown.
+        </p>
+        <button className="btn" onClick={() => setCreating(true)}>
+          + New Opportunity
+        </button>
       </div>
 
-      {openClient && (
-        <CrmClientModal
-          client={openClient}
-          quotes={quotes.filter((q) => q.client_id === openClient.id)}
-          jobs={jobs.filter((j) => j.client_id === openClient.id)}
-          onClose={() => setOpenClient(null)}
+      {opps.length === 0 ? (
+        <div className="panel">
+          <EmptyState>
+            No opportunities yet. Add one here, or open a lead and click "+ Add
+            Opportunity".
+          </EmptyState>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${OPPORTUNITY_STAGES.length}, minmax(260px, 1fr))`,
+            gap: 14,
+            overflowX: "auto",
+          }}
+        >
+          {OPPORTUNITY_STAGES.map((stage) => {
+            const rows = opps.filter((o) => o.status === stage.key);
+            const total = rows.reduce((s, o) => s + o.value, 0);
+            return (
+              <div key={stage.key} className="panel" style={{ margin: 0 }}>
+                <div style={{ marginBottom: 10 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <strong style={{ fontSize: "0.85rem" }}>{stage.label}</strong>
+                    <span className="muted small">{rows.length}</span>
+                  </div>
+                  <div className="muted small">{money(total)}</div>
+                </div>
+
+                <div className="stack-sm">
+                  {rows.map((o) => (
+                    <OpportunityCard
+                      key={o.id}
+                      opportunity={o}
+                      onEdit={() => setEditing(o)}
+                      onDelete={() => onDelete(o)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {creating && <OpportunityModal onClose={() => setCreating(false)} />}
+      {editing && (
+        <OpportunityModal
+          opportunity={editing}
+          onClose={() => setEditing(null)}
         />
       )}
     </>
   );
 }
 
-function CrmClientModal({
-  client,
-  quotes,
-  jobs,
-  onClose,
+function OpportunityCard({
+  opportunity: o,
+  onEdit,
+  onDelete,
 }: {
-  client: Client;
-  quotes: Quote[];
-  jobs: Job[];
-  onClose: () => void;
+  opportunity: Opportunity;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
-  const jobIds = useMemo(() => jobs.map((j) => j.id), [jobs]);
-  const tasksQ = useOpsTasks();
-  const messagesQ = useMessagesForJobs(jobIds);
-  const docsQ = useShipmentDocumentsForJobs(jobIds);
-  const createInvite = useCreateClientInvite();
+  const update = useUpdateOpportunity();
   const { toast, error: toastError } = useToast();
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const name = o.lead?.company ?? o.client?.company ?? "Untitled";
+  const contact = o.lead?.contact ?? o.client?.contact;
+  const email = o.lead?.email ?? o.client?.email;
 
-  const tasks = (tasksQ.data ?? []).filter((t) => t.client_id === client.id);
-
-  async function onInvite() {
+  async function onStatusChange(status: OpportunityStatus) {
     try {
-      const invite = await createInvite.mutateAsync(client.id);
-      const link = `${window.location.origin}/portal/signup?token=${invite.token}`;
-      setInviteLink(link);
-      try {
-        await navigator.clipboard.writeText(link);
-        toast("Invite link copied to clipboard");
-      } catch {
-        toast("Invite link created");
-      }
+      await update.mutateAsync({ id: o.id, patch: { status } });
+      toast("Moved to " + OPPORTUNITY_STAGES.find((s) => s.key === status)?.label);
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Could not create invite");
+      toastError(e instanceof Error ? e.message : "Could not update");
     }
   }
 
-  const pipeline = STATUS_ORDER.map((st) => {
-    const rows = quotes.filter((q) => q.status === st);
-    const value = rows.reduce(
-      (sum, q) => sum + chargeTotals(q.quote_lines, fxOf(q)).sell,
-      0,
-    );
-    return { st, count: rows.length, value };
-  });
+  return (
+    <div
+      style={{
+        border: "1px solid var(--line)",
+        borderRadius: 10,
+        padding: 10,
+        background: "var(--white)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
+        <strong style={{ fontSize: "0.85rem" }}>{o.title || name}</strong>
+        <div style={{ display: "flex", gap: 2 }}>
+          <button className="row-icon-btn" title="Edit" onClick={onEdit}>
+            {Icon.edit}
+          </button>
+          <button
+            className="row-icon-btn danger"
+            title="Delete"
+            onClick={onDelete}
+          >
+            {Icon.delete}
+          </button>
+        </div>
+      </div>
+      {o.title && <div className="muted small">{name}</div>}
+      <div style={{ fontWeight: 700, margin: "4px 0" }}>{money(o.value)}</div>
+      {contact && (
+        <div className="muted small" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {contact}
+          {email && <MailLink email={email} />}
+        </div>
+      )}
+      {o.sales_person?.full_name && (
+        <div className="muted small">Rep: {o.sales_person.full_name}</div>
+      )}
+      {o.quote && (
+        <div className="muted small">
+          Quote:{" "}
+          <Link to={`/quotes/${o.quote.id}`}>{o.quote.reference}</Link>
+        </div>
+      )}
+      {o.job && (
+        <div className="muted small">Shipment: {o.job.reference}</div>
+      )}
+      <select
+        value={o.status}
+        onChange={(e) => onStatusChange(e.target.value as OpportunityStatus)}
+        style={{ marginTop: 8, width: "100%", fontSize: "0.76rem" }}
+      >
+        {OPPORTUNITY_STAGES.map((s) => (
+          <option key={s.key} value={s.key}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
-  type Event = { date: string; label: string; detail?: string };
-  const events: Event[] = [
-    ...quotes.map((q) => ({
-      date: q.created_at,
-      label: `Quote ${q.reference} created`,
-      detail: STATUS_LABEL[q.status],
-    })),
-    ...jobs.flatMap((j) =>
-      (j.job_events ?? []).map((e) => ({
-        date: e.created_at,
-        label: `${j.reference}: milestone → ${e.milestone}`,
-        detail: e.note ?? undefined,
-      })),
-    ),
-    ...(messagesQ.data ?? [])
-      .filter((m) => m.kind === "email")
-      .map((m) => ({
-        date: m.created_at,
-        label: `Email sent: ${m.subject ?? "(no subject)"}`,
-        detail: m.status,
-      })),
-    ...(docsQ.data ?? []).map((d) => ({
-      date: d.created_at,
-      label: `Document ${d.kind === "generated" ? "generated" : "uploaded"}: ${d.name}`,
-    })),
-    ...tasks
-      .filter((t) => t.status === "done" && t.done_at)
-      .map((t) => ({
-        date: t.done_at as string,
-        label: `Task completed: ${t.title}`,
-      })),
-  ].sort((a, b) => (a.date < b.date ? 1 : -1));
+function OpportunityModal({
+  opportunity,
+  onClose,
+}: {
+  opportunity?: Opportunity;
+  onClose: () => void;
+}) {
+  const clientsQ = useClients();
+  const leadsQ = useLeads();
+  const quotesQ = useQuotes();
+  const jobsQ = useJobs();
+  const profilesQ = useProfiles();
+  const create = useCreateOpportunity();
+  const update = useUpdateOpportunity();
+  const { toast, error: toastError } = useToast();
+
+  const [entity, setEntity] = useState(
+    opportunity?.client_id
+      ? `c:${opportunity.client_id}`
+      : opportunity?.lead_id
+        ? `l:${opportunity.lead_id}`
+        : "",
+  );
+
+  const clients = clientsQ.data ?? [];
+  const leads = leadsQ.data ?? [];
+  const salesPeople = profilesQ.data ?? [];
+
+  const [kind, entityId] = entity.split(":");
+  const effectiveClientId =
+    kind === "c" ? entityId : leads.find((l) => l.id === entityId)?.promoted_client_id;
+
+  const linkableQuotes = useMemo(() => {
+    const quotes = quotesQ.data ?? [];
+    return quotes.filter(
+      (q) =>
+        (kind === "l" && q.lead_id === entityId) ||
+        (effectiveClientId && q.client_id === effectiveClientId),
+    );
+  }, [quotesQ.data, kind, entityId, effectiveClientId]);
+
+  const linkableJobs = useMemo(() => {
+    const jobs = jobsQ.data ?? [];
+    return jobs.filter((j) => effectiveClientId && j.client_id === effectiveClientId);
+  }, [jobsQ.data, effectiveClientId]);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!entity) {
+      toastError("Please select a lead or customer");
+      return;
+    }
+    const fd = new FormData(e.currentTarget);
+    const [k, id] = entity.split(":");
+    const patch: OpportunityPatch = {
+      title: String(fd.get("title") || "").trim() || null,
+      lead_id: k === "l" ? id : null,
+      client_id: k === "c" ? id : null,
+      status: fd.get("status") as OpportunityStatus,
+      value: Number(fd.get("value")) || 0,
+      close_date: String(fd.get("close_date") || "") || null,
+      notes: String(fd.get("notes") || "").trim() || null,
+      sales_person_id: String(fd.get("sales_person_id") || "") || null,
+      quote_id: String(fd.get("quote_id") || "") || null,
+      job_id: String(fd.get("job_id") || "") || null,
+    };
+    try {
+      if (opportunity) {
+        await update.mutateAsync({ id: opportunity.id, patch });
+        toast("Opportunity updated");
+      } else {
+        await create.mutateAsync(patch);
+        toast("Opportunity added");
+      }
+      onClose();
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not save");
+    }
+  }
+
+  const busy = create.isPending || update.isPending;
 
   return (
     <Modal
-      title={client.company}
+      title={opportunity ? "Edit Opportunity" : "New Opportunity"}
       onClose={onClose}
-      wide
-      stickyHeader
-      headerActions={
-        <button
-          className="btn outline"
-          onClick={onInvite}
-          disabled={createInvite.isPending}
-        >
-          {createInvite.isPending ? "Creating…" : "Invite to Portal"}
-        </button>
-      }
     >
-      {inviteLink && (
+      <form onSubmit={onSubmit}>
+        <div className="field">
+          <label>Lead or Customer</label>
+          <select value={entity} onChange={(e) => setEntity(e.target.value)}>
+            <option value="">Select…</option>
+            {clients.map((c) => (
+              <option key={c.id} value={`c:${c.id}`}>
+                {c.company} (Customer)
+              </option>
+            ))}
+            {leads.map((l) => (
+              <option key={l.id} value={`l:${l.id}`}>
+                {l.company} (Lead)
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Title (optional)</label>
+          <input
+            name="title"
+            placeholder="e.g. Air freight — China to SA"
+            defaultValue={opportunity?.title ?? ""}
+          />
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>Value (R)</label>
+            <input
+              name="value"
+              type="number"
+              step="0.01"
+              defaultValue={opportunity?.value ?? 0}
+            />
+          </div>
+          <div className="field">
+            <label>Stage</label>
+            <select name="status" defaultValue={opportunity?.status ?? "new_lead"}>
+              {OPPORTUNITY_STAGES.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>Sales Person</label>
+            <select
+              name="sales_person_id"
+              defaultValue={opportunity?.sales_person_id ?? ""}
+            >
+              <option value="">— unassigned —</option>
+              {salesPeople.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name || "—"}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Expected Close Date</label>
+            <input
+              name="close_date"
+              type="date"
+              defaultValue={opportunity?.close_date ?? ""}
+            />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>Link Quote</label>
+            <select name="quote_id" defaultValue={opportunity?.quote_id ?? ""}>
+              <option value="">— none —</option>
+              {linkableQuotes.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.reference}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Link Shipment</label>
+            <select name="job_id" defaultValue={opportunity?.job_id ?? ""}>
+              <option value="">— none —</option>
+              {linkableJobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.reference}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="field">
+          <label>Notes</label>
+          <textarea name="notes" rows={3} defaultValue={opportunity?.notes ?? ""} />
+        </div>
         <div
-          className="hint"
           style={{
-            marginBottom: 14,
-            padding: 10,
-            background: "#f5f4ef",
-            borderRadius: 8,
-            wordBreak: "break-all",
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            marginTop: 8,
           }}
         >
-          Share this link with the customer (copied to clipboard): {inviteLink}
+          <button type="button" className="btn outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn" disabled={busy}>
+            {busy ? "Saving…" : "Save"}
+          </button>
         </div>
-      )}
-      <div className="grid2" style={{ marginBottom: 18 }}>
-        <div>
-          <h4 style={{ margin: "0 0 8px" }}>Deal Pipeline</h4>
-          {pipeline.map((p) => (
-            <div
-              key={p.st}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "6px 0",
-                borderBottom: "1px solid #f0efe8",
-              }}
-            >
-              <span>{STATUS_LABEL[p.st]}</span>
-              <span className="muted">
-                {p.count} · {money(p.value)}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div>
-          <h4 style={{ margin: "0 0 8px" }}>Open Tasks</h4>
-          {tasks.filter((t) => t.status !== "done").length === 0 ? (
-            <p className="muted small">No open tasks for this client.</p>
-          ) : (
-            tasks
-              .filter((t) => t.status !== "done")
-              .map((t) => (
-                <div key={t.id} style={{ padding: "6px 0" }}>
-                  {t.title}
-                  {t.due_date && (
-                    <span className="muted small"> — due {formatDate(t.due_date)}</span>
-                  )}
-                </div>
-              ))
-          )}
-        </div>
-      </div>
-
-      <h4 style={{ margin: "0 0 8px" }}>Activity Timeline</h4>
-      {events.length === 0 ? (
-        <p className="muted small">No activity yet.</p>
-      ) : (
-        <div className="stack-sm">
-          {events.map((e, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "6px 0",
-                borderBottom: "1px solid #f5f4ef",
-              }}
-            >
-              <span>
-                {e.label}
-                {e.detail && <span className="muted small"> — {e.detail}</span>}
-              </span>
-              <span className="muted small nowrap">{formatDate(e.date)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      </form>
     </Modal>
   );
 }

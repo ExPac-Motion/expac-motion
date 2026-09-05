@@ -19,6 +19,7 @@ import type {
   RateSheetPatch,
   LeadPatch,
   LeadStatusPatch,
+  OpportunityPatch,
   ShipmentDocument,
   Supplier,
 } from "./types";
@@ -480,6 +481,33 @@ export function useCreateLeadsBulk() {
   return useMutation({
     mutationFn: db.createLeadsBulk,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+}
+
+/* ---------- Sales CRM: Opportunities ---------- */
+export function useOpportunities() {
+  return useQuery({ queryKey: ["opportunities"], queryFn: db.listOpportunities });
+}
+export function useCreateOpportunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: OpportunityPatch) => db.createOpportunity(patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
+  });
+}
+export function useUpdateOpportunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: OpportunityPatch }) =>
+      db.updateOpportunity(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
+  });
+}
+export function useDeleteOpportunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteOpportunity,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
   });
 }
 

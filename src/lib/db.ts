@@ -34,6 +34,8 @@ import type {
   LeadPatch,
   LeadStatus,
   LeadStatusPatch,
+  Opportunity,
+  OpportunityPatch,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -745,6 +747,50 @@ export async function createLeadsBulk(
   return unwrap<Lead[]>(
     await supabase.from("leads").insert(rows).select(LEAD_SELECT),
   );
+}
+
+/* ---------- Sales CRM: Opportunities ---------- */
+const OPPORTUNITY_SELECT =
+  "*, lead:leads(id,company,contact,email,phone), client:clients(id,company,contact,email,phone), quote:quotes(id,reference,status), job:jobs(id,reference,shipment_status,milestone), sales_person:profiles(id,full_name)";
+
+export async function listOpportunities(): Promise<Opportunity[]> {
+  return unwrap<Opportunity[]>(
+    await supabase
+      .from("opportunities")
+      .select(OPPORTUNITY_SELECT)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function createOpportunity(
+  patch: OpportunityPatch,
+): Promise<Opportunity> {
+  return unwrap<Opportunity>(
+    await supabase
+      .from("opportunities")
+      .insert(patch)
+      .select(OPPORTUNITY_SELECT)
+      .single(),
+  );
+}
+
+export async function updateOpportunity(
+  id: string,
+  patch: OpportunityPatch,
+): Promise<Opportunity> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<Opportunity>(
+    await supabase
+      .from("opportunities")
+      .update(row)
+      .eq("id", id)
+      .select(OPPORTUNITY_SELECT)
+      .single(),
+  );
+}
+
+export async function deleteOpportunity(id: string): Promise<void> {
+  unwrap(await supabase.from("opportunities").delete().eq("id", id));
 }
 
 /* ---------- Document Vault ---------- */

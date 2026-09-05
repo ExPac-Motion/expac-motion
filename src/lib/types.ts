@@ -221,6 +221,48 @@ export type LeadPatch = Partial<
   Omit<Lead, "id" | "created_at" | "updated_at" | "promoted_client_id" | "promoted_at">
 >;
 
+/* ---------- Sales CRM: Opportunities pipeline ---------- */
+
+export type OpportunityStatus =
+  | "new_lead"
+  | "quote_sent"
+  | "quote_accepted"
+  | "job_completed"
+  | "not_proceeding";
+
+export const OPPORTUNITY_STAGES: { key: OpportunityStatus; label: string }[] = [
+  { key: "new_lead", label: "New Lead - Enquiries" },
+  { key: "quote_sent", label: "Quote Sent - Follow Up" },
+  { key: "quote_accepted", label: "Quote Accepted - Job Active" },
+  { key: "job_completed", label: "Job Completed - Shipment Delivered" },
+  { key: "not_proceeding", label: "Not Proceeding - Keep In Contact" },
+];
+
+export interface Opportunity {
+  id: string;
+  title: string | null;
+  lead_id: string | null;
+  client_id: string | null;
+  quote_id: string | null;
+  job_id: string | null;
+  status: OpportunityStatus;
+  value: number;
+  close_date: string | null;
+  notes: string | null;
+  sales_person_id: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Joined for display. */
+  lead?: Pick<Lead, "id" | "company" | "contact" | "email" | "phone"> | null;
+  client?: Pick<Client, "id" | "company" | "contact" | "email" | "phone"> | null;
+  quote?: Pick<Quote, "id" | "reference" | "status"> | null;
+  job?: Pick<Job, "id" | "reference" | "shipment_status" | "milestone"> | null;
+  sales_person?: Pick<Profile, "id" | "full_name"> | null;
+}
+export type OpportunityPatch = Partial<
+  Omit<Opportunity, "id" | "created_at" | "updated_at" | "lead" | "client" | "quote" | "job" | "sales_person">
+>;
+
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
   "Courier Express (CX)",

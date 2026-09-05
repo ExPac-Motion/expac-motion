@@ -10,6 +10,8 @@ import {
   RowActionsHead,
 } from "../components/common";
 import { useToast } from "../components/Toast";
+import { useCreateClientInvite } from "../lib/hooks";
+import ClientActivity from "./ClientActivity";
 import type { Contact } from "../lib/types";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
@@ -62,6 +64,8 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
+  const createInvite = useCreateClientInvite();
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   const rows = query.data ?? [];
 
@@ -127,6 +131,22 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
       setEditing(created);
     } catch (e2) {
       error(e2 instanceof Error ? e2.message : "Could not duplicate");
+    }
+  }
+
+  async function onInvite(row: Contact) {
+    try {
+      const invite = await createInvite.mutateAsync(row.id);
+      const link = `${window.location.origin}/portal/signup?token=${invite.token}`;
+      setInviteLink(link);
+      try {
+        await navigator.clipboard.writeText(link);
+        toast("Invite link copied to clipboard");
+      } catch {
+        toast("Invite link created");
+      }
+    } catch (e2) {
+      error(e2 instanceof Error ? e2.message : "Could not create invite");
     }
   }
 
@@ -234,19 +254,49 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
       {viewing && (
         <Modal
           title={viewing.company}
-          onClose={() => setViewing(null)}
+          onClose={() => {
+            setViewing(null);
+            setInviteLink(null);
+          }}
+          wide={kind === "client"}
+          stickyHeader={kind === "client"}
           headerActions={
-            <button
-              className="btn outline"
-              onClick={() => {
-                setEditing(viewing);
-                setViewing(null);
-              }}
-            >
-              Edit
-            </button>
+            <>
+              {kind === "client" && (
+                <button
+                  className="btn outline"
+                  onClick={() => onInvite(viewing)}
+                  disabled={createInvite.isPending}
+                >
+                  {createInvite.isPending ? "Creating…" : "Invite to Portal"}
+                </button>
+              )}
+              <button
+                className="btn outline"
+                onClick={() => {
+                  setEditing(viewing);
+                  setViewing(null);
+                }}
+              >
+                Edit
+              </button>
+            </>
           }
         >
+          {inviteLink && (
+            <div
+              className="hint"
+              style={{
+                marginBottom: 14,
+                padding: 10,
+                background: "#f5f4ef",
+                borderRadius: 8,
+                wordBreak: "break-all",
+              }}
+            >
+              Share this link with the customer (copied to clipboard): {inviteLink}
+            </div>
+          )}
           <div className="grid2">
             <ViewField label="Contact person" value={viewing.contact || "—"} />
             <ViewField label="Email" value={viewing.email || "—"} />
@@ -258,6 +308,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
             />
           </div>
           <ViewField label="Address" value={viewing.address || "—"} />
+          {kind === "client" && <ClientActivity clientId={viewing.id} />}
         </Modal>
       )}
 

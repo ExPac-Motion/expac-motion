@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import {
   EmptyState,
@@ -11,6 +12,7 @@ import {
 import { useToast } from "../../components/Toast";
 import {
   useCreateLeadsBulk,
+  useCreateOpportunity,
   useDeleteLead,
   useLeadStatuses,
   useLeads,
@@ -34,12 +36,14 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 export default function LeadsPage() {
+  const navigate = useNavigate();
   const { data, isLoading, isError, error } = useLeads();
   const statusesQ = useLeadStatuses();
   const profilesQ = useProfiles();
   const save = useSaveLead();
   const remove = useDeleteLead();
   const bulkCreate = useCreateLeadsBulk();
+  const createOpportunity = useCreateOpportunity();
   const { toast, error: toastError } = useToast();
 
   const [editing, setEditing] = useState<Lead | "new" | null>(null);
@@ -107,6 +111,22 @@ export default function LeadsPage() {
       toast("Lead duplicated");
     } catch (e2) {
       toastError(e2 instanceof Error ? e2.message : "Could not duplicate");
+    }
+  }
+
+  async function onAddOpportunity(row: Lead) {
+    try {
+      await createOpportunity.mutateAsync({
+        lead_id: row.id,
+        client_id: null,
+        status: "new_lead",
+        value: 0,
+        sales_person_id: row.sales_person_id,
+      });
+      toast("Opportunity added to the pipeline");
+      navigate("/crm?tab=opportunities");
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not add opportunity");
     }
   }
 
@@ -251,15 +271,24 @@ export default function LeadsPage() {
           title={viewing.company}
           onClose={() => setViewing(null)}
           headerActions={
-            <button
-              className="btn outline"
-              onClick={() => {
-                setEditing(viewing);
-                setViewing(null);
-              }}
-            >
-              Edit
-            </button>
+            <>
+              <button
+                className="btn outline"
+                onClick={() => onAddOpportunity(viewing)}
+                disabled={createOpportunity.isPending}
+              >
+                {createOpportunity.isPending ? "Adding…" : "+ Add Opportunity"}
+              </button>
+              <button
+                className="btn outline"
+                onClick={() => {
+                  setEditing(viewing);
+                  setViewing(null);
+                }}
+              >
+                Edit
+              </button>
+            </>
           }
         >
           <div className="grid2">
