@@ -373,33 +373,18 @@ function EmailTab() {
 
       <div className="field">
         <label>Active provider</label>
-        <div className="grid2" style={{ alignItems: "start" }}>
-          <div
-            style={{
-              border: "1px solid #e0e1dc",
-              borderRadius: 10,
-              padding: 12,
-            }}
-          >
-            <strong>Resend</strong>
-            <p className="muted small" style={{ margin: "4px 0 0" }}>
-              Live — sends via the Resend API. Configured in Cloudflare Pages
-              environment variables.
-            </p>
-          </div>
-          <div
-            style={{
-              border: "1px dashed #d7d5cc",
-              borderRadius: 10,
-              padding: 12,
-              opacity: 0.65,
-            }}
-          >
-            <strong>Xneelo SMTP</strong>
-            <p className="muted small" style={{ margin: "4px 0 0" }}>
-              Coming soon — send directly from your own mailbox.
-            </p>
-          </div>
+        <div
+          style={{
+            border: "1px solid #e0e1dc",
+            borderRadius: 10,
+            padding: 12,
+          }}
+        >
+          <strong>Resend</strong>
+          <p className="muted small" style={{ margin: "4px 0 0" }}>
+            Live — sends via the Resend API. Configured in Cloudflare Pages
+            environment variables.
+          </p>
         </div>
       </div>
     </>
