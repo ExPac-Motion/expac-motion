@@ -1011,6 +1011,22 @@ export async function renameMediaAsset(
   );
 }
 
+/** Move an asset into a different folder (metadata only — the stored file
+ *  keeps its path; folders here are just a `folder` label). */
+export async function moveMediaAsset(
+  id: string,
+  folder: string,
+): Promise<MediaAsset> {
+  return unwrap<MediaAsset>(
+    await supabase
+      .from("media_assets")
+      .update({ folder: folder.trim() || "General" })
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
+}
+
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 export async function listMailCampaigns(): Promise<MailCampaign[]> {
   return unwrap<MailCampaign[]>(

@@ -5,6 +5,7 @@ import { useToast } from "../../components/Toast";
 import {
   useDeleteMediaAsset,
   useMediaAssets,
+  useMoveMediaAsset,
   useRenameMediaAsset,
   useUploadMediaAsset,
 } from "../../lib/hooks";
@@ -70,6 +71,7 @@ export default function MediaPage() {
   const upload = useUploadMediaAsset();
   const remove = useDeleteMediaAsset();
   const rename = useRenameMediaAsset();
+  const move = useMoveMediaAsset();
   const { toast, error: toastError } = useToast();
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -148,6 +150,23 @@ export default function MediaPage() {
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not rename");
     }
+  }
+
+  async function onMove(a: MediaAsset, dest: string) {
+    if ((a.folder || DEFAULT_FOLDER) === dest) return;
+    try {
+      await move.mutateAsync({ id: a.id, folder: dest });
+      toast(`Moved to ${dest}`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not move");
+    }
+  }
+
+  async function onMoveToNewFolder(a: MediaAsset) {
+    const name = window.prompt("Move to a new folder named…")?.trim();
+    if (!name) return;
+    if (!folders.includes(name)) setExtraFolders((f) => [...f, name]);
+    await onMove(a, name);
   }
 
   return (
@@ -229,6 +248,24 @@ export default function MediaPage() {
                     {formatDate(a.created_at)}
                   </span>
                   <div className="media-actions">
+                    <select
+                      className="media-move"
+                      title="Move to folder"
+                      value={a.folder || DEFAULT_FOLDER}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "__new") onMoveToNewFolder(a);
+                        else onMove(a, v);
+                      }}
+                      disabled={move.isPending}
+                    >
+                      {folders.map((f) => (
+                        <option key={f} value={f}>
+                          {(a.folder || DEFAULT_FOLDER) === f ? `📁 ${f}` : `Move to ${f}`}
+                        </option>
+                      ))}
+                      <option value="__new">＋ New folder…</option>
+                    </select>
                     <button className="btn ghost small" onClick={() => onCopy(a)}>
                       {copied === a.id ? "Copied" : "Copy URL"}
                     </button>

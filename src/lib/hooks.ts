@@ -592,6 +592,14 @@ export function useRenameMediaAsset() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
   });
 }
+export function useMoveMediaAsset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; folder: string }) =>
+      db.moveMediaAsset(input.id, input.folder),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
+  });
+}
 
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 export function useMailCampaigns() {

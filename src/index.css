@@ -3420,6 +3420,15 @@ tr.clickable:hover {
 .media-actions .danger {
   color: #b3261e;
 }
+.media-move {
+  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px 6px;
+  background: var(--white);
+  color: var(--ink);
+  max-width: 130px;
+}
 
 /* image picker popped from the rich-text editor toolbar */
 .rte-gallery-backdrop {
