@@ -828,7 +828,7 @@ export default function QuoteBuilderPage() {
             />
           </div>
           <div className="field">
-            <label>Carrier/Airline Name</label>
+            <label>Agent/Airline Name</label>
             <input
               value={draft.carrier_name}
               onChange={(e) => set("carrier_name", e.target.value)}

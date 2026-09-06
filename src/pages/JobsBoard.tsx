@@ -185,7 +185,7 @@ function JobRow({
           value={row.carrier_name ?? ""}
           onChange={(e) => set("carrier_name", e.target.value)}
           onBlur={() => commit("carrier_name", job.carrier_name ?? "")}
-          placeholder="Carrier/Airline"
+          placeholder="Agent/Airline"
         />
       </td>
       <td>
@@ -446,7 +446,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>AWB/MBL No</th>
                   <th>Container No</th>
                   <th>Shipping Line</th>
-                  <th>Carrier/Airline</th>
+                  <th>Agent/Airline</th>
                   <th>Prov. Delivery</th>
                   <th>ETD</th>
                   <th>ETA</th>
@@ -535,7 +535,7 @@ function JobViewModal({
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
         <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
-        <ViewField label="Carrier/Airline" value={job.carrier_name || "—"} />
+        <ViewField label="Agent/Airline" value={job.carrier_name || "—"} />
         <ViewField label="POL" value={codeOf(job.origin) || "—"} />
         <ViewField label="POD" value={codeOf(job.destination) || "—"} />
         <ViewField label="ETD" value={formatDate(job.etd)} />
@@ -752,7 +752,7 @@ function JobEditModal({
             <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
           </div>
           <div className="field">
-            <label>Carrier/Airline</label>
+            <label>Agent/Airline</label>
             <input name="carrier_name" defaultValue={job.carrier_name ?? ""} />
           </div>
         </div>

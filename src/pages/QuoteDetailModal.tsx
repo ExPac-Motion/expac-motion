@@ -153,7 +153,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         <Field label="HAWB No" value={q.hawb_no || "—"} />
         <Field label="Flight No" value={q.flight_no || "—"} />
         <Field label="Flight Date" value={formatDate(q.flight_date)} />
-        <Field label="Carrier/Airline Name" value={q.carrier_name || "—"} />
+        <Field label="Agent/Airline Name" value={q.carrier_name || "—"} />
         <div>
           <div className="hint" style={{ marginBottom: 4 }}>
             Status
