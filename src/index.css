@@ -723,15 +723,15 @@ tr.clickable:hover {
   flex-wrap: wrap;
   margin: 4px 0 14px;
 }
-.lead-pop {
+.ui-pop {
   position: relative;
   display: inline-flex;
 }
-.lead-pop .btn.active {
+.ui-pop .btn.active {
   background: #eef4e3;
   border-color: var(--green);
 }
-.lead-pop-badge {
+.ui-pop-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -745,7 +745,7 @@ tr.clickable:hover {
   font-size: 0.66rem;
   font-weight: 800;
 }
-.lead-pop-menu {
+.ui-pop-menu {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -762,27 +762,79 @@ tr.clickable:hover {
   flex-direction: column;
   gap: 6px;
 }
-.lead-pop-search {
+.ui-pop-search {
   width: 100%;
 }
-.lead-pop-row {
+.ui-pop-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   font-size: 0.82rem;
 }
-.lead-pop-row > span {
+.ui-pop-row > span {
   color: var(--muted);
   white-space: nowrap;
 }
-.lead-pop-row select,
-.lead-pop-row input {
+.ui-pop-row select,
+.ui-pop-row input {
   max-width: 150px;
 }
-.lead-pop-row .check {
+.ui-pop-row .check {
   margin: 0;
   width: 100%;
+}
+.ui-pop-head {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 8px 0 2px;
+}
+.ui-pop-menu .check {
+  margin: 3px 0;
+  font-size: 0.82rem;
+}
+
+.ls-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  vertical-align: middle;
+}
+
+/* Opportunities pipeline card */
+.opp-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--white);
+  transition: box-shadow 0.13s ease, transform 0.13s ease, border-color 0.13s ease;
+}
+.opp-card:hover {
+  border-color: #cfd3ca;
+  box-shadow: 0 8px 22px rgba(32, 36, 38, 0.13);
+  transform: translateY(-1px);
+}
+.opp-status-badge {
+  display: inline-block;
+  margin: 4px 0;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.opp-card-notes {
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 /* Campaign tracking cell */

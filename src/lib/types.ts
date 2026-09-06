@@ -198,6 +198,7 @@ export interface LeadStatus {
   name: string;
   promotes_to_customer: boolean;
   sort_order: number;
+  color: string;
   created_at: string;
 }
 export type LeadStatusPatch = Partial<Omit<LeadStatus, "id" | "created_at">>;
@@ -279,7 +280,10 @@ export interface Opportunity {
   created_at: string;
   updated_at: string;
   /** Joined for display. */
-  lead?: Pick<Lead, "id" | "company" | "contact" | "email" | "phone"> | null;
+  lead?: Pick<
+    Lead,
+    "id" | "company" | "contact" | "email" | "phone" | "lead_status_id"
+  > | null;
   client?: Pick<Client, "id" | "company" | "contact" | "email" | "phone"> | null;
   quote?: Pick<Quote, "id" | "reference" | "status"> | null;
   job?: Pick<Job, "id" | "reference" | "shipment_status" | "milestone"> | null;

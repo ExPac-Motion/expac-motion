@@ -1,5 +1,41 @@
-import type { MouseEvent, ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
+
+/** A small button that toggles a click-away popover menu. Used for the
+ *  Leads / Opportunities "Filter / Sort / Columns / Options" controls. */
+export function Popover({
+  label,
+  badge,
+  children,
+}: {
+  label: string;
+  badge?: number;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: globalThis.MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+  return (
+    <div className="ui-pop" ref={ref}>
+      <button
+        type="button"
+        className={`btn outline btn-sm${open ? " active" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {label}
+        {badge ? <span className="ui-pop-badge">{badge}</span> : null}
+      </button>
+      {open && <div className="ui-pop-menu">{children(() => setOpen(false))}</div>}
+    </div>
+  );
+}
 
 const ROW_ICON = {
   view: (

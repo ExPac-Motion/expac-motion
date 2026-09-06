@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import Modal from "../../components/Modal";
-import { EmptyState, Loading, MailLink } from "../../components/common";
+import { EmptyState, Loading, MailLink, Popover } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
   useClients,
@@ -9,18 +9,90 @@ import {
   useCreateOpportunity,
   useJobs,
   useLeads,
+  useLeadStatuses,
   useOpportunities,
   useProfiles,
   useQuotes,
   useUpdateOpportunity,
 } from "../../lib/hooks";
-import { money } from "../../lib/format";
+import { formatDate, money } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
+  type LeadStatus,
   type Opportunity,
   type OpportunityPatch,
   type OpportunityStatus,
 } from "../../lib/types";
+
+/* ---------- board view options (persisted per browser) ---------- */
+
+type OppSort = "value" | "created" | "company" | "close";
+interface CardFields {
+  leadStatus: boolean;
+  contact: boolean;
+  value: boolean;
+  rep: boolean;
+  links: boolean;
+  notes: boolean;
+  closeDate: boolean;
+}
+interface BoardOpts {
+  sort: OppSort;
+  stages: OpportunityStatus[];
+  fields: CardFields;
+}
+const DEFAULT_OPTS: BoardOpts = {
+  sort: "value",
+  stages: OPPORTUNITY_STAGES.map((s) => s.key),
+  fields: {
+    leadStatus: true,
+    contact: true,
+    value: true,
+    rep: true,
+    links: true,
+    notes: false,
+    closeDate: false,
+  },
+};
+function loadOpts(): BoardOpts {
+  try {
+    const raw = localStorage.getItem("opps.opts");
+    if (!raw) return DEFAULT_OPTS;
+    const p = JSON.parse(raw) as Partial<BoardOpts>;
+    return {
+      sort: p.sort ?? DEFAULT_OPTS.sort,
+      stages: Array.isArray(p.stages) ? p.stages : DEFAULT_OPTS.stages,
+      fields: { ...DEFAULT_OPTS.fields, ...(p.fields ?? {}) },
+    };
+  } catch {
+    return DEFAULT_OPTS;
+  }
+}
+function saveOpts(o: BoardOpts) {
+  try {
+    localStorage.setItem("opps.opts", JSON.stringify(o));
+  } catch {
+    /* private mode */
+  }
+}
+function readableText(hex: string): string {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return "#fff";
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1f2937" : "#fff";
+}
+
+const FIELD_LABELS: { key: keyof CardFields; label: string }[] = [
+  { key: "leadStatus", label: "Lead status" },
+  { key: "contact", label: "Contact" },
+  { key: "value", label: "Value" },
+  { key: "rep", label: "Sales person" },
+  { key: "links", label: "Quote / shipment" },
+  { key: "notes", label: "Notes" },
+  { key: "closeDate", label: "Close date" },
+];
 
 const Icon = {
   edit: (
@@ -40,12 +112,41 @@ const Icon = {
 
 export default function OpportunitiesTab() {
   const oppsQ = useOpportunities();
+  const statusesQ = useLeadStatuses();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const del = useDeleteOpportunity();
   const { toast, error: toastError } = useToast();
 
+  const [opts, setOpts] = useState<BoardOpts>(loadOpts);
+  function patchOpts(next: BoardOpts) {
+    setOpts(next);
+    saveOpts(next);
+  }
+
   const opps = oppsQ.data ?? [];
+  const statusById = useMemo(() => {
+    const m = new Map<string, LeadStatus>();
+    for (const s of statusesQ.data ?? []) m.set(s.id, s);
+    return m;
+  }, [statusesQ.data]);
+
+  const sortRows = useMemo(() => {
+    return (rows: Opportunity[]) => {
+      const out = rows.slice();
+      out.sort((a, b) => {
+        if (opts.sort === "value") return b.value - a.value;
+        if (opts.sort === "company")
+          return (a.lead?.company ?? a.client?.company ?? "").localeCompare(
+            b.lead?.company ?? b.client?.company ?? "",
+          );
+        if (opts.sort === "close")
+          return (a.close_date ?? "9999").localeCompare(b.close_date ?? "9999");
+        return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      });
+      return out;
+    };
+  }, [opts.sort]);
 
   async function onDelete(o: Opportunity) {
     const name = o.lead?.company ?? o.client?.company ?? "this opportunity";
@@ -66,6 +167,8 @@ export default function OpportunitiesTab() {
     );
   }
 
+  const stages = OPPORTUNITY_STAGES.filter((s) => opts.stages.includes(s.key));
+
   return (
     <>
       <div
@@ -73,15 +176,75 @@ export default function OpportunitiesTab() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 8,
           marginBottom: 14,
+          flexWrap: "wrap",
         }}
       >
         <p className="muted" style={{ margin: 0 }}>
           Move a card to a new stage with its status dropdown.
         </p>
-        <button className="btn" onClick={() => setCreating(true)}>
-          + New Opportunity
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Popover label="Options">
+            {() => (
+              <>
+                <label className="ui-pop-row">
+                  <span>Sort cards by</span>
+                  <select
+                    value={opts.sort}
+                    onChange={(e) =>
+                      patchOpts({ ...opts, sort: e.target.value as OppSort })
+                    }
+                  >
+                    <option value="value">Value (high → low)</option>
+                    <option value="created">Newest first</option>
+                    <option value="company">Company (A–Z)</option>
+                    <option value="close">Close date</option>
+                  </select>
+                </label>
+
+                <div className="ui-pop-head">Visible stages</div>
+                {OPPORTUNITY_STAGES.map((s) => (
+                  <label key={s.key} className="check">
+                    <input
+                      type="checkbox"
+                      checked={opts.stages.includes(s.key)}
+                      onChange={(e) =>
+                        patchOpts({
+                          ...opts,
+                          stages: e.target.checked
+                            ? [...opts.stages, s.key]
+                            : opts.stages.filter((k) => k !== s.key),
+                        })
+                      }
+                    />
+                    {s.label}
+                  </label>
+                ))}
+
+                <div className="ui-pop-head">Show on cards</div>
+                {FIELD_LABELS.map((f) => (
+                  <label key={f.key} className="check">
+                    <input
+                      type="checkbox"
+                      checked={opts.fields[f.key]}
+                      onChange={(e) =>
+                        patchOpts({
+                          ...opts,
+                          fields: { ...opts.fields, [f.key]: e.target.checked },
+                        })
+                      }
+                    />
+                    {f.label}
+                  </label>
+                ))}
+              </>
+            )}
+          </Popover>
+          <button className="btn" onClick={() => setCreating(true)}>
+            + New Opportunity
+          </button>
+        </div>
       </div>
 
       {opps.length === 0 ? (
@@ -91,17 +254,21 @@ export default function OpportunitiesTab() {
             Opportunity".
           </EmptyState>
         </div>
+      ) : stages.length === 0 ? (
+        <div className="panel">
+          <EmptyState>All stages hidden — enable some in Options.</EmptyState>
+        </div>
       ) : (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${OPPORTUNITY_STAGES.length}, minmax(260px, 1fr))`,
+            gridTemplateColumns: `repeat(${stages.length}, minmax(260px, 1fr))`,
             gap: 14,
             overflowX: "auto",
           }}
         >
-          {OPPORTUNITY_STAGES.map((stage) => {
-            const rows = opps.filter((o) => o.status === stage.key);
+          {stages.map((stage) => {
+            const rows = sortRows(opps.filter((o) => o.status === stage.key));
             const total = rows.reduce((s, o) => s + o.value, 0);
             return (
               <div key={stage.key} className="panel" style={{ margin: 0 }}>
@@ -124,6 +291,12 @@ export default function OpportunitiesTab() {
                     <OpportunityCard
                       key={o.id}
                       opportunity={o}
+                      fields={opts.fields}
+                      leadStatus={
+                        o.lead?.lead_status_id
+                          ? statusById.get(o.lead.lead_status_id) ?? null
+                          : null
+                      }
                       onEdit={() => setEditing(o)}
                       onDelete={() => onDelete(o)}
                     />
@@ -148,10 +321,14 @@ export default function OpportunitiesTab() {
 
 function OpportunityCard({
   opportunity: o,
+  fields,
+  leadStatus,
   onEdit,
   onDelete,
 }: {
   opportunity: Opportunity;
+  fields: CardFields;
+  leadStatus: LeadStatus | null;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -171,14 +348,7 @@ function OpportunityCard({
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--line)",
-        borderRadius: 10,
-        padding: 10,
-        background: "var(--white)",
-      }}
-    >
+    <div className="opp-card">
       <div
         style={{
           display: "flex",
@@ -201,25 +371,49 @@ function OpportunityCard({
         </div>
       </div>
       {o.title && <div className="muted small">{name}</div>}
-      <div style={{ fontWeight: 700, margin: "4px 0" }}>{money(o.value)}</div>
-      {contact && (
-        <div className="muted small" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+
+      {fields.leadStatus && leadStatus && (
+        <span
+          className="opp-status-badge"
+          style={{
+            background: leadStatus.color,
+            color: readableText(leadStatus.color),
+          }}
+        >
+          {leadStatus.name}
+        </span>
+      )}
+
+      {fields.value && (
+        <div style={{ fontWeight: 700, margin: "4px 0" }}>{money(o.value)}</div>
+      )}
+      {fields.contact && contact && (
+        <div
+          className="muted small"
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+        >
           {contact}
           {email && <MailLink email={email} />}
         </div>
       )}
-      {o.sales_person?.full_name && (
+      {fields.rep && o.sales_person?.full_name && (
         <div className="muted small">Rep: {o.sales_person.full_name}</div>
       )}
-      {o.quote && (
+      {fields.links && o.quote && (
         <div className="muted small">
-          Quote:{" "}
-          <Link to={`/quotes/${o.quote.id}`}>{o.quote.reference}</Link>
+          Quote: <Link to={`/quotes/${o.quote.id}`}>{o.quote.reference}</Link>
         </div>
       )}
-      {o.job && (
+      {fields.links && o.job && (
         <div className="muted small">Shipment: {o.job.reference}</div>
       )}
+      {fields.closeDate && o.close_date && (
+        <div className="muted small">Close: {formatDate(o.close_date)}</div>
+      )}
+      {fields.notes && o.notes && (
+        <div className="muted small opp-card-notes">{o.notes}</div>
+      )}
+
       <select
         value={o.status}
         onChange={(e) => onStatusChange(e.target.value as OpportunityStatus)}

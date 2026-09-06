@@ -33,6 +33,7 @@ export default function LeadStatusesPage() {
       name,
       promotes_to_customer: fd.get("promotes_to_customer") === "on",
       sort_order: Number(fd.get("sort_order")) || 0,
+      color: String(fd.get("color") || "#64748b"),
     };
     try {
       await save.mutateAsync({
@@ -77,6 +78,7 @@ export default function LeadStatusesPage() {
                     <RowActionsHead />
                   </th>
                   <th>Order</th>
+                  <th>Colour</th>
                   <th>Name</th>
                   <th>Promotes to Customer</th>
                 </tr>
@@ -92,6 +94,13 @@ export default function LeadStatusesPage() {
                     </td>
                     <td>{s.sort_order}</td>
                     <td>
+                      <span
+                        className="ls-swatch"
+                        style={{ background: s.color }}
+                        title={s.color}
+                      />
+                    </td>
+                    <td>
                       <strong>{s.name}</strong>
                     </td>
                     <td>{s.promotes_to_customer ? "Yes" : "—"}</td>
@@ -105,6 +114,23 @@ export default function LeadStatusesPage() {
 
       {viewing && (
         <Modal title={viewing.name} onClose={() => setViewing(null)}>
+          <div className="field">
+            <label>Colour</label>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontWeight: 700,
+              }}
+            >
+              <span
+                className="ls-swatch"
+                style={{ background: viewing.color }}
+              />
+              {viewing.color}
+            </span>
+          </div>
           <div className="field">
             <label>Sort order</label>
             <strong>{viewing.sort_order}</strong>
@@ -126,13 +152,24 @@ export default function LeadStatusesPage() {
               <label>Status name</label>
               <input name="name" defaultValue={current?.name ?? ""} autoFocus />
             </div>
-            <div className="field">
-              <label>Sort order</label>
-              <input
-                name="sort_order"
-                type="number"
-                defaultValue={current?.sort_order ?? rows.length + 1}
-              />
+            <div className="grid2">
+              <div className="field">
+                <label>Sort order</label>
+                <input
+                  name="sort_order"
+                  type="number"
+                  defaultValue={current?.sort_order ?? rows.length + 1}
+                />
+              </div>
+              <div className="field">
+                <label>Colour</label>
+                <input
+                  name="color"
+                  type="color"
+                  defaultValue={current?.color ?? "#64748b"}
+                  style={{ height: 38, padding: 3 }}
+                />
+              </div>
             </div>
             <label className="check">
               <input
