@@ -107,17 +107,10 @@ export function lineTotalIncl(l: QuoteLine): number {
 
 /* ---------- Unit-driven quantity ---------- */
 
-/** Units whose quantity is the packing-list chargeable weight (air modes only). */
+/** Units whose qty is the packing-list chargeable weight (KGS). Any mode. */
 export const WEIGHT_UNITS = ["KGS", "THC"];
-export const WEIGHT_MODES: QuoteMode[] = [
-  "Air Freight (AIR)",
-  "Courier Express (CX)",
-];
-
-/** Freight-ton units: qty = greater of weight-in-tonnes and volume-in-CBM. Any mode. */
-export const REVENUE_TON_UNITS = ["R/T", "W/M"];
-/** 1 metric tonne (1000 kg) = 1 CBM. */
-export const KG_PER_CBM = 1000;
+/** Units whose qty is the packing-list chargeable volume (CBM). Any mode. */
+export const VOLUME_UNITS = ["CBM", "W/M", "R/T"];
 
 /**
  * When a charge line's unit ties it to a packing-list figure, returns that
@@ -125,15 +118,15 @@ export const KG_PER_CBM = 1000;
  */
 export function autoQty(
   line: Pick<QuoteLine, "unit">,
-  mode: QuoteMode,
+  _mode: QuoteMode,
   pack: PackingTotals,
 ): number | null {
   const unit = String(line.unit ?? "");
-  if (WEIGHT_MODES.includes(mode) && WEIGHT_UNITS.includes(unit)) {
+  if (WEIGHT_UNITS.includes(unit)) {
     return pack.chargeable;
   }
-  if (REVENUE_TON_UNITS.includes(unit)) {
-    return Math.max(pack.totalActual / KG_PER_CBM, pack.totalCbm);
+  if (VOLUME_UNITS.includes(unit)) {
+    return pack.totalCbm;
   }
   return null;
 }
@@ -238,7 +231,9 @@ export function packingRow(p: PackingItem): PackingRow {
   const h = Number(p.height_cm) || 0;
   const actual = Number(p.actual_kg) || 0;
   const qty = Number(p.qty_ctns) || 0;
-  const cbm = (l * w * h) / 1_000_000;
+  // A manually entered CBM wins; a blank one falls back to L×W×H.
+  const override = p.cbm === "" || p.cbm == null ? NaN : Number(p.cbm);
+  const cbm = Number.isFinite(override) ? override : (l * w * h) / 1_000_000;
   const volumeKg = cbm * VOLUMETRIC_FACTOR;
   return {
     cbm,

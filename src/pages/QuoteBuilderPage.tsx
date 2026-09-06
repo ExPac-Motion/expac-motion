@@ -70,6 +70,7 @@ function newPackingItem(position: number): PackingItem {
     height_cm: 0,
     actual_kg: 0,
     qty_ctns: 1,
+    cbm: "",
   };
 }
 
@@ -170,6 +171,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
       height_cm: p.height_cm ?? 0,
       actual_kg: p.actual_kg ?? 0,
       qty_ctns: p.qty_ctns ?? 0,
+      cbm: p.cbm ?? "",
     })),
     lines: q.quote_lines.map((l, i) => {
       const fx: FxRates = {
@@ -951,9 +953,16 @@ export default function QuoteBuilderPage() {
                       <td className="num">
                         <input
                           type="number"
-                          readOnly
-                          tabIndex={-1}
-                          value={r.cbm.toFixed(2)}
+                          step="any"
+                          value={String(p.cbm ?? "")}
+                          placeholder={(
+                            ((Number(p.length_cm) || 0) *
+                              (Number(p.width_cm) || 0) *
+                              (Number(p.height_cm) || 0)) /
+                            1_000_000
+                          ).toFixed(2)}
+                          title="Auto from L×W×H — type to override"
+                          onChange={(e) => setPacking(i, "cbm", e.target.value)}
                         />
                       </td>
                       <td className="num">
@@ -1165,12 +1174,9 @@ export default function QuoteBuilderPage() {
                               setLine(i, "description", e.target.value)
                             }
                             placeholder="Charge description"
-                            readOnly={Boolean(
-                              catalogItem(String(l.code ?? ""), draft.mode),
-                            )}
                             title={
                               catalogItem(String(l.code ?? ""), draft.mode)
-                                ? "Set by the selected code"
+                                ? "Pre-filled from the code — edit if you need to"
                                 : undefined
                             }
                           />

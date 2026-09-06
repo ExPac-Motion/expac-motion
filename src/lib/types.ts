@@ -704,6 +704,8 @@ export interface PackingItem {
   height_cm: number | string;
   actual_kg: number | string;
   qty_ctns: number | string;
+  /** Manual CBM override. Blank/null → derived from L×W×H. */
+  cbm?: number | string | null;
 }
 
 export interface QuoteLine {

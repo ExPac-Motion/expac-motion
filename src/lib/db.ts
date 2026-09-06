@@ -274,6 +274,10 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     height_cm: Number(p.height_cm) || 0,
     actual_kg: Number(p.actual_kg) || 0,
     qty_ctns: Number(p.qty_ctns) || 0,
+    cbm:
+      p.cbm === "" || p.cbm == null || Number.isNaN(Number(p.cbm))
+        ? null
+        : Number(p.cbm),
   }));
   const id = unwrap<string>(
     await supabase.rpc("save_quote", {
