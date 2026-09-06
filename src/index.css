@@ -3437,6 +3437,102 @@ tr.clickable:hover {
   max-width: 130px;
 }
 
+/* ---------- Global search palette ---------- */
+.gsearch-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(20, 22, 24, 0.42);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+}
+.gsearch {
+  width: min(620px, 100%);
+  background: var(--white);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+.gsearch-inputrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.gsearch-inputrow svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex: none;
+}
+.gsearch-inputrow input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: transparent;
+  color: var(--ink);
+}
+.gsearch-inputrow kbd {
+  font-size: 0.68rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: var(--muted);
+}
+.gsearch-results {
+  overflow-y: auto;
+  padding: 6px;
+}
+.gsearch-empty {
+  color: var(--muted);
+  font-size: 0.86rem;
+  padding: 18px 12px;
+  text-align: center;
+}
+.gsearch-group {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 10px 4px;
+}
+.gsearch-hit {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.gsearch-hit.active {
+  background: #eef4e3;
+}
+.gsearch-hit-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.gsearch-hit-sub {
+  font-size: 0.76rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* image picker popped from the rich-text editor toolbar */
 .rte-gallery-backdrop {
   position: fixed;

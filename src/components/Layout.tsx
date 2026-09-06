@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import GlobalSearch from "./GlobalSearch";
 
 interface SubLink {
   to: string;
@@ -158,14 +159,7 @@ export default function Layout() {
         </nav>
 
         <div className="topbar-utils">
-          <button
-            className="icon-btn"
-            title="Search (coming soon)"
-            aria-label="Search"
-            disabled
-          >
-            {Icon.search}
-          </button>
+          <GlobalSearch />
           <button
             className="icon-btn"
             title="Notifications (coming soon)"
