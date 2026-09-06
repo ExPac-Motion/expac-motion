@@ -439,7 +439,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>Shipment</th>
                   <th>Customer</th>
                   <th>Shipper</th>
-                  <th>PO #</th>
+                  <th>PO No</th>
                   <th>Mode</th>
                   <th>Shipment Status</th>
                   <th>Additional Notes</th>
@@ -531,7 +531,7 @@ function JobViewModal({
         <ViewField label="Mode" value={job.mode} />
         <ViewField label="Milestone" value={job.milestone} />
         <ViewField label="Shipment Status" value={job.shipment_status || "—"} />
-        <ViewField label="PO #" value={job.po_no || "—"} />
+        <ViewField label="PO No" value={job.po_no || "—"} />
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
         <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
@@ -721,7 +721,7 @@ function JobEditModal({
       <form onSubmit={onSubmit}>
         <div className="grid2">
           <div className="field">
-            <label>PO #</label>
+            <label>PO No</label>
             <input name="po_no" defaultValue={job.po_no ?? ""} autoFocus />
           </div>
           <div className="field">
