@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../components/Modal";
 import {
   EmptyState,
@@ -8,6 +8,7 @@ import {
   PageHeader,
   RowActions,
   RowActionsHead,
+  SearchInput,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import { useCreateClientInvite } from "../lib/hooks";
@@ -66,8 +67,18 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
   const [viewing, setViewing] = useState<Contact | null>(null);
   const createInvite = useCreateClientInvite();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-  const rows = query.data ?? [];
+  const rows = useMemo(() => query.data ?? [], [query.data]);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      [r.company, r.contact, r.email, r.phone, r.vat_no, r.import_code]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [rows, search]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -172,12 +183,23 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
       />
 
       <div className="panel">
+        {rows.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={`Search ${label} or contact…`}
+            />
+          </div>
+        )}
         {query.isLoading ? (
           <Loading />
         ) : query.isError ? (
           <ErrorNote error={query.error} />
         ) : rows.length === 0 ? (
           <EmptyState>No {label}s yet. Add your first one to start quoting.</EmptyState>
+        ) : filtered.length === 0 ? (
+          <EmptyState>No {label}s match "{search}".</EmptyState>
         ) : (
           <div className="table-wrap">
             <table>
@@ -196,7 +218,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {filtered.map((r) => {
                   const mirror = mirrorOf(r);
                   return (
                     <tr key={r.id}>

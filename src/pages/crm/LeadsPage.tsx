@@ -16,6 +16,7 @@ import {
   Popover,
   RowActions,
   RowActionsHead,
+  SearchInput,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -169,6 +170,7 @@ export default function LeadsPage() {
     loadJson<LeadFilters>("leads.filters", EMPTY_FILTERS),
   );
   const [colSearch, setColSearch] = useState("");
+  const [search, setSearch] = useState("");
 
   const rows = useMemo(() => data ?? [], [data]);
   const statuses = statusesQ.data ?? [];
@@ -196,6 +198,14 @@ export default function LeadsPage() {
 
   const displayed = useMemo(() => {
     let out = rows.slice();
+    const q = norm(search);
+    if (q) {
+      out = out.filter((l) =>
+        [l.company, l.contact, l.email, l.phone, l.company_phone]
+          .filter(Boolean)
+          .some((v) => norm(v as string).includes(q)),
+      );
+    }
     if (filters.statusId)
       out = out.filter((l) => l.lead_status_id === filters.statusId);
     if (filters.salesPersonId)
@@ -217,7 +227,7 @@ export default function LeadsPage() {
     out.sort((a, b) => key(a).localeCompare(key(b)));
     if (sort.dir === "desc") out.reverse();
     return out;
-  }, [rows, filters, sort]);
+  }, [rows, filters, sort, search]);
 
   async function onDelete(row: Lead) {
     if (!window.confirm(`Remove lead "${row.company}"?`)) return;
@@ -416,6 +426,11 @@ export default function LeadsPage() {
         </div>
 
         <div className="lead-toolbar">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search company or contact…"
+          />
           <Popover label="+ Add Filter" badge={activeFilterCount}>
             {() => (
               <>

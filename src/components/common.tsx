@@ -1,6 +1,32 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
 
+/** Rounded search field with a magnifier icon, for list pages. */
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search…",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3" />
+      </svg>
+      <input
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 /** A small button that toggles a click-away popover menu. Used for the
  *  Leads / Opportunities "Filter / Sort / Columns / Options" controls. */
 export function Popover({
