@@ -210,6 +210,7 @@ export interface Lead {
   phone: string | null;
   website: string | null;
   source: string | null;
+  description: string | null;
   notes: string | null;
   lead_status_id: string | null;
   sales_person_id: string | null;

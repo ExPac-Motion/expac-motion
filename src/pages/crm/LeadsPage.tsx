@@ -47,9 +47,9 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 const SAMPLE_CSV =
-  "company,contact,email,phone,website,source\n" +
-  "Acme Imports,Jane Smith,jane@acme.co.za,+27 11 555 0100,https://acme.co.za,Website\n" +
-  "Bluewave Trading,John Doe,john@bluewave.co.za,+27 21 555 0199,https://bluewave.co.za,Referral\n";
+  "company,contact,email,phone,website,source,description\n" +
+  "Acme Imports,Jane Smith,jane@acme.co.za,+27 11 555 0100,https://acme.co.za,Website,Regular FCL importer ex China\n" +
+  "Bluewave Trading,John Doe,john@bluewave.co.za,+27 21 555 0199,https://bluewave.co.za,Referral,Air freight enquiry\n";
 
 function downloadSampleCsv() {
   const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
@@ -75,6 +75,7 @@ type ColKey =
   | "status"
   | "salesPerson"
   | "source"
+  | "description"
   | "created";
 
 const ALL_COLUMNS: { key: ColKey; label: string }[] = [
@@ -85,6 +86,7 @@ const ALL_COLUMNS: { key: ColKey; label: string }[] = [
   { key: "status", label: "Status" },
   { key: "salesPerson", label: "Sales Person" },
   { key: "source", label: "Source" },
+  { key: "description", label: "Description" },
   { key: "created", label: "Created" },
 ];
 const DEFAULT_COLUMNS: ColKey[] = [
@@ -289,7 +291,10 @@ export default function LeadsPage() {
       const seenEmail = new Set<string>();
 
       const toCreate: Array<
-        Pick<LeadPatch, "company" | "contact" | "email" | "phone" | "website" | "source">
+        Pick<
+          LeadPatch,
+          "company" | "contact" | "email" | "phone" | "website" | "source" | "description"
+        >
       > = [];
       let skipped = 0;
       let dupes = 0;
@@ -320,6 +325,7 @@ export default function LeadsPage() {
           phone: row.phone || row["phone number"] || null,
           website: row.website || row.url || row["company url"] || null,
           source: row.source || "CSV import",
+          description: row.description || null,
         });
       }
 
@@ -570,6 +576,7 @@ export default function LeadsPage() {
                   {show("status") && <th>Status</th>}
                   {show("salesPerson") && <th>Sales Person</th>}
                   {show("source") && <th>Source</th>}
+                  {show("description") && <th>Description</th>}
                   {show("created") && <th>Created</th>}
                 </tr>
               </thead>
@@ -621,6 +628,7 @@ export default function LeadsPage() {
                       <td>{r.sales_person?.full_name || "—"}</td>
                     )}
                     {show("source") && <td>{r.source || "—"}</td>}
+                    {show("description") && <td>{r.description || "—"}</td>}
                     {show("created") && (
                       <td className="nowrap">{formatDate(r.created_at)}</td>
                     )}
@@ -663,6 +671,7 @@ export default function LeadsPage() {
             <ViewField label="Phone" value={viewing.phone || "—"} />
             <ViewField label="Website" value={viewing.website || "—"} />
             <ViewField label="Source" value={viewing.source || "—"} />
+            <ViewField label="Description" value={viewing.description || "—"} />
             <ViewField
               label="Status"
               value={viewing.lead_status?.name ?? statusName(viewing.lead_status_id)}
@@ -778,6 +787,7 @@ function LeadEditModal({
       phone: String(fd.get("phone") || "").trim() || null,
       website: String(fd.get("website") || "").trim() || null,
       source: String(fd.get("source") || "").trim() || null,
+      description: String(fd.get("description") || "").trim() || null,
       notes: String(fd.get("notes") || "").trim() || null,
       lead_status_id: String(fd.get("lead_status_id") || "") || null,
       sales_person_id: String(fd.get("sales_person_id") || "") || null,
@@ -797,11 +807,11 @@ function LeadEditModal({
   return (
     <Modal title={lead ? "Edit lead" : "Add lead"} onClose={onClose} wide>
       <form onSubmit={onSubmit}>
-        <div className="field">
-          <label>Company name</label>
-          <input name="company" defaultValue={lead?.company ?? ""} autoFocus />
-        </div>
         <div className="grid2">
+          <div className="field">
+            <label>Company name</label>
+            <input name="company" defaultValue={lead?.company ?? ""} autoFocus />
+          </div>
           <div className="field">
             <label>Company website</label>
             <input
@@ -811,12 +821,22 @@ function LeadEditModal({
               defaultValue={lead?.website ?? ""}
             />
           </div>
+        </div>
+        <div className="grid2">
           <div className="field">
             <label>Source</label>
             <input
               name="source"
               placeholder="Referral, website, trade show…"
               defaultValue={lead?.source ?? ""}
+            />
+          </div>
+          <div className="field">
+            <label>Description</label>
+            <input
+              name="description"
+              placeholder="Short summary of the lead"
+              defaultValue={lead?.description ?? ""}
             />
           </div>
         </div>

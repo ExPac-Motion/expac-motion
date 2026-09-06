@@ -10,7 +10,8 @@
 --  in the sequence is harmless -- they run in filename order.)
 
 alter table public.leads
-  add column if not exists website text;
+  add column if not exists website text,
+  add column if not exists description text;
 
 create table if not exists public.lead_contacts (
   id         uuid primary key default gen_random_uuid(),
