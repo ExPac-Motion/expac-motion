@@ -18,6 +18,7 @@ import type {
   QuoteDraft,
   RateSheetPatch,
   LeadPatch,
+  LeadContactDraft,
   LeadStatusPatch,
   OpportunityPatch,
   MailTemplatePatch,
@@ -488,6 +489,22 @@ export function useCreateLeadsBulk() {
   return useMutation({
     mutationFn: db.createLeadsBulk,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+}
+export function useLeadContacts(leadId: string | undefined) {
+  return useQuery({
+    queryKey: ["lead_contacts", leadId],
+    queryFn: () => db.listLeadContacts(leadId as string),
+    enabled: !!leadId,
+  });
+}
+export function useReplaceLeadContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { leadId: string; contacts: LeadContactDraft[] }) =>
+      db.replaceLeadContacts(input.leadId, input.contacts),
+    onSuccess: (_d, input) =>
+      qc.invalidateQueries({ queryKey: ["lead_contacts", input.leadId] }),
   });
 }
 

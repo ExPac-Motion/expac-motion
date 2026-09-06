@@ -208,6 +208,7 @@ export interface Lead {
   contact: string | null;
   email: string | null;
   phone: string | null;
+  website: string | null;
   source: string | null;
   notes: string | null;
   lead_status_id: string | null;
@@ -224,6 +225,23 @@ export interface Lead {
 export type LeadPatch = Partial<
   Omit<Lead, "id" | "created_at" | "updated_at" | "promoted_client_id" | "promoted_at">
 >;
+
+/** Extra people at the same prospect company (leads.contact stays primary). */
+export interface LeadContact {
+  id: string;
+  lead_id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  created_at: string;
+}
+export interface LeadContactDraft {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+}
 
 /* ---------- Sales CRM: Opportunities pipeline ---------- */
 

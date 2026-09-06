@@ -32,6 +32,8 @@ import type {
   Supplier,
   Lead,
   LeadPatch,
+  LeadContact,
+  LeadContactDraft,
   LeadStatus,
   LeadStatusPatch,
   Opportunity,
@@ -754,12 +756,42 @@ export async function deleteLead(id: string): Promise<void> {
 
 /** Bulk create from a CSV/Excel import — bad rows are skipped, not fatal. */
 export async function createLeadsBulk(
-  rows: Array<Pick<LeadPatch, "company" | "contact" | "email" | "phone" | "source">>,
+  rows: Array<
+    Pick<LeadPatch, "company" | "contact" | "email" | "phone" | "website" | "source">
+  >,
 ): Promise<Lead[]> {
   if (rows.length === 0) return [];
   return unwrap<Lead[]>(
     await supabase.from("leads").insert(rows).select(LEAD_SELECT),
   );
+}
+
+export async function listLeadContacts(leadId: string): Promise<LeadContact[]> {
+  return unwrap<LeadContact[]>(
+    await supabase
+      .from("lead_contacts")
+      .select("*")
+      .eq("lead_id", leadId)
+      .order("created_at"),
+  );
+}
+
+/** Replace-all: the lead edit modal owns the full set of extra contacts. */
+export async function replaceLeadContacts(
+  leadId: string,
+  contacts: LeadContactDraft[],
+): Promise<void> {
+  unwrap(await supabase.from("lead_contacts").delete().eq("lead_id", leadId));
+  const rows = contacts
+    .filter((c) => c.name.trim() || c.email.trim() || c.phone.trim())
+    .map((c) => ({
+      lead_id: leadId,
+      name: c.name.trim(),
+      role: c.role.trim() || null,
+      email: c.email.trim() || null,
+      phone: c.phone.trim() || null,
+    }));
+  if (rows.length) unwrap(await supabase.from("lead_contacts").insert(rows));
 }
 
 /* ---------- Sales CRM: Opportunities ---------- */
