@@ -185,7 +185,7 @@ export default function OpportunitiesTab() {
           Move a card to a new stage with its status dropdown.
         </p>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Popover label="Options">
+          <Popover label="Options" size="md">
             {() => (
               <>
                 <label className="ui-pop-row">

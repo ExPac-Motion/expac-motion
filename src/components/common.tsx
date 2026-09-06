@@ -6,10 +6,13 @@ import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
 export function Popover({
   label,
   badge,
+  size = "sm",
   children,
 }: {
   label: string;
   badge?: number;
+  /** "md" matches a normal .btn (e.g. sitting next to "+ New …"). */
+  size?: "sm" | "md";
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -26,7 +29,7 @@ export function Popover({
     <div className="ui-pop" ref={ref}>
       <button
         type="button"
-        className={`btn outline btn-sm${open ? " active" : ""}`}
+        className={`btn outline${size === "sm" ? " btn-sm" : ""}${open ? " active" : ""}`}
         onClick={() => setOpen((v) => !v)}
       >
         {label}
