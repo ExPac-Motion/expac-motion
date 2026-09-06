@@ -47,9 +47,9 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 const SAMPLE_CSV =
-  "company,contact,email,phone,website,source,description\n" +
-  "Acme Imports,Jane Smith,jane@acme.co.za,+27 11 555 0100,https://acme.co.za,Website,Regular FCL importer ex China\n" +
-  "Bluewave Trading,John Doe,john@bluewave.co.za,+27 21 555 0199,https://bluewave.co.za,Referral,Air freight enquiry\n";
+  "company,contact,email,phone,company_phone,website,source,description\n" +
+  "Acme Imports,Jane Smith,jane@acme.co.za,+27 82 555 0100,+27 11 555 0000,https://acme.co.za,Website,Regular FCL importer ex China\n" +
+  "Bluewave Trading,John Doe,john@bluewave.co.za,+27 83 555 0199,+27 21 555 0000,https://bluewave.co.za,Referral,Air freight enquiry\n";
 
 function downloadSampleCsv() {
   const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
@@ -71,6 +71,7 @@ type ColKey =
   | "contact"
   | "email"
   | "phone"
+  | "companyPhone"
   | "website"
   | "status"
   | "salesPerson"
@@ -81,7 +82,8 @@ type ColKey =
 const ALL_COLUMNS: { key: ColKey; label: string }[] = [
   { key: "contact", label: "Contact" },
   { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
+  { key: "phone", label: "Mobile" },
+  { key: "companyPhone", label: "Company Phone" },
   { key: "website", label: "Website" },
   { key: "status", label: "Status" },
   { key: "salesPerson", label: "Sales Person" },
@@ -293,7 +295,14 @@ export default function LeadsPage() {
       const toCreate: Array<
         Pick<
           LeadPatch,
-          "company" | "contact" | "email" | "phone" | "website" | "source" | "description"
+          | "company"
+          | "contact"
+          | "email"
+          | "phone"
+          | "company_phone"
+          | "website"
+          | "source"
+          | "description"
         >
       > = [];
       let skipped = 0;
@@ -322,7 +331,8 @@ export default function LeadsPage() {
           company,
           contact: row.contact || row["contact name"] || row.name || null,
           email: email || null,
-          phone: row.phone || row["phone number"] || null,
+          phone: row.phone || row["mobile"] || row["mobile phone"] || row["phone number"] || null,
+          company_phone: row["company_phone"] || row["company phone"] || null,
           website: row.website || row.url || row["company url"] || null,
           source: row.source || "CSV import",
           description: row.description || null,
@@ -571,7 +581,8 @@ export default function LeadsPage() {
                   <th>Company</th>
                   {show("contact") && <th>Contact</th>}
                   {show("email") && <th>Email</th>}
-                  {show("phone") && <th>Phone</th>}
+                  {show("phone") && <th>Mobile</th>}
+                  {show("companyPhone") && <th>Company Phone</th>}
                   {show("website") && <th>Website</th>}
                   {show("status") && <th>Status</th>}
                   {show("salesPerson") && <th>Sales Person</th>}
@@ -610,6 +621,7 @@ export default function LeadsPage() {
                       </td>
                     )}
                     {show("phone") && <td>{r.phone || "—"}</td>}
+                    {show("companyPhone") && <td>{r.company_phone || "—"}</td>}
                     {show("website") && (
                       <td>
                         {r.website ? (
@@ -667,8 +679,9 @@ export default function LeadsPage() {
         >
           <div className="grid2">
             <ViewField label="Primary contact" value={viewing.contact || "—"} />
+            <ViewField label="Company phone" value={viewing.company_phone || "—"} />
             <ViewField label="Email" value={viewing.email || "—"} />
-            <ViewField label="Phone" value={viewing.phone || "—"} />
+            <ViewField label="Mobile phone" value={viewing.phone || "—"} />
             <ViewField label="Website" value={viewing.website || "—"} />
             <ViewField label="Source" value={viewing.source || "—"} />
             <ViewField label="Description" value={viewing.description || "—"} />
@@ -785,6 +798,7 @@ function LeadEditModal({
       contact: String(fd.get("contact") || "").trim() || null,
       email: String(fd.get("email") || "").trim() || null,
       phone: String(fd.get("phone") || "").trim() || null,
+      company_phone: String(fd.get("company_phone") || "").trim() || null,
       website: String(fd.get("website") || "").trim() || null,
       source: String(fd.get("source") || "").trim() || null,
       description: String(fd.get("description") || "").trim() || null,
@@ -840,9 +854,19 @@ function LeadEditModal({
             />
           </div>
         </div>
-        <div className="field">
-          <label>Primary contact</label>
-          <input name="contact" defaultValue={lead?.contact ?? ""} />
+        <div className="grid2">
+          <div className="field">
+            <label>Primary contact</label>
+            <input name="contact" defaultValue={lead?.contact ?? ""} />
+          </div>
+          <div className="field">
+            <label>Company phone</label>
+            <input
+              name="company_phone"
+              placeholder="Switchboard / landline"
+              defaultValue={lead?.company_phone ?? ""}
+            />
+          </div>
         </div>
         <div className="grid2">
           <div className="field">
@@ -850,7 +874,7 @@ function LeadEditModal({
             <input name="email" type="email" defaultValue={lead?.email ?? ""} />
           </div>
           <div className="field">
-            <label>Phone</label>
+            <label>Mobile phone</label>
             <input name="phone" defaultValue={lead?.phone ?? ""} />
           </div>
         </div>

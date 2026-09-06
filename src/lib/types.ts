@@ -207,7 +207,10 @@ export interface Lead {
   company: string;
   contact: string | null;
   email: string | null;
+  /** The primary contact's mobile. */
   phone: string | null;
+  /** Company switchboard / landline. */
+  company_phone: string | null;
   website: string | null;
   source: string | null;
   description: string | null;
