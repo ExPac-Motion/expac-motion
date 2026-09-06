@@ -402,7 +402,7 @@ export default function CampaignsPage() {
           <EmptyState>No campaigns sent yet.</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table--compact">
+            <table>
               <thead>
                 <tr>
                   <th className="actions-col">

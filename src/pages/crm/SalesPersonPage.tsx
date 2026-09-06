@@ -67,7 +67,7 @@ export default function SalesPersonPage() {
         <EmptyState>No team members yet — add one in Settings.</EmptyState>
       ) : (
         <div className="table-wrap">
-          <table className="table--compact">
+          <table>
             <thead>
               <tr>
                 <th className="actions-col">

@@ -129,7 +129,7 @@ export default function QuotesListPage() {
           </EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table--compact">
+            <table>
               <thead>
                 <tr>
                   <th className="actions-col">
