@@ -321,15 +321,18 @@ export default function DashboardPage() {
                     onClick={() => navigate(`/quotes?status=${p.st}`)}
                   >
                     <span className="nm">
+                      {STATUS_LABEL[p.st]}
                       {accent && (
                         <span
                           className="ms-tag"
-                          style={{ background: "#eef4e3" }}
+                          style={{
+                            background: "var(--green)",
+                            color: "#fff",
+                          }}
                         >
-                          due
+                          Follow Up
                         </span>
                       )}
-                      {STATUS_LABEL[p.st]}
                     </span>
                     <span className="track">
                       <span
