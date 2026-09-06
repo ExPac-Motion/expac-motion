@@ -165,7 +165,7 @@ export default function QuotesListPage() {
                         />
                       </td>
                       <td>
-                        <strong>{q.reference}</strong>
+                        <span className="ref-link">{q.reference}</span>
                       </td>
                       <td>{q.client?.company ?? "—"}</td>
                       <td>{q.supplier?.company ?? "—"}</td>

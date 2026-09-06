@@ -266,15 +266,41 @@ textarea {
 
 .main {
   padding: 28px 34px;
-  overflow-x: auto;
+  /* clip (not auto) so .main is NOT a scroll container — that lets the page
+     header (.topbar) use position: sticky against the viewport. Wide content
+     (tables, the Kanban board) carries its own horizontal scroll. */
+  overflow-x: clip;
 }
+/* The page header (eyebrow + title + CTA buttons) stays pinned below the app
+   nav while the page scrolls. Negative side margins + matching padding let its
+   background span the full width of the .main padding box; the offset clears
+   the dark top-nav, and the taller offset also clears the white sub-nav. */
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 22px;
   flex-wrap: wrap;
   gap: 12px;
+  position: sticky;
+  top: 58px;
+  z-index: 30;
+  margin: -8px -34px 18px;
+  padding: 10px 34px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.has-subnav .topbar {
+  top: 104px;
+}
+@media (max-width: 900px) {
+  .topbar {
+    top: 54px;
+    margin: -6px -18px 14px;
+    padding: 10px 18px;
+  }
+  .has-subnav .topbar {
+    top: 98px;
+  }
 }
 .eyebrow {
   color: var(--green-dark);
@@ -475,13 +501,17 @@ tr.clickable:hover {
   font-size: 12px;
   white-space: nowrap;
 }
-/* Job # opens the source quote. */
-.jobs-table .job-ref {
+/* A record number (quote / shipment ref) that navigates or opens something
+   when clicked — green, like the shipment # on the Active Shipments board. */
+.jobs-table .job-ref,
+.ref-link {
   font-weight: 700;
   color: var(--green-dark);
   text-decoration: none;
+  cursor: pointer;
 }
-.jobs-table .job-ref:hover {
+.jobs-table .job-ref:hover,
+.ref-link:hover {
   text-decoration: underline;
 }
 .jobs-table td {

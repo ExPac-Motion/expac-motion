@@ -205,7 +205,7 @@ export default function Layout() {
         </nav>
       )}
 
-      <main className="main">
+      <main className={`main${activeModule?.children ? " has-subnav" : ""}`}>
         <Outlet />
       </main>
     </div>

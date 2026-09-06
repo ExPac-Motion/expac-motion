@@ -412,7 +412,7 @@ export default function DashboardPage() {
                         onClick={() => navigate("/jobs")}
                       >
                         <td>
-                          <strong>{j.reference}</strong>
+                          <span className="ref-link">{j.reference}</span>
                         </td>
                         <td>{j.client?.company ?? "—"}</td>
                         <td className="nowrap">
@@ -474,7 +474,7 @@ export default function DashboardPage() {
                           onClick={() => setOpenId(q.id)}
                         >
                           <td>
-                            <strong>{q.reference}</strong>
+                            <span className="ref-link">{q.reference}</span>
                           </td>
                           <td>{q.client?.company ?? "—"}</td>
                           <td>{q.supplier?.company ?? "—"}</td>

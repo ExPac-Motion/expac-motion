@@ -141,7 +141,7 @@ export default function LiveTracking() {
                       onClick={() => setMapJob(j)}
                     >
                       <td>
-                        <strong>{j.reference}</strong>
+                        <span className="ref-link">{j.reference}</span>
                       </td>
                       <td>
                         <span className="mode-tag">{j.mode}</span>

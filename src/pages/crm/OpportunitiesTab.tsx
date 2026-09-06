@@ -401,7 +401,10 @@ function OpportunityCard({
       )}
       {fields.links && o.quote && (
         <div className="muted small">
-          Quote: <Link to={`/quotes/${o.quote.id}`}>{o.quote.reference}</Link>
+          Quote:{" "}
+          <Link className="ref-link" to={`/quotes/${o.quote.id}`}>
+            {o.quote.reference}
+          </Link>
         </div>
       )}
       {fields.links && o.job && (
