@@ -119,8 +119,8 @@ function JobRow({
           <strong>{job.reference}</strong>
         )}
       </td>
-      <td className="nowrap">{job.supplier?.company ?? "—"}</td>
       <td className="nowrap">{job.client?.company ?? "—"}</td>
+      <td className="nowrap">{job.supplier?.company ?? "—"}</td>
       <td>
         <input
           value={row.po_no ?? ""}
@@ -436,9 +436,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                     <RowActionsHead />
                   </th>
                   <th>Created On</th>
-                  <th>Shipment #</th>
-                  <th>Shipper</th>
+                  <th>Shipment</th>
                   <th>Customer</th>
+                  <th>Shipper</th>
                   <th>PO #</th>
                   <th>Mode</th>
                   <th>Shipment Status</th>
