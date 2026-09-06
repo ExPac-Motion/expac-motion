@@ -328,15 +328,32 @@ export default function LeadsPage() {
         email: string | null;
         phone: string | null;
       }> = [];
+      let dupContacts = 0;
       for (const [ck, extras] of extraByCompany) {
         const leadId = byCompany.get(ck);
         if (!leadId) continue;
+        // Skip anyone already the primary contact, or repeated in the group.
+        const head = groups.get(ck)![0];
+        const seen = new Set<string>(
+          [
+            cell(head, "email").toLowerCase(),
+            cell(head, "contact", "contact name", "name").toLowerCase(),
+          ].filter(Boolean),
+        );
         for (const r of extras) {
+          const name = cell(r, "contact", "contact name", "name");
+          const email = cell(r, "email");
+          const key = email.toLowerCase() || name.toLowerCase();
+          if (!key || seen.has(key)) {
+            dupContacts++;
+            continue;
+          }
+          seen.add(key);
           contactRows.push({
             lead_id: leadId,
-            name: cell(r, "contact", "contact name", "name"),
+            name,
             role: cell(r, "role", "title", "job title") || null,
-            email: cell(r, "email") || null,
+            email: email || null,
             phone:
               cell(r, "phone", "mobile", "mobile phone", "phone number") || null,
           });
@@ -350,6 +367,7 @@ export default function LeadsPage() {
             ? ` (+${contactRows.length} extra contact${contactRows.length === 1 ? "" : "s"})`
             : "") +
           (dupes > 0 ? ` — skipped ${dupes} existing` : "") +
+          (dupContacts > 0 ? ` — skipped ${dupContacts} duplicate contact(s)` : "") +
           (skipped > 0 ? ` — skipped ${skipped} row(s) with no company` : ""),
       );
     } catch (e2) {
