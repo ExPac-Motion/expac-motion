@@ -440,7 +440,17 @@ tr.clickable:hover {
   color: var(--muted);
 }
 .table-wrap {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 68vh;
+}
+/* Frozen header row: stays visible while a long list scrolls. */
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--white);
+  /* border-bottom is unreliable on sticky collapsed cells — draw it as a shadow */
+  box-shadow: inset 0 -1px 0 var(--line);
 }
 /* denser table for wide, many-column lists (e.g. Quotations) */
 .table--compact {
@@ -453,6 +463,11 @@ tr.clickable:hover {
 }
 .table--compact td {
   padding: 7px 7px;
+}
+/* Leads master view: header text matches the "Actions" label size. */
+.leads-table th {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
 }
 
 /* ---------- Active Jobs: inline-editable grid ---------- */
