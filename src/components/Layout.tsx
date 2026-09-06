@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import GlobalSearch from "./GlobalSearch";
+import NotificationsBell from "./NotificationsBell";
 
 interface SubLink {
   to: string;
@@ -111,18 +112,6 @@ function isSubActive(sub: SubLink, pathname: string, search: string): boolean {
 }
 
 const Icon = {
-  search: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M21 21l-4.3-4.3" />
-    </svg>
-  ),
-  bell: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 8a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6z" />
-      <path d="M10 21a2 2 0 004 0" />
-    </svg>
-  ),
   gear: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="3" />
@@ -160,14 +149,7 @@ export default function Layout() {
 
         <div className="topbar-utils">
           <GlobalSearch />
-          <button
-            className="icon-btn"
-            title="Notifications (coming soon)"
-            aria-label="Notifications"
-            disabled
-          >
-            {Icon.bell}
-          </button>
+          <NotificationsBell />
           <Link
             to="/settings"
             className={`icon-btn${pathname.startsWith("/settings") ? " active" : ""}`}
