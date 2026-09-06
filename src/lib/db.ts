@@ -776,6 +776,20 @@ export async function listLeadContacts(leadId: string): Promise<LeadContact[]> {
   );
 }
 
+/** Bulk insert (CSV import) -- extra contacts spread across many leads. */
+export async function createLeadContacts(
+  rows: Array<{
+    lead_id: string;
+    name: string;
+    role: string | null;
+    email: string | null;
+    phone: string | null;
+  }>,
+): Promise<void> {
+  if (rows.length === 0) return;
+  unwrap(await supabase.from("lead_contacts").insert(rows));
+}
+
 /** Replace-all: the lead edit modal owns the full set of extra contacts. */
 export async function replaceLeadContacts(
   leadId: string,
@@ -796,7 +810,7 @@ export async function replaceLeadContacts(
 
 /* ---------- Sales CRM: Opportunities ---------- */
 const OPPORTUNITY_SELECT =
-  "*, lead:leads(id,company,contact,email,phone), client:clients(id,company,contact,email,phone), quote:quotes(id,reference,status), job:jobs(id,reference,shipment_status,milestone), sales_person:profiles(id,full_name)";
+  "*, lead:leads(id,company,contact,email,phone,lead_status_id), client:clients(id,company,contact,email,phone), quote:quotes(id,reference,status), job:jobs(id,reference,shipment_status,milestone), sales_person:profiles(id,full_name)";
 
 export async function listOpportunities(): Promise<Opportunity[]> {
   return unwrap<Opportunity[]>(

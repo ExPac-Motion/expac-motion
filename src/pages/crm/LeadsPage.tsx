@@ -5,7 +5,6 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
@@ -14,6 +13,7 @@ import {
   ErrorNote,
   Loading,
   MailLink,
+  Popover,
   RowActions,
   RowActionsHead,
 } from "../../components/common";
@@ -29,7 +29,7 @@ import {
   useReplaceLeadContacts,
   useSaveLead,
 } from "../../lib/hooks";
-import { listLeadContacts } from "../../lib/db";
+import { createLeadContacts, listLeadContacts } from "../../lib/db";
 import { formatDate } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
 
@@ -47,9 +47,10 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 const SAMPLE_CSV =
-  "company,contact,email,phone,company_phone,website,source,description\n" +
-  "Acme Imports,Jane Smith,jane@acme.co.za,+27 82 555 0100,+27 11 555 0000,https://acme.co.za,Website,Regular FCL importer ex China\n" +
-  "Bluewave Trading,John Doe,john@bluewave.co.za,+27 83 555 0199,+27 21 555 0000,https://bluewave.co.za,Referral,Air freight enquiry\n";
+  "company,contact,role,email,phone,company_phone,website,source,description\n" +
+  "Acme Imports,Jane Smith,Procurement,jane@acme.co.za,+27 82 555 0100,+27 11 555 0000,https://acme.co.za,Website,Regular FCL importer ex China\n" +
+  "Acme Imports,Sam Ndlovu,Logistics Mgr,sam@acme.co.za,+27 82 555 0101,,,,\n" +
+  "Bluewave Trading,John Doe,Owner,john@bluewave.co.za,+27 83 555 0199,+27 21 555 0000,https://bluewave.co.za,Referral,Air freight enquiry\n";
 
 function downloadSampleCsv() {
   const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
@@ -144,39 +145,6 @@ function saveJson(key: string, value: unknown) {
   }
 }
 
-function Popover({
-  label,
-  badge,
-  children,
-}: {
-  label: string;
-  badge?: number;
-  children: (close: () => void) => ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-  return (
-    <div className="lead-pop" ref={ref}>
-      <button
-        type="button"
-        className={`btn outline btn-sm${open ? " active" : ""}`}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {label}
-        {badge ? <span className="lead-pop-badge">{badge}</span> : null}
-      </button>
-      {open && <div className="lead-pop-menu">{children(() => setOpen(false))}</div>}
-    </div>
-  );
-}
 
 export default function LeadsPage() {
   const navigate = useNavigate();
@@ -285,14 +253,28 @@ export default function LeadsPage() {
       const text = await file.text();
       const parsed = parseCsv(text);
 
-      const existingCompany = new Set(rows.map((l) => norm(l.company)));
-      const existingEmail = new Set(
-        rows.filter((l) => l.email).map((l) => norm(l.email as string)),
-      );
-      const seenCompany = new Set<string>();
-      const seenEmail = new Set<string>();
+      const cell = (row: Record<string, string>, ...keys: string[]) => {
+        for (const k of keys) if (row[k]?.trim()) return row[k].trim();
+        return "";
+      };
 
-      const toCreate: Array<
+      // Group CSV rows by company — the first row per company becomes the
+      // lead, the rest become additional contacts on it.
+      const existingCompany = new Set(rows.map((l) => norm(l.company)));
+      const groups = new Map<string, Record<string, string>[]>();
+      let skipped = 0;
+      for (const row of parsed) {
+        const company = cell(row, "company", "company name");
+        if (!company) {
+          skipped++;
+          continue;
+        }
+        const ck = norm(company);
+        (groups.get(ck) ?? groups.set(ck, []).get(ck)!).push(row);
+      }
+
+      let dupes = 0;
+      const leadRows: Array<
         Pick<
           LeadPatch,
           | "company"
@@ -305,52 +287,69 @@ export default function LeadsPage() {
           | "description"
         >
       > = [];
-      let skipped = 0;
-      let dupes = 0;
+      const extraByCompany = new Map<string, Record<string, string>[]>();
 
-      for (const row of parsed) {
-        const company = (row.company || row["company name"] || "").trim();
-        if (!company) {
-          skipped++;
-          continue;
-        }
-        const email = (row.email || "").trim();
-        const ck = norm(company);
-        const ek = email ? norm(email) : "";
-        if (
-          existingCompany.has(ck) ||
-          seenCompany.has(ck) ||
-          (ek && (existingEmail.has(ek) || seenEmail.has(ek)))
-        ) {
+      for (const [ck, gRows] of groups) {
+        if (existingCompany.has(ck)) {
           dupes++;
           continue;
         }
-        seenCompany.add(ck);
-        if (ek) seenEmail.add(ek);
-        toCreate.push({
-          company,
-          contact: row.contact || row["contact name"] || row.name || null,
-          email: email || null,
-          phone: row.phone || row["mobile"] || row["mobile phone"] || row["phone number"] || null,
-          company_phone: row["company_phone"] || row["company phone"] || null,
-          website: row.website || row.url || row["company url"] || null,
-          source: row.source || "CSV import",
-          description: row.description || null,
+        const head = gRows[0];
+        leadRows.push({
+          company: cell(head, "company", "company name"),
+          contact: cell(head, "contact", "contact name", "name") || null,
+          email: cell(head, "email") || null,
+          phone:
+            cell(head, "phone", "mobile", "mobile phone", "phone number") || null,
+          company_phone: cell(head, "company_phone", "company phone") || null,
+          website: cell(head, "website", "url", "company url") || null,
+          source: cell(head, "source") || "CSV import",
+          description: cell(head, "description") || null,
         });
+        if (gRows.length > 1) extraByCompany.set(ck, gRows.slice(1));
       }
 
-      if (toCreate.length === 0) {
+      if (leadRows.length === 0) {
         toastError(
           dupes > 0
-            ? `Nothing imported — all ${dupes} row(s) are already in Leads`
+            ? `Nothing imported — all ${dupes} compan${dupes === 1 ? "y is" : "ies are"} already in Leads`
             : "No valid rows found — check the file has a Company column",
         );
         return;
       }
-      await bulkCreate.mutateAsync(toCreate);
+
+      const created = await bulkCreate.mutateAsync(leadRows);
+      const byCompany = new Map(created.map((l) => [norm(l.company), l.id]));
+
+      const contactRows: Array<{
+        lead_id: string;
+        name: string;
+        role: string | null;
+        email: string | null;
+        phone: string | null;
+      }> = [];
+      for (const [ck, extras] of extraByCompany) {
+        const leadId = byCompany.get(ck);
+        if (!leadId) continue;
+        for (const r of extras) {
+          contactRows.push({
+            lead_id: leadId,
+            name: cell(r, "contact", "contact name", "name"),
+            role: cell(r, "role", "title", "job title") || null,
+            email: cell(r, "email") || null,
+            phone:
+              cell(r, "phone", "mobile", "mobile phone", "phone number") || null,
+          });
+        }
+      }
+      if (contactRows.length) await createLeadContacts(contactRows);
+
       toast(
-        `Imported ${toCreate.length} lead${toCreate.length === 1 ? "" : "s"}` +
-          (dupes > 0 ? ` — skipped ${dupes} duplicate(s)` : "") +
+        `Imported ${leadRows.length} lead${leadRows.length === 1 ? "" : "s"}` +
+          (contactRows.length
+            ? ` (+${contactRows.length} extra contact${contactRows.length === 1 ? "" : "s"})`
+            : "") +
+          (dupes > 0 ? ` — skipped ${dupes} existing` : "") +
           (skipped > 0 ? ` — skipped ${skipped} row(s) with no company` : ""),
       );
     } catch (e2) {
@@ -402,7 +401,7 @@ export default function LeadsPage() {
           <Popover label="+ Add Filter" badge={activeFilterCount}>
             {() => (
               <>
-                <label className="lead-pop-row">
+                <label className="ui-pop-row">
                   <span>Status</span>
                   <select
                     value={filters.statusId}
@@ -418,7 +417,7 @@ export default function LeadsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="lead-pop-row">
+                <label className="ui-pop-row">
                   <span>Sales Person</span>
                   <select
                     value={filters.salesPersonId}
@@ -434,7 +433,7 @@ export default function LeadsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="lead-pop-row">
+                <label className="ui-pop-row">
                   <span>Source contains</span>
                   <input
                     value={filters.source}
@@ -443,7 +442,7 @@ export default function LeadsPage() {
                     }
                   />
                 </label>
-                <label className="lead-pop-row">
+                <label className="ui-pop-row">
                   <span>Has email</span>
                   <select
                     value={filters.hasEmail}
@@ -475,7 +474,7 @@ export default function LeadsPage() {
           <Popover label="Sort">
             {() => (
               <>
-                <label className="lead-pop-row">
+                <label className="ui-pop-row">
                   <span>Field</span>
                   <select
                     value={sort.key}
@@ -490,7 +489,7 @@ export default function LeadsPage() {
                     <option value="salesPerson">Sales Person</option>
                   </select>
                 </label>
-                <div className="lead-pop-row">
+                <div className="ui-pop-row">
                   <span>Direction</span>
                   <div style={{ display: "flex", gap: 4 }}>
                     <button
@@ -517,12 +516,12 @@ export default function LeadsPage() {
             {() => (
               <>
                 <input
-                  className="lead-pop-search"
+                  className="ui-pop-search"
                   placeholder="Search columns…"
                   value={colSearch}
                   onChange={(e) => setColSearch(e.target.value)}
                 />
-                <div className="lead-pop-row" style={{ opacity: 0.6 }}>
+                <div className="ui-pop-row" style={{ opacity: 0.6 }}>
                   <label className="check">
                     <input type="checkbox" checked disabled /> Company
                   </label>
@@ -530,7 +529,7 @@ export default function LeadsPage() {
                 {ALL_COLUMNS.filter((c) =>
                   c.label.toLowerCase().includes(colSearch.trim().toLowerCase()),
                 ).map((c) => (
-                  <div key={c.key} className="lead-pop-row">
+                  <div key={c.key} className="ui-pop-row">
                     <label className="check">
                       <input
                         type="checkbox"
