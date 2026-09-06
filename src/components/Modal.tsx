@@ -75,9 +75,11 @@ export default function Modal({
     </>
   );
 
+  // Deliberately no backdrop-click-to-close: a stray click outside a form
+  // shouldn't wipe unsaved input. Dismiss via ✕ / Cancel / Escape.
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className={cls} onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop">
+      <div className={cls}>
         {stickyHeader ? (
           <>
             <div className="modal-sticky">{head}</div>
