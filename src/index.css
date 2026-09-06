@@ -464,11 +464,6 @@ tr.clickable:hover {
 .table--compact td {
   padding: 7px 7px;
 }
-/* Leads master view: header text matches the "Actions" label size. */
-.leads-table th {
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-}
 
 /* ---------- Active Jobs: inline-editable grid ---------- */
 .jobs-table {

@@ -604,7 +604,7 @@ export default function LeadsPage() {
           <EmptyState>No leads match the current filters.</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table--compact leads-table">
+            <table className="leads-table">
               <thead>
                 <tr>
                   <th className="actions-col">
