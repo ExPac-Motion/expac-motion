@@ -2178,6 +2178,13 @@ tr.clickable:hover {
   transform: none;
   box-shadow: var(--shadow);
 }
+/* Read-only KPI card that still lifts on hover (Opportunities summary). */
+.kpi-plain {
+  cursor: default;
+}
+.opp-kpis {
+  margin-bottom: 16px;
+}
 .kpi-top {
   display: flex;
   align-items: center;
