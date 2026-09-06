@@ -672,6 +672,9 @@ tr.clickable:hover {
 .rte-icon-select {
   max-width: 40px;
 }
+.rte-font-select {
+  max-width: 120px;
+}
 .rte-ai {
   position: relative;
   display: inline-flex;

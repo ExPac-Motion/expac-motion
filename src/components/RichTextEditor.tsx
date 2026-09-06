@@ -8,6 +8,25 @@ const MERGE_TAGS = [
   { label: "Contact Company", value: "{{ contact.company }}" },
 ];
 
+/** Email-safe families. Value is the full stack applied to the selection. */
+const FONT_FAMILIES = [
+  { label: "Arial", value: "Arial, Helvetica, sans-serif" },
+  { label: "Georgia", value: "Georgia, 'Times New Roman', serif" },
+  { label: "Times New Roman", value: "'Times New Roman', Times, serif" },
+  { label: "Courier New", value: "'Courier New', Courier, monospace" },
+  { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
+  { label: "Tahoma", value: "Tahoma, Geneva, sans-serif" },
+  { label: "Trebuchet MS", value: "'Trebuchet MS', Helvetica, sans-serif" },
+];
+
+const FONT_SIZES = [
+  { label: "Small", value: "12px" },
+  { label: "Normal", value: "14px" },
+  { label: "Medium", value: "16px" },
+  { label: "Large", value: "20px" },
+  { label: "Huge", value: "28px" },
+];
+
 const DEFAULT_FOLDER = "General";
 
 const AI_ACTIONS: {
@@ -52,6 +71,9 @@ export default function RichTextEditor({
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const aiRef = useRef<HTMLDivElement>(null);
+  // Last non-collapsed selection inside the editor. A toolbar <select> steals
+  // focus when opened, so font/size handlers restore this before execCommand.
+  const lastRangeRef = useRef<Range | null>(null);
   const [codeView, setCodeView] = useState(false);
   const [codeText, setCodeText] = useState(value);
   const [uploading, setUploading] = useState(false);
@@ -146,6 +168,69 @@ export default function RichTextEditor({
     const tag = e.target.value;
     e.target.value = "";
     if (tag) insertHtml(tag);
+  }
+
+  /** Remember the live selection while the caret is in the editor. */
+  function rememberSelection() {
+    const sel = window.getSelection();
+    const editor = editorRef.current;
+    if (
+      sel &&
+      sel.rangeCount > 0 &&
+      !sel.isCollapsed &&
+      editor &&
+      editor.contains(sel.anchorNode) &&
+      editor.contains(sel.focusNode)
+    ) {
+      lastRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  /** Put the caret back where it was before a toolbar <select> took focus;
+   *  with nothing previously selected, target the whole body so a font/size
+   *  pick applies to the entire signature. */
+  function restoreSelection() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    if (lastRangeRef.current) {
+      sel.addRange(lastRangeRef.current);
+    } else {
+      const r = document.createRange();
+      r.selectNodeContents(editor);
+      sel.addRange(r);
+    }
+  }
+
+  /** Apply a font family to the selection as an inline style span. */
+  function onPickFont(e: ChangeEvent<HTMLSelectElement>) {
+    const family = e.target.value;
+    e.target.value = "";
+    if (!family) return;
+    restoreSelection();
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand("fontName", false, family);
+    document.execCommand("styleWithCSS", false, "false");
+    emit();
+  }
+
+  /** Apply a font size (px) to the selection. execCommand("fontSize") only
+   *  takes 1-7, so tag the run with a sentinel then rewrite it to px. */
+  function onPickSize(e: ChangeEvent<HTMLSelectElement>) {
+    const size = e.target.value;
+    e.target.value = "";
+    const editor = editorRef.current;
+    if (!size || !editor) return;
+    restoreSelection();
+    document.execCommand("fontSize", false, "7");
+    editor.querySelectorAll('font[size="7"]').forEach((f) => {
+      f.removeAttribute("size");
+      (f as HTMLElement).style.fontSize = size;
+    });
+    emit();
   }
 
   function onPickUnsubscribe(e: ChangeEvent<HTMLSelectElement>) {
@@ -261,6 +346,8 @@ export default function RichTextEditor({
           suppressContentEditableWarning
           onInput={emit}
           onBlur={emit}
+          onMouseUp={rememberSelection}
+          onKeyUp={rememberSelection}
         />
       )}
       <div className="rte-toolbar">
@@ -298,6 +385,38 @@ export default function RichTextEditor({
         <button type="button" title="Underline" onClick={() => exec("underline")}>
           <u>U</u>
         </button>
+        <select
+          className="rte-font-select"
+          title="Font"
+          defaultValue=""
+          disabled={codeView}
+          onChange={onPickFont}
+        >
+          <option value="" disabled>
+            Font
+          </option>
+          {FONT_FAMILIES.map((f) => (
+            <option key={f.label} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rte-font-select"
+          title="Text size"
+          defaultValue=""
+          disabled={codeView}
+          onChange={onPickSize}
+        >
+          <option value="" disabled>
+            Size
+          </option>
+          {FONT_SIZES.map((s) => (
+            <option key={s.label} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
         <button type="button" title="Bullet list" onClick={() => exec("insertUnorderedList")}>
           •≡
         </button>
