@@ -1899,9 +1899,9 @@ tr.clickable:hover {
 }
 .qs-routecol .qs-meta {
   margin-top: 14px;
-  /* labels sit under FROM; the value column lines up under the TO port code
-     (UN/LOCODEs are 5 chars ≈ 130px), text left-aligned */
-  grid-template-columns: auto 130px;
+  /* labels sit under FROM; the value column starts under the TO port code
+     (routebox right edge − a 5-char UN/LOCODE ≈ 108px), text left-aligned */
+  grid-template-columns: auto 108px;
   justify-content: space-between;
 }
 .qs-fromblock {
