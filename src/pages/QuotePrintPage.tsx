@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClients, useCompanySettings, useQuote } from "../lib/hooks";
 import {
@@ -71,6 +71,31 @@ export default function QuotePrintPage() {
     };
   }, [q?.reference]);
 
+  // "Page: 1 of N" — the sheet is engineered to be a single A4 page, but a very
+  // long quote can spill. Estimate the page count from the rendered height vs
+  // the A4 printable area (297mm − the 16mm @page margins), with generous slack
+  // so a normal quote always reads "1 of 1".
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [pageCount, setPageCount] = useState(1);
+  useEffect(() => {
+    function measure() {
+      const el = sheetRef.current;
+      if (!el) return;
+      const perPagePx = 281 * (96 / 25.4); // ≈ 1062px
+      const n = Math.ceil((el.scrollHeight - 120) / perPagePx);
+      setPageCount(Number.isFinite(n) && n > 1 ? n : 1);
+    }
+    measure();
+    const t = window.setTimeout(measure, 300);
+    window.addEventListener("resize", measure);
+    window.addEventListener("beforeprint", measure);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("beforeprint", measure);
+    };
+  }, [q]);
+
   if (isLoading) return <div className="center-note">Loading quotation…</div>;
   if (isError || !q)
     return (
@@ -139,7 +164,7 @@ export default function QuotePrintPage() {
         FX are not shown. VAT is charged per line at the rate set on the quotation.
       </div>
 
-      <div className="qs-sheet">
+      <div className="qs-sheet" ref={sheetRef}>
         {/* company header: logo + "QUOTATION - <company>" + registration lines */}
         <div className="qs-companyhead">
           <img
@@ -206,7 +231,7 @@ export default function QuotePrintPage() {
               <b>Due (or) Validity Date:</b>
               <span>{formatDate(q.valid_until)}</span>
               <b>Page:</b>
-              <span>1</span>
+              <span>1 of {pageCount}</span>
             </div>
           </div>
         </div>
