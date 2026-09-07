@@ -73,6 +73,7 @@ export default function ImportVatDutyPage() {
   const [dirty, setDirty] = useState(false);
   const [roeLoading, setRoeLoading] = useState(false);
   const [roeAsOf, setRoeAsOf] = useState("");
+  const [disbRate, setDisbRate] = useState("2.5");
 
   const ivdQ = useImportVatDuty(quoteId || undefined);
 
@@ -94,6 +95,12 @@ export default function ImportVatDutyPage() {
         : { foreignAmount: 0, localAmount: 0, ttlDuty: 0, ttlImportVat: 0 },
     [draft],
   );
+  const disbAmount =
+    Math.round(
+      (totals.ttlImportVat + totals.ttlDuty) *
+        ((Number(disbRate) || 0) / 100) *
+        100,
+    ) / 100;
 
   const quotes = quotesQ.data ?? [];
   const selectedQuote = quotes.find((q) => q.id === quoteId);
@@ -171,14 +178,24 @@ export default function ImportVatDutyPage() {
     }
   }
 
-  async function push(code: "CU-02" | "CU-03", amount: number, label: string) {
+  async function push(
+    code: "CU-02" | "CU-03" | "DIS-01",
+    amount: number,
+    label: string,
+    feeRate?: number | null,
+  ) {
     if (!draft) return;
     if (dirty || !draft.id) {
       const ok = await onSave();
       if (!ok) return;
     }
     try {
-      await pushLine.mutateAsync({ quoteId: draft.quote_id, code, amount });
+      await pushLine.mutateAsync({
+        quoteId: draft.quote_id,
+        code,
+        amount,
+        feeRate,
+      });
       toast(`${label} pushed to ${selectedQuote?.reference ?? "the quote"}`);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not update the quote");
@@ -458,6 +475,26 @@ export default function ImportVatDutyPage() {
                   {money(totals.ttlDuty)}
                 </div>
               </div>
+              <div className="t">
+                <div
+                  className="label"
+                  style={{ display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  Disbursement Fee
+                  <input
+                    type="number"
+                    step="any"
+                    value={disbRate}
+                    onChange={(e) => setDisbRate(e.target.value)}
+                    aria-label="Disbursement fee %"
+                    style={{ width: 56, padding: "2px 6px" }}
+                  />
+                  %
+                </div>
+                <div className="val" style={{ color: "var(--green-dark)" }}>
+                  {money(disbAmount)}
+                </div>
+              </div>
             </div>
             <div
               className="row-actions"
@@ -485,11 +522,31 @@ export default function ImportVatDutyPage() {
               >
                 Add Duty to Quote Builder
               </button>
+              <button
+                className="btn"
+                onClick={() =>
+                  push(
+                    "DIS-01",
+                    disbAmount,
+                    "Disbursement Fee",
+                    Number(disbRate) || null,
+                  )
+                }
+                disabled={
+                  !draft || save.isPending || pushLine.isPending ||
+                  disbAmount <= 0
+                }
+              >
+                Add Disbursement Fee to Quote Builder
+              </button>
             </div>
             <p className="hint" style={{ marginTop: 10 }}>
-              Pushing writes (or overwrites) the <strong>CU-02 Customs VAT</strong>{" "}
-              and <strong>CU-03 Customs Duty</strong> charge lines on{" "}
+              Pushing writes (or overwrites) the <strong>CU-02 Customs VAT</strong>,{" "}
+              <strong>CU-03 Customs Duty</strong> and{" "}
+              <strong>DIS-01 Disbursement Fee</strong> charge lines on{" "}
               {selectedQuote?.reference ?? "the quotation"} as ZAR lines. The
+              disbursement fee stays {disbRate || "2.5"}% of the VAT + Duty on
+              the quote — edit the VAT/Duty in the builder and it follows. The
               worksheet is saved first so it can be reopened here and amended.
             </p>
           </div>

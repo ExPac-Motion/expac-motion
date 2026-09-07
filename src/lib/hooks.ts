@@ -274,9 +274,16 @@ export function useAddCustomsLineToQuote() {
   return useMutation({
     mutationFn: (input: {
       quoteId: string;
-      code: "CU-02" | "CU-03";
+      code: "CU-02" | "CU-03" | "DIS-01";
       amount: number;
-    }) => db.addCustomsLineToQuote(input.quoteId, input.code, input.amount),
+      feeRate?: number | null;
+    }) =>
+      db.addCustomsLineToQuote(
+        input.quoteId,
+        input.code,
+        input.amount,
+        input.feeRate,
+      ),
     onSuccess: (_v, input) => {
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["quotes", input.quoteId] });

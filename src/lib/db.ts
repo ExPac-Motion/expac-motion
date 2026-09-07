@@ -407,17 +407,21 @@ export async function saveImportVatDuty(
   );
 }
 
-/** Push a computed customs total onto the quote as its CU-02 / CU-03 line. */
+/** Push a computed customs total onto the quote as its CU-02 / CU-03 / DIS-01
+ *  line. `feeRate` (a percentage) is stored on the line for DIS-01 so the
+ *  Quote Builder keeps re-rating it against the VAT + Duty on the quote. */
 export async function addCustomsLineToQuote(
   quoteId: string,
-  code: "CU-02" | "CU-03",
+  code: "CU-02" | "CU-03" | "DIS-01",
   amount: number,
+  feeRate?: number | null,
 ): Promise<void> {
   unwrap(
     await supabase.rpc("add_customs_line_to_quote", {
       p_quote_id: quoteId,
       p_code: code,
       p_amount: amount,
+      p_fee_rate: feeRate ?? null,
     }),
   );
 }
