@@ -71,7 +71,7 @@ export default function LeadStatusesPage() {
           <EmptyState>No statuses yet.</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table--compact">
+            <table>
               <thead>
                 <tr>
                   <th className="actions-col">

@@ -34,6 +34,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
   return {
     id: null,
     reference: newReference(q.mode),
+    customer_reference: "",
     client_id: q.client_id ?? "",
     lead_id: "",
     sales_person_id: q.sales_person_id ?? "",
@@ -167,9 +168,10 @@ export default function QuotesListPage() {
                       onToggle={sel.toggleAll}
                     />
                   </th>
-                  <th>Reference</th>
+                  <th>Shipment</th>
                   <th>Customer</th>
                   <th>Shipper</th>
+                  <th>Reference</th>
                   <th>Trade lane</th>
                   <th>Mode</th>
                   <th>Total Cost</th>
@@ -203,6 +205,7 @@ export default function QuotesListPage() {
                       </td>
                       <td>{q.client?.company ?? "—"}</td>
                       <td>{q.supplier?.company ?? "—"}</td>
+                      <td>{q.customer_reference || "—"}</td>
                       <td className="nowrap">
                         {portCode(q.origin)} → {portCode(q.destination)}
                       </td>

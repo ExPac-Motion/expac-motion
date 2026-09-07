@@ -300,6 +300,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     await supabase.rpc("save_quote", {
       p_id: draft.id,
       p_reference: draft.reference.trim(),
+      p_customer_reference: draft.customer_reference.trim() || null,
       p_client_id: draft.client_id || null,
       p_lead_id: draft.lead_id || null,
       p_sales_person_id: draft.sales_person_id || null,

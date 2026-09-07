@@ -7,6 +7,7 @@ import {
   Loading,
   RowActions,
   RowActionsHead,
+  SearchInput,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -234,12 +235,11 @@ export default function TemplatesPage() {
               used to send mail.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              placeholder="Search templates…"
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ maxWidth: 220 }}
+              onChange={setSearch}
+              placeholder="Search templates…"
             />
             <button className="btn" onClick={() => setEditing("new")}>
               + New Template
@@ -259,7 +259,7 @@ export default function TemplatesPage() {
           </EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table--compact">
+            <table>
               <thead>
                 <tr>
                   <th className="actions-col">

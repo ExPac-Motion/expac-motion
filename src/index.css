@@ -9,8 +9,13 @@
   --line: rgba(32, 36, 38, 0.12);
   --shadow: 0 12px 32px rgba(32, 36, 38, 0.1);
   --radius: 16px;
-  --display: Arial, Helvetica, sans-serif;
-  --body: Arial, Helvetica, sans-serif;
+  /* --- FONT EXPERIMENT (local only, not committed) --- */
+  --display: -apple-system, system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu,
+    Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol";
+  --body: -apple-system, system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu,
+    Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol";
 }
 * {
   box-sizing: border-box;
@@ -26,7 +31,7 @@ body {
   color: var(--ink);
   font-family: var(--body);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 20px;
 }
 h1,
 h2,
@@ -46,6 +51,39 @@ input,
 select,
 textarea {
   font: inherit;
+}
+/* Native <select> → soft rounded box + slim custom chevron, app-wide.
+   Context rules below may set their own padding/background — keep them on
+   `background-color` (not the `background` shorthand) so this arrow survives. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 30px 7px 11px;
+  background-color: var(--white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236f756d' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  color: var(--ink);
+  cursor: pointer;
+}
+/* Bare text inputs → the same soft rounded box. Context rules (.field,
+   .search-box, .jobs-table, .charge-table, .ui-pop-*, …) override per area. */
+input:not([type]),
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="url"],
+input[type="tel"],
+input[type="password"],
+input[type="date"],
+input[type="number"] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background-color: var(--white);
+  color: var(--ink);
 }
 ::-webkit-scrollbar {
   width: 8px;
@@ -222,7 +260,7 @@ textarea {
   display: grid;
   place-items: center;
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--ink);
 }
 .brand-lockup {
@@ -305,7 +343,7 @@ textarea {
 .eyebrow {
   color: var(--green-dark);
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.72rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -321,11 +359,12 @@ textarea {
   border-radius: 10px;
   padding: 10px 16px;
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.88rem;
   background: var(--green);
   color: var(--ink);
   text-decoration: none;
+  white-space: nowrap;
 }
 .btn:hover {
   background: #9bca52;
@@ -395,7 +434,7 @@ textarea {
 .card .value {
   font-family: var(--display);
   font-size: 1.7rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-top: 6px;
 }
 
@@ -442,11 +481,13 @@ th {
   font-weight: 700;
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);
+  white-space: nowrap;
 }
 td {
-  padding: 12px 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  white-space: nowrap;
 }
 tr:last-child td {
   border-bottom: 0;
@@ -523,6 +564,11 @@ tr.clickable:hover {
   background: transparent;
   color: var(--ink);
   font: inherit;
+}
+/* dense inline board — keep the native picker, not the app chevron */
+.jobs-table td select {
+  appearance: auto;
+  -webkit-appearance: auto;
 }
 .jobs-table td input:not([type="checkbox"]):hover,
 .jobs-table td select:hover {
@@ -618,15 +664,19 @@ tr.clickable:hover {
 .field input,
 .field select,
 .field textarea {
-  border: 1px solid #d8d9d4;
-  border-radius: 9px;
-  padding: 9px 11px;
-  background: #fafaf7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background-color: var(--white);
   color: var(--ink);
   width: 100%;
 }
+.field select {
+  padding: 7px 32px 7px 11px;
+}
 .field textarea {
-  min-height: 70px;
+  min-height: 64px;
+  padding: 8px 11px;
   resize: vertical;
 }
 .field .hint {
@@ -710,6 +760,10 @@ tr.clickable:hover {
   font-size: 0.78rem;
   color: var(--ink);
   cursor: pointer;
+}
+.rte-toolbar select {
+  appearance: auto;
+  -webkit-appearance: auto;
 }
 .rte-toolbar button:hover,
 .rte-toolbar select:hover {
@@ -810,7 +864,7 @@ tr.clickable:hover {
   background: var(--green);
   color: var(--ink);
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 .ui-pop-menu {
   position: absolute;
@@ -853,7 +907,7 @@ tr.clickable:hover {
 }
 .ui-pop-head {
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
@@ -912,7 +966,7 @@ tr.clickable:hover {
   padding: 1px 9px;
   border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 .opp-card-notes {
@@ -935,7 +989,7 @@ tr.clickable:hover {
 }
 .track-cell b {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* Web contact forms — builder */
@@ -943,7 +997,7 @@ tr.clickable:hover {
   border: 1px solid transparent;
   background: transparent;
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.05rem;
   color: var(--ink);
   padding: 4px 6px;
@@ -1190,6 +1244,14 @@ tr.clickable:hover {
     grid-template-columns: 1fr 1fr;
   }
 }
+/* the grid `gap` already spaces rows — drop the per-field bottom margin
+   so a 3–4 column form doesn't get a double gap between rows */
+.grid2 > .field,
+.grid3 > .field,
+.grid4 > .field {
+  margin-bottom: 0;
+  align-content: start;
+}
 
 /* ---------- Charge table ---------- */
 .charge-table th,
@@ -1202,8 +1264,11 @@ tr.clickable:hover {
   font-size: 0.82rem;
   border: 1px solid #d8d9d4;
   border-radius: 8px;
-  background: #fafaf7;
+  background-color: #fafaf7;
   width: 100%;
+}
+.charge-table select {
+  padding-right: 26px;
 }
 .charge-table input[readonly] {
   background: #eef0ea;
@@ -1383,7 +1448,7 @@ tr.clickable:hover {
 }
 .totals .t .val {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.15rem;
 }
 
@@ -1476,7 +1541,7 @@ tr.clickable:hover {
   display: grid;
   place-items: center;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0 auto 6px;
 }
 .step.done .dot {
@@ -1751,7 +1816,7 @@ tr.clickable:hover {
 .qs-sheet h1 {
   font-family: var(--display);
   font-size: 30px;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0 0 8px;
 }
 .qs-companyhead {
@@ -1774,7 +1839,7 @@ tr.clickable:hover {
 }
 .qs-companyhead .name {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 20px;
   letter-spacing: 0.02em;
 }
@@ -1837,7 +1902,7 @@ tr.clickable:hover {
   justify-content: center;
   align-items: flex-start;
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 34px;
   color: var(--green);
   letter-spacing: -0.02em;
@@ -1870,7 +1935,7 @@ tr.clickable:hover {
   gap: 12px;
 }
 .qs-routelbl {
-  font-weight: 800;
+  font-weight: 700;
   font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--muted);
@@ -1878,7 +1943,7 @@ tr.clickable:hover {
 }
 .qs-port {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   /* 5 wide caps each side + the arrow must clear the right column with margin
      to spare — 40px crowded the sheet edge and clipped in Save-as-PDF */
   font-size: 32px;
@@ -1916,7 +1981,7 @@ tr.clickable:hover {
   margin-top: 6px;
 }
 .qs-fromto {
-  font-weight: 800;
+  font-weight: 700;
   font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--muted);
@@ -1925,7 +1990,7 @@ tr.clickable:hover {
 .qs-cbar {
   background: var(--green);
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 16px;
   font-family: var(--display);
   padding: 5px 10px;
@@ -1945,7 +2010,7 @@ tr.clickable:hover {
 .qs-bar {
   background: var(--green);
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 13px;
   font-family: var(--display);
   padding: 3px 10px;
@@ -2136,7 +2201,7 @@ tr.clickable:hover {
 }
 .qs-totals .grand {
   margin-top: 30px;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 12px;
 }
 .qs-totals .grand span:first-child {
@@ -2226,7 +2291,7 @@ tr.clickable:hover {
 }
 .kpi-value {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 2rem;
   line-height: 1;
 }
@@ -2361,7 +2426,7 @@ tr.clickable:hover {
 .bar3d-total b {
   font-family: var(--display);
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--ink);
   margin-right: 4px;
 }
@@ -2401,7 +2466,7 @@ tr.clickable:hover {
 .donut-legend .ct {
   margin-left: auto;
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
 }
 .donut-legend button.zero {
   opacity: 0.45;
@@ -2435,7 +2500,7 @@ tr.clickable:hover {
 }
 .funnel-step .ct {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   text-align: right;
 }
 .pipe {
@@ -2488,7 +2553,7 @@ tr.clickable:hover {
 }
 .pipe-row .amt {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.9rem;
   white-space: nowrap;
   text-align: right;
@@ -2576,7 +2641,7 @@ tr.clickable:hover {
 }
 .mini-stats .v {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.05rem;
 }
 
@@ -2617,7 +2682,7 @@ tr.clickable:hover {
   background: #eef4e3;
   color: var(--green-dark);
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
 }
 .ct-chip.alert .ct-chip-n {
   background: #fdecea;
@@ -2661,8 +2726,8 @@ tr.clickable:hover {
 .ct-quickadd select {
   border: 1px solid #d8d9d4;
   border-radius: 9px;
-  padding: 9px 11px;
-  background: #fafaf7;
+  padding: 9px 32px 9px 11px;
+  background-color: #fafaf7;
 }
 .ct-quickadd input {
   flex: 1;
@@ -2814,7 +2879,7 @@ tr.clickable:hover {
 }
 .cal-dow {
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2845,7 +2910,7 @@ tr.clickable:hover {
 }
 .cal-daynum {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.8rem;
 }
 .cal-ev {
@@ -2916,13 +2981,13 @@ tr.clickable:hover {
 }
 .cal-agdate {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.76rem;
   min-width: 92px;
 }
 .cal-tag {
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 2px 7px;
@@ -2961,7 +3026,7 @@ tr.clickable:hover {
 }
 .ref-badge {
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 1px 5px;
   border-radius: 4px;
   background: #eef1ec;
@@ -3021,7 +3086,7 @@ tr.clickable:hover {
 }
 .trk-port {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1rem;
 }
 .trk-line {
@@ -3061,7 +3126,7 @@ tr.clickable:hover {
 }
 .trk-code {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.74rem;
 }
 .trk-when {
@@ -3117,7 +3182,7 @@ tr.clickable:hover {
   cursor: pointer;
   writing-mode: vertical-rl;
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.66rem;
   letter-spacing: 0.14em;
   display: flex;
@@ -3155,7 +3220,7 @@ tr.clickable:hover {
 .comms-rail-eyebrow {
   color: var(--green-dark);
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.62rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -3258,7 +3323,7 @@ tr.clickable:hover {
 }
 .msg-kind {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
@@ -3563,7 +3628,7 @@ tr.clickable:hover {
 }
 .gsearch-group {
   font-family: var(--display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.66rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -3614,7 +3679,7 @@ tr.clickable:hover {
   background: #e11d48;
   color: #fff;
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 16px;
   text-align: center;
 }

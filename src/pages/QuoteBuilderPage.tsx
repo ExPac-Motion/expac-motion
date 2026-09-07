@@ -95,6 +95,7 @@ function blankDraft(): QuoteDraft {
   return {
     id: null,
     reference: newReference(mode),
+    customer_reference: "",
     client_id: "",
     lead_id: "",
     sales_person_id: "",
@@ -134,6 +135,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
   return {
     id: q.id,
     reference: q.reference,
+    customer_reference: q.customer_reference ?? "",
     client_id: q.client_id ?? "",
     lead_id: q.lead_id ?? "",
     sales_person_id: q.sales_person_id ?? "",
@@ -631,10 +633,20 @@ export default function QuoteBuilderPage() {
             <span className="hint">Not shown on the customer quotation.</span>
           </div>
           <div className="field">
-            <label>Reference</label>
+            <label>Shipment No</label>
             <input
               value={draft.reference}
-              onChange={(e) => set("reference", e.target.value)}
+              readOnly
+              title="System-generated shipment number — set by the transport mode"
+              style={{ background: "#f0efe9", cursor: "not-allowed" }}
+            />
+          </div>
+          <div className="field">
+            <label>Reference</label>
+            <input
+              value={draft.customer_reference}
+              onChange={(e) => set("customer_reference", e.target.value)}
+              placeholder="Customer reference / PO"
             />
           </div>
           <div className="field">

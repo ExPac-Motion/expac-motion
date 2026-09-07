@@ -133,7 +133,8 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
           label="Clearing Agent (internal)"
           value={q.clearing_agent?.company ?? "—"}
         />
-        <Field label="Reference" value={q.reference} />
+        <Field label="Shipment No" value={q.reference} />
+        <Field label="Reference" value={q.customer_reference || "—"} />
         <Field label="Valid Until" value={formatDate(q.valid_until)} />
         <Field label="Commercial Value ($)" value={usd(q.commercial_value)} />
         <Field label="Incoterms" value={q.incoterms || "—"} />
@@ -336,7 +337,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
           style={{
             fontFamily: "var(--display)",
             fontSize: "1.5rem",
-            fontWeight: 800,
+            fontWeight: 700,
             color: "var(--green)",
           }}
         >

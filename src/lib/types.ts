@@ -729,7 +729,10 @@ export interface QuoteLine {
 
 export interface Quote {
   id: string;
+  /** System shipment number (AIR/SEA/CX/RDX + 6 digits) — never changes. */
   reference: string;
+  /** Operator-typed customer reference / customer PO for this enquiry. */
+  customer_reference: string | null;
   client_id: string | null;
   /** Set instead of client_id when the customer is a not-yet-promoted lead. */
   lead_id: string | null;
@@ -1008,6 +1011,7 @@ export interface JobTracking {
 export interface QuoteDraft {
   id: string | null;
   reference: string;
+  customer_reference: string;
   client_id: string;
   /** Set instead of client_id when the customer is a not-yet-promoted lead. */
   lead_id: string;
