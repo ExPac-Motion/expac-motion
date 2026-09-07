@@ -23,11 +23,12 @@ import {
   impliedMargin,
   insuranceAmount,
   INSURANCE_CODE,
+  FORWARDING_CODE,
   lineTotal,
   lineBuyTotal,
   packingRow,
   packingTotals,
-  resolveLine,
+  resolveLines,
   sellFromBuy,
   sellInCur,
   volumetricFactor,
@@ -277,17 +278,16 @@ export default function QuoteBuilderPage() {
     () => packingTotals(draft?.packing ?? [], vFactor),
     [draft?.packing, vFactor],
   );
-  // Lines with code/unit-driven values resolved (KGS qty -> chargeable weight, IN-01 -> insurance).
+  // Lines with code/unit-driven values resolved (KGS qty -> chargeable weight,
+  // IN-01 -> insurance, FW-01 -> 1% of International Freight).
   const resolvedLines = useMemo(
     () =>
-      (draft?.lines ?? []).map((l) =>
-        resolveLine(l, {
-          mode: draft?.mode ?? "Air Freight (AIR)",
-          fx,
-          pack: packTotals,
-          commercialValue: draft?.commercial_value ?? "",
-        }),
-      ),
+      resolveLines(draft?.lines ?? [], {
+        mode: draft?.mode ?? "Air Freight (AIR)",
+        fx,
+        pack: packTotals,
+        commercialValue: draft?.commercial_value ?? "",
+      }),
     [draft?.lines, draft?.mode, fx, packTotals, draft?.commercial_value],
   );
   const totals = useMemo(
@@ -1178,6 +1178,10 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
+                      // IN-01 / FW-01: qty, buy and margin are all computed.
+                      const computed =
+                        l.code === INSURANCE_CODE || l.code === FORWARDING_CODE;
+                      const isFwd = l.code === FORWARDING_CODE;
                       return (
                       <tr key={i}>
                         <td className="c-code">
@@ -1241,13 +1245,17 @@ export default function QuoteBuilderPage() {
                           </select>
                         </td>
                         <td className="num">
-                          {l.code === INSURANCE_CODE ? (
+                          {computed ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.qty) || 0).toFixed(2)}
-                              title="Insurance line — quantity is 1"
+                              title={
+                                isFwd
+                                  ? "Forwarding fee — quantity is 1"
+                                  : "Insurance line — quantity is 1"
+                              }
                             />
                           ) : (
                             <input
@@ -1276,13 +1284,17 @@ export default function QuoteBuilderPage() {
                           )}
                         </td>
                         <td className="num">
-                          {l.code === INSURANCE_CODE ? (
+                          {computed ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.buy) || 0).toFixed(2)}
-                              title="0.50% of Commercial Value ($)"
+                              title={
+                                isFwd
+                                  ? "1% of the International Freight Charges (USD)"
+                                  : "0.50% of Commercial Value ($)"
+                              }
                             />
                           ) : (
                             <input
@@ -1294,13 +1306,17 @@ export default function QuoteBuilderPage() {
                           )}
                         </td>
                         <td className="num">
-                          {l.code === INSURANCE_CODE ? (
+                          {computed ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value="0"
-                              title="No markup on insurance"
+                              title={
+                                isFwd
+                                  ? "No markup on the forwarding fee"
+                                  : "No markup on insurance"
+                              }
                             />
                           ) : (
                             <input

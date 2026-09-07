@@ -13,7 +13,7 @@ import {
   lineVatPct,
   packingRow,
   packingTotals,
-  resolveLine,
+  resolveLines,
   sellInCur,
   volumetricFactor,
 } from "../lib/calc";
@@ -42,14 +42,12 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
   const packing = q.packing_list_items ?? [];
   const vFactor = volumetricFactor(q.mode);
   const packTotals = packingTotals(packing, vFactor);
-  const resolvedLines = q.quote_lines.map((l) =>
-    resolveLine(l, {
-      mode: q.mode,
-      fx: fxOf(q),
-      pack: packTotals,
-      commercialValue: q.commercial_value ?? "",
-    }),
-  );
+  const resolvedLines = resolveLines(q.quote_lines, {
+    mode: q.mode,
+    fx: fxOf(q),
+    pack: packTotals,
+    commercialValue: q.commercial_value ?? "",
+  });
   const t = chargeTotals(resolvedLines, fxOf(q));
   const groups = groupByCategory(resolvedLines);
 

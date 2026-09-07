@@ -170,6 +170,32 @@ export function effectiveQty(
 
 /** Cargo Insurance charge code: sell is the insurance premium, not a marked-up buy. */
 export const INSURANCE_CODE = "IN-01";
+/** Forwarding Fee charge code: buy = 1% of the International Freight Charges buy total (USD). */
+export const FORWARDING_CODE = "FW-01";
+/** Forwarding fee rate — 1% of the International Freight Charges USD buy total. */
+export const FORWARDING_RATE = 0.01;
+
+/**
+ * Σ(qty × buy) over the International Freight Charges lines, each converted to
+ * USD, excluding the forwarding fee itself and cargo insurance — the base the
+ * FW-01 1% fee is charged on. Feed it the resolved lines so derived qtys are
+ * settled. `fx` holds USD→ZAR / CNY→ZAR, so CNY→USD = cny/usd and ZAR→USD = 1/usd.
+ */
+export function intlFreightBuyUsd(lines: QuoteLine[], fx: FxRates): number {
+  return (lines || [])
+    .filter(
+      (l) =>
+        (l.category ?? CHARGE_CATEGORIES[0]) === CHARGE_CATEGORIES[0] &&
+        l.code !== FORWARDING_CODE &&
+        l.code !== INSURANCE_CODE,
+    )
+    .reduce((s, l) => {
+      const amt = (Number(l.qty) || 0) * (Number(l.buy) || 0);
+      if (l.cur === "USD") return s + amt;
+      if (l.cur === "CNY") return s + (fx.usd ? (amt * fx.cny) / fx.usd : 0);
+      return s + (fx.usd ? amt / fx.usd : 0); // ZAR
+    }, 0);
+}
 
 export interface LineContext {
   mode: QuoteMode;
@@ -177,6 +203,8 @@ export interface LineContext {
   pack: PackingTotals;
   /** Declared commercial value ($) — drives the IN-01 insurance line. */
   commercialValue: number | string;
+  /** USD buy total of the International Freight Charges lines — drives FW-01. */
+  forwardingBaseUsd?: number;
 }
 
 /**
@@ -199,6 +227,13 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
     qty = 1;
   }
 
+  if (line.code === FORWARDING_CODE) {
+    // Buy = 1% of the International Freight Charges USD buy total; no markup.
+    buy = (ctx.forwardingBaseUsd ?? 0) * FORWARDING_RATE;
+    margin = 0;
+    qty = 1;
+  }
+
   return {
     ...line,
     qty,
@@ -206,6 +241,23 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
     margin,
     sell: sellFromBuy(buy, margin, line.cur, ctx.fx),
   };
+}
+
+/**
+ * Resolves a whole quote's lines. Two passes so the FW-01 forwarding fee can
+ * be a percentage of the other International Freight Charges lines (which
+ * themselves may have code/unit-driven qtys).
+ */
+export function resolveLines(lines: QuoteLine[], ctx: LineContext): QuoteLine[] {
+  const firstPass = (lines || []).map((l) =>
+    l.code === FORWARDING_CODE ? l : resolveLine(l, ctx),
+  );
+  const base = intlFreightBuyUsd(firstPass, ctx.fx);
+  return firstPass.map((l) =>
+    l.code === FORWARDING_CODE
+      ? resolveLine(l, { ...ctx, forwardingBaseUsd: base })
+      : l,
+  );
 }
 
 /** ZAR buy cost for a line: qty x buy x fx rate for the line's currency. */

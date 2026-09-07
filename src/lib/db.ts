@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 import {
   insuranceAmount,
   packingTotals,
-  resolveLine,
+  resolveLines,
   volumetricFactor,
 } from "./calc";
 import type {
@@ -273,8 +273,9 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     pack,
     commercialValue: draft.commercial_value,
   };
+  const resolved = resolveLines(draft.lines, ctx);
   const lines = draft.lines.map((l, i) => {
-    const r = resolveLine(l, ctx);
+    const r = resolved[i];
     return {
       position: i,
       category: l.category,

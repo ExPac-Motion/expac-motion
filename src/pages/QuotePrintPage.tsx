@@ -10,7 +10,7 @@ import {
   lineVatPct,
   packingRow,
   packingTotals,
-  resolveLine,
+  resolveLines,
   volumetricFactor,
 } from "../lib/calc";
 import { formatDate, money, portCode, usd } from "../lib/format";
@@ -50,14 +50,12 @@ export default function QuotePrintPage() {
   );
   const groups = useMemo(() => {
     if (!q) return [];
-    const resolved = q.quote_lines.map((l) =>
-      resolveLine(l, {
-        mode: q.mode,
-        fx,
-        pack,
-        commercialValue: q.commercial_value ?? "",
-      }),
-    );
+    const resolved = resolveLines(q.quote_lines, {
+      mode: q.mode,
+      fx,
+      pack,
+      commercialValue: q.commercial_value ?? "",
+    });
     return groupByCategory(resolved).filter((g) => g.lines.length > 0);
   }, [q, fx, pack]);
 

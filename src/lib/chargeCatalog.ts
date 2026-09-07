@@ -23,7 +23,7 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   // ---- International Freight Charges ----
   { category: "International Freight Charges", code: "AF-01", description: "Air Freight Fee", cur: "USD", unit: "KGS", modes: AIR },
   { category: "International Freight Charges", code: "AF-02", description: "Terminal Handling Fee", cur: "USD", unit: "", modes: AIR },
-  { category: "International Freight Charges", code: "FW-01", description: "Forwarding & Air Waybill Fee", cur: "USD", unit: "AWB", modes: AIR },
+  { category: "International Freight Charges", code: "FW-01", description: "Forwarding Fee", cur: "USD", unit: "1% of International Freight (USD)" },
   { category: "International Freight Charges", code: "OF-01", description: "Ocean Freight", cur: "USD", unit: "", modes: SEA },
   { category: "International Freight Charges", code: "OF-02", description: "Release Fee", cur: "USD", unit: "", modes: SEA },
   { category: "International Freight Charges", code: "OF-06", description: "Ocean Freight (LCL-DDP)", cur: "USD", unit: "W/M", modes: SEA },
@@ -45,6 +45,7 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "Destination Handling and Delivery Charges", code: "OF-03", description: "Dest. De-Grouping Fee", cur: "ZAR", unit: "", modes: SEA },
   { category: "Destination Handling and Delivery Charges", code: "OF-04", description: "LCL Loading (In/Out) Fee", cur: "ZAR", unit: "", modes: SEA },
   { category: "Destination Handling and Delivery Charges", code: "OF-05", description: "Container Import Charges", cur: "ZAR", unit: "", modes: SEA },
+  { category: "Destination Handling and Delivery Charges", code: "OF-07", description: "Cargo Dues", cur: "ZAR", unit: "P/CTNR", modes: SEA },
 
   // ---- Customs Clearance, VAT and Duty Charges ----
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-02", description: "Customs VAT", cur: "ZAR", unit: "AWB" },
