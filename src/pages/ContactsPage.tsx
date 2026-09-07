@@ -12,6 +12,7 @@ import {
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import { useCreateClientInvite } from "../lib/hooks";
+import { PORTAL_SIGNUP_ENABLED } from "../lib/flags";
 import ClientActivity from "./ClientActivity";
 import type { Contact } from "../lib/types";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
@@ -284,7 +285,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
           stickyHeader={kind === "client"}
           headerActions={
             <>
-              {kind === "client" && (
+              {kind === "client" && PORTAL_SIGNUP_ENABLED && (
                 <button
                   className="btn outline"
                   onClick={() => onInvite(viewing)}

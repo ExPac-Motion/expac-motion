@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { claimClientInvite, getInvite } from "../../lib/db";
+import { PORTAL_SIGNUP_ENABLED } from "../../lib/flags";
 import { useInvite } from "../../lib/hooks";
 
 /**
@@ -83,6 +84,29 @@ export default function PortalSignupPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (!PORTAL_SIGNUP_ENABLED) {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="brand">
+            <div className="brand-mark">E</div>
+            <div>
+              <div className="brand-name">ExPac</div>
+              <div className="brand-sub" style={{ color: "#9aa39a" }}>
+                CUSTOMER PORTAL
+              </div>
+            </div>
+          </div>
+          <h1>Not available yet</h1>
+          <p className="sub">
+            The ExPac customer portal is still being set up. Your invite link
+            stays valid — we'll let you know the moment it's ready.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!token) {
