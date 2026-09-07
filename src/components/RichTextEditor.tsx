@@ -10,6 +10,11 @@ const MERGE_TAGS = [
 
 /** Email-safe families. Value is the full stack applied to the selection. */
 const FONT_FAMILIES = [
+  {
+    label: "System",
+    value:
+      "-apple-system, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  },
   { label: "Arial", value: "Arial, Helvetica, sans-serif" },
   { label: "Georgia", value: "Georgia, 'Times New Roman', serif" },
   { label: "Times New Roman", value: "'Times New Roman', Times, serif" },
@@ -19,13 +24,11 @@ const FONT_FAMILIES = [
   { label: "Trebuchet MS", value: "'Trebuchet MS', Helvetica, sans-serif" },
 ];
 
-const FONT_SIZES = [
-  { label: "Small", value: "12px" },
-  { label: "Normal", value: "14px" },
-  { label: "Medium", value: "16px" },
-  { label: "Large", value: "20px" },
-  { label: "Huge", value: "28px" },
-];
+/** 7px – 20px, one step per pixel. */
+const FONT_SIZES = Array.from({ length: 14 }, (_, i) => {
+  const px = `${i + 7}px`;
+  return { label: px, value: px };
+});
 
 const DEFAULT_FOLDER = "General";
 
