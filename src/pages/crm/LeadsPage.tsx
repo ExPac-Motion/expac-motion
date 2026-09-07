@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import RichTextEditor from "../../components/RichTextEditor";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
@@ -18,6 +19,7 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -32,6 +34,7 @@ import {
   useProfiles,
   useReplaceLeadContacts,
   useSaveLead,
+  useUpdateLeadsBulk,
   useUploadMailAsset,
 } from "../../lib/hooks";
 import { createLeadContacts, listLeadContacts } from "../../lib/db";
@@ -159,8 +162,10 @@ export default function LeadsPage() {
   const statusesQ = useLeadStatuses();
   const remove = useDeleteLead();
   const bulkCreate = useCreateLeadsBulk();
+  const bulkUpdate = useUpdateLeadsBulk();
   const createOpportunity = useCreateOpportunity();
   const { toast, error: toastError } = useToast();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const profilesQ = useProfiles();
   const [editing, setEditing] = useState<Lead | "new" | null>(null);
@@ -235,6 +240,8 @@ export default function LeadsPage() {
     if (sort.dir === "desc") out.reverse();
     return out;
   }, [rows, filters, sort, search]);
+
+  const sel = useRowSelection(rows, displayed);
 
   async function onDelete(row: Lead) {
     if (!window.confirm(`Remove lead "${row.company}"?`)) return;
@@ -426,6 +433,18 @@ export default function LeadsPage() {
               style={{ display: "none" }}
               onChange={onImportFile}
             />
+            <button
+              className="btn outline"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the Actions column to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+            </button>
             <button className="btn" onClick={() => setEditing("new")}>
               + Add Lead
             </button>
@@ -615,7 +634,11 @@ export default function LeadsPage() {
               <thead>
                 <tr>
                   <th className="actions-col">
-                    <RowActionsHead />
+                    <RowActionsHead
+                      checked={sel.allChecked}
+                      indeterminate={sel.someChecked}
+                      onToggle={sel.toggleAll}
+                    />
                   </th>
                   <th>Company</th>
                   {show("contact") && <th>Contact</th>}
@@ -635,6 +658,8 @@ export default function LeadsPage() {
                   <tr key={r.id}>
                     <td>
                       <RowActions
+                        selected={sel.isSelected(r.id)}
+                        onSelectToggle={() => sel.toggle(r.id)}
                         onMail={() => setMailing(r)}
                         mailTitle="Send email"
                         onView={() => setViewing(r)}
@@ -787,6 +812,61 @@ export default function LeadsPage() {
           key={mailing.id}
           lead={mailing}
           onClose={() => setMailing(null)}
+        />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} lead${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="lead"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "lead_status_id",
+              label: "Status",
+              type: "select",
+              options: statuses.map((s) => ({ value: s.id, label: s.name })),
+            },
+            {
+              key: "sales_person_id",
+              label: "Sales Person",
+              type: "select",
+              options: salesPeople.map((p) => ({
+                value: p.id,
+                label: p.full_name || "—",
+              })),
+            },
+            {
+              key: "source",
+              label: "Source",
+              type: "text",
+              placeholder: "Referral, website, trade show…",
+            },
+            {
+              key: "description",
+              label: "Description",
+              type: "textarea",
+              placeholder: "Short summary of the lead",
+            },
+          ]}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as LeadPatch,
+              });
+              toast(`Updated ${n} lead${n === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e2) {
+              toastError(
+                e2 instanceof Error ? e2.message : "Could not update leads",
+              );
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
         />
       )}
     </>

@@ -177,7 +177,8 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [templateId, setTemplateId] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusIds, setStatusIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<{ sent: number; total: number } | null>(
     null,
@@ -193,11 +194,32 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // Every lead we're allowed to email — the pool the picker and Send draw from.
+  const mailable = useMemo(
+    () => (leads ?? []).filter((l) => l.email && !l.unsubscribed_at),
+    [leads],
+  );
+  // …narrowed by the status chips and the search box (what's shown in the list).
   const eligibleLeads = useMemo(() => {
-    let list = (leads ?? []).filter((l) => l.email && !l.unsubscribed_at);
-    if (statusFilter) list = list.filter((l) => l.lead_status_id === statusFilter);
+    let list = mailable;
+    if (statusIds.size)
+      list = list.filter(
+        (l) => l.lead_status_id && statusIds.has(l.lead_status_id),
+      );
+    const q = search.trim().toLowerCase();
+    if (q)
+      list = list.filter((l) =>
+        [l.company, l.contact, l.email]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
+      );
     return list;
-  }, [leads, statusFilter]);
+  }, [mailable, statusIds, search]);
+
+  const selectedCount = useMemo(
+    () => mailable.filter((l) => selected.has(l.id)).length,
+    [mailable, selected],
+  );
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -208,12 +230,21 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
     });
   }
 
+  function toggleStatus(id: string) {
+    setStatusIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function onSend() {
     if (!name.trim()) return toastError("Campaign name is required");
     if (!subject.trim()) return toastError("Subject is required");
-    if (selected.size === 0) return toastError("Pick at least one recipient");
+    if (selectedCount === 0) return toastError("Pick at least one recipient");
 
-    const recipients = eligibleLeads
+    const recipients = mailable
       .filter((l) => selected.has(l.id))
       .map((l) => ({
         leadId: l.id,
@@ -271,22 +302,37 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
         />
       </div>
       <div className="field">
-        <label>Recipients — Leads only, must have an email and not be unsubscribed</label>
-        <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All lead statuses</option>
-            {(statuses ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+        <label>
+          Recipients ({selectedCount} selected) — Leads only, must have an email
+          and not be unsubscribed
+        </label>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <input
+            type="search"
+            placeholder="Search name, company or email…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: "1 1 220px", minWidth: 180 }}
+          />
           <button
             type="button"
             className="btn outline btn-sm"
-            onClick={() => setSelected(new Set(eligibleLeads.map((l) => l.id)))}
+            onClick={() =>
+              setSelected(
+                (prev) =>
+                  new Set([...prev, ...eligibleLeads.map((l) => l.id)]),
+              )
+            }
           >
-            Select all ({eligibleLeads.length})
+            Select all shown ({eligibleLeads.length})
           </button>
           <button
             type="button"
@@ -296,10 +342,32 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
             Clear
           </button>
         </div>
+        {(statuses ?? []).length > 0 && (
+          <div className="chips" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className={`chip${statusIds.size === 0 ? " on" : ""}`}
+              onClick={() => setStatusIds(new Set())}
+            >
+              All statuses
+            </button>
+            {(statuses ?? []).map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`chip${statusIds.has(s.id) ? " on" : ""}`}
+                onClick={() => toggleStatus(s.id)}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="lead-picker">
           {eligibleLeads.length === 0 ? (
             <p className="hint">
-              No eligible leads match this filter (needs an email, and not unsubscribed).
+              No eligible leads match the current status / search (recipients also
+              need an email and must not be unsubscribed).
             </p>
           ) : (
             eligibleLeads.map((l) => (
@@ -332,7 +400,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
         <button type="button" className="btn" onClick={onSend} disabled={send.isPending}>
           {send.isPending
             ? "Sending…"
-            : `Send to ${selected.size} recipient${selected.size === 1 ? "" : "s"}`}
+            : `Send to ${selectedCount} recipient${selectedCount === 1 ? "" : "s"}`}
         </button>
       </div>
     </Modal>

@@ -328,6 +328,15 @@ export async function deleteQuote(id: string): Promise<void> {
   unwrap(await supabase.from("quotes").delete().eq("id", id));
 }
 
+/** Apply one patch to every listed quote (Bulk Edit on the Quotations table). */
+export async function updateQuotesBulk(
+  ids: string[],
+  patch: { status?: string; sales_person_id?: string | null },
+): Promise<void> {
+  if (ids.length === 0) return;
+  unwrap(await supabase.from("quotes").update(patch).in("id", ids).select("id"));
+}
+
 /* ---------- Import VAT / Duty Output ---------- */
 
 /** The worksheet for a quote, or null if none has been saved yet. */
@@ -423,6 +432,17 @@ export async function updateJob(id: string, patch: JobPatch): Promise<void> {
 
 export async function deleteJob(id: string): Promise<void> {
   unwrap(await supabase.from("jobs").delete().eq("id", id));
+}
+
+/** Apply one patch to every listed job (Bulk Edit on the Shipments board). */
+export async function updateJobsBulk(
+  ids: string[],
+  patch: JobPatch,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) clean[k] = v === "" ? null : v;
+  unwrap(await supabase.from("jobs").update(clean).in("id", ids).select("id"));
 }
 
 /** Inserts a standalone job row (Duplicate on the board) — not tied to a quote. */
@@ -708,6 +728,18 @@ export async function deleteRateSheetItem(id: string): Promise<void> {
   unwrap(await supabase.from("rate_sheet").delete().eq("id", id));
 }
 
+/** Apply one patch to every listed rate (Bulk Edit on the Rates & Tariff sheet). */
+export async function updateRateSheetItemsBulk(
+  ids: string[],
+  patch: RateSheetPatch,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  unwrap(
+    await supabase.from("rate_sheet").update(row).in("id", ids).select("id"),
+  );
+}
+
 /* ---------- Sales CRM: Leads ---------- */
 const LEAD_SELECT =
   "*, lead_status:lead_statuses(id,name,promotes_to_customer), sales_person:profiles(id,full_name)";
@@ -756,6 +788,16 @@ export async function saveLead(
 
 export async function deleteLead(id: string): Promise<void> {
   unwrap(await supabase.from("leads").delete().eq("id", id));
+}
+
+/** Apply one patch to every listed lead (Bulk Edit on the Leads table). */
+export async function updateLeadsBulk(
+  ids: string[],
+  patch: LeadPatch,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  unwrap(await supabase.from("leads").update(row).in("id", ids).select("id"));
 }
 
 /** Bulk create from a CSV/Excel import — bad rows are skipped, not fatal. */
@@ -1194,6 +1236,22 @@ export async function saveFollowUpRule(
 
 export async function deleteFollowUpRule(id: string): Promise<void> {
   unwrap(await supabase.from("follow_up_rules").delete().eq("id", id));
+}
+
+/** Apply one patch to every listed rule (Bulk Edit on the Follow-up rules table). */
+export async function updateFollowUpRulesBulk(
+  ids: string[],
+  patch: FollowUpRulePatch,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  unwrap(
+    await supabase
+      .from("follow_up_rules")
+      .update(row)
+      .in("id", ids)
+      .select("id"),
+  );
 }
 
 export async function listFollowUpLog(): Promise<FollowUpLogEntry[]> {

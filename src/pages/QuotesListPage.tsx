@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
@@ -8,10 +9,17 @@ import {
   RowActions,
   RowActionsHead,
   StatusBadge,
+  useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import QuoteDetailModal from "./QuoteDetailModal";
-import { useDeleteQuote, useQuotes, useSaveQuote } from "../lib/hooks";
+import {
+  useDeleteQuote,
+  useProfiles,
+  useQuotes,
+  useSaveQuote,
+  useUpdateQuotesBulk,
+} from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
 import { money, newReference, portCode, todayPlusDays } from "../lib/format";
 import { STATUS_LABEL, type Quote, type QuoteDraft, type QuoteStatus } from "../lib/types";
@@ -67,6 +75,10 @@ export default function QuotesListPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const del = useDeleteQuote();
   const save = useSaveQuote();
+  const bulkUpdate = useUpdateQuotesBulk();
+  const profilesQ = useProfiles();
+  const salesPeople = profilesQ.data ?? [];
+  const [bulkOpen, setBulkOpen] = useState(false);
   const { toast, error: toastError } = useToast();
   const [params] = useSearchParams();
   const status = params.get("status");
@@ -97,15 +109,31 @@ export default function QuotesListPage() {
     return filter === "all" ? list : list.filter((q) => q.status === filter);
   }, [quotes, filter]);
 
+  const sel = useRowSelection(quotes ?? [], rows);
+
   return (
     <>
       <PageHeader
         eyebrow="Pricing & costing"
         title="Quotations"
         actions={
-          <button className="btn" onClick={() => navigate("/quotes/new")}>
-            New Quotation
-          </button>
+          <>
+            <button
+              className="btn outline"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the Actions column to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+            </button>
+            <button className="btn" onClick={() => navigate("/quotes/new")}>
+              New Quotation
+            </button>
+          </>
         }
       />
 
@@ -133,7 +161,11 @@ export default function QuotesListPage() {
               <thead>
                 <tr>
                   <th className="actions-col">
-                    <RowActionsHead />
+                    <RowActionsHead
+                      checked={sel.allChecked}
+                      indeterminate={sel.someChecked}
+                      onToggle={sel.toggleAll}
+                    />
                   </th>
                   <th>Reference</th>
                   <th>Customer</th>
@@ -158,6 +190,8 @@ export default function QuotesListPage() {
                     >
                       <td>
                         <RowActions
+                          selected={sel.isSelected(q.id)}
+                          onSelectToggle={() => sel.toggle(q.id)}
                           onView={() => setOpenId(q.id)}
                           onEdit={() => navigate(`/quotes/${q.id}`)}
                           onDelete={() => onDelete(q)}
@@ -191,6 +225,55 @@ export default function QuotesListPage() {
 
       {openId && (
         <QuoteDetailModal quoteId={openId} onClose={() => setOpenId(null)} />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} quote${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="quote"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "status",
+              label: "Status",
+              type: "select",
+              allowClear: false,
+              options: (["open", "sent", "accepted", "lost"] as QuoteStatus[]).map(
+                (s) => ({ value: s, label: STATUS_LABEL[s] }),
+              ),
+            },
+            {
+              key: "sales_person_id",
+              label: "Sales Person",
+              type: "select",
+              options: salesPeople.map((p) => ({
+                value: p.id,
+                label: p.full_name || "—",
+              })),
+            },
+          ]}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as {
+                  status?: string;
+                  sales_person_id?: string | null;
+                },
+              });
+              toast(`Updated ${n} quote${n === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e) {
+              toastError(
+                e instanceof Error ? e.message : "Could not update quotes",
+              );
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
       )}
     </>
   );

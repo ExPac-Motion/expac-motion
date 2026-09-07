@@ -2,12 +2,14 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   PageHeader,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import {
@@ -18,6 +20,7 @@ import {
   useSetJobMilestone,
   useShipmentDocuments,
   useUpdateJob,
+  useUpdateJobsBulk,
   useUploadShipmentDocument,
 } from "../lib/hooks";
 import { getShipmentDocumentUrl } from "../lib/db";
@@ -51,6 +54,8 @@ function codeOf(s: string | null | undefined): string {
 
 function JobRow({
   job,
+  selected,
+  onSelectToggle,
   onSave,
   onOpenComms,
   onView,
@@ -59,6 +64,8 @@ function JobRow({
   onDuplicate,
 }: {
   job: Job;
+  selected: boolean;
+  onSelectToggle: () => void;
   onSave: (id: string, patch: JobPatch) => void;
   onOpenComms: (job: Job) => void;
   onView: (job: Job) => void;
@@ -101,6 +108,8 @@ function JobRow({
     <tr>
       <td>
         <RowActions
+          selected={selected}
+          onSelectToggle={onSelectToggle}
           onMail={() => onOpenComms(job)}
           mailTitle="Messages / email the customer"
           onView={() => onView(job)}
@@ -302,6 +311,7 @@ const COPY: Record<
 export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const { data: jobs, isLoading, isError, error } = useJobs();
   const updateJob = useUpdateJob();
+  const bulkUpdate = useUpdateJobsBulk();
   const deleteJob = useDeleteJob();
   const createJob = useCreateJob();
   const setMilestone = useSetJobMilestone();
@@ -312,6 +322,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [railOpen, setRailOpen] = useState(false);
   const [viewing, setViewing] = useState<Job | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   function openComms(j: Job) {
     setCommsJob(j);
@@ -355,6 +366,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   );
   const rows = stageRows.filter((j) => matchesModeTab(j.mode, modeTab));
   const modeLabel = MODE_TABS.find((t) => t.key === modeTab)?.label ?? "";
+  const sel = useRowSelection(jobs ?? [], rows);
 
   function save(id: string, patch: JobPatch) {
     const toDone = patch.shipment_status === DELIVERED_STATUS;
@@ -408,6 +420,18 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               {modeTab !== "All" ? ` · ${modeLabel} only` : ""}
             </p>
           </div>
+          <button
+            className="btn outline"
+            onClick={() => setBulkOpen(true)}
+            disabled={sel.count === 0}
+            title={
+              sel.count === 0
+                ? "Tick rows in the Actions column to bulk edit"
+                : undefined
+            }
+          >
+            Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+          </button>
         </div>
 
         {isLoading ? (
@@ -433,7 +457,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               <thead>
                 <tr>
                   <th className="actions-col">
-                    <RowActionsHead />
+                    <RowActionsHead
+                      checked={sel.allChecked}
+                      indeterminate={sel.someChecked}
+                      onToggle={sel.toggleAll}
+                    />
                   </th>
                   <th>Created On</th>
                   <th>Shipment</th>
@@ -459,6 +487,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <JobRow
                     key={j.id}
                     job={j}
+                    selected={sel.isSelected(j.id)}
+                    onSelectToggle={() => sel.toggle(j.id)}
                     onSave={save}
                     onOpenComms={openComms}
                     onView={setViewing}
@@ -499,6 +529,61 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             save(editingJob.id, patch);
             setEditingJob(null);
           }}
+        />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} shipment${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="shipment"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "shipment_status",
+              label: "Shipment Status",
+              type: "select",
+              allowClear: false,
+              options: SHIPMENT_STATUSES.map((s) => ({ value: s, label: s })),
+            },
+            { key: "shipping_line", label: "Shipping Line", type: "text" },
+            { key: "carrier_name", label: "Agent/Airline", type: "text" },
+          ]}
+          onApply={async (patch) => {
+            const ids = sel.ids;
+            const n = sel.count;
+            const status = patch.shipment_status;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids,
+                patch: patch as unknown as JobPatch,
+              });
+              if (typeof status === "string" && status) {
+                const milestone = MILESTONE_BY_STATUS[status];
+                if (milestone) {
+                  for (const id of ids) {
+                    setMilestone.mutate({
+                      jobId: id,
+                      milestone,
+                      note: `Shipment Status set to "${status}"`,
+                    });
+                  }
+                }
+              }
+              toast(
+                status === DELIVERED_STATUS
+                  ? `${n} shipment${n === 1 ? "" : "s"} delivered — moved to Completed Shipments`
+                  : `Updated ${n} shipment${n === 1 ? "" : "s"}`,
+              );
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e) {
+              toastError(
+                e instanceof Error ? e.message : "Could not update shipments",
+              );
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
         />
       )}
     </>

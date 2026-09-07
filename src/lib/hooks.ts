@@ -202,6 +202,16 @@ export function useDeleteQuote() {
     },
   });
 }
+export function useUpdateQuotesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      ids: string[];
+      patch: { status?: string; sales_person_id?: string | null };
+    }) => db.updateQuotesBulk(input.ids, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
+  });
+}
 export function useAcceptQuote() {
   const qc = useQueryClient();
   return useMutation({
@@ -443,6 +453,14 @@ export function useDeleteRateSheetItem() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["rate_sheet"] }),
   });
 }
+export function useUpdateRateSheetItemsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: RateSheetPatch }) =>
+      db.updateRateSheetItemsBulk(input.ids, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rate_sheet"] }),
+  });
+}
 
 /* ---------- Sales CRM: Leads ---------- */
 export function useLeadStatuses() {
@@ -482,6 +500,17 @@ export function useDeleteLead() {
   return useMutation({
     mutationFn: db.deleteLead,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+}
+export function useUpdateLeadsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: LeadPatch }) =>
+      db.updateLeadsBulk(input.ids, input.patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
   });
 }
 export function useCreateLeadsBulk() {
@@ -642,6 +671,14 @@ export function useDeleteFollowUpRule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.deleteFollowUpRule,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["follow_up_rules"] }),
+  });
+}
+export function useUpdateFollowUpRulesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: FollowUpRulePatch }) =>
+      db.updateFollowUpRulesBulk(input.ids, input.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["follow_up_rules"] }),
   });
 }
@@ -867,6 +904,14 @@ export function useDeleteJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.deleteJob,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+}
+export function useUpdateJobsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: JobPatch }) =>
+      db.updateJobsBulk(input.ids, input.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 }

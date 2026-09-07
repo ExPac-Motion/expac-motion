@@ -1,5 +1,15 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
+import Modal from "./Modal";
 
 /** Rounded search field with a magnifier icon, for list pages. */
 export function SearchInput({
@@ -103,11 +113,17 @@ const ROW_ICON = {
 };
 
 /**
- * Leading Actions cell for list tables: a reserved (currently inert) bulk-select
- * checkbox + View / Edit / Delete / Duplicate icon buttons. Every control stops
- * propagation since these rows are often themselves clickable (opens View).
+ * Leading Actions cell for list tables: a bulk-select checkbox + View / Edit /
+ * Delete / Duplicate icon buttons. Every control stops propagation since these
+ * rows are often themselves clickable (opens View).
+ *
+ * Pass `onSelectToggle` (paired with a `useRowSelection` head) to make the
+ * checkbox live; omit it and the checkbox stays inert (pages not yet wired for
+ * bulk actions).
  */
 export function RowActions({
+  selected,
+  onSelectToggle,
   onMail,
   mailTitle = "Send a message",
   onView,
@@ -115,6 +131,9 @@ export function RowActions({
   onDelete,
   onDuplicate,
 }: {
+  /** Controlled bulk-select state — only when `onSelectToggle` is also given. */
+  selected?: boolean;
+  onSelectToggle?: () => void;
   /** When set, a mail icon is shown first (after the checkbox). */
   onMail?: () => void;
   mailTitle?: string;
@@ -131,7 +150,17 @@ export function RowActions({
   };
   return (
     <div className="row-icons">
-      <input type="checkbox" onClick={(e) => e.stopPropagation()} />
+      {onSelectToggle ? (
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={onSelectToggle}
+          onClick={(e) => e.stopPropagation()}
+          title="Select row"
+        />
+      ) : (
+        <input type="checkbox" onClick={(e) => e.stopPropagation()} />
+      )}
       {onMail && (
         <button className="row-icon-btn" title={mailTitle} onClick={stop(onMail)}>
           {ROW_ICON.mail}
@@ -169,13 +198,266 @@ export function RowActions({
   );
 }
 
-/** Header cell to pair with RowActions: a select-all checkbox + "Actions" label. */
-export function RowActionsHead() {
+/** Header cell to pair with RowActions: a select-all checkbox + "Actions" label.
+ *  Pass `onToggle` (from `useRowSelection`) to make the checkbox live. */
+export function RowActionsHead({
+  checked,
+  indeterminate,
+  onToggle,
+}: {
+  checked?: boolean;
+  indeterminate?: boolean;
+  onToggle?: () => void;
+} = {}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = !!indeterminate && !checked;
+  }, [indeterminate, checked]);
   return (
     <div className="row-icons row-icons-head">
-      <input type="checkbox" />
+      {onToggle ? (
+        <input
+          ref={ref}
+          type="checkbox"
+          checked={!!checked}
+          onChange={onToggle}
+          title="Select all"
+        />
+      ) : (
+        <input type="checkbox" />
+      )}
       <span>Actions</span>
     </div>
+  );
+}
+
+/* ---------- bulk selection + bulk edit ---------- */
+
+/**
+ * Bulk-select state for a list table. Pass the full row list; optionally pass
+ * the on-screen subset (after filters) as `visibleRows` so "select all" only
+ * touches what's visible while selections survive a filter change. Rows that
+ * leave the list entirely (deleted / refetched away) drop out of the count on
+ * their own — the raw id set is filtered against the live rows on every read.
+ */
+export function useRowSelection<T extends { id: string }>(
+  allRows: T[],
+  visibleRows: T[] = allRows,
+) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+
+  const liveIds = useMemo(
+    () => new Set(allRows.map((r) => r.id)),
+    [allRows],
+  );
+  const effective = useMemo(
+    () => [...selected].filter((id) => liveIds.has(id)),
+    [selected, liveIds],
+  );
+  const effectiveSet = useMemo(() => new Set(effective), [effective]);
+  const visibleIds = useMemo(() => visibleRows.map((r) => r.id), [visibleRows]);
+
+  const toggle = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelected((prev) => {
+      const everyOn =
+        visibleIds.length > 0 && visibleIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      visibleIds.forEach((id) => {
+        if (everyOn) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
+  }, [visibleIds]);
+
+  const clear = useCallback(() => setSelected(new Set()), []);
+
+  const allChecked =
+    visibleIds.length > 0 && visibleIds.every((id) => effectiveSet.has(id));
+  const someChecked = visibleIds.some((id) => effectiveSet.has(id));
+
+  return {
+    ids: effective,
+    count: effective.length,
+    isSelected: (id: string) => effectiveSet.has(id),
+    toggle,
+    toggleAll,
+    clear,
+    allChecked,
+    someChecked,
+  };
+}
+
+export type BulkField = {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "number" | "select" | "toggle";
+  /** Options for `type: "select"`. */
+  options?: { value: string; label: string }[];
+  /** Labels for `type: "toggle"` (defaults Yes / No). */
+  onLabel?: string;
+  offLabel?: string;
+  placeholder?: string;
+  /** `false` removes the "— clear —" choice, so the field can only be set,
+   *  not blanked (use for NOT NULL columns like a quote's status). */
+  allowClear?: boolean;
+};
+
+/**
+ * Generic "change these fields on every selected row" dialog. Each field has a
+ * tick that enables its input; only ticked fields end up in the patch, so
+ * untouched columns are left exactly as they were.
+ */
+export function BulkEditModal({
+  title,
+  count,
+  noun = "row",
+  fields,
+  busy,
+  onApply,
+  onClose,
+}: {
+  title: string;
+  count: number;
+  noun?: string;
+  fields: BulkField[];
+  busy?: boolean;
+  onApply: (patch: Record<string, string | number | boolean | null>) => void;
+  onClose: () => void;
+}) {
+  const [on, setOn] = useState<Record<string, boolean>>({});
+  const [val, setVal] = useState<Record<string, string>>({});
+  const anyOn = fields.some((f) => on[f.key]);
+
+  const fallback = (f: BulkField) =>
+    f.type === "toggle"
+      ? "true"
+      : f.type === "select" && f.allowClear === false
+        ? f.options?.[0]?.value ?? ""
+        : "";
+
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const patch: Record<string, string | number | boolean | null> = {};
+    for (const f of fields) {
+      if (!on[f.key]) continue;
+      const raw = (val[f.key] ?? fallback(f)).trim();
+      if (f.type === "toggle") {
+        patch[f.key] = raw === "true";
+      } else if (raw === "") {
+        if (f.allowClear === false) continue;
+        patch[f.key] = null;
+      } else if (f.type === "number") {
+        patch[f.key] = Number(raw);
+      } else {
+        patch[f.key] = raw;
+      }
+    }
+    if (Object.keys(patch).length === 0) return;
+    onApply(patch);
+  }
+
+  return (
+    <Modal title={title} onClose={onClose} wide>
+      <form onSubmit={submit}>
+        <p className="hint" style={{ marginTop: 0 }}>
+          Changes apply to <strong>{count}</strong> selected{" "}
+          {count === 1 ? noun : `${noun}s`}. Tick a field to change it — anything
+          left unticked stays as it is.
+        </p>
+        {fields.map((f) => (
+          <div className="field" key={f.key}>
+            <label className="check" style={{ margin: "10px 0 0" }}>
+              <input
+                type="checkbox"
+                checked={!!on[f.key]}
+                onChange={(e) =>
+                  setOn((p) => ({ ...p, [f.key]: e.target.checked }))
+                }
+              />
+              {f.label}
+            </label>
+            {on[f.key] &&
+              (f.type === "select" ? (
+                <select
+                  value={val[f.key] ?? fallback(f)}
+                  onChange={(e) =>
+                    setVal((p) => ({ ...p, [f.key]: e.target.value }))
+                  }
+                  style={{ marginTop: 6 }}
+                >
+                  {f.allowClear !== false && <option value="">— clear —</option>}
+                  {(f.options ?? []).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ) : f.type === "toggle" ? (
+                <select
+                  value={val[f.key] ?? "true"}
+                  onChange={(e) =>
+                    setVal((p) => ({ ...p, [f.key]: e.target.value }))
+                  }
+                  style={{ marginTop: 6 }}
+                >
+                  <option value="true">{f.onLabel ?? "Yes"}</option>
+                  <option value="false">{f.offLabel ?? "No"}</option>
+                </select>
+              ) : f.type === "textarea" ? (
+                <textarea
+                  rows={3}
+                  value={val[f.key] ?? ""}
+                  placeholder={f.placeholder}
+                  onChange={(e) =>
+                    setVal((p) => ({ ...p, [f.key]: e.target.value }))
+                  }
+                  style={{ marginTop: 6 }}
+                />
+              ) : (
+                <input
+                  type={f.type === "number" ? "number" : "text"}
+                  value={val[f.key] ?? ""}
+                  placeholder={f.placeholder}
+                  onChange={(e) =>
+                    setVal((p) => ({ ...p, [f.key]: e.target.value }))
+                  }
+                  style={{ marginTop: 6 }}
+                />
+              ))}
+          </div>
+        ))}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            marginTop: 16,
+          }}
+        >
+          <button
+            type="button"
+            className="btn outline"
+            onClick={onClose}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+          <button type="submit" className="btn" disabled={busy || !anyOn}>
+            {busy ? "Applying…" : `Apply to ${count}`}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

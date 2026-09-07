@@ -1,11 +1,13 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -15,12 +17,14 @@ import {
   useMailTemplates,
   useRunDueFollowUps,
   useSaveFollowUpRule,
+  useUpdateFollowUpRulesBulk,
 } from "../../lib/hooks";
 import { formatDateTime } from "../../lib/format";
 import {
   FOLLOW_UP_TRIGGERS,
   type FollowUpLogEntry,
   type FollowUpRule,
+  type FollowUpRulePatch,
   type FollowUpTrigger,
 } from "../../lib/types";
 
@@ -147,9 +151,11 @@ export default function FollowUpsPage() {
   const { data: templates } = useMailTemplates();
   const remove = useDeleteFollowUpRule();
   const runNow = useRunDueFollowUps();
+  const bulkUpdate = useUpdateFollowUpRulesBulk();
   const { toast, error: toastError } = useToast();
 
   const [editing, setEditing] = useState<FollowUpRule | "new" | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const templateName = useMemo(() => {
     const m = new Map((templates ?? []).map((t) => [t.id, t.name]));
@@ -158,6 +164,7 @@ export default function FollowUpsPage() {
 
   const rules = rulesQ.data ?? [];
   const log = logQ.data ?? [];
+  const sel = useRowSelection(rules);
 
   async function onDelete(row: FollowUpRule) {
     if (!window.confirm(`Delete rule "${row.name}"?`)) return;
@@ -198,6 +205,18 @@ export default function FollowUpsPage() {
             >
               {runNow.isPending ? "Running…" : "Run due follow-ups now"}
             </button>
+            <button
+              className="btn outline"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the Actions column to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+            </button>
             <button className="btn" onClick={() => setEditing("new")}>
               + New Rule
             </button>
@@ -216,7 +235,11 @@ export default function FollowUpsPage() {
               <thead>
                 <tr>
                   <th className="actions-col">
-                    <RowActionsHead />
+                    <RowActionsHead
+                      checked={sel.allChecked}
+                      indeterminate={sel.someChecked}
+                      onToggle={sel.toggleAll}
+                    />
                   </th>
                   <th>Name</th>
                   <th>Trigger</th>
@@ -230,6 +253,8 @@ export default function FollowUpsPage() {
                   <tr key={r.id}>
                     <td>
                       <RowActions
+                        selected={sel.isSelected(r.id)}
+                        onSelectToggle={() => sel.toggle(r.id)}
                         onView={() => setEditing(r)}
                         onEdit={() => setEditing(r)}
                         onDelete={() => onDelete(r)}
@@ -305,6 +330,57 @@ export default function FollowUpsPage() {
           key={editing === "new" ? "new" : editing.id}
           rule={editing}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} rule${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="rule"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "active",
+              label: "Active",
+              type: "toggle",
+              onLabel: "Active",
+              offLabel: "Inactive",
+            },
+            {
+              key: "template_id",
+              label: "Template to send",
+              type: "select",
+              allowClear: false,
+              options: (templates ?? []).map((t) => ({
+                value: t.id,
+                label: t.name,
+              })),
+            },
+            {
+              key: "delay_days",
+              label: "After how many days",
+              type: "number",
+              allowClear: false,
+            },
+          ]}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as FollowUpRulePatch,
+              });
+              toast(`Updated ${n} rule${n === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e) {
+              toastError(
+                e instanceof Error ? e.message : "Could not update rules",
+              );
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
         />
       )}
     </>

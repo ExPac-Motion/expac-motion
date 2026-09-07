@@ -79,6 +79,22 @@ export default function MediaPage() {
   const [extraFolders, setExtraFolders] = useState<string[]>([]);
   const [renaming, setRenaming] = useState<MediaAsset | null>(null);
   const [copied, setCopied] = useState<string>("");
+  const [view, setView] = useState<"grid" | "list">(() => {
+    try {
+      return localStorage.getItem("media.view") === "list" ? "list" : "grid";
+    } catch {
+      return "grid";
+    }
+  });
+
+  function pickView(v: "grid" | "list") {
+    setView(v);
+    try {
+      localStorage.setItem("media.view", v);
+    } catch {
+      /* private mode — non-fatal */
+    }
+  }
 
   const assets = useMemo(() => data ?? [], [data]);
 
@@ -119,6 +135,35 @@ export default function MediaPage() {
     if (!name) return;
     if (!folders.includes(name)) setExtraFolders((f) => [...f, name]);
     setFolder(name);
+  }
+
+  async function onDeleteFolder(name: string) {
+    if (name === DEFAULT_FOLDER) return;
+    const inFolder = assets.filter(
+      (a) => (a.folder || DEFAULT_FOLDER) === name,
+    );
+    const msg = inFolder.length
+      ? `Delete folder "${name}"? Its ${inFolder.length} image${
+          inFolder.length === 1 ? "" : "s"
+        } will be moved to ${DEFAULT_FOLDER}.`
+      : `Delete empty folder "${name}"?`;
+    if (!window.confirm(msg)) return;
+    try {
+      for (const a of inFolder) {
+        await move.mutateAsync({ id: a.id, folder: DEFAULT_FOLDER });
+      }
+      setExtraFolders((f) => f.filter((x) => x !== name));
+      setFolder(ALL);
+      toast(
+        inFolder.length
+          ? `Folder deleted — ${inFolder.length} image${
+              inFolder.length === 1 ? "" : "s"
+            } moved to ${DEFAULT_FOLDER}`
+          : "Folder deleted",
+      );
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not delete folder");
+    }
   }
 
   async function onDelete(a: MediaAsset) {
@@ -188,6 +233,20 @@ export default function MediaPage() {
           >
             <span>{f}</span>
             <span className="media-folder-count">{countFor(f)}</span>
+            {f !== DEFAULT_FOLDER && (
+              <span
+                className="media-folder-del"
+                role="button"
+                tabIndex={-1}
+                title={`Delete folder "${f}"`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteFolder(f);
+                }}
+              >
+                ✕
+              </span>
+            )}
           </button>
         ))}
         <button className="btn outline btn-sm media-newfolder" onClick={onNewFolder}>
@@ -204,13 +263,33 @@ export default function MediaPage() {
               <strong>{uploadFolder}</strong>.
             </p>
           </div>
-          <button
-            className="btn"
-            onClick={() => fileRef.current?.click()}
-            disabled={upload.isPending}
-          >
-            {upload.isPending ? "Uploading…" : "Upload"}
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="media-viewtoggle" role="group" aria-label="View">
+              <button
+                type="button"
+                className={`chip${view === "grid" ? " on" : ""}`}
+                onClick={() => pickView("grid")}
+                title="Grid view"
+              >
+                Grid
+              </button>
+              <button
+                type="button"
+                className={`chip${view === "list" ? " on" : ""}`}
+                onClick={() => pickView("list")}
+                title="List view"
+              >
+                List
+              </button>
+            </div>
+            <button
+              className="btn"
+              onClick={() => fileRef.current?.click()}
+              disabled={upload.isPending}
+            >
+              {upload.isPending ? "Uploading…" : "Upload"}
+            </button>
+          </div>
           <input
             ref={fileRef}
             type="file"
@@ -232,7 +311,7 @@ export default function MediaPage() {
               : "This folder is empty. Upload an image or pick another folder."}
           </EmptyState>
         ) : (
-          <div className="media-grid">
+          <div className={`media-grid${view === "list" ? " is-list" : ""}`}>
             {shown.map((a) => (
               <figure key={a.id} className="media-card">
                 <div className="media-thumb">

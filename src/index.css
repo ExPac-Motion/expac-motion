@@ -3365,6 +3365,31 @@ tr.clickable:hover {
 .media-folder-count {
   font-size: 0.78rem;
   color: var(--muted);
+  margin-left: auto;
+}
+.media-folder-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.media-folder:hover .media-folder-del,
+.media-folder.active .media-folder-del {
+  opacity: 1;
+}
+.media-folder-del:hover {
+  background: #fdecea;
+  color: #b3261e;
+}
+.media-viewtoggle {
+  display: inline-flex;
+  gap: 4px;
 }
 .media-newfolder {
   margin-top: 8px;
@@ -3375,6 +3400,31 @@ tr.clickable:hover {
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 14px;
   margin-top: 12px;
+}
+.media-grid.is-list {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.media-grid.is-list .media-card {
+  flex-direction: row;
+  align-items: stretch;
+}
+.media-grid.is-list .media-thumb {
+  flex: 0 0 132px;
+  width: 132px;
+  aspect-ratio: auto;
+}
+.media-grid.is-list .media-card figcaption {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+.media-grid.is-list .media-name,
+.media-grid.is-list .media-meta {
+  white-space: normal;
+}
+.media-grid.is-list .media-actions {
+  margin-top: 8px;
 }
 .media-card {
   margin: 0;

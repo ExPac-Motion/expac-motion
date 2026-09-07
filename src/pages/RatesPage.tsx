@@ -1,18 +1,21 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../components/Modal";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   PageHeader,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import {
   useDeleteRateSheetItem,
   useRateSheet,
   useSaveRateSheetItem,
+  useUpdateRateSheetItemsBulk,
 } from "../lib/hooks";
 import {
   CHARGE_CATEGORIES,
@@ -29,14 +32,18 @@ export default function RatesPage() {
   const { data, isLoading, isError, error } = useRateSheet();
   const save = useSaveRateSheetItem();
   const remove = useDeleteRateSheetItem();
+  const bulkUpdate = useUpdateRateSheetItemsBulk();
   const { toast, error: toastError } = useToast();
   const [editing, setEditing] = useState<RateSheetItem | "new" | null>(null);
   const [modeFilter, setModeFilter] = useState<QuoteMode | "All">("All");
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const rows = useMemo(() => {
     const list = data ?? [];
     return modeFilter === "All" ? list : list.filter((r) => r.mode === modeFilter);
   }, [data, modeFilter]);
+
+  const sel = useRowSelection(data ?? [], rows);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,9 +106,23 @@ export default function RatesPage() {
         eyebrow="Standard buy/sell rates"
         title="Rates & Tariff Sheet"
         actions={
-          <button className="btn" onClick={() => setEditing("new")}>
-            + Add rate
-          </button>
+          <>
+            <button
+              className="btn outline"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the Actions column to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+            </button>
+            <button className="btn" onClick={() => setEditing("new")}>
+              + Add rate
+            </button>
+          </>
         }
       />
 
@@ -137,7 +158,11 @@ export default function RatesPage() {
               <thead>
                 <tr>
                   <th className="actions-col">
-                    <RowActionsHead />
+                    <RowActionsHead
+                      checked={sel.allChecked}
+                      indeterminate={sel.someChecked}
+                      onToggle={sel.toggleAll}
+                    />
                   </th>
                   <th>Mode</th>
                   <th>Lane</th>
@@ -154,6 +179,8 @@ export default function RatesPage() {
                   <tr key={r.id}>
                     <td>
                       <RowActions
+                        selected={sel.isSelected(r.id)}
+                        onSelectToggle={() => sel.toggle(r.id)}
                         onView={() => setEditing(r)}
                         onEdit={() => setEditing(r)}
                         onDelete={() => onDelete(r)}
@@ -301,6 +328,55 @@ export default function RatesPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} rate${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="rate"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "category",
+              label: "Category",
+              type: "select",
+              allowClear: false,
+              options: CHARGE_CATEGORIES.map((c) => ({ value: c, label: c })),
+            },
+            {
+              key: "cur",
+              label: "Currency",
+              type: "select",
+              allowClear: false,
+              options: LINE_CURRENCIES.map((c) => ({ value: c, label: c })),
+            },
+            { key: "carrier", label: "Carrier", type: "text" },
+            {
+              key: "margin",
+              label: "Margin %",
+              type: "number",
+              allowClear: false,
+            },
+          ]}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as RateSheetPatch,
+              });
+              toast(`Updated ${n} rate${n === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e2) {
+              toastError(
+                e2 instanceof Error ? e2.message : "Could not update rates",
+              );
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
       )}
     </>
   );
