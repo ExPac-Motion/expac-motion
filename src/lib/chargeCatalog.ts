@@ -50,7 +50,7 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "Destination Handling and Delivery Charges", code: "OF-07", description: "Cargo Dues", cur: "ZAR", unit: "P/CTNR", modes: SEA, vat_pct: 15 },
 
   // ---- Customs Clearance, VAT and Duty Charges ----
-  { category: "Customs Clearance, VAT and Duty Charges", code: "CU-02", description: "Customs VAT", cur: "ZAR", unit: "AWB" },
+  { category: "Customs Clearance, VAT and Duty Charges", code: "CU-02", description: "Customs VAT", cur: "ZAR", unit: "AWB", vat_pct: 100 },
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-03", description: "Customs Duty", cur: "ZAR", unit: "AWB" },
   { category: "Customs Clearance, VAT and Duty Charges", code: "DIS-01", description: "Disbursement Fee", cur: "ZAR", unit: "DIS", vat_pct: 15 },
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-05", description: "Customs Clearance Fee", cur: "ZAR", unit: "AWB", vat_pct: 15 },

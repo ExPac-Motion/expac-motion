@@ -22,6 +22,7 @@ import {
   groupByCategory,
   impliedMargin,
   insuranceAmount,
+  CUSTOMS_VAT_CODE,
   SERVICE_FEE_CODES,
   serviceFeePrefillZar,
   lineTotal,
@@ -430,10 +431,13 @@ export default function QuoteBuilderPage() {
       const lines = d.lines.map((l, i) => {
         if (i !== index) return l;
         const merged = { ...l, ...patch } as QuoteLine;
-        // Service-fee lines hold a typed sell (R) — never derive it from buy.
+        // Sell-only lines (service fees + Customs VAT) hold a typed sell (R) —
+        // never derive it from buy.
+        const mergedCode = String(merged.code ?? "");
         const recompute =
           ("buy" in patch || "margin" in patch || "cur" in patch) &&
-          !SERVICE_FEE_CODES.includes(String(merged.code ?? ""));
+          !SERVICE_FEE_CODES.includes(mergedCode) &&
+          mergedCode !== CUSTOMS_VAT_CODE;
         if (recompute) {
           merged.sell = sellFromBuy(
             merged.buy,
@@ -1217,12 +1221,12 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
-                      // Service fees (IN-01 / FW-01 / DIS-01 / CU-05): no buy
-                      // cost, the Sell (R) cell is typed directly — pre-filled
-                      // on pick, then every cell is a normal editable field.
-                      const isServiceFee = SERVICE_FEE_CODES.includes(
-                        String(l.code ?? ""),
-                      );
+                      // Sell-only lines — service fees (IN-01 / FW-01 / DIS-01 /
+                      // CU-05) and Customs VAT (CU-02, whole amount is VAT):
+                      // no buy cost, the figure is typed straight into Sell (R).
+                      const isServiceFee =
+                        SERVICE_FEE_CODES.includes(String(l.code ?? "")) ||
+                        String(l.code ?? "") === CUSTOMS_VAT_CODE;
                       return (
                       <tr key={i}>
                         <td className="c-code">

@@ -110,14 +110,28 @@ export function lineVatPct(l: Pick<QuoteLine, "vat_pct">): number {
   return Number(l.vat_pct) || 0;
 }
 
-/** ZAR VAT amount on a line: lineTotal x vat_pct/100. */
-export function lineVat(l: QuoteLine): number {
-  return lineTotal(l) * (lineVatPct(l) / 100);
+/** A line whose whole amount IS a VAT amount (e.g. Customs VAT): vat_pct 100.
+ *  It carries no VAT-exclusive value — the sell is the tax itself. */
+export function isVatOnlyLine(l: Pick<QuoteLine, "vat_pct">): boolean {
+  return lineVatPct(l) >= 100;
 }
 
-/** ZAR line total including VAT. */
+/** VAT-exclusive ZAR value of a line: 0 for a VAT-only line, else lineTotal. */
+export function lineNet(l: QuoteLine): number {
+  return isVatOnlyLine(l) ? 0 : lineTotal(l);
+}
+
+/** ZAR VAT amount on a line: the whole amount for a VAT-only line, otherwise
+ *  lineTotal x vat_pct/100. */
+export function lineVat(l: QuoteLine): number {
+  return isVatOnlyLine(l)
+    ? lineTotal(l)
+    : lineTotal(l) * (lineVatPct(l) / 100);
+}
+
+/** ZAR line total including VAT (net + VAT — equals lineTotal either way). */
 export function lineTotalIncl(l: QuoteLine): number {
-  return lineTotal(l) + lineVat(l);
+  return lineNet(l) + lineVat(l);
 }
 
 /* ---------- Unit-driven quantity ---------- */
@@ -273,6 +287,19 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
     return { ...line, qty, buy: 0, margin: 0, sell: Number(line.sell) || 0 };
   }
 
+  // Customs VAT (CU-02): the whole amount is tax — a 100%-VAT line with no buy
+  // cost and no markup. The sell stands as entered / stored.
+  if (line.code === CUSTOMS_VAT_CODE) {
+    return {
+      ...line,
+      qty,
+      buy: 0,
+      margin: 0,
+      vat_pct: 100,
+      sell: Number(line.sell) || 0,
+    };
+  }
+
   return {
     ...line,
     qty,
@@ -300,8 +327,10 @@ export function chargeTotals(
   let sell = 0;
   let vat = 0;
   (lines || []).forEach((l) => {
-    cost += lineCostZar(l, fx);
-    sell += lineTotal(l);
+    // A VAT-only line (Customs VAT) is a pure pass-through — no cost, no
+    // margin, no net sale; the whole amount lands in the VAT bucket.
+    cost += isVatOnlyLine(l) ? 0 : lineCostZar(l, fx);
+    sell += lineNet(l);
     vat += lineVat(l);
   });
   const gp = sell - cost;
@@ -393,7 +422,7 @@ export function groupByCategory(lines: QuoteLine[]): CategoryGroup[] {
     const groupLines = lines
       .map((line, index) => ({ line, index }))
       .filter((x) => (x.line.category ?? CHARGE_CATEGORIES[0]) === category);
-    const subtotal = groupLines.reduce((s, x) => s + lineTotal(x.line), 0);
+    const subtotal = groupLines.reduce((s, x) => s + lineNet(x.line), 0);
     const vat = groupLines.reduce((s, x) => s + lineVat(x.line), 0);
     return {
       category,

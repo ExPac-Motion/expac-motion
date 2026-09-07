@@ -4,7 +4,8 @@ import { useClients, useCompanySettings, useQuote } from "../lib/hooks";
 import {
   fxOf,
   groupByCategory,
-  lineTotal,
+  isVatOnlyLine,
+  lineNet,
   lineTotalIncl,
   lineVat,
   lineVatPct,
@@ -112,7 +113,7 @@ export default function QuotePrintPage() {
   let vatTotal = 0;
   groups.forEach((g) =>
     g.lines.forEach((x) => {
-      exclusive += lineTotal(x.line);
+      exclusive += lineNet(x.line);
       vatTotal += lineVat(x.line);
     }),
   );
@@ -357,7 +358,7 @@ export default function QuotePrintPage() {
               let gEx = 0;
               let gIncl = 0;
               const rows = g.lines.map(({ line: l }, i) => {
-                const ex = lineTotal(l);
+                const ex = lineNet(l);
                 const incl = lineTotalIncl(l);
                 gEx += ex;
                 gIncl += incl;
@@ -369,7 +370,7 @@ export default function QuotePrintPage() {
                     </td>
                     <td>{l.unit || "—"}</td>
                     <td className="n">{n2(l.qty)}</td>
-                    <td className="n">{money(l.sell)}</td>
+                    <td className="n">{money(isVatOnlyLine(l) ? 0 : l.sell)}</td>
                     <td className="n">{n2(lineVatPct(l))}%</td>
                     <td className="n">{money(ex)}</td>
                     <td className="n">{money(incl)}</td>

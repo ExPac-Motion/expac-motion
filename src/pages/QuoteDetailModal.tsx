@@ -7,7 +7,7 @@ import {
   chargeTotals,
   fxOf,
   groupByCategory,
-  lineTotal,
+  lineNet,
   lineBuyTotal,
   lineTotalIncl,
   lineVatPct,
@@ -289,7 +289,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                           {l.cur} {lineBuyTotal(l).toFixed(2)}
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 700 }}>
-                          {money(lineTotal(l))}
+                          {money(lineNet(l))}
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 700 }}>
                           {money(lineTotalIncl(l))}
