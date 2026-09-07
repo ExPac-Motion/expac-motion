@@ -2021,9 +2021,11 @@ tr.clickable:hover {
 .qs-pgrid {
   display: grid;
   grid-template-columns: 112px 1fr;
-  gap: 1px 8px;
+  /* row gap + start offset match .qs-meta on the right so the two
+     blocks' rows stay level all the way down */
+  gap: 2px 8px;
   font-size: 11px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 .qs-pgrid b {
   font-weight: 400;
