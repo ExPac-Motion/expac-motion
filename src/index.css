@@ -1913,6 +1913,7 @@ tr.clickable:hover {
   grid-template-columns: auto auto;
   gap: 2px 18px;
   font-size: 11px;
+  line-height: 1.4;
 }
 .qs-meta b {
   font-weight: 400;
@@ -2021,8 +2022,10 @@ tr.clickable:hover {
 .qs-pgrid {
   display: grid;
   grid-template-columns: 112px 1fr;
-  gap: 1px 8px;
+  /* keep the row rhythm identical to the document-meta block on the right */
+  gap: 2px 8px;
   font-size: 11px;
+  line-height: 1.4;
   margin-top: 8px;
 }
 .qs-pgrid b {
