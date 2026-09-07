@@ -3,6 +3,7 @@ import {
   useDeleteTransporter,
   useSaveTransporter,
   useTransporters,
+  useUpdateContactsBulk,
 } from "../lib/hooks";
 
 export default function TransportersPage() {
@@ -12,6 +13,7 @@ export default function TransportersPage() {
       query={useTransporters()}
       save={useSaveTransporter()}
       remove={useDeleteTransporter()}
+      bulkUpdate={useUpdateContactsBulk("transporter")}
     />
   );
 }

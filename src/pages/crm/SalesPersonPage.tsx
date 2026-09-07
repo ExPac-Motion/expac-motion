@@ -1,14 +1,21 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
-import { useProfiles, useQuotes, useUpdateProfile } from "../../lib/hooks";
+import {
+  useProfiles,
+  useQuotes,
+  useUpdateProfile,
+  useUpdateProfilesBulk,
+} from "../../lib/hooks";
 import { chargeTotals, fxOf } from "../../lib/calc";
 import { money } from "../../lib/format";
 import type { Profile, ProfilePatch } from "../../lib/types";
@@ -23,10 +30,17 @@ function isThisMonth(iso: string | null): boolean {
 export default function SalesPersonPage() {
   const profilesQ = useProfiles();
   const quotesQ = useQuotes();
+  const bulkUpdate = useUpdateProfilesBulk();
+  const { toast, error: toastError } = useToast();
   const [editing, setEditing] = useState<Profile | null>(null);
   const [viewing, setViewing] = useState<Profile | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
-  const people = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+  const people = useMemo(
+    () => (profilesQ.data ?? []).filter((p) => p.role !== "client"),
+    [profilesQ.data],
+  );
+  const sel = useRowSelection(people);
 
   const stats = useMemo(() => {
     const quotes = quotesQ.data ?? [];
@@ -57,6 +71,18 @@ export default function SalesPersonPage() {
             salesperson on each accepted quote.
           </p>
         </div>
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
       </div>
 
       {isLoading ? (
@@ -71,7 +97,11 @@ export default function SalesPersonPage() {
             <thead>
               <tr>
                 <th className="actions-col">
-                  <RowActionsHead />
+                  <RowActionsHead
+                    checked={sel.allChecked}
+                    indeterminate={sel.someChecked}
+                    onToggle={sel.toggleAll}
+                  />
                 </th>
                 <th>Name</th>
                 <th>Revenue (This Month)</th>
@@ -87,6 +117,8 @@ export default function SalesPersonPage() {
                   <tr key={p.id}>
                     <td>
                       <RowActions
+                        selected={sel.isSelected(p.id)}
+                        onSelectToggle={() => sel.toggle(p.id)}
                         onView={() => setViewing(p)}
                         onEdit={() => setEditing(p)}
                       />
@@ -145,6 +177,46 @@ export default function SalesPersonPage() {
 
       {editing && (
         <TargetsModal profile={editing} onClose={() => setEditing(null)} />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} team member${
+            sel.count === 1 ? "" : "s"
+          }`}
+          count={sel.count}
+          noun="team member"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "sales_revenue_target",
+              label: "Revenue Target (R)",
+              type: "number",
+              allowClear: false,
+            },
+            {
+              key: "sales_gp_target",
+              label: "GP Target (R)",
+              type: "number",
+              allowClear: false,
+            },
+          ]}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as ProfilePatch,
+              });
+              toast(`Updated ${n} team member${n === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e2) {
+              toastError(e2 instanceof Error ? e2.message : "Could not update");
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
       )}
     </div>
   );

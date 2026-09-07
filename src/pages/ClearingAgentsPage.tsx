@@ -3,6 +3,7 @@ import {
   useClearingAgents,
   useDeleteClearingAgent,
   useSaveClearingAgent,
+  useUpdateContactsBulk,
 } from "../lib/hooks";
 
 export default function ClearingAgentsPage() {
@@ -12,6 +13,7 @@ export default function ClearingAgentsPage() {
       query={useClearingAgents()}
       save={useSaveClearingAgent()}
       remove={useDeleteClearingAgent()}
+      bulkUpdate={useUpdateContactsBulk("clearing_agent")}
     />
   );
 }

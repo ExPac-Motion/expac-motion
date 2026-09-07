@@ -1,5 +1,10 @@
 import ContactsPage from "./ContactsPage";
-import { useClients, useDeleteClient, useSaveClient } from "../lib/hooks";
+import {
+  useClients,
+  useDeleteClient,
+  useSaveClient,
+  useUpdateContactsBulk,
+} from "../lib/hooks";
 
 export default function ClientsPage() {
   return (
@@ -8,6 +13,7 @@ export default function ClientsPage() {
       query={useClients()}
       save={useSaveClient()}
       remove={useDeleteClient()}
+      bulkUpdate={useUpdateContactsBulk("client")}
     />
   );
 }

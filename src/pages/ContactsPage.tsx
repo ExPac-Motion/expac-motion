@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../components/Modal";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
@@ -9,6 +10,8 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
+  useRowSelection,
+  type BulkField,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import { useCreateClientInvite } from "../lib/hooks";
@@ -58,9 +61,20 @@ interface Props {
   query: UseQueryResult<Contact[]>;
   save: UseMutationResult<Contact, Error, { id?: string; values: ContactValues }>;
   remove: UseMutationResult<void, Error, string>;
+  bulkUpdate: UseMutationResult<
+    void,
+    Error,
+    { ids: string[]; patch: Partial<ContactValues> }
+  >;
 }
 
-export default function ContactsPage({ kind, query, save, remove }: Props) {
+export default function ContactsPage({
+  kind,
+  query,
+  save,
+  remove,
+  bulkUpdate,
+}: Props) {
   const { label, title, eyebrow } = COPY[kind];
   const Label = titleCase(label);
   const { toast, error } = useToast();
@@ -69,6 +83,7 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
   const createInvite = useCreateClientInvite();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const filtered = useMemo(() => {
@@ -80,6 +95,20 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
         .some((v) => String(v).toLowerCase().includes(q)),
     );
   }, [rows, search]);
+
+  // Rows mirrored from the other contact book are read-only here — not selectable.
+  const selectable = useMemo(
+    () =>
+      filtered.filter(
+        (r) =>
+          !(
+            (kind === "agent" && r.source_clearing_agent_id) ||
+            (kind === "clearing_agent" && r.source_agent_id)
+          ),
+      ),
+    [filtered, kind],
+  );
+  const sel = useRowSelection(selectable);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -177,9 +206,23 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
         eyebrow={eyebrow}
         title={title}
         actions={
-          <button className="btn" onClick={() => setEditing("new")}>
-            + Add {label}
-          </button>
+          <>
+            <button
+              className="btn outline"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the Actions column to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+            </button>
+            <button className="btn" onClick={() => setEditing("new")}>
+              + Add {label}
+            </button>
+          </>
         }
       />
 
@@ -207,7 +250,11 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
               <thead>
                 <tr>
                   <th className="actions-col">
-                    <RowActionsHead />
+                    <RowActionsHead
+                      checked={sel.allChecked}
+                      indeterminate={sel.someChecked}
+                      onToggle={sel.toggleAll}
+                    />
                   </th>
                   <th>Company</th>
                   <th>Contact</th>
@@ -236,6 +283,8 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
                           </div>
                         ) : (
                           <RowActions
+                            selected={sel.isSelected(r.id)}
+                            onSelectToggle={() => sel.toggle(r.id)}
                             onView={() => setViewing(r)}
                             onEdit={() => setEditing(r)}
                             onDelete={() => onDelete(r)}
@@ -421,6 +470,56 @@ export default function ContactsPage({ kind, query, save, remove }: Props) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} ${
+            sel.count === 1 ? label : `${label}s`
+          }`}
+          count={sel.count}
+          noun={label}
+          busy={bulkUpdate.isPending}
+          fields={((): BulkField[] => {
+            const f: BulkField[] = [
+              { key: "vat_no", label: `${Label} VAT No`, type: "text" },
+              {
+                key: "import_code",
+                label: `${Label} Import Code`,
+                type: "text",
+              },
+              { key: "address", label: "Address", type: "textarea" },
+            ];
+            if (kind === "agent")
+              f.push({
+                key: "also_clearing_agent",
+                label: "Is also Clearing Agent",
+                type: "toggle",
+              });
+            if (kind === "clearing_agent")
+              f.push({
+                key: "also_agent",
+                label: "Is also Agent",
+                type: "toggle",
+              });
+            return f;
+          })()}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as Partial<ContactValues>,
+              });
+              toast(`Updated ${n} ${n === 1 ? label : `${label}s`}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e2) {
+              error(e2 instanceof Error ? e2.message : "Could not update");
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
       )}
     </>
   );

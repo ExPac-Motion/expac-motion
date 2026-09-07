@@ -60,6 +60,36 @@ export function useDeleteClient() {
   });
 }
 
+const CONTACT_TABLE_BY_KIND = {
+  client: "clients",
+  supplier: "suppliers",
+  agent: "agents",
+  transporter: "transporters",
+  clearing_agent: "clearing_agents",
+} as const;
+
+/** Bulk Edit for any of the contact books (Customers / Shippers / Agents / …). */
+export function useUpdateContactsBulk(
+  kind: keyof typeof CONTACT_TABLE_BY_KIND,
+) {
+  const qc = useQueryClient();
+  const table = CONTACT_TABLE_BY_KIND[kind];
+  return useMutation({
+    mutationFn: (input: {
+      ids: string[];
+      patch: Partial<Omit<Contact, "id" | "created_at">>;
+    }) => db.updateContactsBulk(table, input.ids, input.patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [table] });
+      // agents ⇄ clearing agents mirror each other
+      if (table === "agents" || table === "clearing_agents") {
+        qc.invalidateQueries({ queryKey: ["agents"] });
+        qc.invalidateQueries({ queryKey: ["clearing_agents"] });
+      }
+    },
+  });
+}
+
 /* ---------- Suppliers ---------- */
 export function useSuppliers() {
   return useQuery({ queryKey: ["suppliers"], queryFn: db.listSuppliers });
@@ -858,6 +888,14 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: (input: { id: string; patch: ProfilePatch }) =>
       db.updateProfile(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }),
+  });
+}
+export function useUpdateProfilesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: ProfilePatch }) =>
+      db.updateProfilesBulk(input.ids, input.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }),
   });
 }

@@ -1,5 +1,10 @@
 import ContactsPage from "./ContactsPage";
-import { useDeleteSupplier, useSaveSupplier, useSuppliers } from "../lib/hooks";
+import {
+  useDeleteSupplier,
+  useSaveSupplier,
+  useSuppliers,
+  useUpdateContactsBulk,
+} from "../lib/hooks";
 
 export default function SuppliersPage() {
   return (
@@ -8,6 +13,7 @@ export default function SuppliersPage() {
       query={useSuppliers()}
       save={useSaveSupplier()}
       remove={useDeleteSupplier()}
+      bulkUpdate={useUpdateContactsBulk("supplier")}
     />
   );
 }

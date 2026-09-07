@@ -89,6 +89,23 @@ export async function deleteClient(id: string): Promise<void> {
   unwrap(await supabase.from("clients").delete().eq("id", id));
 }
 
+export type ContactTable =
+  | "clients"
+  | "suppliers"
+  | "agents"
+  | "transporters"
+  | "clearing_agents";
+
+/** Apply one patch to every listed contact (Bulk Edit on a contact book). */
+export async function updateContactsBulk(
+  table: ContactTable,
+  ids: string[],
+  patch: Partial<Omit<Contact, "id" | "created_at">>,
+): Promise<void> {
+  if (ids.length === 0) return;
+  unwrap(await supabase.from(table).update(patch).in("id", ids).select("id"));
+}
+
 /* ---------- Suppliers ---------- */
 export async function listSuppliers(): Promise<Supplier[]> {
   return unwrap(
@@ -702,6 +719,17 @@ export async function updateProfile(
 ): Promise<Profile> {
   return unwrap<Profile>(
     await supabase.from("profiles").update(patch).eq("id", id).select("*").single(),
+  );
+}
+
+/** Apply one patch to every listed team member (Bulk Edit on Sales Person). */
+export async function updateProfilesBulk(
+  ids: string[],
+  patch: ProfilePatch,
+): Promise<void> {
+  if (ids.length === 0) return;
+  unwrap(
+    await supabase.from("profiles").update(patch).in("id", ids).select("id"),
   );
 }
 
