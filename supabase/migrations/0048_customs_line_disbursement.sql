@@ -7,6 +7,10 @@
 --
 -- Run in the Supabase SQL editor after 0047. Self-contained & idempotent.
 
+-- Drop the old 3-arg signature so adding p_fee_rate doesn't leave an
+-- ambiguous overload (the app always sends all four params now).
+drop function if exists public.add_customs_line_to_quote(uuid, text, numeric);
+
 create or replace function public.add_customs_line_to_quote(
   p_quote_id uuid,
   p_code     text,
