@@ -653,6 +653,7 @@ export const CHARGE_UNITS: string[] = [
   "KGS",
   "AWB",
   "INV",
+  "DOC",
   "CBM",
   "W/M",
   "R/T",
