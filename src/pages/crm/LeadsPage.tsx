@@ -57,10 +57,10 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 const SAMPLE_CSV =
-  "company,contact,role,email,phone,company_phone,website,source,description\n" +
-  "Acme Imports,Jane Smith,Procurement,jane@acme.co.za,+27 82 555 0100,+27 11 555 0000,https://acme.co.za,Website,Regular FCL importer ex China\n" +
-  "Acme Imports,Sam Ndlovu,Logistics Mgr,sam@acme.co.za,+27 82 555 0101,,,,\n" +
-  "Bluewave Trading,John Doe,Owner,john@bluewave.co.za,+27 83 555 0199,+27 21 555 0000,https://bluewave.co.za,Referral,Air freight enquiry\n";
+  "company,contact,role,email,phone,company_phone,website,address,source,description\n" +
+  "Acme Imports,Jane Smith,Procurement,jane@acme.co.za,+27 82 555 0100,+27 11 555 0000,https://acme.co.za,Epping 7460 Cape Town,Website,Regular FCL importer ex China\n" +
+  "Acme Imports,Sam Ndlovu,Logistics Mgr,sam@acme.co.za,+27 82 555 0101,,,,,\n" +
+  "Bluewave Trading,John Doe,Owner,john@bluewave.co.za,+27 83 555 0199,+27 21 555 0000,https://bluewave.co.za,Montana Pretoria,Referral,Air freight enquiry\n";
 
 function downloadSampleCsv() {
   const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
@@ -307,6 +307,7 @@ export default function LeadsPage() {
           | "phone"
           | "company_phone"
           | "website"
+          | "address"
           | "source"
           | "description"
         >
@@ -327,6 +328,7 @@ export default function LeadsPage() {
             cell(head, "phone", "mobile", "mobile phone", "phone number") || null,
           company_phone: cell(head, "company_phone", "company phone") || null,
           website: cell(head, "website", "url", "company url") || null,
+          address: cell(head, "address", "physical address") || null,
           source: cell(head, "source") || "CSV import",
           description: cell(head, "description") || null,
         });
@@ -749,6 +751,7 @@ export default function LeadsPage() {
             <ViewField label="Email" value={viewing.email || "—"} />
             <ViewField label="Mobile phone" value={viewing.phone || "—"} />
             <ViewField label="Website" value={viewing.website || "—"} />
+            <ViewField label="Address" value={viewing.address || "—"} />
             <ViewField label="Source" value={viewing.source || "—"} />
             <ViewField label="Description" value={viewing.description || "—"} />
             <ViewField
@@ -1038,6 +1041,7 @@ function LeadEditModal({
       phone: String(fd.get("phone") || "").trim() || null,
       company_phone: String(fd.get("company_phone") || "").trim() || null,
       website: String(fd.get("website") || "").trim() || null,
+      address: String(fd.get("address") || "").trim() || null,
       source: String(fd.get("source") || "").trim() || null,
       description: String(fd.get("description") || "").trim() || null,
       notes: String(fd.get("notes") || "").trim() || null,
@@ -1115,6 +1119,15 @@ function LeadEditModal({
             <label>Mobile phone</label>
             <input name="phone" defaultValue={lead?.phone ?? ""} />
           </div>
+        </div>
+        <div className="field">
+          <label>Address</label>
+          <textarea
+            name="address"
+            rows={2}
+            placeholder="Physical / delivery address"
+            defaultValue={lead?.address ?? ""}
+          />
         </div>
 
         <div className="field">

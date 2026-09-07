@@ -213,6 +213,7 @@ export interface Lead {
   /** Company switchboard / landline. */
   company_phone: string | null;
   website: string | null;
+  address: string | null;
   source: string | null;
   description: string | null;
   notes: string | null;
@@ -776,7 +777,10 @@ export interface Quote {
   packing_list_items: PackingItem[];
   client?: Pick<Client, "id" | "company"> | null;
   /** Set instead of `client` when the quote is against a not-yet-promoted lead. */
-  lead?: Pick<Lead, "id" | "company" | "contact" | "email" | "phone"> | null;
+  lead?: Pick<
+    Lead,
+    "id" | "company" | "contact" | "email" | "phone" | "address"
+  > | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
   agent?: Pick<Agent, "id" | "company"> | null;
   transporter?: Pick<Transporter, "id" | "company"> | null;

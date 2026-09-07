@@ -117,7 +117,7 @@ export default function QuotePrintPage() {
     ["Customer VAT No", clientRec?.vat_no || "TBC"],
     ["Tel Number", party?.phone || "—"],
     ["Email Address", party?.email || "—"],
-    ["Address", clientRec?.address || "To Be Confirmed"],
+    ["Address", party?.address || "To Be Confirmed"],
   ];
 
   const packingRows = q.packing_list_items ?? [];
