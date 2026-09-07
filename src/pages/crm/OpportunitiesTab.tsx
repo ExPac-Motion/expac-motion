@@ -15,6 +15,7 @@ import {
   useQuotes,
   useUpdateOpportunity,
 } from "../../lib/hooks";
+import { chargeTotals, fxOf } from "../../lib/calc";
 import { formatDate, money } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
@@ -22,7 +23,16 @@ import {
   type Opportunity,
   type OpportunityPatch,
   type OpportunityStatus,
+  type QuoteStatus,
 } from "../../lib/types";
+
+/** Quote status → pipeline stage for the auto-listed quotation cards. */
+const QUOTE_STAGE: Record<QuoteStatus, OpportunityStatus> = {
+  open: "new_lead",
+  sent: "quote_sent",
+  accepted: "quote_accepted",
+  lost: "not_proceeding",
+};
 
 /* ---------- board view options (persisted per browser) ---------- */
 
@@ -40,10 +50,13 @@ interface BoardOpts {
   sort: OppSort;
   stages: OpportunityStatus[];
   fields: CardFields;
+  /** Auto-list every quotation as a card (in the stage matching its status). */
+  showQuotes: boolean;
 }
 const DEFAULT_OPTS: BoardOpts = {
   sort: "value",
   stages: OPPORTUNITY_STAGES.map((s) => s.key),
+  showQuotes: true,
   fields: {
     leadStatus: true,
     contact: true,
@@ -62,6 +75,7 @@ function loadOpts(): BoardOpts {
     return {
       sort: p.sort ?? DEFAULT_OPTS.sort,
       stages: Array.isArray(p.stages) ? p.stages : DEFAULT_OPTS.stages,
+      showQuotes: p.showQuotes ?? DEFAULT_OPTS.showQuotes,
       fields: { ...DEFAULT_OPTS.fields, ...(p.fields ?? {}) },
     };
   } catch {
@@ -149,6 +163,9 @@ const STAGE_ICON: Record<OpportunityStatus, ReactNode> = {
 export default function OpportunitiesTab() {
   const oppsQ = useOpportunities();
   const statusesQ = useLeadStatuses();
+  const quotesQ = useQuotes();
+  const leadsQ = useLeads();
+  const profilesQ = useProfiles();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const del = useDeleteOpportunity();
@@ -160,7 +177,88 @@ export default function OpportunitiesTab() {
     saveOpts(next);
   }
 
-  const opps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
+  const realOpps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
+
+  const leadStatusIdByLead = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const l of leadsQ.data ?? []) m.set(l.id, l.lead_status_id);
+    return m;
+  }, [leadsQ.data]);
+
+  const profileById = useMemo(() => {
+    const m = new Map<string, { id: string; full_name: string | null }>();
+    for (const p of profilesQ.data ?? []) m.set(p.id, p);
+    return m;
+  }, [profilesQ.data]);
+
+  // Every quotation is surfaced as a card in the stage matching its status,
+  // unless a real opportunity already links that quote.
+  const quoteOpps = useMemo<Opportunity[]>(() => {
+    if (!opts.showQuotes) return [];
+    const linked = new Set(
+      (oppsQ.data ?? [])
+        .map((o) => o.quote_id)
+        .filter((id): id is string => !!id),
+    );
+    return (quotesQ.data ?? [])
+      .filter((q) => !linked.has(q.id))
+      .map((q) => {
+        const t = chargeTotals(q.quote_lines, fxOf(q));
+        const prof = q.sales_person_id
+          ? profileById.get(q.sales_person_id)
+          : null;
+        return {
+          id: `quote:${q.id}`,
+          title: null,
+          lead_id: q.lead_id,
+          client_id: q.client_id,
+          quote_id: q.id,
+          job_id: null,
+          status: QUOTE_STAGE[q.status],
+          value: t.sell,
+          close_date: q.valid_until,
+          notes: null,
+          sales_person_id: q.sales_person_id,
+          created_at: q.created_at,
+          updated_at: q.updated_at,
+          lead: q.lead
+            ? {
+                id: q.lead.id,
+                company: q.lead.company,
+                contact: q.lead.contact,
+                email: q.lead.email,
+                phone: q.lead.phone,
+                lead_status_id: leadStatusIdByLead.get(q.lead.id) ?? null,
+              }
+            : null,
+          client: q.client
+            ? {
+                id: q.client.id,
+                company: q.client.company,
+                contact: null,
+                email: null,
+                phone: null,
+              }
+            : null,
+          quote: { id: q.id, reference: q.reference, status: q.status },
+          job: null,
+          sales_person: prof
+            ? { id: prof.id, full_name: prof.full_name }
+            : null,
+        } satisfies Opportunity;
+      });
+  }, [
+    opts.showQuotes,
+    oppsQ.data,
+    quotesQ.data,
+    profileById,
+    leadStatusIdByLead,
+  ]);
+
+  const opps = useMemo(
+    () => [...realOpps, ...quoteOpps],
+    [realOpps, quoteOpps],
+  );
 
   const statusById = useMemo(() => {
     const m = new Map<string, LeadStatus>();
@@ -238,6 +336,18 @@ export default function OpportunitiesTab() {
                     <option value="company">Company (A–Z)</option>
                     <option value="close">Close date</option>
                   </select>
+                </label>
+
+                <div className="ui-pop-head">Sources</div>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={opts.showQuotes}
+                    onChange={(e) =>
+                      patchOpts({ ...opts, showQuotes: e.target.checked })
+                    }
+                  />
+                  List every quotation
                 </label>
 
                 <div className="ui-pop-head">Visible stages</div>
@@ -338,6 +448,7 @@ export default function OpportunitiesTab() {
                     <OpportunityCard
                       key={o.id}
                       opportunity={o}
+                      synthetic={String(o.id).startsWith("quote:")}
                       fields={opts.fields}
                       leadStatus={
                         o.lead?.lead_status_id
@@ -368,12 +479,14 @@ export default function OpportunitiesTab() {
 
 function OpportunityCard({
   opportunity: o,
+  synthetic,
   fields,
   leadStatus,
   onEdit,
   onDelete,
 }: {
   opportunity: Opportunity;
+  synthetic: boolean;
   fields: CardFields;
   leadStatus: LeadStatus | null;
   onEdit: () => void;
@@ -404,19 +517,36 @@ function OpportunityCard({
           gap: 6,
         }}
       >
-        <strong className="opp-company">{name}</strong>
-        <div style={{ display: "flex", gap: 2 }}>
-          <button className="row-icon-btn" title="Edit" onClick={onEdit}>
-            {Icon.edit}
-          </button>
-          <button
-            className="row-icon-btn danger"
-            title="Delete"
-            onClick={onDelete}
+        <strong className="opp-company">
+          {name}
+          {synthetic && (
+            <span className="tag" style={{ marginLeft: 6 }}>
+              quote
+            </span>
+          )}
+        </strong>
+        {synthetic ? (
+          <Link
+            className="row-icon-btn"
+            title="Open quotation"
+            to={`/quotes/${o.quote?.id}`}
           >
-            {Icon.delete}
-          </button>
-        </div>
+            {Icon.edit}
+          </Link>
+        ) : (
+          <div style={{ display: "flex", gap: 2 }}>
+            <button className="row-icon-btn" title="Edit" onClick={onEdit}>
+              {Icon.edit}
+            </button>
+            <button
+              className="row-icon-btn danger"
+              title="Delete"
+              onClick={onDelete}
+            >
+              {Icon.delete}
+            </button>
+          </div>
+        )}
       </div>
 
       {fields.value && (
@@ -474,7 +604,13 @@ function OpportunityCard({
 
       <select
         value={o.status}
+        disabled={synthetic}
         onChange={(e) => onStatusChange(e.target.value as OpportunityStatus)}
+        title={
+          synthetic
+            ? "This card follows the quotation's status — change it on the quote"
+            : undefined
+        }
         style={{ marginTop: 8, width: "100%", fontSize: "0.76rem" }}
       >
         {OPPORTUNITY_STAGES.map((s) => (
