@@ -139,7 +139,7 @@ export default function QuotePrintPage() {
 
   const clientRows: [string, string][] = [
     ["Contact Person", party?.contact || "—"],
-    ["Customer VAT No", clientRec?.vat_no || "TBC"],
+    ["Customer VAT No", party?.vat_no || "TBC"],
     ["Tel Number", party?.phone || "—"],
     ["Email Address", party?.email || "—"],
     ["Address", party?.address || "To Be Confirmed"],

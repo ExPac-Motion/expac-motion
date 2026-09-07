@@ -214,6 +214,7 @@ export interface Lead {
   company_phone: string | null;
   website: string | null;
   address: string | null;
+  vat_no: string | null;
   source: string | null;
   description: string | null;
   notes: string | null;
@@ -784,7 +785,7 @@ export interface Quote {
   /** Set instead of `client` when the quote is against a not-yet-promoted lead. */
   lead?: Pick<
     Lead,
-    "id" | "company" | "contact" | "email" | "phone" | "address"
+    "id" | "company" | "contact" | "email" | "phone" | "address" | "vat_no"
   > | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
   agent?: Pick<Agent, "id" | "company"> | null;
