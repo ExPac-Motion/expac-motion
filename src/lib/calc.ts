@@ -90,6 +90,11 @@ export function lineTotal(l: QuoteLine): number {
   return (Number(l.qty) || 0) * (Number(l.sell) || 0);
 }
 
+/** Foreign purchase total in the line's own currency: qty x buy (pre-FX). */
+export function lineBuyTotal(l: Pick<QuoteLine, "qty" | "buy">): number {
+  return (Number(l.qty) || 0) * (Number(l.buy) || 0);
+}
+
 /** VAT % applied to a line (0 when unset / zero-rated). */
 export function lineVatPct(l: Pick<QuoteLine, "vat_pct">): number {
   return Number(l.vat_pct) || 0;

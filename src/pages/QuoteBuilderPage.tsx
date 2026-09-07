@@ -24,6 +24,7 @@ import {
   insuranceAmount,
   INSURANCE_CODE,
   lineTotal,
+  lineBuyTotal,
   packingRow,
   packingTotals,
   resolveLine,
@@ -1166,6 +1167,7 @@ export default function QuoteBuilderPage() {
                       <th className="num">VAT (%)</th>
                       <th className="num">Sell ($)</th>
                       <th className="num">Sell (R)</th>
+                      <th className="num">Total Buy ($)</th>
                       <th className="num">Line total (R)</th>
                       <th />
                     </tr>
@@ -1331,6 +1333,15 @@ export default function QuoteBuilderPage() {
                             readOnly
                             value={(Number(l.sell) || 0).toFixed(2)}
                             title="Sell ($) converted at the currency rate"
+                            tabIndex={-1}
+                          />
+                        </td>
+                        <td className="num">
+                          <input
+                            type="number"
+                            readOnly
+                            value={lineBuyTotal(l).toFixed(2)}
+                            title={`Qty × Buy in ${l.cur} — foreign purchase total`}
                             tabIndex={-1}
                           />
                         </td>
