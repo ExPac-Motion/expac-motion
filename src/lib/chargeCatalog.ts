@@ -26,6 +26,7 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "International Freight Charges", code: "FW-01", description: "Forwarding & Air Waybill Fee", cur: "USD", unit: "AWB", modes: AIR },
   { category: "International Freight Charges", code: "OF-01", description: "Ocean Freight", cur: "USD", unit: "", modes: SEA },
   { category: "International Freight Charges", code: "OF-02", description: "Release Fee", cur: "USD", unit: "", modes: SEA },
+  { category: "International Freight Charges", code: "OF-06", description: "Ocean Freight (LCL-DDP)", cur: "USD", unit: "W/M", modes: SEA },
   { category: "International Freight Charges", code: "IN-01", description: "Cargo Insurance", cur: "USD", unit: "0.35% USD on Commercial Value" },
 
   // ---- Ex-Works Charges ----

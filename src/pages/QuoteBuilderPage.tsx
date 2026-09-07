@@ -83,6 +83,7 @@ function newLine(category: ChargeCategory, position: number): QuoteLine {
     cur: "USD",
     unit: "",
     qty: 1,
+    qty_override: false,
     buy: 0,
     margin: 0,
     vat_pct: 0,
@@ -204,6 +205,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
         cur,
         unit,
         qty: l.qty ?? 0,
+        qty_override: l.qty_override ?? false,
         buy,
         margin,
         vat_pct: l.vat_pct ?? 0,
@@ -390,7 +392,10 @@ export default function QuoteBuilderPage() {
   }
 
   function setLine(index: number, field: keyof QuoteLine, value: string) {
-    setLineFields(index, { [field]: value });
+    const patch: Partial<QuoteLine> = { [field]: value };
+    // A fresh unit means the qty goes back to being derived.
+    if (field === "unit") patch.qty_override = false;
+    setLineFields(index, patch);
   }
 
   function setLineFields(index: number, patch: Partial<QuoteLine>) {
@@ -421,8 +426,14 @@ export default function QuoteBuilderPage() {
     setLineFields(
       index,
       item
-        ? { code, description: item.description, cur: item.cur, unit: item.unit }
-        : { code },
+        ? {
+            code,
+            description: item.description,
+            cur: item.cur,
+            unit: item.unit,
+            qty_override: false,
+          }
+        : { code, qty_override: false },
     );
   }
 
@@ -1160,7 +1171,10 @@ export default function QuoteBuilderPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {g.lines.map(({ line: l, index: i }) => (
+                    {g.lines.map(({ line: l, index: i }) => {
+                      const autoQ = autoQty(l, draft.mode, packTotals);
+                      const qtyDerived = autoQ != null && !l.qty_override;
+                      return (
                       <tr key={i}>
                         <td className="c-code">
                           <select
@@ -1223,25 +1237,37 @@ export default function QuoteBuilderPage() {
                           </select>
                         </td>
                         <td className="num">
-                          {autoQty(l, draft.mode, packTotals) != null ||
-                          l.code === INSURANCE_CODE ? (
+                          {l.code === INSURANCE_CODE ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.qty) || 0).toFixed(2)}
-                              title={
-                                l.code === INSURANCE_CODE
-                                  ? "Insurance line — quantity is 1"
-                                  : "Quantity set from the Packing List for this unit"
-                              }
+                              title="Insurance line — quantity is 1"
                             />
                           ) : (
                             <input
                               type="number"
                               step="any"
-                              value={String(draft.lines[i]?.qty ?? "")}
-                              onChange={(e) => setLine(i, "qty", e.target.value)}
+                              className={qtyDerived ? "qty-derived" : undefined}
+                              value={
+                                qtyDerived
+                                  ? (autoQ ?? 0).toFixed(2)
+                                  : String(draft.lines[i]?.qty ?? "")
+                              }
+                              onChange={(e) =>
+                                setLineFields(i, {
+                                  qty: e.target.value,
+                                  qty_override: true,
+                                })
+                              }
+                              title={
+                                qtyDerived
+                                  ? "Auto from the Packing List for this unit — type to override"
+                                  : l.qty_override
+                                    ? "Manually set — clear or change the unit to go back to auto"
+                                    : undefined
+                              }
                             />
                           )}
                         </td>
@@ -1324,7 +1350,8 @@ export default function QuoteBuilderPage() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

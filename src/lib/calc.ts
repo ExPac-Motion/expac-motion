@@ -112,15 +112,28 @@ export const WEIGHT_UNITS = ["KGS", "THC"];
 /** Units whose qty is the packing-list chargeable volume (CBM). Any mode. */
 export const VOLUME_UNITS = ["CBM", "W/M", "R/T"];
 
+/** Ocean Freight (LCL-DDP): qty billed per freight ton (W/M), min 0.50. */
+export const OCEAN_LCL_DDP_CODE = "OF-06";
+
+/** Freight ton (weight-or-measure): MAX(total weight in tonnes, total CBM). */
+export function freightTon(pack: PackingTotals): number {
+  return Math.max((pack.totalActual || 0) / 1000, pack.totalCbm || 0);
+}
+
 /**
- * When a charge line's unit ties it to a packing-list figure, returns that
- * figure; otherwise null (the line keeps its typed qty).
+ * When a charge line's unit / code ties its qty to a packing-list figure,
+ * returns that figure; otherwise null (the line keeps its typed qty). An
+ * operator override (`qty_override`) always returns null so their number wins.
  */
 export function autoQty(
-  line: Pick<QuoteLine, "unit">,
+  line: Pick<QuoteLine, "unit" | "code" | "qty_override">,
   _mode: QuoteMode,
   pack: PackingTotals,
 ): number | null {
+  if (line.qty_override) return null;
+  if (line.code === OCEAN_LCL_DDP_CODE) {
+    return Math.max(0.5, freightTon(pack));
+  }
   const unit = String(line.unit ?? "");
   if (WEIGHT_UNITS.includes(unit)) {
     return pack.chargeable;

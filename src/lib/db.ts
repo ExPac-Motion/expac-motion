@@ -278,6 +278,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       cur: l.cur,
       unit: (l.unit ?? "").toString(),
       qty: Number(r.qty) || 0,
+      qty_override: !!l.qty_override,
       buy: Number(r.buy) || 0,
       margin: Number(r.margin) || 0,
       vat_pct: Number(r.vat_pct) || 0,

@@ -718,6 +718,9 @@ export interface QuoteLine {
   cur: LineCurrency;
   unit: string;
   qty: number | string;
+  /** true once an operator hand-edits qty on a line whose qty would
+   *  otherwise be derived (weight/volume unit, or a code-driven rule). */
+  qty_override?: boolean;
   buy: number | string;
   /** Markup % added to buy before converting to the ZAR sell rate. */
   margin: number | string;
