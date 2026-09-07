@@ -23,8 +23,9 @@ import {
   impliedMargin,
   insuranceAmount,
   INSURANCE_CODE,
-  FORWARDING_CODE,
-  DISBURSEMENT_CODE,
+  SERVICE_FEE_CODES,
+  serviceFeePrefillZar,
+  buyRate,
   lineTotal,
   lineBuyTotal,
   packingRow,
@@ -407,11 +408,13 @@ export default function QuoteBuilderPage() {
     setDraft((d) => {
       if (!d) return d;
       const fxRates = fxOfDraft(d);
-      const recompute =
-        "buy" in patch || "margin" in patch || "cur" in patch;
       const lines = d.lines.map((l, i) => {
         if (i !== index) return l;
         const merged = { ...l, ...patch } as QuoteLine;
+        // Service-fee lines hold a typed sell (R) — never derive it from buy.
+        const recompute =
+          ("buy" in patch || "margin" in patch || "cur" in patch) &&
+          !SERVICE_FEE_CODES.includes(String(merged.code ?? ""));
         if (recompute) {
           merged.sell = sellFromBuy(
             merged.buy,
@@ -428,18 +431,27 @@ export default function QuoteBuilderPage() {
 
   function pickCode(index: number, code: string) {
     const item = catalogItem(code, draft?.mode);
-    setLineFields(
-      index,
-      item
-        ? {
-            code,
-            description: item.description,
-            cur: item.cur,
-            unit: item.unit,
-            qty_override: false,
-          }
-        : { code, qty_override: false },
-    );
+    const patch: Partial<QuoteLine> = item
+      ? {
+          code,
+          description: item.description,
+          cur: item.cur,
+          unit: item.unit,
+          qty_override: false,
+        }
+      : { code, qty_override: false };
+    // Default VAT % carried by the code (OF-07 / DIS-01 / CU-05 = 15).
+    if (item?.vat_pct != null) patch.vat_pct = item.vat_pct;
+    // Service fee: no buy, pre-fill a suggested Sell (R), then all editable.
+    if (SERVICE_FEE_CODES.includes(code)) {
+      patch.buy = 0;
+      patch.margin = 0;
+      patch.qty = 1;
+      const others = resolvedLines.filter((_, i) => i !== index);
+      const prefill = serviceFeePrefillZar(code, others, fx);
+      patch.sell = prefill > 0 ? Number(prefill.toFixed(2)) : "";
+    }
+    setLineFields(index, patch);
   }
 
   function addLine(category: ChargeCategory) {
@@ -1181,28 +1193,13 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
-                      // IN-01 / FW-01 / DIS-01: qty, buy and margin are computed.
-                      const isFwd = l.code === FORWARDING_CODE;
-                      const isDis = l.code === DISBURSEMENT_CODE;
-                      const computed =
-                        l.code === INSURANCE_CODE || isFwd || isDis;
-                      const feeTitle = {
-                        qty: isFwd
-                          ? "Forwarding fee — quantity is 1"
-                          : isDis
-                            ? "Disbursement fee — quantity is 1"
-                            : "Insurance line — quantity is 1",
-                        buy: isFwd
-                          ? "1% of the International Freight Charges (USD)"
-                          : isDis
-                            ? "2.5% of the total Customs VAT + Duty (ZAR)"
-                            : "0.50% of Commercial Value ($)",
-                        margin: isFwd
-                          ? "No markup on the forwarding fee"
-                          : isDis
-                            ? "No markup on the disbursement fee"
-                            : "No markup on insurance",
-                      };
+                      // IN-01: qty / buy / margin are all locked (computed).
+                      const computed = l.code === INSURANCE_CODE;
+                      // Service fees (FW-01 / DIS-01 / CU-05): no buy cost, the
+                      // Sell (R) cell is typed directly (pre-filled on pick).
+                      const isServiceFee = SERVICE_FEE_CODES.includes(
+                        String(l.code ?? ""),
+                      );
                       return (
                       <tr key={i}>
                         <td className="c-code">
@@ -1272,7 +1269,7 @@ export default function QuoteBuilderPage() {
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.qty) || 0).toFixed(2)}
-                              title={feeTitle.qty}
+                              title="Insurance line — quantity is 1"
                             />
                           ) : (
                             <input
@@ -1307,40 +1304,31 @@ export default function QuoteBuilderPage() {
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.buy) || 0).toFixed(2)}
-                              title={feeTitle.buy}
+                              title="0.50% of Commercial Value ($)"
                             />
                           ) : (
                             <input
                               type="number"
                               step="any"
                               value={String(l.buy ?? "")}
+                              placeholder={isServiceFee ? "0" : undefined}
                               onChange={(e) => setLine(i, "buy", e.target.value)}
+                              title={
+                                isServiceFee
+                                  ? "Service fee — usually no buy cost"
+                                  : undefined
+                              }
                             />
                           )}
                         </td>
                         <td className="num">
-                          {isFwd || isDis ? (
-                            <input
-                              type="number"
-                              step="any"
-                              value={String(draft.lines[i]?.fee_rate ?? "")}
-                              placeholder={isFwd ? "1" : "2.5"}
-                              onChange={(e) =>
-                                setLineFields(i, { fee_rate: e.target.value })
-                              }
-                              title={
-                                isFwd
-                                  ? "Fee rate % — 1% of International Freight by default; edit to raise / lower"
-                                  : "Fee rate % — 2.5% of Customs VAT + Duty by default; edit to raise / lower"
-                              }
-                            />
-                          ) : computed ? (
+                          {computed ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value="0"
-                              title={feeTitle.margin}
+                              title="No markup on insurance"
                             />
                           ) : (
                             <input
@@ -1364,19 +1352,40 @@ export default function QuoteBuilderPage() {
                           <input
                             type="number"
                             readOnly
-                            value={sellInCur(l.buy, l.margin).toFixed(2)}
-                            title={`Buy + margin, in ${l.cur} (before ZAR conversion)`}
+                            value={(isServiceFee
+                              ? (Number(l.sell) || 0) /
+                                (buyRate(l.cur, fx) || 1)
+                              : sellInCur(l.buy, l.margin)
+                            ).toFixed(2)}
+                            title={
+                              isServiceFee
+                                ? `Sell (R) back-converted to ${l.cur}`
+                                : `Buy + margin, in ${l.cur} (before ZAR conversion)`
+                            }
                             tabIndex={-1}
                           />
                         </td>
                         <td className="num">
-                          <input
-                            type="number"
-                            readOnly
-                            value={(Number(l.sell) || 0).toFixed(2)}
-                            title="Sell ($) converted at the currency rate"
-                            tabIndex={-1}
-                          />
+                          {isServiceFee ? (
+                            <input
+                              type="number"
+                              step="any"
+                              value={String(draft.lines[i]?.sell ?? "")}
+                              placeholder="0"
+                              onChange={(e) =>
+                                setLineFields(i, { sell: e.target.value })
+                              }
+                              title="Service fee — type the sell (R) amount"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              readOnly
+                              value={(Number(l.sell) || 0).toFixed(2)}
+                              title="Sell ($) converted at the currency rate"
+                              tabIndex={-1}
+                            />
+                          )}
                         </td>
                         <td className="num">
                           <input

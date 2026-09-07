@@ -170,27 +170,23 @@ export function effectiveQty(
 
 /** Cargo Insurance charge code: sell is the insurance premium, not a marked-up buy. */
 export const INSURANCE_CODE = "IN-01";
-/** Forwarding Fee charge code: buy = a % of the International Freight Charges buy total (USD). */
+/** ExPac service-fee codes: no buy cost — the operator types the sell. Picking
+ *  the code pre-fills a suggested sell (see serviceFeePrefillZar), then every
+ *  cell is a normal editable field. */
 export const FORWARDING_CODE = "FW-01";
-/** DIS-01 Disbursement Fee: buy = a % of the Customs VAT + Duty total (ZAR). */
 export const DISBURSEMENT_CODE = "DIS-01";
-/** Default rates (decimal). The line's editable `fee_rate` (a percentage)
- *  overrides these when set. */
+export const CUSTOMS_CLEARANCE_CODE = "CU-05";
+export const SERVICE_FEE_CODES: readonly string[] = [
+  FORWARDING_CODE,
+  DISBURSEMENT_CODE,
+  CUSTOMS_CLEARANCE_CODE,
+];
+/** Default suggested rates (decimal) for the pre-fill. */
 export const FORWARDING_RATE = 0.01;
 export const DISBURSEMENT_RATE = 0.025;
-/** Customs VAT / Customs Duty charge codes — the base for the DIS-01 fee. */
+/** Customs VAT / Customs Duty charge codes — the base for the DIS-01 pre-fill. */
 export const CUSTOMS_VAT_CODE = "CU-02";
 export const CUSTOMS_DUTY_CODE = "CU-03";
-
-/** Effective fee rate (decimal) for a %-fee line: the line's `fee_rate`
- *  (a percentage) if set, otherwise the code's default. */
-export function feeRateOf(
-  feeRate: number | string | null | undefined,
-  dflt: number,
-): number {
-  if (feeRate == null || feeRate === "") return dflt;
-  return (Number(feeRate) || 0) / 100;
-}
 
 /**
  * Σ(qty × buy) over the International Freight Charges lines, each converted to
@@ -228,16 +224,28 @@ export function customsVatDutyZar(lines: QuoteLine[], fx: FxRates): number {
     );
 }
 
+/** Suggested SELL (R) to drop in when a service-fee code is picked. FW-01 =
+ *  1% of International Freight (USD→ZAR); DIS-01 = 2.5% of Customs VAT + Duty
+ *  (ZAR); CU-05 has no formula, so 0. `lines` should exclude the line being
+ *  picked. */
+export function serviceFeePrefillZar(
+  code: string,
+  lines: QuoteLine[],
+  fx: FxRates,
+): number {
+  if (code === FORWARDING_CODE)
+    return intlFreightBuyUsd(lines, fx) * FORWARDING_RATE * (fx.usd || 0);
+  if (code === DISBURSEMENT_CODE)
+    return customsVatDutyZar(lines, fx) * DISBURSEMENT_RATE;
+  return 0;
+}
+
 export interface LineContext {
   mode: QuoteMode;
   fx: FxRates;
   pack: PackingTotals;
   /** Declared commercial value ($) — drives the IN-01 insurance line. */
   commercialValue: number | string;
-  /** USD buy total of the International Freight Charges lines — drives FW-01. */
-  forwardingBaseUsd?: number;
-  /** ZAR total of the Customs VAT + Duty lines — drives DIS-01. */
-  disbursementBaseZar?: number;
 }
 
 /**
@@ -260,21 +268,9 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
     qty = 1;
   }
 
-  if (line.code === FORWARDING_CODE) {
-    // Buy = fee_rate% (default 1%) of the International Freight USD buy total.
-    buy =
-      (ctx.forwardingBaseUsd ?? 0) * feeRateOf(line.fee_rate, FORWARDING_RATE);
-    margin = 0;
-    qty = 1;
-  }
-
-  if (line.code === DISBURSEMENT_CODE) {
-    // Buy = fee_rate% (default 2.5%) of the Customs VAT + Duty total (ZAR).
-    buy =
-      (ctx.disbursementBaseZar ?? 0) *
-      feeRateOf(line.fee_rate, DISBURSEMENT_RATE);
-    margin = 0;
-    qty = 1;
+  // Service fees: no cost, the operator's typed sell (R) stands as-is.
+  if (SERVICE_FEE_CODES.includes(line.code)) {
+    return { ...line, qty, buy, margin, sell: Number(line.sell) || 0 };
   }
 
   return {
@@ -286,26 +282,9 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
   };
 }
 
-/**
- * Resolves a whole quote's lines. Two passes so the percentage fees (FW-01 =
- * 1% of International Freight, DIS-01 = 2.5% of Customs VAT + Duty) can be a
- * function of the other lines, which themselves may have code/unit-driven qtys.
- */
+/** Resolves a whole quote's lines. */
 export function resolveLines(lines: QuoteLine[], ctx: LineContext): QuoteLine[] {
-  const isPctFee = (c: string) =>
-    c === FORWARDING_CODE || c === DISBURSEMENT_CODE;
-  const firstPass = (lines || []).map((l) =>
-    isPctFee(l.code) ? l : resolveLine(l, ctx),
-  );
-  const forwardingBaseUsd = intlFreightBuyUsd(firstPass, ctx.fx);
-  const disbursementBaseZar = customsVatDutyZar(firstPass, ctx.fx);
-  return firstPass.map((l) => {
-    if (l.code === FORWARDING_CODE)
-      return resolveLine(l, { ...ctx, forwardingBaseUsd });
-    if (l.code === DISBURSEMENT_CODE)
-      return resolveLine(l, { ...ctx, disbursementBaseZar });
-    return l;
-  });
+  return (lines || []).map((l) => resolveLine(l, ctx));
 }
 
 /** ZAR buy cost for a line: qty x buy x fx rate for the line's currency. */
