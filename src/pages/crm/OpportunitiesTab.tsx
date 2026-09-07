@@ -475,9 +475,10 @@ function OpportunityCard({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
+          gap: 6,
         }}
       >
-        <strong style={{ fontSize: "0.85rem" }}>{o.title || name}</strong>
+        <strong className="opp-company">{name}</strong>
         <div style={{ display: "flex", gap: 2 }}>
           <button className="row-icon-btn" title="Edit" onClick={onEdit}>
             {Icon.edit}
@@ -491,29 +492,36 @@ function OpportunityCard({
           </button>
         </div>
       </div>
-      {o.title && <div className="muted small">{name}</div>}
-
-      {fields.leadStatus && leadStatus && (
-        <span
-          className="opp-status-badge"
-          style={{
-            background: leadStatus.color,
-            color: readableText(leadStatus.color),
-          }}
-        >
-          {leadStatus.name}
-        </span>
-      )}
 
       {fields.value && (
-        <div style={{ fontWeight: 700, margin: "4px 0" }}>{money(o.value)}</div>
+        <div className="opp-line">
+          <span className="opp-line-label">Opportunity Value:</span>{" "}
+          <strong>{money(o.value)}</strong>
+        </div>
       )}
+
+      {fields.leadStatus && leadStatus && (
+        <div className="opp-line">
+          <span className="opp-line-label">Lead Status:</span>{" "}
+          <span
+            className="opp-status-badge"
+            style={{
+              background: leadStatus.color,
+              color: readableText(leadStatus.color),
+            }}
+          >
+            {leadStatus.name}
+          </span>
+        </div>
+      )}
+
       {fields.contact && contact && (
         <div
-          className="muted small"
+          className="opp-line"
           style={{ display: "flex", alignItems: "center", gap: 6 }}
         >
-          {contact}
+          <span className="opp-line-label">Contact Name:</span>
+          <span>{contact}</span>
           {email && <MailLink email={email} />}
         </div>
       )}

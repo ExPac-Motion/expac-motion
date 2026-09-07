@@ -891,6 +891,21 @@ tr.clickable:hover {
   box-shadow: 0 8px 22px rgba(32, 36, 38, 0.13);
   transform: translateY(-1px);
 }
+.opp-company {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  color: #1e3a8a;
+}
+.opp-line {
+  font-size: 0.8rem;
+  margin: 3px 0;
+  color: var(--ink-2);
+}
+.opp-line-label {
+  color: var(--muted);
+  font-weight: 700;
+}
 .opp-status-badge {
   display: inline-block;
   margin: 4px 0;
