@@ -654,6 +654,7 @@ export const CHARGE_UNITS: string[] = [
   "AWB",
   "INV",
   "DOC",
+  "DIS",
   "CBM",
   "W/M",
   "R/T",
