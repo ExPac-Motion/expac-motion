@@ -495,7 +495,7 @@ function OpportunityCard({
 
       {fields.value && (
         <div className="opp-line">
-          <span className="opp-line-label">Opportunity Value:</span>{" "}
+          <span className="opp-line-label">Value:</span>{" "}
           <strong>{money(o.value)}</strong>
         </div>
       )}
@@ -520,7 +520,7 @@ function OpportunityCard({
           className="opp-line"
           style={{ display: "flex", alignItems: "center", gap: 6 }}
         >
-          <span className="opp-line-label">Contact Name:</span>
+          <span className="opp-line-label">Contact:</span>
           <span>{contact}</span>
           {email && <MailLink email={email} />}
         </div>
