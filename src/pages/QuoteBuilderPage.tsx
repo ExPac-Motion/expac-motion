@@ -1311,26 +1311,42 @@ export default function QuoteBuilderPage() {
                           />
                         </td>
                         <td className="num">
-                          <input
-                            type="number"
-                            step="any"
-                            value={String(l.buy ?? "")}
-                            placeholder={isServiceFee ? "0" : undefined}
-                            onChange={(e) => setLine(i, "buy", e.target.value)}
-                            title={
-                              isServiceFee
-                                ? "Service fee — pre-filled at 0, editable if you need a cost"
-                                : undefined
-                            }
-                          />
+                          {isServiceFee ? (
+                            <input
+                              type="number"
+                              readOnly
+                              tabIndex={-1}
+                              value=""
+                              placeholder="—"
+                              title="Service fee — no buy cost, priced only in Sell (R)"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              step="any"
+                              value={String(l.buy ?? "")}
+                              onChange={(e) => setLine(i, "buy", e.target.value)}
+                            />
+                          )}
                         </td>
                         <td className="num">
-                          <input
-                            type="number"
-                            step="any"
-                            value={String(l.margin ?? "")}
-                            onChange={(e) => setLine(i, "margin", e.target.value)}
-                          />
+                          {isServiceFee ? (
+                            <input
+                              type="number"
+                              readOnly
+                              tabIndex={-1}
+                              value=""
+                              placeholder="—"
+                              title="Service fee — no markup, priced only in Sell (R)"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              step="any"
+                              value={String(l.margin ?? "")}
+                              onChange={(e) => setLine(i, "margin", e.target.value)}
+                            />
+                          )}
                         </td>
                         <td className="num">
                           <input
@@ -1387,8 +1403,13 @@ export default function QuoteBuilderPage() {
                           <input
                             type="number"
                             readOnly
-                            value={lineBuyTotal(l).toFixed(2)}
-                            title={`Qty × Buy in ${l.cur} — foreign purchase total`}
+                            value={isServiceFee ? "" : lineBuyTotal(l).toFixed(2)}
+                            placeholder={isServiceFee ? "—" : undefined}
+                            title={
+                              isServiceFee
+                                ? "Service fee — no buy cost"
+                                : `Qty × Buy in ${l.cur} — foreign purchase total`
+                            }
                             tabIndex={-1}
                           />
                         </td>
