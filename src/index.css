@@ -1901,9 +1901,10 @@ tr.clickable:hover {
 }
 .qs-routecol .qs-meta {
   margin-top: 14px;
-  /* labels sit under FROM; the value column starts under the TO port code
-     (routebox right edge − a 5-char UN/LOCODE ≈ 108px), text left-aligned */
-  grid-template-columns: auto 108px;
+  /* the value column starts under the TO port code: the routebox splits into
+     two equal halves either side of the ~50px arrow, so the TO half (and the
+     values under it) begin at 50% − half the arrow. */
+  grid-template-columns: auto calc(50% - 25px);
   justify-content: space-between;
 }
 .qs-fromblock {
@@ -1955,8 +1956,13 @@ tr.clickable:hover {
 .qs-routebox {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 0;
+}
+/* FROM and TO each own a fixed half of the row, so the port codes sit at
+   the same X on every quote regardless of which 5-letter code it is. */
+.qs-routebox > div {
+  flex: 1 1 0;
+  min-width: 0;
 }
 .qs-routelbl {
   font-weight: 700;
