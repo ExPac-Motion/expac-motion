@@ -110,65 +110,41 @@ const Icon = {
   ),
 };
 
-/* KPI icons — same stroke style as the main dashboard's cards. */
-const KpiIcon = {
-  target: (
+/* One icon per pipeline stage, sat in front of the column heading. */
+const STAGE_ICON: Record<OpportunityStatus, ReactNode> = {
+  new_lead: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="4" />
       <circle cx="12" cy="12" r="0.5" fill="currentColor" />
     </svg>
   ),
-  cash: (
+  quote_sent: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M22 2L11 13" />
+      <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+    </svg>
+  ),
+  quote_accepted: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="2" y="6" width="20" height="12" rx="2" />
       <circle cx="12" cy="12" r="2.5" />
       <path d="M6 9v6M18 9v6" />
     </svg>
   ),
-  send: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M22 2L11 13" />
-      <path d="M22 2l-7 20-4-9-9-4 20-7z" />
-    </svg>
-  ),
-  trophy: (
+  job_completed: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z" />
       <path d="M17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3" />
     </svg>
   ),
-  percent: (
+  not_proceeding: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M19 5L5 19" />
-      <circle cx="7.5" cy="7.5" r="2.5" />
-      <circle cx="16.5" cy="16.5" r="2.5" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 9v6M14 9v6" />
     </svg>
   ),
 };
-
-function OppKpi({
-  icon,
-  label,
-  value,
-  foot,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: ReactNode;
-  foot: ReactNode;
-}) {
-  return (
-    <div className="kpi kpi-plain">
-      <div className="kpi-top">
-        <span className="kpi-icon">{icon}</span>
-        <span className="kpi-label">{label}</span>
-      </div>
-      <div className="kpi-value">{value}</div>
-      <div className="kpi-foot">{foot}</div>
-    </div>
-  );
-}
 
 export default function OpportunitiesTab() {
   const oppsQ = useOpportunities();
@@ -185,31 +161,6 @@ export default function OpportunitiesTab() {
   }
 
   const opps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
-
-  const kpi = useMemo(() => {
-    const openKeys = new Set<OpportunityStatus>([
-      "new_lead",
-      "quote_sent",
-      "quote_accepted",
-    ]);
-    const open = opps.filter((o) => openKeys.has(o.status));
-    const openValue = open.reduce((s, o) => s + o.value, 0);
-    const sent = opps.filter((o) => o.status === "quote_sent");
-    const won = opps.filter((o) => o.status === "job_completed");
-    const lost = opps.filter((o) => o.status === "not_proceeding").length;
-    const decided = won.length + lost;
-    return {
-      openCount: open.length,
-      openValue,
-      avg: open.length ? openValue / open.length : 0,
-      sentCount: sent.length,
-      sentValue: sent.reduce((s, o) => s + o.value, 0),
-      wonCount: won.length,
-      wonValue: won.reduce((s, o) => s + o.value, 0),
-      winRate: decided ? Math.round((won.length / decided) * 100) : 0,
-      lost,
-    };
-  }, [opps]);
 
   const statusById = useMemo(() => {
     const m = new Map<string, LeadStatus>();
@@ -333,41 +284,6 @@ export default function OpportunitiesTab() {
         </div>
       </div>
 
-      {opps.length > 0 && (
-        <div className="dash-kpis opp-kpis">
-          <OppKpi
-            icon={KpiIcon.target}
-            label="Open Opportunities"
-            value={kpi.openCount}
-            foot={<span>{opps.length} all-time</span>}
-          />
-          <OppKpi
-            icon={KpiIcon.cash}
-            label="Open Pipeline Value"
-            value={money(kpi.openValue)}
-            foot={<span>Avg {money(kpi.avg)}</span>}
-          />
-          <OppKpi
-            icon={KpiIcon.send}
-            label="Quote Sent — Follow Up"
-            value={kpi.sentCount}
-            foot={<span>{money(kpi.sentValue)} in play</span>}
-          />
-          <OppKpi
-            icon={KpiIcon.trophy}
-            label="Won — Delivered"
-            value={kpi.wonCount}
-            foot={<span>{money(kpi.wonValue)}</span>}
-          />
-          <OppKpi
-            icon={KpiIcon.percent}
-            label="Win Rate"
-            value={`${kpi.winRate}%`}
-            foot={<span>{kpi.lost} not proceeding</span>}
-          />
-        </div>
-      )}
-
       {opps.length === 0 ? (
         <div className="panel">
           <EmptyState>
@@ -399,12 +315,22 @@ export default function OpportunitiesTab() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
+                      gap: 6,
                     }}
                   >
-                    <strong style={{ fontSize: "0.85rem" }}>{stage.label}</strong>
+                    <span className="opp-col-head">
+                      <span className="opp-col-icon">
+                        {STAGE_ICON[stage.key]}
+                      </span>
+                      <strong style={{ fontSize: "0.85rem" }}>
+                        {stage.label}
+                      </strong>
+                    </span>
                     <span className="muted small">{rows.length}</span>
                   </div>
-                  <div className="muted small">{money(total)}</div>
+                  <div className="small" style={{ fontWeight: 700 }}>
+                    {money(total)}
+                  </div>
                 </div>
 
                 <div className="stack-sm">

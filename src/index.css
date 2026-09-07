@@ -927,6 +927,28 @@ tr.clickable:hover {
   vertical-align: middle;
 }
 
+/* Opportunities pipeline column heading */
+.opp-col-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.opp-col-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: #eef4e3;
+  color: var(--green-dark);
+}
+.opp-col-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
 /* Opportunities pipeline card */
 .opp-card {
   border: 1px solid var(--line);
