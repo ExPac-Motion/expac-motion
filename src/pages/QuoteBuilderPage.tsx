@@ -24,6 +24,7 @@ import {
   insuranceAmount,
   INSURANCE_CODE,
   FORWARDING_CODE,
+  DISBURSEMENT_CODE,
   lineTotal,
   lineBuyTotal,
   packingRow,
@@ -86,6 +87,7 @@ function newLine(category: ChargeCategory, position: number): QuoteLine {
     unit: "",
     qty: 1,
     qty_override: false,
+    fee_rate: null,
     buy: 0,
     margin: 0,
     vat_pct: 0,
@@ -208,6 +210,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
         unit,
         qty: l.qty ?? 0,
         qty_override: l.qty_override ?? false,
+        fee_rate: l.fee_rate ?? null,
         buy,
         margin,
         vat_pct: l.vat_pct ?? 0,
@@ -1178,10 +1181,28 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
-                      // IN-01 / FW-01: qty, buy and margin are all computed.
-                      const computed =
-                        l.code === INSURANCE_CODE || l.code === FORWARDING_CODE;
+                      // IN-01 / FW-01 / DIS-01: qty, buy and margin are computed.
                       const isFwd = l.code === FORWARDING_CODE;
+                      const isDis = l.code === DISBURSEMENT_CODE;
+                      const computed =
+                        l.code === INSURANCE_CODE || isFwd || isDis;
+                      const feeTitle = {
+                        qty: isFwd
+                          ? "Forwarding fee — quantity is 1"
+                          : isDis
+                            ? "Disbursement fee — quantity is 1"
+                            : "Insurance line — quantity is 1",
+                        buy: isFwd
+                          ? "1% of the International Freight Charges (USD)"
+                          : isDis
+                            ? "2.5% of the total Customs VAT + Duty (ZAR)"
+                            : "0.50% of Commercial Value ($)",
+                        margin: isFwd
+                          ? "No markup on the forwarding fee"
+                          : isDis
+                            ? "No markup on the disbursement fee"
+                            : "No markup on insurance",
+                      };
                       return (
                       <tr key={i}>
                         <td className="c-code">
@@ -1251,11 +1272,7 @@ export default function QuoteBuilderPage() {
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.qty) || 0).toFixed(2)}
-                              title={
-                                isFwd
-                                  ? "Forwarding fee — quantity is 1"
-                                  : "Insurance line — quantity is 1"
-                              }
+                              title={feeTitle.qty}
                             />
                           ) : (
                             <input
@@ -1290,11 +1307,7 @@ export default function QuoteBuilderPage() {
                               readOnly
                               tabIndex={-1}
                               value={(Number(l.buy) || 0).toFixed(2)}
-                              title={
-                                isFwd
-                                  ? "1% of the International Freight Charges (USD)"
-                                  : "0.50% of Commercial Value ($)"
-                              }
+                              title={feeTitle.buy}
                             />
                           ) : (
                             <input
@@ -1306,17 +1319,28 @@ export default function QuoteBuilderPage() {
                           )}
                         </td>
                         <td className="num">
-                          {computed ? (
+                          {isFwd || isDis ? (
+                            <input
+                              type="number"
+                              step="any"
+                              value={String(draft.lines[i]?.fee_rate ?? "")}
+                              placeholder={isFwd ? "1" : "2.5"}
+                              onChange={(e) =>
+                                setLineFields(i, { fee_rate: e.target.value })
+                              }
+                              title={
+                                isFwd
+                                  ? "Fee rate % — 1% of International Freight by default; edit to raise / lower"
+                                  : "Fee rate % — 2.5% of Customs VAT + Duty by default; edit to raise / lower"
+                              }
+                            />
+                          ) : computed ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value="0"
-                              title={
-                                isFwd
-                                  ? "No markup on the forwarding fee"
-                                  : "No markup on insurance"
-                              }
+                              title={feeTitle.margin}
                             />
                           ) : (
                             <input

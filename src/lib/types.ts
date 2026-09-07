@@ -724,6 +724,9 @@ export interface QuoteLine {
   /** true once an operator hand-edits qty on a line whose qty would
    *  otherwise be derived (weight/volume unit, or a code-driven rule). */
   qty_override?: boolean;
+  /** Percentage for a %-of-something fee line (FW-01, DIS-01). null = use the
+   *  code's default rate. */
+  fee_rate?: number | string | null;
   buy: number | string;
   /** Markup % added to buy before converting to the ZAR sell rate. */
   margin: number | string;
