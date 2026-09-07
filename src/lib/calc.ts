@@ -168,15 +168,15 @@ export function effectiveQty(
   return auto != null ? auto : Number(line.qty) || 0;
 }
 
-/** Cargo Insurance charge code: sell is the insurance premium, not a marked-up buy. */
-export const INSURANCE_CODE = "IN-01";
-/** ExPac service-fee codes: no buy cost — the operator types the sell. Picking
+/** ExPac sell-only codes: no buy cost — the operator types the sell. Picking
  *  the code pre-fills a suggested sell (see serviceFeePrefillZar), then every
  *  cell is a normal editable field. */
+export const INSURANCE_CODE = "IN-01";
 export const FORWARDING_CODE = "FW-01";
 export const DISBURSEMENT_CODE = "DIS-01";
 export const CUSTOMS_CLEARANCE_CODE = "CU-05";
 export const SERVICE_FEE_CODES: readonly string[] = [
+  INSURANCE_CODE,
   FORWARDING_CODE,
   DISBURSEMENT_CODE,
   CUSTOMS_CLEARANCE_CODE,
@@ -224,15 +224,18 @@ export function customsVatDutyZar(lines: QuoteLine[], fx: FxRates): number {
     );
 }
 
-/** Suggested SELL (R) to drop in when a service-fee code is picked. FW-01 =
- *  1% of International Freight (USD→ZAR); DIS-01 = 2.5% of Customs VAT + Duty
- *  (ZAR); CU-05 has no formula, so 0. `lines` should exclude the line being
- *  picked. */
+/** Suggested SELL (R) to drop in when a sell-only code is picked.
+ *  IN-01 = 0.50% of Commercial Value ($→ZAR); FW-01 = 1% of International
+ *  Freight ($→ZAR); DIS-01 = 2.5% of Customs VAT + Duty (ZAR); CU-05 has no
+ *  formula, so 0. `lines` should exclude the line being picked. */
 export function serviceFeePrefillZar(
   code: string,
   lines: QuoteLine[],
   fx: FxRates,
+  commercialValue: number | string = "",
 ): number {
+  if (code === INSURANCE_CODE)
+    return insuranceAmount(commercialValue) * (fx.usd || 0);
   if (code === FORWARDING_CODE)
     return intlFreightBuyUsd(lines, fx) * FORWARDING_RATE * (fx.usd || 0);
   if (code === DISBURSEMENT_CODE)
@@ -261,14 +264,8 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
   const auto = autoQty(line, ctx.mode, ctx.pack);
   if (auto != null) qty = auto;
 
-  if (line.code === INSURANCE_CODE) {
-    // Sell (R) = insurance amount ($) converted at the line's currency rate.
-    buy = insuranceAmount(ctx.commercialValue);
-    margin = 0;
-    qty = 1;
-  }
-
-  // Service fees: no cost, the operator's typed sell (R) stands as-is.
+  // Sell-only codes (IN-01 / FW-01 / DIS-01 / CU-05): no cost, the operator's
+  // typed sell (R) stands as-is (pre-filled on pick, see serviceFeePrefillZar).
   if (SERVICE_FEE_CODES.includes(line.code)) {
     return { ...line, qty, buy, margin, sell: Number(line.sell) || 0 };
   }

@@ -22,7 +22,6 @@ import {
   groupByCategory,
   impliedMargin,
   insuranceAmount,
-  INSURANCE_CODE,
   SERVICE_FEE_CODES,
   serviceFeePrefillZar,
   buyRate,
@@ -448,7 +447,12 @@ export default function QuoteBuilderPage() {
       patch.margin = 0;
       patch.qty = 1;
       const others = resolvedLines.filter((_, i) => i !== index);
-      const prefill = serviceFeePrefillZar(code, others, fx);
+      const prefill = serviceFeePrefillZar(
+        code,
+        others,
+        fx,
+        draft?.commercial_value,
+      );
       patch.sell = prefill > 0 ? Number(prefill.toFixed(2)) : "";
     }
     setLineFields(index, patch);
@@ -1193,10 +1197,9 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
-                      // IN-01: qty / buy / margin are all locked (computed).
-                      const computed = l.code === INSURANCE_CODE;
-                      // Service fees (FW-01 / DIS-01 / CU-05): no buy cost, the
-                      // Sell (R) cell is typed directly (pre-filled on pick).
+                      // Service fees (IN-01 / FW-01 / DIS-01 / CU-05): no buy
+                      // cost, the Sell (R) cell is typed directly — pre-filled
+                      // on pick, then every cell is a normal editable field.
                       const isServiceFee = SERVICE_FEE_CODES.includes(
                         String(l.code ?? ""),
                       );
@@ -1263,81 +1266,51 @@ export default function QuoteBuilderPage() {
                           </select>
                         </td>
                         <td className="num">
-                          {computed ? (
-                            <input
-                              type="number"
-                              readOnly
-                              tabIndex={-1}
-                              value={(Number(l.qty) || 0).toFixed(2)}
-                              title="Insurance line — quantity is 1"
-                            />
-                          ) : (
-                            <input
-                              type="number"
-                              step="any"
-                              className={qtyDerived ? "qty-derived" : undefined}
-                              value={
-                                qtyDerived
-                                  ? (autoQ ?? 0).toFixed(2)
-                                  : String(draft.lines[i]?.qty ?? "")
-                              }
-                              onChange={(e) =>
-                                setLineFields(i, {
-                                  qty: e.target.value,
-                                  qty_override: true,
-                                })
-                              }
-                              title={
-                                qtyDerived
-                                  ? "Auto from the Packing List for this unit — type to override"
-                                  : l.qty_override
-                                    ? "Manually set — clear or change the unit to go back to auto"
-                                    : undefined
-                              }
-                            />
-                          )}
-                        </td>
-                        <td className="num">
-                          {computed ? (
-                            <input
-                              type="number"
-                              readOnly
-                              tabIndex={-1}
-                              value={(Number(l.buy) || 0).toFixed(2)}
-                              title="0.50% of Commercial Value ($)"
-                            />
-                          ) : (
-                            <input
-                              type="number"
-                              step="any"
-                              value={String(l.buy ?? "")}
-                              placeholder={isServiceFee ? "0" : undefined}
-                              onChange={(e) => setLine(i, "buy", e.target.value)}
-                              title={
-                                isServiceFee
-                                  ? "Service fee — usually no buy cost"
+                          <input
+                            type="number"
+                            step="any"
+                            className={qtyDerived ? "qty-derived" : undefined}
+                            value={
+                              qtyDerived
+                                ? (autoQ ?? 0).toFixed(2)
+                                : String(draft.lines[i]?.qty ?? "")
+                            }
+                            onChange={(e) =>
+                              setLineFields(i, {
+                                qty: e.target.value,
+                                qty_override: true,
+                              })
+                            }
+                            title={
+                              qtyDerived
+                                ? "Auto from the Packing List for this unit — type to override"
+                                : l.qty_override
+                                  ? "Manually set — clear or change the unit to go back to auto"
                                   : undefined
-                              }
-                            />
-                          )}
+                            }
+                          />
                         </td>
                         <td className="num">
-                          {computed ? (
-                            <input
-                              type="number"
-                              readOnly
-                              tabIndex={-1}
-                              value="0"
-                              title="No markup on insurance"
-                            />
-                          ) : (
-                            <input
-                              type="number"
-                              step="any"
-                              value={String(l.margin ?? "")}
-                              onChange={(e) => setLine(i, "margin", e.target.value)}
-                            />
-                          )}
+                          <input
+                            type="number"
+                            step="any"
+                            value={String(l.buy ?? "")}
+                            placeholder={isServiceFee ? "0" : undefined}
+                            onChange={(e) => setLine(i, "buy", e.target.value)}
+                            title={
+                              isServiceFee
+                                ? "Service fee — usually no buy cost"
+                                : undefined
+                            }
+                          />
+                        </td>
+                        <td className="num">
+                          <input
+                            type="number"
+                            step="any"
+                            value={String(l.margin ?? "")}
+                            onChange={(e) => setLine(i, "margin", e.target.value)}
+                          />
                         </td>
                         <td className="num">
                           <input
