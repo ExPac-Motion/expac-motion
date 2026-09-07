@@ -632,7 +632,7 @@ export default function FormsPage() {
                       />
                     </td>
                     <td>
-                      <strong>{f.name}</strong>
+                      <strong className="row-name">{f.name}</strong>
                     </td>
                     <td>{f.fields.length}</td>
                     <td>

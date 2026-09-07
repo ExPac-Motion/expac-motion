@@ -668,7 +668,7 @@ export default function LeadsPage() {
                       />
                     </td>
                     <td>
-                      <strong>{r.company}</strong>
+                      <strong className="row-name">{r.company}</strong>
                       {r.promoted_client_id && (
                         <span className="tag">promoted to customer</span>
                       )}

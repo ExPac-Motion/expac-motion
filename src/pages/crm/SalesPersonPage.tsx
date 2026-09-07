@@ -124,7 +124,7 @@ export default function SalesPersonPage() {
                       />
                     </td>
                     <td>
-                      <strong>{p.full_name || "—"}</strong>
+                      <strong className="row-name">{p.full_name || "—"}</strong>
                     </td>
                     <td>{money(s.revenue)}</td>
                     <td>

@@ -493,7 +493,7 @@ export default function CampaignsPage() {
                       />
                     </td>
                     <td>
-                      <strong>{c.name}</strong>
+                      <strong className="row-name">{c.name}</strong>
                     </td>
                     <td>{c.subject}</td>
                     <td>

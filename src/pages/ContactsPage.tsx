@@ -293,7 +293,7 @@ export default function ContactsPage({
                         )}
                       </td>
                       <td>
-                        <strong>{r.company}</strong>
+                        <strong className="row-name">{r.company}</strong>
                         {r.also_clearing_agent && (
                           <span className="tag">also clearing agent</span>
                         )}

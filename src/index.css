@@ -897,6 +897,11 @@ tr.clickable:hover {
   line-height: 1.25;
   color: rgb(36, 91, 198);
 }
+/* Primary row name (Customers / Suppliers / Leads / Sales Person /
+   Templates / Campaigns / Forms list tables) */
+.row-name {
+  color: rgb(36, 91, 198);
+}
 .opp-line {
   font-size: 0.8rem;
   margin: 3px 0;

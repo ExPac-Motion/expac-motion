@@ -282,7 +282,7 @@ export default function TemplatesPage() {
                       />
                     </td>
                     <td>
-                      <strong>{t.name}</strong>
+                      <strong className="row-name">{t.name}</strong>
                     </td>
                     <td>{t.subject}</td>
                     <td className="nowrap">{formatDate(t.updated_at)}</td>
