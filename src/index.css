@@ -1827,9 +1827,11 @@ tr.clickable:hover {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
   font-size: 11px;
   line-height: 1.4;
-  /* the printed quotation is set entirely in Arial — this also redefines
-     --display for every descendant that uses it (title, port codes, bars) */
-  font-family: Arial, Helvetica, sans-serif;
+  /* system font stack, matching the rest of the app (was Arial). Renders
+     per-OS — Segoe UI / San Francisco / Roboto — so the saved PDF's
+     typeface depends on who generates it. */
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   --display: Arial, Helvetica, sans-serif;
   /* keep the green bars / tints when "Background graphics" is off in Save-as-PDF */
   -webkit-print-color-adjust: exact;
