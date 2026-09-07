@@ -78,6 +78,9 @@ export default function QuotePrintPage() {
     );
 
   const clientRec = clients?.find((c) => c.id === q.client_id);
+  // A quote raised against a not-yet-promoted lead has no client record —
+  // fall back to the lead's own contact details.
+  const party = clientRec ?? q.lead ?? null;
 
   // Grand total. VAT is the sum of each line's qty x sell x vat_pct%.
   let exclusive = 0;
@@ -110,11 +113,11 @@ export default function QuotePrintPage() {
   ];
 
   const clientRows: [string, string][] = [
-    ["Contact Person", clientRec?.contact || "—"],
-    ["Customer VAT No", "TBC"],
-    ["Tel Number", clientRec?.phone || "—"],
-    ["Email Address", clientRec?.email || "—"],
-    ["Address", "To Be Confirmed"],
+    ["Contact Person", party?.contact || "—"],
+    ["Customer VAT No", clientRec?.vat_no || "TBC"],
+    ["Tel Number", party?.phone || "—"],
+    ["Email Address", party?.email || "—"],
+    ["Address", clientRec?.address || "To Be Confirmed"],
   ];
 
   const packingRows = q.packing_list_items ?? [];
