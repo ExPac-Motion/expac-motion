@@ -24,7 +24,6 @@ import {
   insuranceAmount,
   SERVICE_FEE_CODES,
   serviceFeePrefillZar,
-  buyRate,
   lineTotal,
   lineBuyTotal,
   packingRow,
@@ -201,6 +200,27 @@ function draftFromQuote(q: Quote): QuoteDraft {
         storedUnit && !CHARGE_UNITS.includes(storedUnit) && catUnit
           ? catUnit
           : storedUnit;
+      // Sell-only service fees (IN-01 / FW-01 / DIS-01 / CU-05): the stored
+      // sell (R) is the source of truth. Buy / margin open at 0 (the cells stay
+      // editable) — never reconstructed from the sell, and any stray legacy
+      // Buy value on the row is dropped.
+      if (SERVICE_FEE_CODES.includes(l.code ?? "")) {
+        return {
+          position: i,
+          category: (l.category as ChargeCategory) ?? CHARGE_CATEGORIES[0],
+          code: l.code ?? "",
+          description: l.description ?? "",
+          cur,
+          unit,
+          qty: l.qty ?? 1,
+          qty_override: l.qty_override ?? false,
+          fee_rate: l.fee_rate ?? null,
+          buy: 0,
+          margin: 0,
+          vat_pct: l.vat_pct ?? 0,
+          sell: Math.round(storedSell * 100) / 100,
+        };
+      }
       return {
         position: i,
         category: (l.category as ChargeCategory) ?? CHARGE_CATEGORIES[0],
@@ -1299,7 +1319,7 @@ export default function QuoteBuilderPage() {
                             onChange={(e) => setLine(i, "buy", e.target.value)}
                             title={
                               isServiceFee
-                                ? "Service fee — usually no buy cost"
+                                ? "Service fee — pre-filled at 0, editable if you need a cost"
                                 : undefined
                             }
                           />
@@ -1322,21 +1342,24 @@ export default function QuoteBuilderPage() {
                           />
                         </td>
                         <td className="num">
-                          <input
-                            type="number"
-                            readOnly
-                            value={(isServiceFee
-                              ? (Number(l.sell) || 0) /
-                                (buyRate(l.cur, fx) || 1)
-                              : sellInCur(l.buy, l.margin)
-                            ).toFixed(2)}
-                            title={
-                              isServiceFee
-                                ? `Sell (R) back-converted to ${l.cur}`
-                                : `Buy + margin, in ${l.cur} (before ZAR conversion)`
-                            }
-                            tabIndex={-1}
-                          />
+                          {isServiceFee ? (
+                            <input
+                              type="number"
+                              readOnly
+                              tabIndex={-1}
+                              value=""
+                              placeholder="—"
+                              title="Service fee — priced directly in Sell (R)"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              readOnly
+                              value={sellInCur(l.buy, l.margin).toFixed(2)}
+                              title={`Buy + margin, in ${l.cur} (before ZAR conversion)`}
+                              tabIndex={-1}
+                            />
+                          )}
                         </td>
                         <td className="num">
                           {isServiceFee ? (

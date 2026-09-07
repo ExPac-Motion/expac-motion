@@ -264,8 +264,10 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
   const auto = autoQty(line, ctx.mode, ctx.pack);
   if (auto != null) qty = auto;
 
-  // Sell-only codes (IN-01 / FW-01 / DIS-01 / CU-05): no cost, the operator's
-  // typed sell (R) stands as-is (pre-filled on pick, see serviceFeePrefillZar).
+  // Sell-only codes (IN-01 / FW-01 / DIS-01 / CU-05): the sell (R) is typed
+  // directly (pre-filled on pick, see serviceFeePrefillZar) and never derived
+  // from buy × margin. Every cell stays editable, so qty / buy / margin pass
+  // through as entered — they just don't drive the sell.
   if (SERVICE_FEE_CODES.includes(line.code)) {
     return { ...line, qty, buy, margin, sell: Number(line.sell) || 0 };
   }
