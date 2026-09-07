@@ -1,8 +1,8 @@
 :root {
   --green: #8cbc43;
   --green-dark: #719d2f;
-  --ink: #202426;
-  --ink-2: #2b2f31;
+  --ink: rgb(46, 46, 46);
+  --ink-2: rgb(46, 46, 46);
   --paper: #f4f1ea;
   --white: #fff;
   --muted: #6f756d;

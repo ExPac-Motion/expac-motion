@@ -95,7 +95,7 @@ export function buildShipmentEmail(
 
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#202426;line-height:1.55;max-width:640px">
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2e2e2e;line-height:1.55;max-width:640px">
   <img src="https://expac.co.za${COMPANY.logoPrint}" alt="EXPAC Forwarding" style="max-height:46px;margin-bottom:8px" />
   <div style="border-top:3px solid #8cbc43;margin:6px 0 14px"></div>
   <pre style="font-family:Arial,Helvetica,sans-serif;font-size:14px;white-space:pre-wrap;margin:0">${esc(text)}</pre>
