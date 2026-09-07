@@ -203,7 +203,12 @@ export default function QuotesListPage() {
                       <td>
                         <span className="ref-link">{q.reference}</span>
                       </td>
-                      <td>{q.client?.company ?? "—"}</td>
+                      <td>
+                        {q.client?.company ?? q.lead?.company ?? "—"}
+                        {!q.client && q.lead && (
+                          <span className="tag">lead</span>
+                        )}
+                      </td>
                       <td>{q.supplier?.company ?? "—"}</td>
                       <td>{q.customer_reference || "—"}</td>
                       <td className="nowrap">

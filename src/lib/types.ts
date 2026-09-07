@@ -775,6 +775,8 @@ export interface Quote {
   quote_lines: QuoteLine[];
   packing_list_items: PackingItem[];
   client?: Pick<Client, "id" | "company"> | null;
+  /** Set instead of `client` when the quote is against a not-yet-promoted lead. */
+  lead?: Pick<Lead, "id" | "company"> | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
   agent?: Pick<Agent, "id" | "company"> | null;
   transporter?: Pick<Transporter, "id" | "company"> | null;

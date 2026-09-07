@@ -224,7 +224,7 @@ export async function deleteClearingAgent(id: string): Promise<void> {
 
 /* ---------- Quotes ---------- */
 const QUOTE_SELECT =
-  "*, quote_lines(*), packing_list_items(*), client:clients(id,company), supplier:suppliers(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
+  "*, quote_lines(*), packing_list_items(*), client:clients(id,company), lead:leads(id,company), supplier:suppliers(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
 
 function sortLines(q: Quote): Quote {
   q.quote_lines = [...(q.quote_lines || [])].sort(

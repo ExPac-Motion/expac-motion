@@ -95,7 +95,7 @@ export default function QuotePrintPage() {
   // Quote-stage fields only. Booking details (ETD/ETA, MAWB/HAWB/flight,
   // vessel/MBL/HBL/container, carrier, status) don't exist yet on a quotation.
   const shipment: [string, string][] = [
-    ["Customer / Importer", q.client?.company ?? "—"],
+    ["Customer / Importer", q.client?.company ?? q.lead?.company ?? "—"],
     ["Shipper / Exporter", q.supplier?.company ?? "—"],
     ["Reference", q.reference],
     ["Mode", q.mode],
@@ -158,7 +158,9 @@ export default function QuotePrintPage() {
         <div className="qs-head">
           <div className="qs-client">
             <div className="qs-fromto">TO</div>
-            <div className="qs-cbar">{q.client?.company ?? "CUSTOMER"}</div>
+            <div className="qs-cbar">
+              {q.client?.company ?? q.lead?.company ?? "CUSTOMER"}
+            </div>
             <div className="qs-pgrid">
               {clientRows.map(([k, v]) => (
                 <Fragment key={k}>

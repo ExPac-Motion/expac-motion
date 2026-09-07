@@ -122,7 +122,13 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
       }
     >
       <div className="grid4" style={{ margin: "4px 0 14px" }}>
-        <Field label="Customer/Importer" value={q.client?.company ?? "—"} />
+        <Field
+          label="Customer/Importer"
+          value={
+            q.client?.company ??
+            (q.lead?.company ? `${q.lead.company} (lead)` : "—")
+          }
+        />
         <Field label="Shipper/Exporter" value={q.supplier?.company ?? "—"} />
         <Field label="Agent (internal)" value={q.agent?.company ?? "—"} />
         <Field
