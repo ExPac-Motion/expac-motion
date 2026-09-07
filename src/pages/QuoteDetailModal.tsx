@@ -15,6 +15,7 @@ import {
   packingTotals,
   resolveLine,
   sellInCur,
+  volumetricFactor,
 } from "../lib/calc";
 import { formatDate, money, usd } from "../lib/format";
 
@@ -39,7 +40,8 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
   }
 
   const packing = q.packing_list_items ?? [];
-  const packTotals = packingTotals(packing);
+  const vFactor = volumetricFactor(q.mode);
+  const packTotals = packingTotals(packing, vFactor);
   const resolvedLines = q.quote_lines.map((l) =>
     resolveLine(l, {
       mode: q.mode,
@@ -192,7 +194,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
               </thead>
               <tbody>
                 {packing.map((p, i) => {
-                  const r = packingRow(p);
+                  const r = packingRow(p, vFactor);
                   return (
                     <tr key={p.id ?? i}>
                       <td style={{ textAlign: "right" }}>{Number(p.length_cm) || 0}</td>
@@ -213,7 +215,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
               <tfoot>
                 <tr>
                   <td colSpan={7} style={{ textAlign: "right" }} className="muted">
-                    Chargeable Volume (CBM)
+                    Chg Vol (CBM)
                   </td>
                   <td colSpan={2} style={{ textAlign: "right", fontWeight: 700 }}>
                     {packTotals.totalCbm.toFixed(2)}
@@ -221,7 +223,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                 </tr>
                 <tr>
                   <td colSpan={7} style={{ textAlign: "right" }} className="muted">
-                    Chargeable Weight (KGS) — max(actual{" "}
+                    Chg Weight (KGS) — max(actual{" "}
                     {packTotals.totalActual.toFixed(2)}, volume{" "}
                     {packTotals.totalVolume.toFixed(2)})
                   </td>

@@ -30,7 +30,7 @@ import {
   resolveLine,
   sellFromBuy,
   sellInCur,
-  VOLUMETRIC_FACTOR,
+  volumetricFactor,
   type FxRates,
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
@@ -272,9 +272,10 @@ export default function QuoteBuilderPage() {
     }),
     [draft?.fx_usd_zar, draft?.fx_cny_zar],
   );
+  const vFactor = volumetricFactor(draft?.mode);
   const packTotals = useMemo(
-    () => packingTotals(draft?.packing ?? []),
-    [draft?.packing],
+    () => packingTotals(draft?.packing ?? [], vFactor),
+    [draft?.packing, vFactor],
   );
   // Lines with code/unit-driven values resolved (KGS qty -> chargeable weight, IN-01 -> insurance).
   const resolvedLines = useMemo(
@@ -883,8 +884,9 @@ export default function QuoteBuilderPage() {
           <div>
             <h2>Packing List Information</h2>
             <p>
-              Dimensions in cm. Volume (KGS) = CBM × {VOLUMETRIC_FACTOR}.
-              Chargeable weight = greater of total actual and total volume weight.
+              Dimensions in cm. Volume (KGS) = CBM × {vFactor}
+              {vFactor === 1000 ? " (Sea LCL: 1 CBM = 1 000 kg)" : ""}. Chargeable
+              weight = greater of total actual and total volume weight.
             </p>
           </div>
           <button className="btn small outline" onClick={addPacking}>
@@ -931,7 +933,7 @@ export default function QuoteBuilderPage() {
                 </tr>
               ) : (
                 draft.packing.map((p, i) => {
-                  const r = packingRow(p);
+                  const r = packingRow(p, vFactor);
                   return (
                     <tr key={i}>
                       <td className="num">
@@ -1064,21 +1066,21 @@ export default function QuoteBuilderPage() {
 
         <div className="totals">
           <div className="t">
-            <div className="label">Total Actual Weight (KGS)</div>
+            <div className="label">Total Act (KGS)</div>
             <div className="val">{packTotals.totalActual.toFixed(2)}</div>
           </div>
           <div className="t">
-            <div className="label">Volume Weight (KGS)</div>
+            <div className="label">Volume (KGS)</div>
             <div className="val">{packTotals.totalVolume.toFixed(2)}</div>
           </div>
           <div className="t">
-            <div className="label">Chargeable Volume (CBM)</div>
+            <div className="label">Chg Vol (CBM)</div>
             <div className="val" style={{ color: "var(--green-dark)" }}>
               {packTotals.totalCbm.toFixed(2)}
             </div>
           </div>
           <div className="t">
-            <div className="label">Chargeable Weight (KGS)</div>
+            <div className="label">Chg Weight (KGS)</div>
             <div className="val" style={{ color: "var(--green-dark)" }}>
               {packTotals.chargeable.toFixed(2)}
             </div>

@@ -6,8 +6,18 @@ import {
   type QuoteMode,
 } from "./types";
 
-/** kg per m³ used to convert volume to a chargeable weight (air standard, per the ExPac packing sheet). */
+/** kg per m³ used to convert volume to a chargeable weight. Air / courier /
+ *  road use the 1:6 airline standard (~167). */
 export const VOLUMETRIC_FACTOR = 167;
+/** Sea LCL bills 1 CBM = 1000 kg. */
+export const SEA_LCL_VOLUMETRIC_FACTOR = 1000;
+
+/** The volumetric factor for a quote's transport mode. */
+export function volumetricFactor(mode: string | null | undefined): number {
+  return mode === "Sea Freight (LCL)"
+    ? SEA_LCL_VOLUMETRIC_FACTOR
+    : VOLUMETRIC_FACTOR;
+}
 
 /** Insurance is 0.50% of the declared commercial value. */
 export const INSURANCE_RATE = 0.005;
@@ -243,7 +253,10 @@ export interface PackingRow {
   totalVolume: number;
 }
 
-export function packingRow(p: PackingItem): PackingRow {
+export function packingRow(
+  p: PackingItem,
+  factor: number = VOLUMETRIC_FACTOR,
+): PackingRow {
   const l = Number(p.length_cm) || 0;
   const w = Number(p.width_cm) || 0;
   const h = Number(p.height_cm) || 0;
@@ -252,7 +265,7 @@ export function packingRow(p: PackingItem): PackingRow {
   // A manually entered CBM wins; a blank one falls back to L×W×H.
   const override = p.cbm === "" || p.cbm == null ? NaN : Number(p.cbm);
   const cbm = Number.isFinite(override) ? override : (l * w * h) / 1_000_000;
-  const volumeKg = cbm * VOLUMETRIC_FACTOR;
+  const volumeKg = cbm * factor;
   return {
     cbm,
     volumeKg,
@@ -271,13 +284,16 @@ export interface PackingTotals {
   chargeable: number;
 }
 
-export function packingTotals(items: PackingItem[] | null | undefined): PackingTotals {
+export function packingTotals(
+  items: PackingItem[] | null | undefined,
+  factor: number = VOLUMETRIC_FACTOR,
+): PackingTotals {
   let qty = 0;
   let totalCbm = 0;
   let totalActual = 0;
   let totalVolume = 0;
   (items || []).forEach((p) => {
-    const r = packingRow(p);
+    const r = packingRow(p, factor);
     qty += Number(p.qty_ctns) || 0;
     totalCbm += r.totalCbm;
     totalActual += r.totalActual;

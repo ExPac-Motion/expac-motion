@@ -11,6 +11,7 @@ import {
   packingRow,
   packingTotals,
   resolveLine,
+  volumetricFactor,
 } from "../lib/calc";
 import { formatDate, money, portCode, usd } from "../lib/format";
 import { COMPANY } from "../lib/company";
@@ -42,9 +43,10 @@ export default function QuotePrintPage() {
     : COMPANY;
 
   const fx = useMemo(() => (q ? fxOf(q) : { usd: 0, cny: 0 }), [q]);
+  const vFactor = volumetricFactor(q?.mode);
   const pack = useMemo(
-    () => packingTotals(q?.packing_list_items ?? []),
-    [q?.packing_list_items],
+    () => packingTotals(q?.packing_list_items ?? [], vFactor),
+    [q?.packing_list_items, vFactor],
   );
   const groups = useMemo(() => {
     if (!q) return [];
@@ -254,7 +256,7 @@ export default function QuotePrintPage() {
               </thead>
               <tbody>
                 {packingRows.map((p, i) => {
-                  const r = packingRow(p);
+                  const r = packingRow(p, vFactor);
                   return (
                     <tr key={p.id ?? i}>
                       <td>{n2(p.length_cm)}</td>
@@ -285,19 +287,19 @@ export default function QuotePrintPage() {
             </table>
             <div className="qs-pksum">
               <div>
-                <span className="k">Total Actual Weight (KGS)</span>{" "}
+                <span className="k">Total Act (KGS)</span>{" "}
                 <b>{n2(pack.totalActual)}</b>
               </div>
               <div>
-                <span className="k">Volume Weight (KGS)</span>{" "}
+                <span className="k">Volume (KGS)</span>{" "}
                 <b>{n2(pack.totalVolume)}</b>
               </div>
               <div>
-                <span className="k">Chargeable Volume (CBM)</span>{" "}
+                <span className="k">Chg Vol (CBM)</span>{" "}
                 <b className="hl">{n2(pack.totalCbm)}</b>
               </div>
               <div>
-                <span className="k">Chargeable Weight (KGS)</span>{" "}
+                <span className="k">Chg Weight (KGS)</span>{" "}
                 <b className="hl">{n2(pack.chargeable)}</b>
               </div>
             </div>

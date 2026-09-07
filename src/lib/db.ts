@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
-import { insuranceAmount, packingTotals, resolveLine } from "./calc";
+import {
+  insuranceAmount,
+  packingTotals,
+  resolveLine,
+  volumetricFactor,
+} from "./calc";
 import type {
   Client,
   CompanySettings,
@@ -258,7 +263,7 @@ export async function getQuote(id: string): Promise<Quote> {
  * Returns the quote id (new or existing).
  */
 export async function saveQuote(draft: QuoteDraft): Promise<string> {
-  const pack = packingTotals(draft.packing);
+  const pack = packingTotals(draft.packing, volumetricFactor(draft.mode));
   const ctx = {
     mode: draft.mode,
     fx: {
