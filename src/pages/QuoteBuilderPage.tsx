@@ -555,6 +555,17 @@ export default function QuoteBuilderPage() {
             >
               Cancel
             </button>
+            {isEdit && draft.id && (
+              <button
+                className="btn outline"
+                onClick={() =>
+                  window.open(`/quotes/${draft.id}/print`, "_blank", "noopener")
+                }
+                title="Open the customer quotation document in a new tab"
+              >
+                Quotation Document
+              </button>
+            )}
             <button className="btn" onClick={onSave} disabled={saveQuote.isPending}>
               {saveQuote.isPending ? "Saving…" : "Save Quotation"}
             </button>
