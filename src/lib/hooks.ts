@@ -247,8 +247,12 @@ export function useAcceptQuote() {
   return useMutation({
     mutationFn: db.acceptQuote,
     onSuccess: () => {
+      // accept_quote also promotes a linked lead into a real customer.
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["opportunities"] });
     },
   });
 }

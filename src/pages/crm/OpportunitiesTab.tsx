@@ -4,6 +4,7 @@ import Modal from "../../components/Modal";
 import { EmptyState, Loading, MailLink, Popover } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
+  useAcceptQuote,
   useClients,
   useDeleteOpportunity,
   useCreateOpportunity,
@@ -14,6 +15,7 @@ import {
   useProfiles,
   useQuotes,
   useUpdateOpportunity,
+  useUpdateQuotesBulk,
 } from "../../lib/hooks";
 import { chargeTotals, fxOf } from "../../lib/calc";
 import { formatDate, money } from "../../lib/format";
@@ -32,6 +34,18 @@ const QUOTE_STAGE: Record<QuoteStatus, OpportunityStatus> = {
   sent: "quote_sent",
   accepted: "quote_accepted",
   lost: "not_proceeding",
+};
+
+/**
+ * Pipeline stage → quote status, for moving an auto-listed quotation card.
+ * "job_completed" has no quote-level equivalent (it's driven by the shipment),
+ * so that stage can't be set straight from a quote card.
+ */
+const STAGE_QUOTE_STATUS: Partial<Record<OpportunityStatus, QuoteStatus>> = {
+  new_lead: "open",
+  quote_sent: "sent",
+  quote_accepted: "accepted",
+  not_proceeding: "lost",
 };
 
 /* ---------- board view options (persisted per browser) ---------- */
@@ -495,15 +509,43 @@ function OpportunityCard({
   onDelete: () => void;
 }) {
   const update = useUpdateOpportunity();
+  const updateQuote = useUpdateQuotesBulk();
+  const acceptQuote = useAcceptQuote();
   const { toast, error: toastError } = useToast();
   const name = o.lead?.company ?? o.client?.company ?? "Untitled";
   const contact = o.lead?.contact ?? o.client?.contact;
   const email = o.lead?.email ?? o.client?.email;
 
   async function onStatusChange(status: OpportunityStatus) {
+    const label = OPPORTUNITY_STAGES.find((s) => s.key === status)?.label;
     try {
+      if (synthetic) {
+        if (!o.quote?.id) return;
+        // Moving a quotation card to "Quote Accepted" runs the real
+        // Accept & create shipment flow — a shipment is created and shows up
+        // under Active Shipments (and the lead is promoted to a customer).
+        if (status === "quote_accepted") {
+          if (o.quote.status === "accepted") return;
+          await acceptQuote.mutateAsync(o.quote.id);
+          toast("Shipment created — check Active Shipments");
+          return;
+        }
+        // Other stages just re-stamp the quote's status; the board then
+        // re-derives the card into its new column.
+        const quoteStatus = STAGE_QUOTE_STATUS[status];
+        if (!quoteStatus) {
+          toastError("This stage can't be set from a quotation card.");
+          return;
+        }
+        await updateQuote.mutateAsync({
+          ids: [o.quote.id],
+          patch: { status: quoteStatus },
+        });
+        toast("Quotation moved to " + label);
+        return;
+      }
       await update.mutateAsync({ id: o.id, patch: { status } });
-      toast("Moved to " + OPPORTUNITY_STAGES.find((s) => s.key === status)?.label);
+      toast("Moved to " + label);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not update");
     }
@@ -606,17 +648,23 @@ function OpportunityCard({
 
       <select
         value={o.status}
-        disabled={synthetic}
+        disabled={
+          update.isPending || updateQuote.isPending || acceptQuote.isPending
+        }
         onChange={(e) => onStatusChange(e.target.value as OpportunityStatus)}
         title={
           synthetic
-            ? "This card follows the quotation's status — change it on the quote"
+            ? "Moving this card re-stamps the quotation's status"
             : undefined
         }
         style={{ marginTop: 8, width: "100%", fontSize: "0.76rem" }}
       >
         {OPPORTUNITY_STAGES.map((s) => (
-          <option key={s.key} value={s.key}>
+          <option
+            key={s.key}
+            value={s.key}
+            disabled={synthetic && !STAGE_QUOTE_STATUS[s.key]}
+          >
             {s.label}
           </option>
         ))}
