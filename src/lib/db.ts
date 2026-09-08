@@ -71,7 +71,10 @@ function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
 }
 
 /* ---------- Clients ---------- */
-const CLIENT_SELECT = "*, sales_person:profiles(id,full_name)";
+// profiles relates to clients two ways (clients.sales_person_id -> profiles,
+// and profiles.client_id -> clients for portal logins), so disambiguate the
+// embed with the FK column hint.
+const CLIENT_SELECT = "*, sales_person:profiles!sales_person_id(id,full_name)";
 export async function listClients(): Promise<Client[]> {
   return unwrap(
     await supabase
