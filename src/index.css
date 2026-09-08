@@ -934,15 +934,18 @@ tr.clickable:hover {
 /* Opportunities board — scrolls inside its own box so the stage headers
    freeze while the (long) card columns scroll under them. Same mechanism as
    the table-wrap frozen thead. The Options / + New row sits above this box
-   and stays put. */
+   and stays put; only the stage name + count + total value stay frozen.
+   The box has a firm viewport-relative height so it is ALWAYS its own
+   scroll container — nudge the 235px if the board runs past the window
+   bottom (page scrolls) or leaves too much empty space. */
 .opp-board {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(260px, 1fr);
   gap: 14px;
   overflow: auto;
-  max-height: calc(100vh - 270px);
-  min-height: 320px;
+  height: calc(100vh - 235px);
+  min-height: 300px;
   align-items: start;
 }
 .opp-col {
@@ -955,12 +958,13 @@ tr.clickable:hover {
   z-index: 2;
   background: var(--white);
   margin: -20px -20px 10px;
-  padding: 16px 20px 10px;
-  box-shadow: inset 0 -1px 0 var(--line);
+  padding: 14px 20px 8px;
+  border-bottom: 2px solid var(--line);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 @media (max-width: 900px) {
   .opp-board {
+    height: auto;
     max-height: none;
   }
 }
