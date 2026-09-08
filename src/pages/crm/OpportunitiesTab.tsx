@@ -203,6 +203,8 @@ export default function OpportunitiesTab() {
     return (quotesQ.data ?? [])
       .filter((q) => !linked.has(q.id))
       .map((q) => {
+        // Full quotation value the customer sees: freight + handling + customs,
+        // incl. VAT (matches "Total quotation (incl. VAT)" on the quote).
         const t = chargeTotals(q.quote_lines, fxOf(q));
         const prof = q.sales_person_id
           ? profileById.get(q.sales_person_id)
@@ -215,7 +217,7 @@ export default function OpportunitiesTab() {
           quote_id: q.id,
           job_id: null,
           status: QUOTE_STAGE[q.status],
-          value: t.sell,
+          value: t.sellIncl,
           close_date: q.valid_until,
           notes: null,
           sales_person_id: q.sales_person_id,
