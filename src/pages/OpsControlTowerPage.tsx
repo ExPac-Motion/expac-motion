@@ -77,6 +77,7 @@ export default function OpsControlTowerPage() {
     const expiring = quotes.filter(
       (q) =>
         q.status !== "accepted" &&
+        q.status !== "completed" &&
         q.status !== "lost" &&
         q.valid_until &&
         q.valid_until >= today &&

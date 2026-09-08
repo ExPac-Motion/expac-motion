@@ -643,6 +643,10 @@ tr.clickable:hover {
   background: #e5f3d9;
   color: var(--green-dark);
 }
+.badge.completed {
+  background: #d9efe4;
+  color: #0f6b4f;
+}
 .badge.lost {
   background: #fdecea;
   color: #b3261e;

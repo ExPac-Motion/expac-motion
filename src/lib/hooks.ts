@@ -232,6 +232,15 @@ export function useDeleteQuote() {
     },
   });
 }
+/** TEMP (0052): manual Opportunities-board value on a quote. */
+export function useSetQuoteOpportunityValue() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; value: number | null }) =>
+      db.setQuoteOpportunityValue(input.id, input.value),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
+  });
+}
 export function useUpdateQuotesBulk() {
   const qc = useQueryClient();
   return useMutation({

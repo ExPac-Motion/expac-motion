@@ -18,6 +18,7 @@ import {
   volumetricFactor,
 } from "../lib/calc";
 import { formatDate, money, usd } from "../lib/format";
+import { WON_QUOTE_STATUSES } from "../lib/types";
 
 interface Props {
   quoteId: string;
@@ -107,7 +108,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
           <button className="btn danger" onClick={onDelete} disabled={del.isPending}>
             Delete
           </button>
-          {q.status !== "accepted" ? (
+          {!WON_QUOTE_STATUSES.includes(q.status) ? (
             <button className="btn" onClick={onAccept} disabled={accept.isPending}>
               {accept.isPending ? "Working…" : "Accept & create shipment"}
             </button>

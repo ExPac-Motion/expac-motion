@@ -25,7 +25,13 @@ import { money, newReference, portCode, todayPlusDays } from "../lib/format";
 import { STATUS_LABEL, type Quote, type QuoteDraft, type QuoteStatus } from "../lib/types";
 
 function isQuoteStatus(v: string | null): v is QuoteStatus {
-  return v === "open" || v === "sent" || v === "accepted" || v === "lost";
+  return (
+    v === "open" ||
+    v === "sent" ||
+    v === "accepted" ||
+    v === "completed" ||
+    v === "lost"
+  );
 }
 
 /** Everything but booking-specific fields (vessel/flight/MBL/HBL/dates), which
@@ -247,9 +253,9 @@ export default function QuotesListPage() {
               label: "Status",
               type: "select",
               allowClear: false,
-              options: (["open", "sent", "accepted", "lost"] as QuoteStatus[]).map(
-                (s) => ({ value: s, label: STATUS_LABEL[s] }),
-              ),
+              options: (
+                ["open", "sent", "accepted", "completed", "lost"] as QuoteStatus[]
+              ).map((s) => ({ value: s, label: STATUS_LABEL[s] })),
             },
             {
               key: "sales_person_id",

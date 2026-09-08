@@ -146,7 +146,13 @@ export function buildCalendarEvents({
   if (sources.has("quotes")) {
     for (const q of quotes) {
       const exp = d10(q.valid_until);
-      if (!exp || q.status === "accepted" || q.status === "lost") continue;
+      if (
+        !exp ||
+        q.status === "accepted" ||
+        q.status === "completed" ||
+        q.status === "lost"
+      )
+        continue;
       out.push({
         id: `quote-${q.id}`,
         date: exp,

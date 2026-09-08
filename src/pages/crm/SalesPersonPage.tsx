@@ -18,6 +18,7 @@ import {
 } from "../../lib/hooks";
 import { chargeTotals, fxOf } from "../../lib/calc";
 import { money } from "../../lib/format";
+import { WON_QUOTE_STATUSES } from "../../lib/types";
 import type { Profile, ProfilePatch } from "../../lib/types";
 
 function isThisMonth(iso: string | null): boolean {
@@ -46,7 +47,11 @@ export default function SalesPersonPage() {
     const quotes = quotesQ.data ?? [];
     const map = new Map<string, { revenue: number; gp: number }>();
     for (const q of quotes) {
-      if (q.status !== "accepted" || !isThisMonth(q.accepted_at) || !q.sales_person_id) {
+      if (
+        !WON_QUOTE_STATUSES.includes(q.status) ||
+        !isThisMonth(q.accepted_at) ||
+        !q.sales_person_id
+      ) {
         continue;
       }
       const t = chargeTotals(q.quote_lines, fxOf(q));

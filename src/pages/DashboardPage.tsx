@@ -143,7 +143,7 @@ export default function DashboardPage() {
     const withT = quotes.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
     const openValue = quotes
       .map((q, i) => ({ q, t: withT[i] }))
-      .filter((x) => x.q.status !== "accepted")
+      .filter((x) => x.q.status !== "accepted" && x.q.status !== "completed")
       .reduce((s, x) => s + x.t.sell, 0);
     const avgMargin =
       withT.length > 0

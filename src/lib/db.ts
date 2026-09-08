@@ -355,6 +355,23 @@ export async function deleteQuote(id: string): Promise<void> {
   unwrap(await supabase.from("quotes").delete().eq("id", id));
 }
 
+/**
+ * TEMP (0052): set the manual Opportunities-board value straight on a quote.
+ * `null` clears it (the board reverts to the computed quotation total).
+ */
+export async function setQuoteOpportunityValue(
+  id: string,
+  value: number | null,
+): Promise<void> {
+  unwrap(
+    await supabase
+      .from("quotes")
+      .update({ opportunity_value: value })
+      .eq("id", id)
+      .select("id"),
+  );
+}
+
 /** Apply one patch to every listed quote (Bulk Edit on the Quotations table). */
 export async function updateQuotesBulk(
   ids: string[],

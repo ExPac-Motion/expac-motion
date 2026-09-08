@@ -1,4 +1,4 @@
-export type QuoteStatus = "open" | "sent" | "accepted" | "lost";
+export type QuoteStatus = "open" | "sent" | "accepted" | "completed" | "lost";
 export type QuoteMode =
   | "Air Freight (AIR)"
   | "Courier Express (CX)"
@@ -262,8 +262,8 @@ export type OpportunityStatus =
 export const OPPORTUNITY_STAGES: { key: OpportunityStatus; label: string }[] = [
   { key: "new_lead", label: "New Lead - Enquiries" },
   { key: "quote_sent", label: "Quote Sent - Follow Up" },
-  { key: "quote_accepted", label: "Quote Accepted - Job Active" },
-  { key: "job_completed", label: "Job Completed - Shipment Delivered" },
+  { key: "quote_accepted", label: "Quote Accepted - Active Shipment" },
+  { key: "job_completed", label: "Completed - Shipment Delivered" },
   { key: "not_proceeding", label: "Not Proceeding - Keep In Contact" },
 ];
 
@@ -276,6 +276,9 @@ export interface Opportunity {
   job_id: string | null;
   status: OpportunityStatus;
   value: number;
+  /** TEMP (0052): for synthetic quotation cards, the raw manual override
+   *  (NULL when the card is showing the computed quotation total). */
+  opportunity_value?: number | null;
   close_date: string | null;
   notes: string | null;
   sales_person_id: string | null;
@@ -668,12 +671,21 @@ export const CHARGE_UNITS: string[] = [
 ];
 
 export const STATUS_LABEL: Record<QuoteStatus, string> = {
-  open: "Open",
-  sent: "Sent",
-  accepted: "Accepted",
-  lost: "Lost",
+  open: "New Lead",
+  sent: "Quote Sent",
+  accepted: "Quote Accepted",
+  completed: "Completed",
+  lost: "Not Proceeding",
 };
-export const STATUS_ORDER: QuoteStatus[] = ["open", "sent", "accepted", "lost"];
+export const STATUS_ORDER: QuoteStatus[] = [
+  "open",
+  "sent",
+  "accepted",
+  "completed",
+  "lost",
+];
+/** Quote statuses that count as a won deal (accepted, or since delivered). */
+export const WON_QUOTE_STATUSES: QuoteStatus[] = ["accepted", "completed"];
 
 export interface Contact {
   id: string;
@@ -761,6 +773,9 @@ export interface Quote {
   valid_until: string | null;
   status: QuoteStatus;
   accepted_at: string | null;
+  /** TEMP (0052): manual Opportunities-board value while the old CRM is
+   *  migrated. NULL → the board uses the computed quotation total. */
+  opportunity_value: number | null;
   commercial_value: number | null;
   insurance_amount: number | null;
   vessel_name: string | null;

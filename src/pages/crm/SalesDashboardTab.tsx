@@ -27,6 +27,7 @@ import {
   OPPORTUNITY_STAGES,
   STATUS_LABEL,
   STATUS_ORDER,
+  WON_QUOTE_STATUSES,
   type CompanySettingsPatch,
   type OpportunityStatus,
 } from "../../lib/types";
@@ -118,7 +119,7 @@ export default function SalesDashboardTab() {
 
   const kpis = useMemo(() => {
     const acceptedThisMonth = quotes.filter(
-      (q) => q.status === "accepted" && isThisMonth(q.accepted_at),
+      (q) => WON_QUOTE_STATUSES.includes(q.status) && isThisMonth(q.accepted_at),
     );
     const totals = acceptedThisMonth.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
     const revenue = totals.reduce((s, t) => s + t.sell, 0);
@@ -176,7 +177,9 @@ export default function SalesDashboardTab() {
     });
     const max = Math.max(1, ...rows.map((r) => r.value));
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
-    const won = rows.find((r) => r.st === "accepted")?.count ?? 0;
+    const won = rows
+      .filter((r) => WON_QUOTE_STATUSES.includes(r.st))
+      .reduce((s, r) => s + r.count, 0);
     const lost = rows.find((r) => r.st === "lost")?.count ?? 0;
     const winRate = won + lost > 0 ? (won / (won + lost)) * 100 : 0;
     return { rows, max, totalValue, winRate, total: quotes.length };
@@ -188,7 +191,7 @@ export default function SalesDashboardTab() {
       .map((p) => {
         const mine = quotes.filter(
           (q) =>
-            q.status === "accepted" &&
+            WON_QUOTE_STATUSES.includes(q.status) &&
             isThisMonth(q.accepted_at) &&
             q.sales_person_id === p.id,
         );
@@ -490,7 +493,9 @@ export default function SalesDashboardTab() {
             {quotePipeline.rows.map((r) => (
               <button
                 key={r.st}
-                className={`pipe-row${r.st === "accepted" ? " accent" : ""}`}
+                className={`pipe-row${
+                  WON_QUOTE_STATUSES.includes(r.st) ? " accent" : ""
+                }`}
                 onClick={() => navigate(`/quotes?status=${r.st}`)}
               >
                 <span className="nm">{STATUS_LABEL[r.st]}</span>

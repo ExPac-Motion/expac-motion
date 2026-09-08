@@ -14,6 +14,7 @@ import {
   useOpportunities,
   useProfiles,
   useQuotes,
+  useSetQuoteOpportunityValue,
   useUpdateOpportunity,
   useUpdateQuotesBulk,
 } from "../../lib/hooks";
@@ -33,18 +34,19 @@ const QUOTE_STAGE: Record<QuoteStatus, OpportunityStatus> = {
   open: "new_lead",
   sent: "quote_sent",
   accepted: "quote_accepted",
+  completed: "job_completed",
   lost: "not_proceeding",
 };
 
 /**
  * Pipeline stage → quote status, for moving an auto-listed quotation card.
- * "job_completed" has no quote-level equivalent (it's driven by the shipment),
- * so that stage can't be set straight from a quote card.
+ * Every stage now maps 1:1 to a quote status.
  */
 const STAGE_QUOTE_STATUS: Partial<Record<OpportunityStatus, QuoteStatus>> = {
   new_lead: "open",
   quote_sent: "sent",
   quote_accepted: "accepted",
+  job_completed: "completed",
   not_proceeding: "lost",
 };
 
@@ -219,7 +221,11 @@ export default function OpportunitiesTab() {
       .map((q) => {
         // Full quotation value the customer sees: freight + handling + customs,
         // incl. VAT (matches "Total quotation (incl. VAT)" on the quote).
+        // TEMP (0052): a manual opportunity_value on the quote wins while the
+        // old CRM is being migrated (bare quotes with no charge lines).
         const t = chargeTotals(q.quote_lines, fxOf(q));
+        const manualValue =
+          q.opportunity_value != null ? Number(q.opportunity_value) : null;
         const prof = q.sales_person_id
           ? profileById.get(q.sales_person_id)
           : null;
@@ -231,7 +237,8 @@ export default function OpportunitiesTab() {
           quote_id: q.id,
           job_id: null,
           status: QUOTE_STAGE[q.status],
-          value: t.sellIncl,
+          value: manualValue ?? t.sellIncl,
+          opportunity_value: manualValue,
           close_date: q.valid_until,
           notes: null,
           sales_person_id: q.sales_person_id,
@@ -525,7 +532,8 @@ function OpportunityCard({
         // Accept & create shipment flow — a shipment is created and shows up
         // under Active Shipments (and the lead is promoted to a customer).
         if (status === "quote_accepted") {
-          if (o.quote.status === "accepted") return;
+          if (o.quote.status === "accepted" || o.quote.status === "completed")
+            return;
           await acceptQuote.mutateAsync(o.quote.id);
           toast("Shipment created — check Active Shipments");
           return;
@@ -594,9 +602,20 @@ function OpportunityCard({
       </div>
 
       {fields.value && (
-        <div className="opp-line">
-          <span className="opp-line-label">Value:</span>{" "}
-          <strong>{money(o.value)}</strong>
+        <div
+          className="opp-line"
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+        >
+          <span className="opp-line-label">Value:</span>
+          {synthetic && o.quote?.id ? (
+            <QuoteValueEditor
+              quoteId={o.quote.id}
+              manual={o.opportunity_value ?? null}
+              computed={o.value}
+            />
+          ) : (
+            <strong>{money(o.value)}</strong>
+          )}
         </div>
       )}
 
@@ -670,6 +689,67 @@ function OpportunityCard({
         ))}
       </select>
     </div>
+  );
+}
+
+/**
+ * TEMP (0052): inline editor for a quotation card's opportunity value while the
+ * old CRM is being migrated. Writes `quotes.opportunity_value` directly; blank
+ * clears it and the card falls back to the computed quotation total.
+ */
+function QuoteValueEditor({
+  quoteId,
+  manual,
+  computed,
+}: {
+  quoteId: string;
+  manual: number | null;
+  computed: number;
+}) {
+  const save = useSetQuoteOpportunityValue();
+  const { toast, error: toastError } = useToast();
+  const [text, setText] = useState(manual != null ? String(manual) : "");
+
+  // Re-sync if the stored value changes (another edit, a refetch).
+  const [seenManual, setSeenManual] = useState(manual);
+  if (seenManual !== manual) {
+    setSeenManual(manual);
+    setText(manual != null ? String(manual) : "");
+  }
+
+  async function commit() {
+    const trimmed = text.trim();
+    if (trimmed !== "" && !Number.isFinite(Number(trimmed))) {
+      setText(manual != null ? String(manual) : "");
+      return;
+    }
+    const next = trimmed === "" ? null : Number(trimmed);
+    if ((next ?? null) === (manual ?? null)) return;
+    try {
+      await save.mutateAsync({ id: quoteId, value: next });
+      toast(next == null ? "Value cleared — using quotation total" : "Value saved");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not save value");
+      setText(manual != null ? String(manual) : "");
+    }
+  }
+
+  return (
+    <input
+      type="number"
+      step="any"
+      inputMode="decimal"
+      value={text}
+      placeholder={money(computed)}
+      title="Manual opportunity value — leave blank to use the quotation total"
+      disabled={save.isPending}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      style={{ width: 130, fontWeight: 700, fontSize: "0.8rem", padding: "2px 6px" }}
+    />
   );
 }
 
