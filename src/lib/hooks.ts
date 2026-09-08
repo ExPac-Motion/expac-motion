@@ -59,6 +59,22 @@ export function useDeleteClient() {
     },
   });
 }
+export function useClientContacts(clientId: string | undefined) {
+  return useQuery({
+    queryKey: ["client_contacts", clientId],
+    queryFn: () => db.listClientContacts(clientId as string),
+    enabled: !!clientId,
+  });
+}
+export function useReplaceClientContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clientId: string; contacts: LeadContactDraft[] }) =>
+      db.replaceClientContacts(input.clientId, input.contacts),
+    onSuccess: (_d, input) =>
+      qc.invalidateQueries({ queryKey: ["client_contacts", input.clientId] }),
+  });
+}
 
 const CONTACT_TABLE_BY_KIND = {
   client: "clients",

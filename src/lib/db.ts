@@ -21,6 +21,7 @@ import type {
   Milestone,
   OpsTask,
   OpsTaskPatch,
+  ClientContact,
   ClientDocument,
   ClientInvite,
   ClientJob,
@@ -70,16 +71,29 @@ function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
 }
 
 /* ---------- Clients ---------- */
+const CLIENT_SELECT = "*, sales_person:profiles(id,full_name)";
 export async function listClients(): Promise<Client[]> {
   return unwrap(
-    await supabase.from("clients").select("*").order("company", { ascending: true }),
+    await supabase
+      .from("clients")
+      .select(CLIENT_SELECT)
+      .order("company", { ascending: true }),
   );
+}
+/** Drop joined-only keys before a write hits the clients table. */
+function clientColumns<T extends Record<string, unknown>>(input: T) {
+  const { sales_person: _sp, ...cols } = input as T & { sales_person?: unknown };
+  return cols;
 }
 export async function createClient(
   input: Omit<Client, "id" | "created_at">,
 ): Promise<Client> {
   return unwrap(
-    await supabase.from("clients").insert(input).select("*").single(),
+    await supabase
+      .from("clients")
+      .insert(clientColumns(input))
+      .select(CLIENT_SELECT)
+      .single(),
   );
 }
 export async function updateClient(
@@ -87,11 +101,48 @@ export async function updateClient(
   input: Partial<Omit<Client, "id" | "created_at">>,
 ): Promise<Client> {
   return unwrap(
-    await supabase.from("clients").update(input).eq("id", id).select("*").single(),
+    await supabase
+      .from("clients")
+      .update(clientColumns(input))
+      .eq("id", id)
+      .select(CLIENT_SELECT)
+      .single(),
   );
 }
 export async function deleteClient(id: string): Promise<void> {
   unwrap(await supabase.from("clients").delete().eq("id", id));
+}
+
+export async function listClientContacts(
+  clientId: string,
+): Promise<ClientContact[]> {
+  return unwrap<ClientContact[]>(
+    await supabase
+      .from("client_contacts")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at"),
+  );
+}
+
+/** Replace-all: the customer edit modal owns the full set of extra contacts. */
+export async function replaceClientContacts(
+  clientId: string,
+  contacts: LeadContactDraft[],
+): Promise<void> {
+  unwrap(
+    await supabase.from("client_contacts").delete().eq("client_id", clientId),
+  );
+  const rows = contacts
+    .filter((c) => c.name.trim() || c.email.trim() || c.phone.trim())
+    .map((c) => ({
+      client_id: clientId,
+      name: c.name.trim(),
+      role: c.role.trim() || null,
+      email: c.email.trim() || null,
+      phone: c.phone.trim() || null,
+    }));
+  if (rows.length) unwrap(await supabase.from("client_contacts").insert(rows));
 }
 
 export type ContactTable =

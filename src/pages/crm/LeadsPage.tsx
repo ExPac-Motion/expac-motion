@@ -40,7 +40,7 @@ import {
 import { createLeadContacts, listLeadContacts } from "../../lib/db";
 import { sendMail } from "../../lib/mail";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
-import { formatDate } from "../../lib/format";
+import { formatDate, normalizeWebsite } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
 
 /** Minimal CSV parser — no quoted-comma support needed for a simple lead import. */
@@ -754,6 +754,10 @@ export default function LeadsPage() {
             <ViewField label="Mobile phone" value={viewing.phone || "—"} />
             <ViewField label="Website" value={viewing.website || "—"} />
             <ViewField label="Customer VAT No" value={viewing.vat_no || "—"} />
+            <ViewField
+              label="Customer Import Code"
+              value={viewing.import_code || "—"}
+            />
             <ViewField label="Address" value={viewing.address || "—"} />
             <ViewField label="Source" value={viewing.source || "—"} />
             <ViewField label="Description" value={viewing.description || "—"} />
@@ -1043,9 +1047,12 @@ function LeadEditModal({
       email: String(fd.get("email") || "").trim() || null,
       phone: String(fd.get("phone") || "").trim() || null,
       company_phone: String(fd.get("company_phone") || "").trim() || null,
-      website: String(fd.get("website") || "").trim() || null,
+      // Accept "www.acme.co.za" / "acme.co.za"; store a scheme-qualified URL
+      // so the Website link (<a href>) resolves absolutely, not relative.
+      website: normalizeWebsite(String(fd.get("website") || "")),
       address: String(fd.get("address") || "").trim() || null,
       vat_no: String(fd.get("vat_no") || "").trim() || null,
+      import_code: String(fd.get("import_code") || "").trim() || null,
       source: String(fd.get("source") || "").trim() || null,
       description: String(fd.get("description") || "").trim() || null,
       notes: String(fd.get("notes") || "").trim() || null,
@@ -1076,8 +1083,9 @@ function LeadEditModal({
             <label>Company website</label>
             <input
               name="website"
-              type="url"
-              placeholder="https://acme.co.za"
+              type="text"
+              inputMode="url"
+              placeholder="www.acme.co.za"
               defaultValue={lead?.website ?? ""}
             />
           </div>
@@ -1130,14 +1138,18 @@ function LeadEditModal({
             <input name="vat_no" defaultValue={lead?.vat_no ?? ""} />
           </div>
           <div className="field">
-            <label>Address</label>
-            <textarea
-              name="address"
-              rows={2}
-              placeholder="Physical / delivery address"
-              defaultValue={lead?.address ?? ""}
-            />
+            <label>Customer Import Code</label>
+            <input name="import_code" defaultValue={lead?.import_code ?? ""} />
           </div>
+        </div>
+        <div className="field">
+          <label>Address</label>
+          <textarea
+            name="address"
+            rows={2}
+            placeholder="Physical / delivery address"
+            defaultValue={lead?.address ?? ""}
+          />
         </div>
 
         <div className="field">

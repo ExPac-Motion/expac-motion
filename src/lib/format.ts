@@ -95,6 +95,19 @@ export function todayPlusDays(days: number): string {
 }
 
 /**
+ * Accept "www.acme.co.za" / "acme.co.za" as a website and return a
+ * scheme-qualified URL, so an <a href> resolves absolutely rather than
+ * relative to the app. Empty in -> null out; already-qualified left as-is.
+ */
+export function normalizeWebsite(
+  raw: string | null | undefined,
+): string | null {
+  const v = (raw ?? "").trim();
+  if (!v) return null;
+  return /^https?:\/\//i.test(v) ? v : `https://${v.replace(/^\/+/, "")}`;
+}
+
+/**
  * Port code for the big FROM → TO line on the quotation. Expects a UN/LOCODE
  * (2-letter country + 3-char location, e.g. "CNSNZ", "ZAJNB") at the start of
  * the Origin/Destination text — "CNSNZ — Shenzhen, China" -> "CNSNZ". Falls back

@@ -215,6 +215,7 @@ export interface Lead {
   website: string | null;
   address: string | null;
   vat_no: string | null;
+  import_code: string | null;
   source: string | null;
   description: string | null;
   notes: string | null;
@@ -697,12 +698,32 @@ export interface Contact {
   vat_no?: string | null;
   import_code?: string | null;
   address?: string | null;
+  /** Customer-only profile fields — parity with a Lead (clients table). */
+  company_phone?: string | null;
+  website?: string | null;
+  source?: string | null;
+  description?: string | null;
+  notes?: string | null;
+  sales_person_id?: string | null;
   /** Agent <-> Clearing Agent cross-listing (agents / clearing_agents only). */
   also_clearing_agent?: boolean | null;
   also_agent?: boolean | null;
   /** Non-null on a row that mirrors a record in the other table (read-only here). */
   source_agent_id?: string | null;
   source_clearing_agent_id?: string | null;
+  created_at: string;
+  /** Joined for display (clients only). */
+  sales_person?: Pick<Profile, "id" | "full_name"> | null;
+}
+
+/** Extra people at a customer company (clients.contact stays primary). */
+export interface ClientContact {
+  id: string;
+  client_id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
   created_at: string;
 }
 export type Client = Contact;

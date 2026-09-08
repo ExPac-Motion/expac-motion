@@ -1,4 +1,10 @@
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import Modal from "../components/Modal";
 import {
   BulkEditModal,
@@ -14,10 +20,16 @@ import {
   type BulkField,
 } from "../components/common";
 import { useToast } from "../components/Toast";
-import { useCreateClientInvite } from "../lib/hooks";
+import {
+  useCreateClientInvite,
+  useProfiles,
+  useReplaceClientContacts,
+} from "../lib/hooks";
+import { listClientContacts } from "../lib/db";
+import { normalizeWebsite } from "../lib/format";
 import { PORTAL_SIGNUP_ENABLED } from "../lib/flags";
 import ClientActivity from "./ClientActivity";
-import type { Contact } from "../lib/types";
+import type { Contact, LeadContactDraft } from "../lib/types";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
@@ -77,6 +89,7 @@ export default function ContactsPage({
 }: Props) {
   const { label, title, eyebrow } = COPY[kind];
   const Label = titleCase(label);
+  const isClient = kind === "client";
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
@@ -84,6 +97,43 @@ export default function ContactsPage({
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
+
+  // Customer-only: salespeople for the owner dropdown + the editable list of
+  // extra contacts at the company (mirrors the Lead edit form).
+  const profilesQ = useProfiles();
+  const salesPeople = profilesQ.data ?? [];
+  const replaceClientContacts = useReplaceClientContacts();
+  const [extraContacts, setExtraContacts] = useState<LeadContactDraft[]>([]);
+
+  const editingClientId =
+    isClient && editing && editing !== "new" ? editing.id : null;
+  useEffect(() => {
+    if (!isClient) return;
+    let alive = true;
+    const p = editingClientId
+      ? listClientContacts(editingClientId)
+      : Promise.resolve([]);
+    p.then((cs) => {
+      if (!alive) return;
+      setExtraContacts(
+        cs.map((c) => ({
+          name: c.name,
+          role: c.role ?? "",
+          email: c.email ?? "",
+          phone: c.phone ?? "",
+        })),
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isClient, editingClientId, editing]);
+
+  function updateExtraContact(i: number, patch: Partial<LeadContactDraft>) {
+    setExtraContacts((prev) =>
+      prev.map((c, j) => (j === i ? { ...c, ...patch } : c)),
+    );
+  }
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const filtered = useMemo(() => {
@@ -122,6 +172,15 @@ export default function ContactsPage({
     values.vat_no = String(fd.get("vat_no") || "").trim() || null;
     values.import_code = String(fd.get("import_code") || "").trim() || null;
     values.address = String(fd.get("address") || "").trim() || null;
+    if (isClient) {
+      values.company_phone =
+        String(fd.get("company_phone") || "").trim() || null;
+      values.website = normalizeWebsite(String(fd.get("website") || ""));
+      values.source = String(fd.get("source") || "").trim() || null;
+      values.description = String(fd.get("description") || "").trim() || null;
+      values.notes = String(fd.get("notes") || "").trim() || null;
+      values.sales_person_id = String(fd.get("sales_person_id") || "") || null;
+    }
     if (kind === "agent") {
       values.also_clearing_agent = fd.get("also_clearing_agent") === "on";
     }
@@ -133,10 +192,16 @@ export default function ContactsPage({
       return;
     }
     try {
-      await save.mutateAsync({
+      const saved = await save.mutateAsync({
         id: editing && editing !== "new" ? editing.id : undefined,
         values,
       });
+      if (isClient) {
+        await replaceClientContacts.mutateAsync({
+          clientId: saved.id,
+          contacts: extraContacts,
+        });
+      }
       setEditing(null);
       toast("Saved");
     } catch (e2) {
@@ -164,6 +229,14 @@ export default function ContactsPage({
       import_code: row.import_code ?? null,
       address: row.address ?? null,
     };
+    if (isClient) {
+      values.company_phone = row.company_phone ?? null;
+      values.website = row.website ?? null;
+      values.source = row.source ?? null;
+      values.description = row.description ?? null;
+      values.notes = row.notes ?? null;
+      values.sales_person_id = row.sales_person_id ?? null;
+    }
     if (kind === "agent") values.also_clearing_agent = Boolean(row.also_clearing_agent);
     if (kind === "clearing_agent") values.also_agent = Boolean(row.also_agent);
     try {
@@ -371,15 +444,50 @@ export default function ContactsPage({
           )}
           <div className="grid2">
             <ViewField label="Contact person" value={viewing.contact || "—"} />
+            <ViewField
+              label={isClient ? "Mobile phone" : "Phone"}
+              value={viewing.phone || "—"}
+            />
             <ViewField label="Email" value={viewing.email || "—"} />
-            <ViewField label="Phone" value={viewing.phone || "—"} />
+            {isClient && (
+              <ViewField
+                label="Company phone"
+                value={viewing.company_phone || "—"}
+              />
+            )}
+            {isClient && (
+              <ViewField label="Website">
+                {viewing.website ? (
+                  <a href={viewing.website} target="_blank" rel="noreferrer">
+                    {viewing.website.replace(/^https?:\/\//, "")}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </ViewField>
+            )}
+            {isClient && (
+              <ViewField label="Source" value={viewing.source || "—"} />
+            )}
             <ViewField label={`${Label} VAT No`} value={viewing.vat_no || "—"} />
             <ViewField
               label={`${Label} Import Code`}
               value={viewing.import_code || "—"}
             />
+            {isClient && (
+              <ViewField
+                label="Sales Person"
+                value={viewing.sales_person?.full_name || "—"}
+              />
+            )}
           </div>
+          {isClient && (
+            <ViewField label="Description" value={viewing.description || "—"} />
+          )}
           <ViewField label="Address" value={viewing.address || "—"} />
+          {isClient && (
+            <ViewField label="Notes" value={viewing.notes || "—"} />
+          )}
           {kind === "client" && <ClientActivity clientId={viewing.id} />}
         </Modal>
       )}
@@ -388,23 +496,88 @@ export default function ContactsPage({
         <Modal
           title={current ? `Edit ${label}` : `Add ${label}`}
           onClose={() => setEditing(null)}
+          wide={isClient}
         >
           <form onSubmit={onSubmit}>
-            <div className="field">
-              <label>Company name</label>
-              <input name="company" defaultValue={current?.company ?? ""} autoFocus />
-            </div>
-            <div className="field">
-              <label>Contact person</label>
-              <input name="contact" defaultValue={current?.contact ?? ""} />
-            </div>
+            {isClient ? (
+              <div className="grid2">
+                <div className="field">
+                  <label>Company name</label>
+                  <input
+                    name="company"
+                    defaultValue={current?.company ?? ""}
+                    autoFocus
+                  />
+                </div>
+                <div className="field">
+                  <label>Company website</label>
+                  <input
+                    name="website"
+                    type="text"
+                    inputMode="url"
+                    placeholder="www.acme.co.za"
+                    defaultValue={current?.website ?? ""}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="field">
+                <label>Company name</label>
+                <input
+                  name="company"
+                  defaultValue={current?.company ?? ""}
+                  autoFocus
+                />
+              </div>
+            )}
+            {isClient && (
+              <div className="grid2">
+                <div className="field">
+                  <label>Source</label>
+                  <input
+                    name="source"
+                    placeholder="Referral, website, trade show…"
+                    defaultValue={current?.source ?? ""}
+                  />
+                </div>
+                <div className="field">
+                  <label>Description</label>
+                  <input
+                    name="description"
+                    placeholder="Short summary of the customer"
+                    defaultValue={current?.description ?? ""}
+                  />
+                </div>
+              </div>
+            )}
+            {isClient ? (
+              <div className="grid2">
+                <div className="field">
+                  <label>Primary contact</label>
+                  <input name="contact" defaultValue={current?.contact ?? ""} />
+                </div>
+                <div className="field">
+                  <label>Company phone</label>
+                  <input
+                    name="company_phone"
+                    placeholder="Switchboard / landline"
+                    defaultValue={current?.company_phone ?? ""}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="field">
+                <label>Contact person</label>
+                <input name="contact" defaultValue={current?.contact ?? ""} />
+              </div>
+            )}
             <div className="grid2">
               <div className="field">
                 <label>Email</label>
                 <input name="email" type="email" defaultValue={current?.email ?? ""} />
               </div>
               <div className="field">
-                <label>Phone</label>
+                <label>{isClient ? "Mobile phone" : "Phone"}</label>
                 <input name="phone" defaultValue={current?.phone ?? ""} />
               </div>
             </div>
@@ -429,6 +602,96 @@ export default function ContactsPage({
                 defaultValue={current?.address ?? ""}
               />
             </div>
+            {isClient && (
+              <>
+                <div className="field">
+                  <label>Additional contacts at this company</label>
+                  {extraContacts.map((c, i) => (
+                    <div
+                      key={i}
+                      className="grid2"
+                      style={{ gap: 8, marginBottom: 6, alignItems: "start" }}
+                    >
+                      <input
+                        placeholder="Name"
+                        value={c.name}
+                        onChange={(e) =>
+                          updateExtraContact(i, { name: e.target.value })
+                        }
+                      />
+                      <input
+                        placeholder="Role / title"
+                        value={c.role}
+                        onChange={(e) =>
+                          updateExtraContact(i, { role: e.target.value })
+                        }
+                      />
+                      <input
+                        placeholder="Email"
+                        value={c.email}
+                        onChange={(e) =>
+                          updateExtraContact(i, { email: e.target.value })
+                        }
+                      />
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                          placeholder="Phone"
+                          value={c.phone}
+                          onChange={(e) =>
+                            updateExtraContact(i, { phone: e.target.value })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="btn ghost small"
+                          onClick={() =>
+                            setExtraContacts((prev) =>
+                              prev.filter((_, j) => j !== i),
+                            )
+                          }
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn outline btn-sm"
+                    onClick={() =>
+                      setExtraContacts((prev) => [
+                        ...prev,
+                        { name: "", role: "", email: "", phone: "" },
+                      ])
+                    }
+                  >
+                    + Add contact
+                  </button>
+                </div>
+                <div className="field">
+                  <label>Sales Person</label>
+                  <select
+                    name="sales_person_id"
+                    defaultValue={current?.sales_person_id ?? ""}
+                  >
+                    <option value="">— unassigned —</option>
+                    {salesPeople.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name || "—"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Notes</label>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    defaultValue={current?.notes ?? ""}
+                  />
+                </div>
+              </>
+            )}
             {kind === "agent" && (
               <label className="check">
                 <input
@@ -525,13 +788,21 @@ export default function ContactsPage({
   );
 }
 
-function ViewField({ label, value }: { label: string; value: string }) {
+function ViewField({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: string;
+  children?: ReactNode;
+}) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div className="hint" style={{ marginBottom: 4 }}>
         {label}
       </div>
-      <strong>{value}</strong>
+      <strong>{children ?? value}</strong>
     </div>
   );
 }
