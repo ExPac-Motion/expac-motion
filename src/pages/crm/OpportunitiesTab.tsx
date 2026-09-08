@@ -429,13 +429,20 @@ export default function OpportunitiesTab() {
           <EmptyState>All stages hidden — enable some in Options.</EmptyState>
         </div>
       ) : (
-        <div className="opp-board">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${stages.length}, minmax(260px, 1fr))`,
+            gap: 14,
+            overflowX: "auto",
+          }}
+        >
           {stages.map((stage) => {
             const rows = sortRows(opps.filter((o) => o.status === stage.key));
             const total = rows.reduce((s, o) => s + o.value, 0);
             return (
-              <div key={stage.key} className="panel opp-col">
-                <div className="opp-col-header">
+              <div key={stage.key} className="panel" style={{ margin: 0 }}>
+                <div style={{ marginBottom: 10 }}>
                   <div
                     style={{
                       display: "flex",
