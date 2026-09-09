@@ -1905,10 +1905,9 @@ tr.clickable:hover {
 }
 .qs-routecol .qs-meta {
   margin-top: 14px;
-  /* Labels sit under FROM; the value column is left-aligned. Widen it so the
-     values start further left of the sheet's right edge (they were crowding
-     the edge / TO port code) — nudge this if they drift too far either way. */
-  grid-template-columns: auto 150px;
+  /* labels sit under FROM; the value column starts under the TO port code
+     (routebox right edge − a 5-char UN/LOCODE ≈ 100px), text left-aligned */
+  grid-template-columns: auto 100px;
   justify-content: space-between;
 }
 .qs-fromblock {
