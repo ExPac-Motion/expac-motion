@@ -1905,9 +1905,9 @@ tr.clickable:hover {
 }
 .qs-routecol .qs-meta {
   margin-top: 14px;
-  /* labels sit under FROM; the value column starts under the TO port code
-     (routebox right edge − a 5-char UN/LOCODE ≈ 100px), text left-aligned */
-  grid-template-columns: auto 100px;
+  /* labels sit under FROM; the value column is left-aligned and starts under
+     the TO port code's left edge (a 5-char UN/LOCODE at 32px ≈ 110px) */
+  grid-template-columns: auto 112px;
   justify-content: space-between;
 }
 .qs-fromblock {
@@ -2200,20 +2200,16 @@ tr.clickable:hover {
 .qs-foot > div {
   min-width: 0;
 }
-/* footer headings ("BANKING DETAILS", the strapline) match the charges-table
-   category rows (SERVICE DESCRIPTION): 9.5px uppercase grey in a green-tinted
-   bordered box, no blue */
+/* footer headings ("BANKING DETAILS", the strapline): small green uppercase
+   text, no box, no blue */
 .qs-foot h4 {
   margin: 0 0 7px;
-  background: #eef4e3;
-  border: 1px solid #cdddb4;
-  color: #444;
+  color: var(--green-dark);
   font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   line-height: 1.35;
-  padding: 3px 6px;
 }
 .qs-foot > div > p {
   /* match the banking column's line-height so line 7 lands level with "Swift Code" */
