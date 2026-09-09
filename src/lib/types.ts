@@ -811,6 +811,8 @@ export interface Quote {
   flight_no: string | null;
   flight_date: string | null;
   carrier_name: string | null;
+  /** Carrier / shipping line — seeds the shipment's Carrier column. */
+  shipping_line: string | null;
   fx_usd_zar: number;
   fx_cny_zar: number;
   created_at: string;
@@ -1092,6 +1094,7 @@ export interface QuoteDraft {
   flight_no: string;
   flight_date: string;
   carrier_name: string;
+  shipping_line: string;
   fx_usd_zar: string;
   fx_cny_zar: string;
   packing: PackingItem[];

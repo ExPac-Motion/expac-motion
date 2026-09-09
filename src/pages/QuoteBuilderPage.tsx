@@ -129,6 +129,7 @@ function blankDraft(): QuoteDraft {
     flight_no: "",
     flight_date: "",
     carrier_name: "",
+    shipping_line: "",
     fx_usd_zar: "18.50",
     fx_cny_zar: "2.60",
     packing: [newPackingItem(0)],
@@ -169,6 +170,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     flight_no: q.flight_no ?? "",
     flight_date: q.flight_date ?? "",
     carrier_name: q.carrier_name ?? "",
+    shipping_line: q.shipping_line ?? "",
     fx_usd_zar: q.fx_usd_zar != null ? String(q.fx_usd_zar) : "0",
     fx_cny_zar: q.fx_cny_zar != null ? String(q.fx_cny_zar) : "0",
     packing: (q.packing_list_items ?? []).map((p, i) => ({
@@ -834,6 +836,13 @@ export default function QuoteBuilderPage() {
             <span className="hint">
               Pick a UN/LOCODE or type your own (start with the 5-char code).
             </span>
+          </div>
+          <div className="field">
+            <label>Carrier</label>
+            <input
+              value={draft.shipping_line}
+              onChange={(e) => set("shipping_line", e.target.value)}
+            />
           </div>
           <div className="field">
             <label>Vessel Name</label>

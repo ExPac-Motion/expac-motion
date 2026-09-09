@@ -396,6 +396,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_flight_no: draft.flight_no.trim() || null,
       p_flight_date: draft.flight_date || null,
       p_carrier_name: draft.carrier_name.trim() || null,
+      p_shipping_line: draft.shipping_line.trim() || null,
       p_fx_usd_zar: Number(draft.fx_usd_zar) || 0,
       p_fx_cny_zar: Number(draft.fx_cny_zar) || 0,
       p_lines: lines,
