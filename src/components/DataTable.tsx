@@ -19,6 +19,8 @@ export interface DataColumn<T> {
   /** Fixed columns (e.g. the row-actions cell) never move or resize and
    *  always render first. */
   fixed?: boolean;
+  /** When set, the header is clickable to sort by this value (asc → desc → off). */
+  sortValue?: (row: T) => string | number | null | undefined;
 }
 
 interface Props<T> {
@@ -60,12 +62,17 @@ export default function DataTable<T>({
 
   const [order, setOrder] = useState<string[]>(movableKeys);
   const [widths, setWidths] = useState<Record<string, number>>({});
+  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(
+    null,
+  );
 
   // keep the latest values reachable from window event handlers
   const orderRef = useRef(order);
   const widthsRef = useRef(widths);
+  const sortRef = useRef(sort);
   orderRef.current = order;
   widthsRef.current = widths;
+  sortRef.current = sort;
 
   // hydrate from the saved layout (and re-merge when the column set changes)
   useEffect(() => {
@@ -78,6 +85,7 @@ export default function DataTable<T>({
       ...movableKeys.filter((k) => !savedOrder.includes(k)),
     ]);
     setWidths(saved?.widths ?? {});
+    setSort(saved?.sort ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefsQ.data, movableSig]);
 
@@ -85,10 +93,23 @@ export default function DataTable<T>({
   const [justSaved, setJustSaved] = useState(false);
 
   function saveGrid() {
-    savePrefs.mutate({ order: orderRef.current, widths: widthsRef.current });
+    savePrefs.mutate({
+      order: orderRef.current,
+      widths: widthsRef.current,
+      sort: sortRef.current,
+    });
     setDirty(false);
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 1500);
+  }
+
+  function toggleSort(key: string) {
+    setSort((s) => {
+      if (!s || s.key !== key) return { key, dir: "asc" };
+      if (s.dir === "asc") return { key, dir: "desc" };
+      return null;
+    });
+    setDirty(true);
   }
 
   const orderedCols = useMemo(() => {
@@ -152,9 +173,31 @@ export default function DataTable<T>({
   function resetLayout() {
     setOrder(movableKeys);
     setWidths({});
-    savePrefs.mutate({ order: movableKeys, widths: {} });
+    setSort(null);
+    savePrefs.mutate({ order: movableKeys, widths: {}, sort: null });
     setDirty(false);
   }
+
+  const sortedRows = useMemo(() => {
+    if (!sort) return rows;
+    const col = byKey.get(sort.key);
+    if (!col?.sortValue) return rows;
+    const get = col.sortValue;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const va = get(a);
+      const vb = get(b);
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number")
+        return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }) * dir;
+    });
+  }, [rows, sort, byKey]);
 
   return (
     <div className="dt-wrap">
@@ -193,11 +236,15 @@ export default function DataTable<T>({
                   key={c.key}
                   className={[
                     c.fixed ? "dt-fixed" : "dt-th",
+                    c.sortValue ? "dt-sortable" : "",
                     dragKey === c.key ? "dt-drag" : "",
                     overKey === c.key ? "dt-over" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
+                  onClick={
+                    c.sortValue ? () => toggleSort(c.key) : undefined
+                  }
                   draggable={!c.fixed}
                   onDragStart={(e) => {
                     if (c.fixed || resizeRef.current) {
@@ -234,7 +281,14 @@ export default function DataTable<T>({
                         }
                   }
                 >
-                  <span className="dt-th-label">{c.header}</span>
+                  <span className="dt-th-label">
+                    {c.header}
+                    {sort?.key === c.key && (
+                      <span className="dt-sort-ind">
+                        {sort.dir === "asc" ? " ▲" : " ▼"}
+                      </span>
+                    )}
+                  </span>
                   {!c.fixed && (
                     <span
                       className="dt-rz"
@@ -248,7 +302,7 @@ export default function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
+            {sortedRows.map((row) => {
               const rc = [
                 onRowClick ? "clickable" : "",
                 rowClass?.(row) ?? "",

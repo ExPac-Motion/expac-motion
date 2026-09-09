@@ -593,6 +593,13 @@ table.dt th.dt-drag {
 table.dt th.dt-over {
   box-shadow: inset 3px 0 0 var(--green);
 }
+table.dt th.dt-sortable {
+  cursor: pointer;
+}
+.dt-sort-ind {
+  color: var(--green-dark);
+  font-weight: 700;
+}
 /* resize grip on the right edge of a header cell */
 .dt-rz {
   position: absolute;

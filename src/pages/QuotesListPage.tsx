@@ -23,7 +23,13 @@ import {
 } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
 import { money, newReference, portCode, todayPlusDays } from "../lib/format";
-import { STATUS_LABEL, type Quote, type QuoteDraft, type QuoteStatus } from "../lib/types";
+import {
+  STATUS_LABEL,
+  STATUS_ORDER,
+  type Quote,
+  type QuoteDraft,
+  type QuoteStatus,
+} from "../lib/types";
 
 function isQuoteStatus(v: string | null): v is QuoteStatus {
   return (
@@ -160,6 +166,8 @@ export default function QuotesListPage() {
         key: "customer",
         header: "Customer",
         width: 240,
+        sortValue: (q) =>
+          (q.client?.company ?? q.lead?.company ?? "").toLowerCase(),
         render: (q) => (
           <>
             {q.client?.company ?? q.lead?.company ?? "—"}
@@ -184,9 +192,17 @@ export default function QuotesListPage() {
         header: "Trade lane",
         width: 150,
         cellClass: "nowrap",
+        sortValue: (q) =>
+          `${portCode(q.origin)} → ${portCode(q.destination)}`,
         render: (q) => `${portCode(q.origin)} → ${portCode(q.destination)}`,
       },
-      { key: "mode", header: "Mode", width: 130, render: (q) => q.mode },
+      {
+        key: "mode",
+        header: "Mode",
+        width: 130,
+        sortValue: (q) => q.mode,
+        render: (q) => q.mode,
+      },
       {
         key: "cost",
         header: "Total Cost",
@@ -215,6 +231,7 @@ export default function QuotesListPage() {
         key: "status",
         header: "Status",
         width: 140,
+        sortValue: (q) => STATUS_ORDER.indexOf(q.status),
         render: (q) => <StatusBadge status={q.status} />,
       },
     ],

@@ -1137,4 +1137,6 @@ export interface UiTableLayout {
   order?: string[];
   /** Column key -> pixel width. */
   widths?: Record<string, number>;
+  /** Active sort, if any. */
+  sort?: { key: string; dir: "asc" | "desc" } | null;
 }
