@@ -201,17 +201,6 @@ function JobRow({
       <td>
         <input
           type="date"
-          value={row.provisional_delivery_date ?? ""}
-          onChange={(e) => {
-            set("provisional_delivery_date", e.target.value);
-            onSave(job.id, { provisional_delivery_date: e.target.value });
-          }}
-          title="Provisional delivery date"
-        />
-      </td>
-      <td>
-        <input
-          type="date"
           value={row.etd ?? ""}
           onChange={(e) => {
             set("etd", e.target.value);
@@ -227,6 +216,17 @@ function JobRow({
             set("eta", e.target.value);
             onSave(job.id, { eta: e.target.value });
           }}
+        />
+      </td>
+      <td>
+        <input
+          type="date"
+          value={row.provisional_delivery_date ?? ""}
+          onChange={(e) => {
+            set("provisional_delivery_date", e.target.value);
+            onSave(job.id, { provisional_delivery_date: e.target.value });
+          }}
+          title="Provisional delivery date"
         />
       </td>
       <td>
@@ -471,14 +471,14 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>Reference</th>
                   <th>Mode</th>
                   <th>Shipment Status</th>
-                  <th>Additional Notes</th>
+                  <th>Notes</th>
                   <th>AWB/MBL No</th>
                   <th>Container No</th>
                   <th>Shipping Line</th>
                   <th>Agent/Airline</th>
-                  <th>Prov. Delivery</th>
                   <th>ETD</th>
                   <th>ETA</th>
+                  <th>PDD</th>
                   <th>POL</th>
                   <th>POD</th>
                 </tr>
@@ -627,12 +627,12 @@ function JobViewModal({
         <ViewField label="ETD" value={formatDate(job.etd)} />
         <ViewField label="ETA" value={formatDate(job.eta)} />
         <ViewField
-          label="Prov. Delivery"
+          label="PDD"
           value={formatDate(job.provisional_delivery_date)}
         />
         <ViewField label="Created On" value={formatDate(job.created_at)} />
       </div>
-      <ViewField label="Additional Notes" value={job.notes || "—"} />
+      <ViewField label="Notes" value={job.notes || "—"} />
       {job.quote_id && (
         <p style={{ marginTop: 8 }}>
           <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
@@ -875,7 +875,7 @@ function JobEditModal({
             <input type="date" name="eta" defaultValue={job.eta ?? ""} />
           </div>
           <div className="field">
-            <label>Prov. Delivery</label>
+            <label>PDD</label>
             <input
               type="date"
               name="provisional_delivery_date"
@@ -884,7 +884,7 @@ function JobEditModal({
           </div>
         </div>
         <div className="field">
-          <label>Additional Notes</label>
+          <label>Notes</label>
           <textarea name="notes" rows={2} defaultValue={job.notes ?? ""} />
         </div>
         <div
