@@ -97,6 +97,11 @@ export default function DataTable<T>({
   const widthOf = (c: DataColumn<T>) =>
     widths[c.key] ?? c.width ?? DEFAULT_WIDTH;
 
+  // The table is exactly as wide as the sum of its columns, so resizing one
+  // column grows the table (and the wrapper scrolls) instead of the browser
+  // redistributing width across every other column.
+  const totalWidth = orderedCols.reduce((s, c) => s + widthOf(c), 0);
+
   /* ---- resize ---- */
   const resizeRef = useRef<{ key: string; startX: number; startW: number } | null>(
     null,
@@ -157,7 +162,10 @@ export default function DataTable<T>({
         </button>
       </div>
       <div className="table-wrap">
-        <table className={`dt${className ? " " + className : ""}`}>
+        <table
+          className={`dt${className ? " " + className : ""}`}
+          style={{ width: totalWidth, minWidth: "100%" }}
+        >
           <colgroup>
             {orderedCols.map((c) => (
               <col key={c.key} style={{ width: widthOf(c) }} />

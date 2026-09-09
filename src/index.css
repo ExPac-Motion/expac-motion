@@ -546,19 +546,30 @@ tr.clickable:hover {
 }
 table.dt {
   table-layout: fixed;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   border: 1px solid var(--line);
 }
 table.dt th,
 table.dt td {
-  border: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* the row-actions column must never clip its buttons */
+/* The row-actions column is pinned to the left: it never reorders, never
+   resizes, and stays put while the rest of the table scrolls sideways. */
 table.dt th.dt-fixed,
 table.dt td.dt-cell-fixed {
   overflow: visible;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--white);
+  border-right: 2px solid var(--line);
+}
+table.dt thead th.dt-fixed {
+  z-index: 5;
 }
 table.dt th.dt-th {
   position: relative;
