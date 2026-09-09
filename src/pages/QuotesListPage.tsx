@@ -12,6 +12,7 @@ import {
   useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
+import DataTable, { type DataColumn } from "../components/DataTable";
 import QuoteDetailModal from "./QuoteDetailModal";
 import {
   useDeleteQuote,
@@ -119,6 +120,108 @@ export default function QuotesListPage() {
 
   const sel = useRowSelection(quotes ?? [], rows);
 
+  const totalsByQuote = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof chargeTotals>>();
+    for (const q of rows) m.set(q.id, chargeTotals(q.quote_lines, fxOf(q)));
+    return m;
+  }, [rows]);
+
+  const columns = useMemo<DataColumn<Quote>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 118,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (q) => (
+          <RowActions
+            selected={sel.isSelected(q.id)}
+            onSelectToggle={() => sel.toggle(q.id)}
+            onView={() => setOpenId(q.id)}
+            onEdit={() => navigate(`/quotes/${q.id}`)}
+            onDelete={() => onDelete(q)}
+            onDuplicate={() => onDuplicate(q)}
+          />
+        ),
+      },
+      {
+        key: "shipment",
+        header: "Shipment",
+        width: 120,
+        render: (q) => <span className="ref-link">{q.reference}</span>,
+      },
+      {
+        key: "customer",
+        header: "Customer",
+        width: 180,
+        render: (q) => (
+          <>
+            {q.client?.company ?? q.lead?.company ?? "—"}
+            {!q.client && q.lead && <span className="tag">lead</span>}
+          </>
+        ),
+      },
+      {
+        key: "shipper",
+        header: "Shipper",
+        width: 170,
+        render: (q) => q.supplier?.company ?? "—",
+      },
+      {
+        key: "reference",
+        header: "Reference",
+        width: 130,
+        render: (q) => q.customer_reference || "—",
+      },
+      {
+        key: "lane",
+        header: "Trade lane",
+        width: 130,
+        cellClass: "nowrap",
+        render: (q) => `${portCode(q.origin)} → ${portCode(q.destination)}`,
+      },
+      { key: "mode", header: "Mode", width: 120, render: (q) => q.mode },
+      {
+        key: "cost",
+        header: "Total Cost",
+        width: 110,
+        render: (q) => money(totalsByQuote.get(q.id)?.cost ?? 0),
+      },
+      {
+        key: "value",
+        header: "Total Value",
+        width: 110,
+        render: (q) => money(totalsByQuote.get(q.id)?.sell ?? 0),
+      },
+      {
+        key: "margin",
+        header: "Margin",
+        width: 90,
+        render: (q) => `${(totalsByQuote.get(q.id)?.margin ?? 0).toFixed(1)}%`,
+      },
+      {
+        key: "profit",
+        header: "Total Profit",
+        width: 110,
+        render: (q) => money(totalsByQuote.get(q.id)?.gp ?? 0),
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: 130,
+        render: (q) => <StatusBadge status={q.status} />,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, totalsByQuote, navigate],
+  );
+
   return (
     <>
       <PageHeader
@@ -164,77 +267,14 @@ export default function QuotesListPage() {
               : "No quotes match this filter."}
           </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="table--compact quotes-table">
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead
-                      checked={sel.allChecked}
-                      indeterminate={sel.someChecked}
-                      onToggle={sel.toggleAll}
-                    />
-                  </th>
-                  <th>Shipment</th>
-                  <th>Customer</th>
-                  <th>Shipper</th>
-                  <th>Reference</th>
-                  <th>Trade lane</th>
-                  <th>Mode</th>
-                  <th>Total Cost</th>
-                  <th>Total Value</th>
-                  <th>Margin</th>
-                  <th>Total Profit</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((q) => {
-                  const t = chargeTotals(q.quote_lines, fxOf(q));
-                  return (
-                    <tr
-                      key={q.id}
-                      className="clickable"
-                      onClick={() => setOpenId(q.id)}
-                    >
-                      <td>
-                        <RowActions
-                          selected={sel.isSelected(q.id)}
-                          onSelectToggle={() => sel.toggle(q.id)}
-                          onView={() => setOpenId(q.id)}
-                          onEdit={() => navigate(`/quotes/${q.id}`)}
-                          onDelete={() => onDelete(q)}
-                          onDuplicate={() => onDuplicate(q)}
-                        />
-                      </td>
-                      <td>
-                        <span className="ref-link">{q.reference}</span>
-                      </td>
-                      <td>
-                        {q.client?.company ?? q.lead?.company ?? "—"}
-                        {!q.client && q.lead && (
-                          <span className="tag">lead</span>
-                        )}
-                      </td>
-                      <td>{q.supplier?.company ?? "—"}</td>
-                      <td>{q.customer_reference || "—"}</td>
-                      <td className="nowrap">
-                        {portCode(q.origin)} → {portCode(q.destination)}
-                      </td>
-                      <td>{q.mode}</td>
-                      <td>{money(t.cost)}</td>
-                      <td>{money(t.sell)}</td>
-                      <td>{t.margin.toFixed(1)}%</td>
-                      <td>{money(t.gp)}</td>
-                      <td>
-                        <StatusBadge status={q.status} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="quotes"
+            className="table--compact quotes-table"
+            columns={columns}
+            rows={rows}
+            rowKey={(q) => q.id}
+            onRowClick={(q) => setOpenId(q.id)}
+          />
         )}
       </div>
 

@@ -60,6 +60,7 @@ import type {
   VaultBudgetEntry,
   VaultBudgetDraft,
   VaultTodo,
+  UiTableLayout,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -1509,4 +1510,31 @@ export async function updateVaultTodo(
 }
 export async function deleteVaultTodo(id: string): Promise<void> {
   unwrap(await supabase.from("vault_todos").delete().eq("id", id));
+}
+
+/* ---------- Per-user table column layout ---------- */
+
+export async function getTablePrefs(tableKey: string): Promise<UiTableLayout> {
+  const { data, error } = await supabase
+    .from("ui_table_prefs")
+    .select("layout")
+    .eq("table_key", tableKey)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data?.layout as UiTableLayout) ?? {};
+}
+
+export async function saveTablePrefs(
+  tableKey: string,
+  layout: UiTableLayout,
+): Promise<void> {
+  unwrap(
+    await supabase
+      .from("ui_table_prefs")
+      .upsert(
+        { table_key: tableKey, layout, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,table_key" },
+      )
+      .select("table_key"),
+  );
 }

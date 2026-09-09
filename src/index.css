@@ -535,6 +535,67 @@ tr.clickable:hover {
   font-size: 12px;
 }
 
+/* ---------- DataTable: grid lines + resizable / draggable columns ---------- */
+.dt-wrap {
+  position: relative;
+}
+.dt-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+table.dt {
+  table-layout: fixed;
+  border-collapse: collapse;
+  border: 1px solid var(--line);
+}
+table.dt th,
+table.dt td {
+  border: 1px solid var(--line);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* the row-actions column must never clip its buttons */
+table.dt th.dt-fixed,
+table.dt td.dt-cell-fixed {
+  overflow: visible;
+}
+table.dt th.dt-th {
+  position: relative;
+  cursor: grab;
+  user-select: none;
+}
+table.dt th.dt-th:active {
+  cursor: grabbing;
+}
+table.dt th .dt-th-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+table.dt th.dt-drag {
+  opacity: 0.4;
+}
+table.dt th.dt-over {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+/* resize grip on the right edge of a header cell */
+.dt-rz {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+}
+.dt-rz:hover {
+  background: var(--green);
+  opacity: 0.5;
+}
+
 /* ---------- Active Jobs: inline-editable grid ---------- */
 .jobs-table {
   min-width: 1560px;

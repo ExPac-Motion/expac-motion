@@ -1129,3 +1129,12 @@ export interface VaultTodo {
   sort_order: number;
   created_at: string;
 }
+
+/* ---------- Per-user table column layout ---------- */
+
+export interface UiTableLayout {
+  /** Ordered list of movable column keys. */
+  order?: string[];
+  /** Column key -> pixel width. */
+  widths?: Record<string, number>;
+}

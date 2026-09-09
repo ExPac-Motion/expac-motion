@@ -28,6 +28,7 @@ import type {
   Supplier,
   VaultBudgetDraft,
   VaultTodo,
+  UiTableLayout,
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
 import { buildShipmentEmail } from "./mailTemplates";
@@ -1053,5 +1054,24 @@ export function useDeleteVaultTodo() {
   return useMutation({
     mutationFn: db.deleteVaultTodo,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
+  });
+}
+
+/* ---------- Per-user table column layout ---------- */
+
+export function useTablePrefs(tableKey: string) {
+  return useQuery({
+    queryKey: ["ui_table_prefs", tableKey],
+    queryFn: () => db.getTablePrefs(tableKey),
+    staleTime: 5 * 60_000,
+  });
+}
+export function useSaveTablePrefs(tableKey: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (layout: UiTableLayout) => db.saveTablePrefs(tableKey, layout),
+    onMutate: (layout) => {
+      qc.setQueryData(["ui_table_prefs", tableKey], layout);
+    },
   });
 }
