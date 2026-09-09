@@ -117,9 +117,10 @@ export default function DataTable<T>({
     const w = Math.max(min, Math.round(r.startW + (e.clientX - r.startX)));
     setWidths((prev) => ({ ...prev, [r.key]: w }));
   }
-  function onResizeUp() {
+  function endResize() {
     window.removeEventListener("pointermove", onResizeMove);
-    window.removeEventListener("pointerup", onResizeUp);
+    window.removeEventListener("pointerup", endResize);
+    window.removeEventListener("pointercancel", endResize);
     if (resizeRef.current) {
       resizeRef.current = null;
       setDirty(true);
@@ -130,7 +131,8 @@ export default function DataTable<T>({
     e.stopPropagation();
     resizeRef.current = { key: c.key, startX: e.clientX, startW: widthOf(c) };
     window.addEventListener("pointermove", onResizeMove);
-    window.addEventListener("pointerup", onResizeUp);
+    window.addEventListener("pointerup", endResize);
+    window.addEventListener("pointercancel", endResize);
   }
 
   /* ---- reorder ---- */
@@ -202,21 +204,35 @@ export default function DataTable<T>({
                       e.preventDefault();
                       return;
                     }
+                    // Firefox won't start a drag unless dataTransfer is set.
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", c.key);
                     setDragKey(c.key);
                   }}
                   onDragEnd={() => {
                     setDragKey(null);
                     setOverKey(null);
                   }}
+                  onDragEnter={
+                    c.fixed ? undefined : (e) => e.preventDefault()
+                  }
                   onDragOver={
                     c.fixed
                       ? undefined
                       : (e) => {
                           e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
                           if (overKey !== c.key) setOverKey(c.key);
                         }
                   }
-                  onDrop={c.fixed ? undefined : () => drop(c.key)}
+                  onDrop={
+                    c.fixed
+                      ? undefined
+                      : (e) => {
+                          e.preventDefault();
+                          drop(c.key);
+                        }
+                  }
                 >
                   <span className="dt-th-label">{c.header}</span>
                   {!c.fixed && (
