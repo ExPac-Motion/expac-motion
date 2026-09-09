@@ -21,6 +21,10 @@ export interface DataColumn<T> {
   fixed?: boolean;
   /** When set, the header is clickable to sort by this value (asc → desc → off). */
   sortValue?: (row: T) => string | number | null | undefined;
+  /** Column starts hidden; the user can show it from "Table settings". */
+  defaultHidden?: boolean;
+  /** Plain-text name for the "Table settings" list (defaults to a string header). */
+  label?: string;
 }
 
 interface Props<T> {
@@ -59,20 +63,27 @@ export default function DataTable<T>({
     () => new Map(columns.map((c) => [c.key, c])),
     [columns],
   );
+  const defaultHidden = useMemo(
+    () => columns.filter((c) => !c.fixed && c.defaultHidden).map((c) => c.key),
+    [columns],
+  );
 
   const [order, setOrder] = useState<string[]>(movableKeys);
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(
     null,
   );
+  const [hidden, setHidden] = useState<string[]>(defaultHidden);
 
   // keep the latest values reachable from window event handlers
   const orderRef = useRef(order);
   const widthsRef = useRef(widths);
   const sortRef = useRef(sort);
+  const hiddenRef = useRef(hidden);
   orderRef.current = order;
   widthsRef.current = widths;
   sortRef.current = sort;
+  hiddenRef.current = hidden;
 
   // hydrate from the saved layout (and re-merge when the column set changes)
   useEffect(() => {
@@ -86,21 +97,42 @@ export default function DataTable<T>({
     ]);
     setWidths(saved?.widths ?? {});
     setSort(saved?.sort ?? null);
+    setHidden(
+      (saved?.hidden ?? defaultHidden).filter((k) => movableKeys.includes(k)),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefsQ.data, movableSig]);
 
   const [dirty, setDirty] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [showCols, setShowCols] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showCols) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!settingsRef.current?.contains(e.target as Node)) setShowCols(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [showCols]);
 
   function saveGrid() {
     savePrefs.mutate({
       order: orderRef.current,
       widths: widthsRef.current,
       sort: sortRef.current,
+      hidden: hiddenRef.current,
     });
     setDirty(false);
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 1500);
+  }
+
+  function toggleColumn(key: string) {
+    setHidden((h) =>
+      h.includes(key) ? h.filter((k) => k !== key) : [...h, key],
+    );
+    setDirty(true);
   }
 
   function toggleSort(key: string) {
@@ -115,9 +147,18 @@ export default function DataTable<T>({
   const orderedCols = useMemo(() => {
     const movable = order
       .map((k) => byKey.get(k))
-      .filter((c): c is DataColumn<T> => !!c);
+      .filter((c): c is DataColumn<T> => !!c && !hidden.includes(c.key));
     return [...fixed, ...movable];
-  }, [order, byKey, fixed]);
+  }, [order, byKey, fixed, hidden]);
+
+  /** Every non-fixed column, in display order, for the settings list. */
+  const allMovable = useMemo(
+    () =>
+      order
+        .map((k) => byKey.get(k))
+        .filter((c): c is DataColumn<T> => !!c),
+    [order, byKey],
+  );
 
   const widthOf = (c: DataColumn<T>) =>
     widths[c.key] ?? c.width ?? DEFAULT_WIDTH;
@@ -174,7 +215,13 @@ export default function DataTable<T>({
     setOrder(movableKeys);
     setWidths({});
     setSort(null);
-    savePrefs.mutate({ order: movableKeys, widths: {}, sort: null });
+    setHidden(defaultHidden);
+    savePrefs.mutate({
+      order: movableKeys,
+      widths: {},
+      sort: null,
+      hidden: defaultHidden,
+    });
     setDirty(false);
   }
 
@@ -214,10 +261,38 @@ export default function DataTable<T>({
           type="button"
           className="btn ghost btn-sm"
           onClick={resetLayout}
-          title="Restore the default column order and widths"
+          title="Restore the default columns, order and widths"
         >
           Reset columns
         </button>
+        <div className="dt-settings" ref={settingsRef}>
+          <button
+            type="button"
+            className="btn ghost btn-sm"
+            onClick={() => setShowCols((v) => !v)}
+            title="Choose which columns to show"
+          >
+            Table settings ▾
+          </button>
+          {showCols && (
+            <div className="dt-colmenu">
+              <div className="dt-colmenu-head">Show columns</div>
+              {allMovable.map((c) => (
+                <label key={c.key} className="dt-colmenu-row">
+                  <input
+                    type="checkbox"
+                    checked={!hidden.includes(c.key)}
+                    onChange={() => toggleColumn(c.key)}
+                  />
+                  <span>
+                    {c.label ??
+                      (typeof c.header === "string" ? c.header : c.key)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <div className="table-wrap">
         <table
@@ -283,10 +358,10 @@ export default function DataTable<T>({
                 >
                   <span className="dt-th-label">
                     {c.header}
-                    {sort?.key === c.key && (
-                      <span className="dt-sort-ind">
-                        {sort.dir === "asc" ? " ▲" : " ▼"}
-                      </span>
+                    {c.sortValue && (
+                      <SortIcon
+                        dir={sort?.key === c.key ? sort.dir : undefined}
+                      />
                     )}
                   </span>
                   {!c.fixed && (
@@ -334,5 +409,14 @@ export default function DataTable<T>({
         </table>
       </div>
     </div>
+  );
+}
+
+function SortIcon({ dir }: { dir?: "asc" | "desc" }) {
+  return (
+    <svg className="dt-sort-icon" viewBox="0 0 10 14" aria-hidden="true">
+      <path d="M5 0 9 5H1z" opacity={dir === "asc" ? 1 : 0.32} />
+      <path d="M5 14 9 9H1z" opacity={dir === "desc" ? 1 : 0.32} />
+    </svg>
   );
 }

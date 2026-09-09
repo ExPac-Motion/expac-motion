@@ -596,9 +596,51 @@ table.dt th.dt-over {
 table.dt th.dt-sortable {
   cursor: pointer;
 }
-.dt-sort-ind {
-  color: var(--green-dark);
+.dt-sort-icon {
+  width: 8px;
+  height: 11px;
+  margin-left: 5px;
+  vertical-align: -1px;
+  fill: var(--green-dark);
+  flex: none;
+}
+/* Table settings (column show/hide) menu */
+.dt-settings {
+  position: relative;
+}
+.dt-colmenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 190px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+  padding: 6px;
+}
+.dt-colmenu-head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   font-weight: 700;
+  color: var(--muted);
+  padding: 4px 8px 6px;
+}
+.dt-colmenu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.dt-colmenu-row:hover {
+  background: #f4f3ee;
 }
 /* resize grip on the right edge of a header cell */
 .dt-rz {

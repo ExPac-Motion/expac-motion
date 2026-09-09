@@ -1139,4 +1139,6 @@ export interface UiTableLayout {
   widths?: Record<string, number>;
   /** Active sort, if any. */
   sort?: { key: string; dir: "asc" | "desc" } | null;
+  /** Movable column keys the user has hidden. */
+  hidden?: string[];
 }
