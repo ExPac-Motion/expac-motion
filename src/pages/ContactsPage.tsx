@@ -20,6 +20,7 @@ import {
   type BulkField,
 } from "../components/common";
 import { useToast } from "../components/Toast";
+import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   useCreateClientInvite,
   useProfiles,
@@ -273,6 +274,110 @@ export default function ContactsPage({
     return null;
   }
 
+  const columns = useMemo<DataColumn<Contact>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 150,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (r) => {
+          const mirror = mirrorOf(r);
+          return mirror ? (
+            <div className="row-icons">
+              <input type="checkbox" onClick={(e) => e.stopPropagation()} />
+              <span className="muted small">Synced from {COPY[mirror].title}</span>
+            </div>
+          ) : (
+            <RowActions
+              selected={sel.isSelected(r.id)}
+              onSelectToggle={() => sel.toggle(r.id)}
+              onView={() => setViewing(r)}
+              onEdit={() => setEditing(r)}
+              onDelete={() => onDelete(r)}
+              onDuplicate={() => onDuplicate(r)}
+            />
+          );
+        },
+      },
+      {
+        key: "company",
+        header: "Company",
+        width: 240,
+        sortValue: (r) => r.company.toLowerCase(),
+        render: (r) => (
+          <>
+            <strong className="row-name">{r.company}</strong>
+            {r.also_clearing_agent && (
+              <span className="tag">also clearing agent</span>
+            )}
+            {r.also_agent && <span className="tag">also agent</span>}
+          </>
+        ),
+      },
+      {
+        key: "contact",
+        header: "Contact",
+        width: 160,
+        sortValue: (r) => (r.contact ?? "").toLowerCase(),
+        render: (r) => r.contact || "—",
+      },
+      {
+        key: "email",
+        header: "Email",
+        width: 250,
+        sortValue: (r) => (r.email ?? "").toLowerCase(),
+        render: (r) =>
+          r.email ? (
+            <span className="email-cell">
+              {r.email}
+              <MailLink email={r.email} />
+            </span>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "phone",
+        header: "Phone",
+        width: 150,
+        sortValue: (r) => r.phone ?? "",
+        render: (r) => r.phone || "—",
+      },
+      {
+        key: "vat_no",
+        header: `${Label} VAT No`,
+        label: "VAT No",
+        width: 140,
+        sortValue: (r) => r.vat_no ?? "",
+        render: (r) => r.vat_no || "—",
+      },
+      {
+        key: "import_code",
+        header: `${Label} Import Code`,
+        label: "Import Code",
+        width: 150,
+        sortValue: (r) => r.import_code ?? "",
+        render: (r) => r.import_code || "—",
+      },
+      {
+        key: "address",
+        header: "Address",
+        width: 280,
+        sortValue: (r) => r.address ?? "",
+        render: (r) => r.address || "—",
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, kind, Label],
+  );
+
   return (
     <>
       <PageHeader
@@ -318,81 +423,13 @@ export default function ContactsPage({
         ) : filtered.length === 0 ? (
           <EmptyState>No {label}s match "{search}".</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead
-                      checked={sel.allChecked}
-                      indeterminate={sel.someChecked}
-                      onToggle={sel.toggleAll}
-                    />
-                  </th>
-                  <th>Company</th>
-                  <th>Contact</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>VAT No</th>
-                  <th>Import Code</th>
-                  <th>Address</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const mirror = mirrorOf(r);
-                  return (
-                    <tr key={r.id}>
-                      <td>
-                        {mirror ? (
-                          <div className="row-icons">
-                            <input
-                              type="checkbox"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <span className="muted small">
-                              Synced from {COPY[mirror].title}
-                            </span>
-                          </div>
-                        ) : (
-                          <RowActions
-                            selected={sel.isSelected(r.id)}
-                            onSelectToggle={() => sel.toggle(r.id)}
-                            onView={() => setViewing(r)}
-                            onEdit={() => setEditing(r)}
-                            onDelete={() => onDelete(r)}
-                            onDuplicate={() => onDuplicate(r)}
-                          />
-                        )}
-                      </td>
-                      <td>
-                        <strong className="row-name">{r.company}</strong>
-                        {r.also_clearing_agent && (
-                          <span className="tag">also clearing agent</span>
-                        )}
-                        {r.also_agent && <span className="tag">also agent</span>}
-                      </td>
-                      <td>{r.contact || "—"}</td>
-                      <td>
-                        {r.email ? (
-                          <span className="email-cell">
-                            {r.email}
-                            <MailLink email={r.email} />
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>{r.phone || "—"}</td>
-                      <td>{r.vat_no || "—"}</td>
-                      <td>{r.import_code || "—"}</td>
-                      <td>{r.address || "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey={`contacts-${kind}`}
+            className="table--compact"
+            columns={columns}
+            rows={filtered}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
 
