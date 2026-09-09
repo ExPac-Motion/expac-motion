@@ -187,7 +187,7 @@ function JobRow({
           value={row.shipping_line ?? ""}
           onChange={(e) => set("shipping_line", e.target.value)}
           onBlur={() => commit("shipping_line", job.shipping_line ?? "")}
-          placeholder="Shipping line"
+          placeholder="Carrier"
         />
       </td>
       <td>
@@ -474,7 +474,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   <th>Notes</th>
                   <th>AWB/MBL No</th>
                   <th>Container No</th>
-                  <th>Shipping Line</th>
+                  <th>Carrier</th>
                   <th>Agent/Airline</th>
                   <th>ETD</th>
                   <th>ETA</th>
@@ -547,7 +547,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               allowClear: false,
               options: SHIPMENT_STATUSES.map((s) => ({ value: s, label: s })),
             },
-            { key: "shipping_line", label: "Shipping Line", type: "text" },
+            { key: "shipping_line", label: "Carrier", type: "text" },
             { key: "carrier_name", label: "Agent/Airline", type: "text" },
           ]}
           onApply={async (patch) => {
@@ -620,7 +620,7 @@ function JobViewModal({
         <ViewField label="Reference" value={job.po_no || "—"} />
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
-        <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
+        <ViewField label="Carrier" value={job.shipping_line || "—"} />
         <ViewField label="Agent/Airline" value={job.carrier_name || "—"} />
         <ViewField label="POL" value={codeOf(job.origin) || "—"} />
         <ViewField label="POD" value={codeOf(job.destination) || "—"} />
@@ -839,7 +839,7 @@ function JobEditModal({
         </div>
         <div className="grid2">
           <div className="field">
-            <label>Shipping Line</label>
+            <label>Carrier</label>
             <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
           </div>
           <div className="field">
