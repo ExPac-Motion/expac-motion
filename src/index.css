@@ -526,6 +526,14 @@ tr.clickable:hover {
 .table--compact td {
   padding: 7px 7px;
 }
+/* Quotations list header row: same readable size as the Shipments board */
+.quotes-table th {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.quotes-table td {
+  font-size: 12px;
+}
 
 /* ---------- Active Jobs: inline-editable grid ---------- */
 .jobs-table {

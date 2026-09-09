@@ -11,6 +11,7 @@ import {
   useUploadMailAsset,
 } from "../lib/hooks";
 import type { CompanySettingsPatch, Profile, UserRole } from "../lib/types";
+import { formatDate } from "../lib/format";
 
 type Tab = "company" | "defaults" | "team" | "email";
 
@@ -285,13 +286,7 @@ function TeamTab() {
                     <option value="user">Standard user</option>
                   </select>
                 </td>
-                <td className="nowrap">
-                  {new Date(p.created_at).toLocaleDateString("en-ZA", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </td>
+                <td className="nowrap">{formatDate(p.created_at)}</td>
               </tr>
             ))}
           </tbody>
