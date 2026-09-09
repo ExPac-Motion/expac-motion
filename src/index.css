@@ -562,6 +562,12 @@ table.dt td {
   border-bottom: 1px solid var(--line);
   overflow: hidden;
   text-overflow: ellipsis;
+  /* one consistent size for every DataTable, matching the Shipments board —
+     never inherit .table--compact's smaller header/body text */
+  font-size: 12px;
+}
+table.dt th {
+  letter-spacing: 0.04em;
 }
 /* The row-actions column is pinned to the left: it never reorders, never
    resizes, and stays put while the rest of the table scrolls sideways. */

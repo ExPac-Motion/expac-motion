@@ -9,6 +9,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import RichTextEditor from "../../components/RichTextEditor";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   BulkEditModal,
   EmptyState,
@@ -78,44 +79,6 @@ const norm = (s: string) => s.trim().toLowerCase();
 
 /* ---------- master view: columns / sort / filters ---------- */
 
-type ColKey =
-  | "contact"
-  | "email"
-  | "phone"
-  | "companyPhone"
-  | "website"
-  | "status"
-  | "salesPerson"
-  | "source"
-  | "description"
-  | "created";
-
-const ALL_COLUMNS: { key: ColKey; label: string }[] = [
-  { key: "contact", label: "Contact" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Mobile" },
-  { key: "companyPhone", label: "Company Phone" },
-  { key: "website", label: "Website" },
-  { key: "status", label: "Status" },
-  { key: "salesPerson", label: "Sales Person" },
-  { key: "source", label: "Source" },
-  { key: "description", label: "Description" },
-  { key: "created", label: "Created" },
-];
-const DEFAULT_COLUMNS: ColKey[] = [
-  "contact",
-  "email",
-  "phone",
-  "status",
-  "salesPerson",
-  "created",
-];
-
-type SortKey = "company" | "contact" | "status" | "salesPerson" | "created";
-interface SortState {
-  key: SortKey;
-  dir: "asc" | "desc";
-}
 interface LeadFilters {
   statusId: string;
   salesPersonId: string;
@@ -135,16 +98,6 @@ function loadJson<T>(key: string, fallback: T): T {
     return raw ? { ...fallback, ...(JSON.parse(raw) as object) } : fallback;
   } catch {
     return fallback;
-  }
-}
-function loadCols(): ColKey[] {
-  try {
-    const raw = localStorage.getItem("leads.columns");
-    if (!raw) return DEFAULT_COLUMNS;
-    const arr = JSON.parse(raw) as ColKey[];
-    return Array.isArray(arr) ? arr : DEFAULT_COLUMNS;
-  } catch {
-    return DEFAULT_COLUMNS;
   }
 }
 function saveJson(key: string, value: unknown) {
@@ -174,34 +127,20 @@ export default function LeadsPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const viewContactsQ = useLeadContacts(viewing?.id);
 
-  const [columns, setColumns] = useState<ColKey[]>(loadCols);
-  const [sort, setSort] = useState<SortState>(() =>
-    loadJson<SortState>("leads.sort", { key: "created", dir: "desc" }),
-  );
   const [filters, setFilters] = useState<LeadFilters>(() =>
     loadJson<LeadFilters>("leads.filters", EMPTY_FILTERS),
   );
-  const [colSearch, setColSearch] = useState("");
   const [search, setSearch] = useState("");
 
   const rows = useMemo(() => data ?? [], [data]);
   const statuses = statusesQ.data ?? [];
   const salesPeople = profilesQ.data ?? [];
 
-  function patchColumns(next: ColKey[]) {
-    setColumns(next);
-    saveJson("leads.columns", next);
-  }
-  function patchSort(next: SortState) {
-    setSort(next);
-    saveJson("leads.sort", next);
-  }
   function patchFilters(next: LeadFilters) {
     setFilters(next);
     saveJson("leads.filters", next);
   }
 
-  const show = (k: ColKey) => columns.includes(k);
   const activeFilterCount =
     (filters.statusId ? 1 : 0) +
     (filters.salesPersonId ? 1 : 0) +
@@ -229,17 +168,10 @@ export default function LeadsPage() {
     if (filters.hasEmail === "yes") out = out.filter((l) => !!l.email);
     if (filters.hasEmail === "no") out = out.filter((l) => !l.email);
 
-    const key = (l: Lead): string => {
-      if (sort.key === "company") return l.company ?? "";
-      if (sort.key === "contact") return l.contact ?? "";
-      if (sort.key === "status") return l.lead_status?.name ?? "";
-      if (sort.key === "salesPerson") return l.sales_person?.full_name ?? "";
-      return l.created_at ?? "";
-    };
-    out.sort((a, b) => key(a).localeCompare(key(b)));
-    if (sort.dir === "desc") out.reverse();
+    // newest first by default; column sorting is handled by <DataTable>
+    out.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     return out;
-  }, [rows, filters, sort, search]);
+  }, [rows, filters, search]);
 
   const sel = useRowSelection(rows, displayed);
 
@@ -407,6 +339,140 @@ export default function LeadsPage() {
     statuses.find((s) => s.id === id)?.name ?? "—";
   const viewContacts = viewContactsQ.data ?? [];
 
+  const leadCols = useMemo<DataColumn<Lead>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 150,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (r) => (
+          <RowActions
+            selected={sel.isSelected(r.id)}
+            onSelectToggle={() => sel.toggle(r.id)}
+            onMail={() => setMailing(r)}
+            mailTitle="Send email"
+            onView={() => setViewing(r)}
+            onEdit={() => setEditing(r)}
+            onDelete={() => onDelete(r)}
+          />
+        ),
+      },
+      {
+        key: "company",
+        header: "Company",
+        width: 240,
+        sortValue: (r) => r.company.toLowerCase(),
+        render: (r) => (
+          <>
+            <strong className="row-name">{r.company}</strong>
+            {r.promoted_client_id && (
+              <span className="tag">promoted to customer</span>
+            )}
+          </>
+        ),
+      },
+      {
+        key: "contact",
+        header: "Contact",
+        width: 160,
+        sortValue: (r) => (r.contact ?? "").toLowerCase(),
+        render: (r) => r.contact || "—",
+      },
+      {
+        key: "email",
+        header: "Email",
+        width: 240,
+        sortValue: (r) => (r.email ?? "").toLowerCase(),
+        render: (r) =>
+          r.email ? (
+            <span className="email-cell">
+              {r.email}
+              <MailLink email={r.email} />
+            </span>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "phone",
+        header: "Mobile",
+        width: 140,
+        sortValue: (r) => r.phone ?? "",
+        render: (r) => r.phone || "—",
+      },
+      {
+        key: "company_phone",
+        header: "Company Phone",
+        width: 150,
+        defaultHidden: true,
+        sortValue: (r) => r.company_phone ?? "",
+        render: (r) => r.company_phone || "—",
+      },
+      {
+        key: "website",
+        header: "Website",
+        width: 200,
+        defaultHidden: true,
+        sortValue: (r) => r.website ?? "",
+        render: (r) =>
+          r.website ? (
+            <a href={r.website} target="_blank" rel="noreferrer">
+              {r.website.replace(/^https?:\/\//, "")}
+            </a>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: 150,
+        sortValue: (r) => r.lead_status?.name ?? statusName(r.lead_status_id),
+        render: (r) => r.lead_status?.name ?? statusName(r.lead_status_id),
+      },
+      {
+        key: "sales_person",
+        header: "Sales Person",
+        width: 160,
+        sortValue: (r) => (r.sales_person?.full_name ?? "").toLowerCase(),
+        render: (r) => r.sales_person?.full_name || "—",
+      },
+      {
+        key: "source",
+        header: "Source",
+        width: 150,
+        defaultHidden: true,
+        sortValue: (r) => r.source ?? "",
+        render: (r) => r.source || "—",
+      },
+      {
+        key: "description",
+        header: "Description",
+        width: 220,
+        defaultHidden: true,
+        sortValue: (r) => r.description ?? "",
+        render: (r) => r.description || "—",
+      },
+      {
+        key: "created",
+        header: "Created",
+        width: 120,
+        cellClass: "nowrap",
+        sortValue: (r) => r.created_at,
+        render: (r) => formatDate(r.created_at),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, statuses],
+  );
+
   return (
     <>
       <div className="panel">
@@ -533,92 +599,6 @@ export default function LeadsPage() {
               </>
             )}
           </Popover>
-
-          <Popover label="Sort">
-            {() => (
-              <>
-                <label className="ui-pop-row">
-                  <span>Field</span>
-                  <select
-                    value={sort.key}
-                    onChange={(e) =>
-                      patchSort({ ...sort, key: e.target.value as SortKey })
-                    }
-                  >
-                    <option value="created">Created</option>
-                    <option value="company">Company</option>
-                    <option value="contact">Contact</option>
-                    <option value="status">Status</option>
-                    <option value="salesPerson">Sales Person</option>
-                  </select>
-                </label>
-                <div className="ui-pop-row">
-                  <span>Direction</span>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <button
-                      type="button"
-                      className={`chip${sort.dir === "asc" ? " on" : ""}`}
-                      onClick={() => patchSort({ ...sort, dir: "asc" })}
-                    >
-                      Asc
-                    </button>
-                    <button
-                      type="button"
-                      className={`chip${sort.dir === "desc" ? " on" : ""}`}
-                      onClick={() => patchSort({ ...sort, dir: "desc" })}
-                    >
-                      Desc
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </Popover>
-
-          <Popover label="Columns">
-            {() => (
-              <>
-                <input
-                  className="ui-pop-search"
-                  placeholder="Search columns…"
-                  value={colSearch}
-                  onChange={(e) => setColSearch(e.target.value)}
-                />
-                <div className="ui-pop-row" style={{ opacity: 0.6 }}>
-                  <label className="check">
-                    <input type="checkbox" checked disabled /> Company
-                  </label>
-                </div>
-                {ALL_COLUMNS.filter((c) =>
-                  c.label.toLowerCase().includes(colSearch.trim().toLowerCase()),
-                ).map((c) => (
-                  <div key={c.key} className="ui-pop-row">
-                    <label className="check">
-                      <input
-                        type="checkbox"
-                        checked={show(c.key)}
-                        onChange={(e) =>
-                          patchColumns(
-                            e.target.checked
-                              ? [...columns, c.key]
-                              : columns.filter((k) => k !== c.key),
-                          )
-                        }
-                      />
-                      {c.label}
-                    </label>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="btn ghost small"
-                  onClick={() => patchColumns(DEFAULT_COLUMNS)}
-                >
-                  Reset to default
-                </button>
-              </>
-            )}
-          </Popover>
         </div>
 
         {isLoading ? (
@@ -633,92 +613,13 @@ export default function LeadsPage() {
         ) : displayed.length === 0 ? (
           <EmptyState>No leads match the current filters.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="leads-table">
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead
-                      checked={sel.allChecked}
-                      indeterminate={sel.someChecked}
-                      onToggle={sel.toggleAll}
-                    />
-                  </th>
-                  <th>Company</th>
-                  {show("contact") && <th>Contact</th>}
-                  {show("email") && <th>Email</th>}
-                  {show("phone") && <th>Mobile</th>}
-                  {show("companyPhone") && <th>Company Phone</th>}
-                  {show("website") && <th>Website</th>}
-                  {show("status") && <th>Status</th>}
-                  {show("salesPerson") && <th>Sales Person</th>}
-                  {show("source") && <th>Source</th>}
-                  {show("description") && <th>Description</th>}
-                  {show("created") && <th>Created</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {displayed.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <RowActions
-                        selected={sel.isSelected(r.id)}
-                        onSelectToggle={() => sel.toggle(r.id)}
-                        onMail={() => setMailing(r)}
-                        mailTitle="Send email"
-                        onView={() => setViewing(r)}
-                        onEdit={() => setEditing(r)}
-                        onDelete={() => onDelete(r)}
-                      />
-                    </td>
-                    <td>
-                      <strong className="row-name">{r.company}</strong>
-                      {r.promoted_client_id && (
-                        <span className="tag">promoted to customer</span>
-                      )}
-                    </td>
-                    {show("contact") && <td>{r.contact || "—"}</td>}
-                    {show("email") && (
-                      <td>
-                        {r.email ? (
-                          <span className="email-cell">
-                            {r.email}
-                            <MailLink email={r.email} />
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                    {show("phone") && <td>{r.phone || "—"}</td>}
-                    {show("companyPhone") && <td>{r.company_phone || "—"}</td>}
-                    {show("website") && (
-                      <td>
-                        {r.website ? (
-                          <a href={r.website} target="_blank" rel="noreferrer">
-                            {r.website.replace(/^https?:\/\//, "")}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                    {show("status") && (
-                      <td>{r.lead_status?.name ?? statusName(r.lead_status_id)}</td>
-                    )}
-                    {show("salesPerson") && (
-                      <td>{r.sales_person?.full_name || "—"}</td>
-                    )}
-                    {show("source") && <td>{r.source || "—"}</td>}
-                    {show("description") && <td>{r.description || "—"}</td>}
-                    {show("created") && (
-                      <td className="nowrap">{formatDate(r.created_at)}</td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="leads"
+            className="leads-table"
+            columns={leadCols}
+            rows={displayed}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
 
