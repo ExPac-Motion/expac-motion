@@ -3060,6 +3060,15 @@ table.dt th.dt-sortable {
 .vault-grid .table--compact td.n {
   text-align: right;
 }
+/* Freeze the header row (Date / Type / Category / Amount / Note) while the
+   list scrolls, with a crisp line above and below it. */
+.vault-grid .table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--white);
+  box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line);
+}
 .vault-inline {
   width: 100%;
   border: 1px solid transparent;
