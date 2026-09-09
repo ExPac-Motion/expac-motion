@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import { useJobTracking, useJobs, useRefreshTracking } from "../../lib/hooks";
@@ -73,6 +74,121 @@ export default function LiveTracking() {
     }
   }
 
+  const trkCols = useMemo<DataColumn<Job>[]>(
+    () => [
+      {
+        key: "refresh",
+        fixed: true,
+        width: 92,
+        header: "",
+        render: (j) => (
+          <button
+            className="btn small outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRefresh(j);
+            }}
+            disabled={busyId === j.id}
+          >
+            {busyId === j.id ? "…" : "Refresh"}
+          </button>
+        ),
+      },
+      {
+        key: "shipment",
+        header: "Shipment",
+        width: 135,
+        sortValue: (j) => j.reference,
+        render: (j) => <span className="ref-link">{j.reference}</span>,
+      },
+      {
+        key: "mode",
+        header: "Mode",
+        width: 130,
+        sortValue: (j) => j.mode,
+        render: (j) => <span className="mode-tag">{j.mode}</span>,
+      },
+      {
+        key: "lane",
+        header: "Lane",
+        width: 140,
+        cellClass: "nowrap",
+        sortValue: (j) => `${portCode(j.origin)} → ${portCode(j.destination)}`,
+        render: (j) => `${portCode(j.origin)} → ${portCode(j.destination)}`,
+      },
+      {
+        key: "reference",
+        header: "Reference",
+        width: 180,
+        cellClass: "nowrap",
+        sortValue: (j) => trackableRef(j)?.value ?? "",
+        render: (j) => {
+          const ref = trackableRef(j);
+          return ref ? (
+            <>
+              <span className="ref-badge">{ref.label}</span> {ref.value}
+            </>
+          ) : (
+            "—"
+          );
+        },
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: 150,
+        sortValue: (j) =>
+          trackingByJob.get(j.id)?.status ?? j.shipment_status ?? "",
+        render: (j) => {
+          const status =
+            trackingByJob.get(j.id)?.status ?? j.shipment_status ?? "—";
+          return (
+            <span className={`ms-tag tone-${trackingTone(status)}`}>
+              {status}
+            </span>
+          );
+        },
+      },
+      {
+        key: "carrier",
+        header: "Carrier",
+        width: 150,
+        sortValue: (j) => trackingByJob.get(j.id)?.carrier ?? "",
+        render: (j) => trackingByJob.get(j.id)?.carrier ?? "—",
+      },
+      {
+        key: "eta",
+        header: "ETA",
+        width: 130,
+        sortValue: (j) => trackingByJob.get(j.id)?.eta ?? j.eta ?? "",
+        render: (j) => {
+          const t = trackingByJob.get(j.id);
+          const eta = t?.eta ?? j.eta;
+          const slipped = etaSlipped(j.eta, t?.eta);
+          return (
+            <span className={slipped ? "eta-slip" : ""}>
+              {eta ? formatDate(eta) : "—"}
+              {slipped && <span title="Later than planned ETA"> ▲</span>}
+            </span>
+          );
+        },
+      },
+      {
+        key: "synced",
+        header: "Synced",
+        width: 150,
+        cellClass: "hint",
+        sortValue: (j) => trackingByJob.get(j.id)?.synced_at ?? "",
+        render: (j) => {
+          const s = trackingByJob.get(j.id)?.synced_at;
+          return s ? formatDateTime(s) : "never";
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trackingByJob, busyId],
+  );
+
   if (jobsQ.isLoading || trackQ.isLoading) return <div className="panel"><Loading /></div>;
   if (jobsQ.isError) return <div className="panel"><ErrorNote error={jobsQ.error} /></div>;
 
@@ -112,77 +228,14 @@ export default function LiveTracking() {
             No active shipment carries an AWB, MBL or container number yet.
           </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="trk-table">
-              <thead>
-                <tr>
-                  <th>Shipment</th>
-                  <th>Mode</th>
-                  <th>Lane</th>
-                  <th>Reference</th>
-                  <th>Status</th>
-                  <th>Carrier</th>
-                  <th>ETA</th>
-                  <th>Synced</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {trackable.map((j) => {
-                  const ref = trackableRef(j)!;
-                  const t = trackingByJob.get(j.id);
-                  const status = t?.status ?? j.shipment_status ?? "—";
-                  const eta = t?.eta ?? j.eta;
-                  const slipped = etaSlipped(j.eta, t?.eta);
-                  return (
-                    <tr
-                      key={j.id}
-                      className="trk-row clickable"
-                      onClick={() => setMapJob(j)}
-                    >
-                      <td>
-                        <span className="ref-link">{j.reference}</span>
-                      </td>
-                      <td>
-                        <span className="mode-tag">{j.mode}</span>
-                      </td>
-                      <td className="nowrap">
-                        {portCode(j.origin)} → {portCode(j.destination)}
-                      </td>
-                      <td className="nowrap">
-                        <span className="ref-badge">{ref.label}</span> {ref.value}
-                      </td>
-                      <td>
-                        <span className={`ms-tag tone-${trackingTone(status)}`}>
-                          {status}
-                        </span>
-                      </td>
-                      <td>{t?.carrier ?? "—"}</td>
-                      <td className={slipped ? "eta-slip" : ""}>
-                        {eta ? formatDate(eta) : "—"}
-                        {slipped && <span title="Later than planned ETA"> ▲</span>}
-                      </td>
-                      <td className="hint">
-                        {t?.synced_at ? formatDateTime(t.synced_at) : "never"}
-                      </td>
-                      <td>
-                        <button
-                          className="btn small outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRefresh(j);
-                          }}
-                          disabled={busyId === j.id}
-                        >
-                          {busyId === j.id ? "…" : "Refresh"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="live-tracking"
+            className="trk-table"
+            columns={trkCols}
+            rows={trackable}
+            rowKey={(j) => j.id}
+            onRowClick={(j) => setMapJob(j)}
+          />
         )}
 
         {noNumber.length > 0 && (
