@@ -1035,7 +1035,11 @@ export function useVaultTodos() {
 export function useAddVaultTodo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (title: string) => db.addVaultTodo(title),
+    mutationFn: (input: {
+      title: string;
+      forecasted: number;
+      transferred_to: string;
+    }) => db.addVaultTodo(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
   });
 }
@@ -1044,7 +1048,12 @@ export function useUpdateVaultTodo() {
   return useMutation({
     mutationFn: (input: {
       id: string;
-      patch: Partial<Pick<VaultTodo, "title" | "done" | "sort_order">>;
+      patch: Partial<
+        Pick<
+          VaultTodo,
+          "title" | "forecasted" | "transferred_to" | "done" | "sort_order"
+        >
+      >;
     }) => db.updateVaultTodo(input.id, input.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
   });

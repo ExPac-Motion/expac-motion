@@ -1124,11 +1124,21 @@ export type VaultBudgetDraft = {
 export interface VaultTodo {
   id: string;
   user_id: string;
+  /** The expense name. */
   title: string;
+  /** Forecasted amount, in rand. */
+  forecasted: number;
+  /** Account / place the money was transferred to (filled in later). */
+  transferred_to: string | null;
   done: boolean;
   sort_order: number;
   created_at: string;
 }
+export type VaultExpenseDraft = {
+  title: string;
+  forecasted: string;
+  transferred_to: string;
+};
 
 /* ---------- Per-user table column layout ---------- */
 

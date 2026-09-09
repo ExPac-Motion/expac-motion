@@ -3044,10 +3044,35 @@ table.dt th.dt-sortable {
   min-width: 0;
 }
 .vault-addrow select {
-  flex: 0 0 auto;
+  flex: 0 0 132px;
 }
 .vault-addrow button {
   flex: 0 0 auto;
+}
+/* Expense Control table */
+.vault-grid .table--compact th.n,
+.vault-grid .table--compact td.n {
+  text-align: right;
+}
+.vault-inline {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: transparent;
+  font: inherit;
+}
+.vault-inline:hover {
+  border-color: var(--line);
+}
+.vault-inline:focus {
+  border-color: var(--green);
+  background: var(--white);
+  outline: none;
+}
+.vault-foot td {
+  border-top: 1.5px solid var(--line);
+  font-weight: 700;
 }
 .vault-tag {
   font-size: 0.68rem;

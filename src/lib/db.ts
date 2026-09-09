@@ -1493,18 +1493,32 @@ export async function listVaultTodos(): Promise<VaultTodo[]> {
       .order("created_at", { ascending: true }),
   );
 }
-export async function addVaultTodo(title: string): Promise<VaultTodo> {
+export async function addVaultTodo(input: {
+  title: string;
+  forecasted: number;
+  transferred_to: string;
+}): Promise<VaultTodo> {
   return unwrap(
     await supabase
       .from("vault_todos")
-      .insert({ title: title.trim(), sort_order: Date.now() % 1_000_000 })
+      .insert({
+        title: input.title.trim(),
+        forecasted: input.forecasted,
+        transferred_to: input.transferred_to.trim() || null,
+        sort_order: Date.now() % 1_000_000,
+      })
       .select("*")
       .single(),
   );
 }
 export async function updateVaultTodo(
   id: string,
-  patch: Partial<Pick<VaultTodo, "title" | "done" | "sort_order">>,
+  patch: Partial<
+    Pick<
+      VaultTodo,
+      "title" | "forecasted" | "transferred_to" | "done" | "sort_order"
+    >
+  >,
 ): Promise<void> {
   unwrap(await supabase.from("vault_todos").update(patch).eq("id", id));
 }

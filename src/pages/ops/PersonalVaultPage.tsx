@@ -15,7 +15,7 @@ import {
   useVaultTodos,
 } from "../../lib/hooks";
 import { formatDate, money } from "../../lib/format";
-import type { VaultBudgetDraft } from "../../lib/types";
+import type { VaultBudgetDraft, VaultExpenseDraft } from "../../lib/types";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
@@ -32,7 +32,7 @@ export default function PersonalVaultPage() {
   return (
     <div className="vault-grid">
       <PersonalBudget />
-      <ExpressControl />
+      <ExpenseControl />
     </div>
   );
 }
@@ -227,34 +227,55 @@ function PersonalBudget() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Express Control — personal quick-actions checklist                 */
+/* Expense Control — forecasted expenses + where they were transferred */
 /* ------------------------------------------------------------------ */
-function ExpressControl() {
+const emptyExpense = (): VaultExpenseDraft => ({
+  title: "",
+  forecasted: "",
+  transferred_to: "",
+});
+
+function ExpenseControl() {
   const q = useVaultTodos();
   const add = useAddVaultTodo();
   const update = useUpdateVaultTodo();
   const del = useDeleteVaultTodo();
   const { toast, error } = useToast();
-  const [title, setTitle] = useState("");
+  const [form, setForm] = useState<VaultExpenseDraft>(emptyExpense());
+
+  const set = <K extends keyof VaultExpenseDraft>(
+    k: K,
+    v: VaultExpenseDraft[K],
+  ) => setForm((f) => ({ ...f, [k]: v }));
 
   const items = q.data ?? [];
-  const openCount = items.filter((t) => !t.done).length;
+  const openCount = items.filter((t) => !t.transferred_to).length;
+  const forecastTotal = items.reduce((s, t) => s + (Number(t.forecasted) || 0), 0);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
-    const t = title.trim();
-    if (!t) return;
+    if (!form.title.trim()) {
+      error("Name the expense");
+      return;
+    }
     try {
-      await add.mutateAsync(t);
-      setTitle("");
+      await add.mutateAsync({
+        title: form.title,
+        forecasted: Number(form.forecasted) || 0,
+        transferred_to: form.transferred_to,
+      });
+      setForm(emptyExpense());
     } catch (e2) {
       error(e2 instanceof Error ? e2.message : "Could not add");
     }
   }
 
-  async function toggle(id: string, done: boolean) {
+  async function setTransfer(id: string, transferred_to: string) {
     try {
-      await update.mutateAsync({ id, patch: { done } });
+      await update.mutateAsync({
+        id,
+        patch: { transferred_to: transferred_to.trim() || null },
+      });
     } catch (e2) {
       error(e2 instanceof Error ? e2.message : "Could not update");
     }
@@ -272,15 +293,28 @@ function ExpressControl() {
   return (
     <section className="panel">
       <div className="vault-head">
-        <h3>Express Control</h3>
+        <h3>Expense Control</h3>
         <span className="muted small">{openCount} open</span>
       </div>
 
       <form className="vault-addrow" onSubmit={onAdd}>
         <input
-          placeholder="Add a quick action…"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Expense"
+          value={form.title}
+          onChange={(e) => set("title", e.target.value)}
+        />
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Forecasted (R)"
+          value={form.forecasted}
+          onChange={(e) => set("forecasted", e.target.value)}
+        />
+        <input
+          placeholder="Transferred To"
+          value={form.transferred_to}
+          onChange={(e) => set("transferred_to", e.target.value)}
         />
         <button type="submit" className="btn" disabled={add.isPending}>
           Add
@@ -294,27 +328,53 @@ function ExpressControl() {
       ) : items.length === 0 ? (
         <EmptyState>Nothing here yet.</EmptyState>
       ) : (
-        <ul className="vault-todos">
-          {items.map((t) => (
-            <li key={t.id} className={t.done ? "done" : ""}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={t.done}
-                  onChange={(e) => toggle(t.id, e.target.checked)}
-                />
-                <span>{t.title}</span>
-              </label>
-              <button
-                type="button"
-                className="btn ghost btn-sm"
-                onClick={() => remove(t.id)}
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="table-wrap">
+          <table className="table--compact">
+            <thead>
+              <tr>
+                <th>Expense</th>
+                <th className="n">Forecasted (R)</th>
+                <th>Transferred To</th>
+                <th className="actions-col" />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.title || "—"}</td>
+                  <td className="n nowrap">{money(Number(t.forecasted))}</td>
+                  <td>
+                    <input
+                      className="vault-inline"
+                      placeholder="—"
+                      defaultValue={t.transferred_to ?? ""}
+                      onBlur={(e) => {
+                        if ((e.target.value.trim() || null) !== t.transferred_to)
+                          setTransfer(t.id, e.target.value);
+                      }}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn ghost btn-sm"
+                      onClick={() => remove(t.id)}
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              <tr className="vault-foot">
+                <td>Total</td>
+                <td className="n nowrap">
+                  <b>{money(forecastTotal)}</b>
+                </td>
+                <td colSpan={2} />
+              </tr>
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );
