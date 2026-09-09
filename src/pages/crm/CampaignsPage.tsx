@@ -451,7 +451,7 @@ export default function CampaignsPage() {
       {
         key: "actions",
         fixed: true,
-        width: 90,
+        width: 108,
         header: <RowActionsHead />,
         render: (c) => (
           <RowActions onView={() => setViewing(c)} onDelete={() => onDelete(c)} />
@@ -528,6 +528,7 @@ export default function CampaignsPage() {
           <DataTable
             tableKey="mail-campaigns"
             className="table--compact"
+            headerTools="row"
             columns={columns}
             rows={rows}
             rowKey={(c) => c.id}

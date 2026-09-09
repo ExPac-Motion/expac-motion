@@ -37,6 +37,14 @@ interface Props<T> {
   rowClass?: (row: T) => string | undefined;
   /** Extra controls rendered at the start of the toolbar, before "Save Grid". */
   toolbar?: ReactNode;
+  /**
+   * Where the Save Grid / Reset / Table-settings row sits.
+   *  - "pull" (default): tucked up level with the panel heading (for pages
+   *    whose header has nothing on the right).
+   *  - "row": its own row below the header (for pages with a search box or
+   *    "+ New …" button on the right, which "pull" would overlap).
+   */
+  headerTools?: "pull" | "row";
   /** Extra classes on the <table> (e.g. "table--compact"). */
   className?: string;
 }
@@ -52,6 +60,7 @@ export default function DataTable<T>({
   rowClass,
   className,
   toolbar,
+  headerTools = "pull",
 }: Props<T>) {
   const prefsQ = useTablePrefs(tableKey);
   const savePrefs = useSaveTablePrefs(tableKey);
@@ -251,7 +260,7 @@ export default function DataTable<T>({
 
   return (
     <div className="dt-wrap">
-      <div className="dt-tools">
+      <div className={`dt-tools${headerTools === "row" ? " dt-tools--row" : ""}`}>
         {toolbar}
         <button
           type="button"

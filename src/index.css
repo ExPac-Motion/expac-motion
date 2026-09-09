@@ -550,6 +550,11 @@ tr.clickable:hover {
   position: relative;
   z-index: 1;
 }
+/* Pages whose panel heading already has a search box or "+ New …" button on
+   the right can't pull the toolbar up into it — give it its own row instead. */
+.dt-tools--row {
+  margin-top: 6px;
+}
 table.dt {
   table-layout: fixed;
   border-collapse: separate;

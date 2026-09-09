@@ -426,6 +426,7 @@ export default function ContactsPage({
           <DataTable
             tableKey={`contacts-${kind}`}
             className="table--compact"
+            headerTools="row"
             columns={columns}
             rows={filtered}
             rowKey={(r) => r.id}

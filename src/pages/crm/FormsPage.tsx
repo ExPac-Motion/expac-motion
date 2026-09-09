@@ -587,7 +587,7 @@ export default function FormsPage() {
       {
         key: "actions",
         fixed: true,
-        width: 118,
+        width: 150,
         header: <RowActionsHead />,
         render: (f) => (
           <RowActions
@@ -671,6 +671,7 @@ export default function FormsPage() {
           <DataTable
             tableKey="web-forms"
             className="table--compact"
+            headerTools="row"
             columns={columns}
             rows={forms}
             rowKey={(f) => f.id}

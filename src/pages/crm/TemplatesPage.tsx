@@ -229,7 +229,7 @@ export default function TemplatesPage() {
       {
         key: "actions",
         fixed: true,
-        width: 118,
+        width: 180,
         header: <RowActionsHead />,
         render: (t) => (
           <RowActions
@@ -305,6 +305,7 @@ export default function TemplatesPage() {
           <DataTable
             tableKey="mail-templates"
             className="table--compact"
+            headerTools="row"
             columns={columns}
             rows={rows}
             rowKey={(t) => t.id}
