@@ -596,6 +596,11 @@ table.dt th .dt-th-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* Movable headers: let clicks fall through the label to the <th> itself so the
+   whole header drags / sorts. The fixed Actions header is exempt — its label
+   holds a real "select all" checkbox that must stay clickable. */
+table.dt th.dt-th .dt-th-label {
   pointer-events: none;
 }
 table.dt th.dt-drag {
