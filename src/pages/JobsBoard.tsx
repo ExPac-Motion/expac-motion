@@ -1,6 +1,14 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
+import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   BulkEditModal,
   EmptyState,
@@ -52,202 +60,53 @@ function codeOf(s: string | null | undefined): string {
   return c === "—" ? "" : c;
 }
 
-function JobRow({
-  job,
-  selected,
-  onSelectToggle,
-  onSave,
-  onOpenComms,
-  onView,
-  onEdit,
-  onDelete,
-  onDuplicate,
+/* The Shipments board only edits four fields inline (notes + the three
+   dates); everything else is read-only here and changed on the quotation.
+   Each editable cell owns its draft so a background refetch never clobbers
+   what's being typed. */
+function JobTextCell({
+  value,
+  onCommit,
+  placeholder,
 }: {
-  job: Job;
-  selected: boolean;
-  onSelectToggle: () => void;
-  onSave: (id: string, patch: JobPatch) => void;
-  onOpenComms: (job: Job) => void;
-  onView: (job: Job) => void;
-  onEdit: (job: Job) => void;
-  onDelete: (job: Job) => void;
-  onDuplicate: (job: Job) => void;
+  value: string | null | undefined;
+  onCommit: (v: string) => void;
+  placeholder?: string;
 }) {
-  // Row owns its edit state; seeded once from the job. Each field saves to the
-  // server on blur / change, so a refetch never has to clobber what's typed.
-  const [row, setRow] = useState<JobPatch>({
-    po_no: job.po_no ?? "",
-    shipment_status: job.shipment_status ?? "",
-    notes: job.notes ?? "",
-    awb_mbl: job.awb_mbl ?? "",
-    container_no: job.container_no ?? "",
-    shipping_line: job.shipping_line ?? "",
-    carrier_name: job.carrier_name ?? "",
-    provisional_delivery_date: job.provisional_delivery_date ?? "",
-    etd: job.etd ?? "",
-    eta: job.eta ?? "",
-    origin: codeOf(job.origin),
-    destination: codeOf(job.destination),
-  });
-
-  function set<K extends keyof JobPatch>(key: K, value: JobPatch[K]) {
-    setRow((r) => ({ ...r, [key]: value }));
-  }
-  function commit<K extends keyof JobPatch>(key: K, initial: string) {
-    const next = (row[key] ?? "") as string;
-    if (next !== (initial ?? "")) onSave(job.id, { [key]: next } as JobPatch);
-  }
-  // Port fields: normalise whatever was typed/picked to a bare code on blur.
-  function commitPort(key: "origin" | "destination") {
-    const code = codeOf(row[key] as string);
-    set(key, code);
-    if (code !== codeOf(job[key])) onSave(job.id, { [key]: code } as JobPatch);
-  }
-
+  const [v, setV] = useState(value ?? "");
+  useEffect(() => setV(value ?? ""), [value]);
   return (
-    <tr>
-      <td>
-        <RowActions
-          selected={selected}
-          onSelectToggle={onSelectToggle}
-          onMail={() => onOpenComms(job)}
-          mailTitle="Messages / email the customer"
-          onView={() => onView(job)}
-          onEdit={() => onEdit(job)}
-          onDelete={() => onDelete(job)}
-          onDuplicate={() => onDuplicate(job)}
-        />
-      </td>
-      <td className="nowrap">{formatDate(job.created_at)}</td>
-      <td className="nowrap">
-        {job.quote_id ? (
-          <Link className="job-ref" to={`/quotes/${job.quote_id}`}>
-            {job.reference}
-          </Link>
-        ) : (
-          <strong>{job.reference}</strong>
-        )}
-      </td>
-      <td className="nowrap">{job.client?.company ?? "—"}</td>
-      <td className="nowrap">{job.supplier?.company ?? "—"}</td>
-      <td>
-        <input
-          value={row.po_no ?? ""}
-          onChange={(e) => set("po_no", e.target.value)}
-          onBlur={() => commit("po_no", job.po_no ?? "")}
-          placeholder="Customer ref / PO"
-          title="Customer reference / PO number"
-        />
-      </td>
-      <td className="nowrap">{job.mode}</td>
-      <td>
-        <select
-          className={`job-status is-${shipmentStatusTone(row.shipment_status)}`}
-          value={row.shipment_status ?? ""}
-          onChange={(e) => {
-            set("shipment_status", e.target.value);
-            onSave(job.id, { shipment_status: e.target.value });
-          }}
-        >
-          <option value="">— set status —</option>
-          {SHIPMENT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="job-notes">
-        <input
-          value={row.notes ?? ""}
-          onChange={(e) => set("notes", e.target.value)}
-          onBlur={() => commit("notes", job.notes ?? "")}
-          placeholder="Add an update…"
-        />
-      </td>
-      <td>
-        <input
-          value={row.awb_mbl ?? ""}
-          onChange={(e) => set("awb_mbl", e.target.value)}
-          onBlur={() => commit("awb_mbl", job.awb_mbl ?? "")}
-          placeholder={docLabel(job.mode)}
-          title={docLabel(job.mode)}
-        />
-      </td>
-      <td>
-        <input
-          value={row.container_no ?? ""}
-          onChange={(e) => set("container_no", e.target.value)}
-          onBlur={() => commit("container_no", job.container_no ?? "")}
-          placeholder="Container"
-        />
-      </td>
-      <td>
-        <input
-          value={row.shipping_line ?? ""}
-          onChange={(e) => set("shipping_line", e.target.value)}
-          onBlur={() => commit("shipping_line", job.shipping_line ?? "")}
-          placeholder="Carrier"
-        />
-      </td>
-      <td>
-        <input
-          value={row.carrier_name ?? ""}
-          onChange={(e) => set("carrier_name", e.target.value)}
-          onBlur={() => commit("carrier_name", job.carrier_name ?? "")}
-          placeholder="Agent/Airline"
-        />
-      </td>
-      <td>
-        <input
-          type="date"
-          value={row.etd ?? ""}
-          onChange={(e) => {
-            set("etd", e.target.value);
-            onSave(job.id, { etd: e.target.value });
-          }}
-        />
-      </td>
-      <td>
-        <input
-          type="date"
-          value={row.eta ?? ""}
-          onChange={(e) => {
-            set("eta", e.target.value);
-            onSave(job.id, { eta: e.target.value });
-          }}
-        />
-      </td>
-      <td>
-        <input
-          type="date"
-          value={row.provisional_delivery_date ?? ""}
-          onChange={(e) => {
-            set("provisional_delivery_date", e.target.value);
-            onSave(job.id, { provisional_delivery_date: e.target.value });
-          }}
-          title="Provisional delivery date"
-        />
-      </td>
-      <td>
-        <input
-          list="job-locodes"
-          value={row.origin ?? ""}
-          onChange={(e) => set("origin", e.target.value)}
-          onBlur={() => commitPort("origin")}
-          placeholder="POL"
-        />
-      </td>
-      <td>
-        <input
-          list="job-locodes"
-          value={row.destination ?? ""}
-          onChange={(e) => set("destination", e.target.value)}
-          onBlur={() => commitPort("destination")}
-          placeholder="POD"
-        />
-      </td>
-    </tr>
+    <input
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => {
+        if (v !== (value ?? "")) onCommit(v);
+      }}
+      placeholder={placeholder}
+    />
+  );
+}
+function JobDateCell({
+  value,
+  onCommit,
+  title,
+}: {
+  value: string | null | undefined;
+  onCommit: (v: string) => void;
+  title?: string;
+}) {
+  const [v, setV] = useState(value ?? "");
+  useEffect(() => setV(value ?? ""), [value]);
+  return (
+    <input
+      type="date"
+      value={v}
+      title={title}
+      onChange={(e) => {
+        setV(e.target.value);
+        onCommit(e.target.value);
+      }}
+    />
   );
 }
 
@@ -407,6 +266,201 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   const copy = COPY[mode];
 
+  const jobCols = useMemo<DataColumn<Job>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 200,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (j) => (
+          <RowActions
+            selected={sel.isSelected(j.id)}
+            onSelectToggle={() => sel.toggle(j.id)}
+            onMail={() => openComms(j)}
+            mailTitle="Messages / email the customer"
+            onView={() => setViewing(j)}
+            onEdit={() => setEditingJob(j)}
+            onDelete={() => onDeleteJob(j)}
+            onDuplicate={() => onDuplicateJob(j)}
+          />
+        ),
+      },
+      {
+        key: "created",
+        header: "Created On",
+        width: 110,
+        cellClass: "nowrap",
+        sortValue: (j) => j.created_at,
+        render: (j) => formatDate(j.created_at),
+      },
+      {
+        key: "shipment",
+        header: "Shipment",
+        width: 135,
+        cellClass: "nowrap",
+        sortValue: (j) => j.reference,
+        render: (j) =>
+          j.quote_id ? (
+            <Link className="job-ref" to={`/quotes/${j.quote_id}`}>
+              {j.reference}
+            </Link>
+          ) : (
+            <strong>{j.reference}</strong>
+          ),
+      },
+      {
+        key: "customer",
+        header: "Customer",
+        width: 220,
+        sortValue: (j) => (j.client?.company ?? "").toLowerCase(),
+        render: (j) => j.client?.company ?? "—",
+      },
+      {
+        key: "shipper",
+        header: "Shipper",
+        width: 220,
+        sortValue: (j) => (j.supplier?.company ?? "").toLowerCase(),
+        render: (j) => j.supplier?.company ?? "—",
+      },
+      {
+        key: "reference",
+        header: "Reference",
+        width: 150,
+        sortValue: (j) => j.po_no ?? "",
+        render: (j) => j.po_no || "—",
+      },
+      {
+        key: "mode",
+        header: "Mode",
+        width: 130,
+        cellClass: "nowrap",
+        sortValue: (j) => j.mode,
+        render: (j) => j.mode,
+      },
+      {
+        key: "shipment_status",
+        header: "Shipment Status",
+        width: 170,
+        sortValue: (j) =>
+          SHIPMENT_STATUSES.indexOf(
+            j.shipment_status as (typeof SHIPMENT_STATUSES)[number],
+          ),
+        render: (j) => (
+          <select
+            className={`job-status is-${shipmentStatusTone(j.shipment_status ?? "")}`}
+            value={j.shipment_status ?? ""}
+            onChange={(e) => save(j.id, { shipment_status: e.target.value })}
+          >
+            <option value="">— set status —</option>
+            {SHIPMENT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        ),
+      },
+      {
+        key: "notes",
+        header: "Notes",
+        width: 220,
+        cellClass: "job-notes",
+        sortValue: (j) => j.notes ?? "",
+        render: (j) => (
+          <JobTextCell
+            value={j.notes}
+            placeholder="Add an update…"
+            onCommit={(v) => save(j.id, { notes: v })}
+          />
+        ),
+      },
+      {
+        key: "awb_mbl",
+        header: "AWB/MBL No",
+        width: 150,
+        sortValue: (j) => j.awb_mbl ?? "",
+        render: (j) => j.awb_mbl || "—",
+      },
+      {
+        key: "container_no",
+        header: "Container No",
+        width: 150,
+        sortValue: (j) => j.container_no ?? "",
+        render: (j) => j.container_no || "—",
+      },
+      {
+        key: "shipping_line",
+        header: "Carrier",
+        width: 150,
+        sortValue: (j) => j.shipping_line ?? "",
+        render: (j) => j.shipping_line || "—",
+      },
+      {
+        key: "carrier_name",
+        header: "Agent/Airline",
+        width: 160,
+        sortValue: (j) => j.carrier_name ?? "",
+        render: (j) => j.carrier_name || "—",
+      },
+      {
+        key: "etd",
+        header: "ETD",
+        width: 120,
+        sortValue: (j) => j.etd ?? "",
+        render: (j) => (
+          <JobDateCell value={j.etd} onCommit={(v) => save(j.id, { etd: v })} />
+        ),
+      },
+      {
+        key: "eta",
+        header: "ETA",
+        width: 120,
+        sortValue: (j) => j.eta ?? "",
+        render: (j) => (
+          <JobDateCell value={j.eta} onCommit={(v) => save(j.id, { eta: v })} />
+        ),
+      },
+      {
+        key: "pdd",
+        header: "PDD",
+        width: 120,
+        sortValue: (j) => j.provisional_delivery_date ?? "",
+        render: (j) => (
+          <JobDateCell
+            value={j.provisional_delivery_date}
+            title="Provisional delivery date"
+            onCommit={(v) =>
+              save(j.id, { provisional_delivery_date: v })
+            }
+          />
+        ),
+      },
+      {
+        key: "pol",
+        header: "POL",
+        width: 110,
+        sortValue: (j) => codeOf(j.origin),
+        render: (j) => codeOf(j.origin) || "—",
+      },
+      {
+        key: "pod",
+        header: "POD",
+        width: 110,
+        sortValue: (j) => codeOf(j.destination),
+        render: (j) => codeOf(j.destination) || "—",
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, mode],
+  );
+
   return (
     <>
       <div className={railOpen ? "board-shift" : ""}>
@@ -446,61 +500,13 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               : copy.empty}
           </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <datalist id="job-locodes">
-              {LOCODES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.city}, {l.country}
-                </option>
-              ))}
-            </datalist>
-            <table className="table--compact jobs-table">
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead
-                      checked={sel.allChecked}
-                      indeterminate={sel.someChecked}
-                      onToggle={sel.toggleAll}
-                    />
-                  </th>
-                  <th>Created On</th>
-                  <th>Shipment</th>
-                  <th>Customer</th>
-                  <th>Shipper</th>
-                  <th>Reference</th>
-                  <th>Mode</th>
-                  <th>Shipment Status</th>
-                  <th>Notes</th>
-                  <th>AWB/MBL No</th>
-                  <th>Container No</th>
-                  <th>Carrier</th>
-                  <th>Agent/Airline</th>
-                  <th>ETD</th>
-                  <th>ETA</th>
-                  <th>PDD</th>
-                  <th>POL</th>
-                  <th>POD</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((j) => (
-                  <JobRow
-                    key={j.id}
-                    job={j}
-                    selected={sel.isSelected(j.id)}
-                    onSelectToggle={() => sel.toggle(j.id)}
-                    onSave={save}
-                    onOpenComms={openComms}
-                    onView={setViewing}
-                    onEdit={setEditingJob}
-                    onDelete={onDeleteJob}
-                    onDuplicate={onDuplicateJob}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey={`jobs-${mode}`}
+            className="jobs-table"
+            columns={jobCols}
+            rows={rows}
+            rowKey={(j) => j.id}
+          />
         )}
       </div>
       </div>
@@ -805,6 +811,13 @@ function JobEditModal({
   return (
     <Modal title={`Edit ${job.reference}`} onClose={onClose} wide>
       <form onSubmit={onSubmit}>
+        <datalist id="job-locodes">
+          {LOCODES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.city}, {l.country}
+            </option>
+          ))}
+        </datalist>
         <div className="grid2">
           <div className="field">
             <label>Reference</label>
