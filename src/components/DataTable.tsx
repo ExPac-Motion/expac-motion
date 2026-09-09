@@ -81,11 +81,15 @@ export default function DataTable<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefsQ.data, movableSig]);
 
-  const persist = (next: { order?: string[]; widths?: Record<string, number> }) =>
-    savePrefs.mutate({
-      order: next.order ?? orderRef.current,
-      widths: next.widths ?? widthsRef.current,
-    });
+  const [dirty, setDirty] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  function saveGrid() {
+    savePrefs.mutate({ order: orderRef.current, widths: widthsRef.current });
+    setDirty(false);
+    setJustSaved(true);
+    window.setTimeout(() => setJustSaved(false), 1500);
+  }
 
   const orderedCols = useMemo(() => {
     const movable = order
@@ -118,7 +122,7 @@ export default function DataTable<T>({
     window.removeEventListener("pointerup", onResizeUp);
     if (resizeRef.current) {
       resizeRef.current = null;
-      persist({ widths: widthsRef.current });
+      setDirty(true);
     }
   }
   function startResize(e: ReactPointerEvent, c: DataColumn<T>) {
@@ -140,18 +144,27 @@ export default function DataTable<T>({
     const next = order.filter((k) => k !== dk);
     next.splice(next.indexOf(targetKey), 0, dk);
     setOrder(next);
-    persist({ order: next });
+    setDirty(true);
   }
 
   function resetLayout() {
     setOrder(movableKeys);
     setWidths({});
     savePrefs.mutate({ order: movableKeys, widths: {} });
+    setDirty(false);
   }
 
   return (
     <div className="dt-wrap">
       <div className="dt-tools">
+        <button
+          type="button"
+          className={`btn btn-sm${dirty ? "" : " outline"}`}
+          onClick={saveGrid}
+          title="Save this column order and widths to your account"
+        >
+          {justSaved ? "Saved ✓" : "Save Grid"}
+        </button>
         <button
           type="button"
           className="btn ghost btn-sm"

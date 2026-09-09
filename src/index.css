@@ -542,6 +542,7 @@ tr.clickable:hover {
 .dt-tools {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-bottom: 6px;
 }
 table.dt {
