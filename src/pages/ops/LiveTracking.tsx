@@ -231,6 +231,7 @@ export default function LiveTracking() {
           <DataTable
             tableKey="live-tracking"
             className="trk-table"
+            headerTools="row"
             columns={trkCols}
             rows={trackable}
             rowKey={(j) => j.id}
