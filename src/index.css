@@ -1906,8 +1906,8 @@ tr.clickable:hover {
 .qs-routecol .qs-meta {
   margin-top: 14px;
   /* labels sit under FROM; the value column is left-aligned and starts under
-     the TO port code's left edge (a 5-char UN/LOCODE at 32px ≈ 110px) */
-  grid-template-columns: auto 112px;
+     the TO port code's left edge (a 5-char UN/LOCODE at 32px measures ~109px) */
+  grid-template-columns: auto 109px;
   justify-content: space-between;
 }
 .qs-fromblock {
