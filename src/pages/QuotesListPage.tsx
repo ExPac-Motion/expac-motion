@@ -131,7 +131,7 @@ export default function QuotesListPage() {
       {
         key: "actions",
         fixed: true,
-        width: 118,
+        width: 172,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
