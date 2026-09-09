@@ -2810,6 +2810,137 @@ tr.clickable:hover {
   border-bottom-color: var(--green);
 }
 
+/* --- Personal Vault --- */
+.vault-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .vault-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.vault-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.vault-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.vault-month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vault-month input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 9px;
+}
+.vault-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.vault-totals > div {
+  background: #f6f5f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vault-totals .k {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.vault-totals b {
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+.vault-totals b.neg {
+  color: #b3261e;
+}
+.vault-totals b.pos {
+  color: var(--green-dark);
+}
+.vault-addrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.vault-addrow input,
+.vault-addrow select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  flex: 1 1 120px;
+  min-width: 0;
+}
+.vault-addrow select {
+  flex: 0 0 auto;
+}
+.vault-addrow button {
+  flex: 0 0 auto;
+}
+.vault-tag {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.vault-tag.income {
+  background: #e5f3d9;
+  color: var(--green-dark);
+}
+.vault-tag.expense {
+  background: #fdecea;
+  color: #b3261e;
+}
+.vault-todos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.vault-todos li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.vault-todos li:last-child {
+  border-bottom: 0;
+}
+.vault-todos li label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.vault-todos li.done span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
 /* --- Tasks & Notes --- */
 .ct-quickadd {
   display: flex;

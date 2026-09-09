@@ -1100,3 +1100,32 @@ export interface QuoteDraft {
   packing: PackingItem[];
   lines: QuoteLine[];
 }
+
+/* ---------- Personal Vault (Control Tower) ---------- */
+
+export interface VaultBudgetEntry {
+  id: string;
+  user_id: string;
+  kind: "income" | "expense";
+  category: string | null;
+  amount: number;
+  occurred_on: string;
+  note: string | null;
+  created_at: string;
+}
+export type VaultBudgetDraft = {
+  kind: "income" | "expense";
+  category: string;
+  amount: string;
+  occurred_on: string;
+  note: string;
+};
+
+export interface VaultTodo {
+  id: string;
+  user_id: string;
+  title: string;
+  done: boolean;
+  sort_order: number;
+  created_at: string;
+}

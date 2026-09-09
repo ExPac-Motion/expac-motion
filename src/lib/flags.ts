@@ -11,3 +11,16 @@
  * portal is ready for customers.
  */
 export const PORTAL_SIGNUP_ENABLED = false;
+
+/**
+ * The account that sees the "Personal Vault" tab under Control Tower. The
+ * vault's data is RLS-locked to each user anyway; this just decides whose
+ * nav shows the tab. Change to your own login email.
+ */
+export const VAULT_OWNER_EMAIL = "support@expac.co.za";
+
+export function isVaultOwner(email: string | null | undefined): boolean {
+  return (
+    !!email && email.trim().toLowerCase() === VAULT_OWNER_EMAIL.toLowerCase()
+  );
+}

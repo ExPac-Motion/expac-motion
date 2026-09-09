@@ -57,6 +57,9 @@ import type {
   WebFormPatch,
   WebFormSubmission,
   PublicWebForm,
+  VaultBudgetEntry,
+  VaultBudgetDraft,
+  VaultTodo,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -1436,4 +1439,74 @@ export async function getShipmentDocumentUrl(
     .createSignedUrl(storagePath, 300);
   if (error || !data) throw error ?? new Error("Could not create download link");
   return data.signedUrl;
+}
+
+/* ---------- Personal Vault (Control Tower) ---------- */
+
+export async function listVaultBudget(): Promise<VaultBudgetEntry[]> {
+  return unwrap(
+    await supabase
+      .from("vault_budget_entries")
+      .select("*")
+      .order("occurred_on", { ascending: false })
+      .order("created_at", { ascending: false }),
+  );
+}
+export async function saveVaultBudgetEntry(input: {
+  id?: string;
+  values: VaultBudgetDraft;
+}): Promise<VaultBudgetEntry> {
+  const row = {
+    kind: input.values.kind,
+    category: input.values.category.trim() || null,
+    amount: Number(input.values.amount) || 0,
+    occurred_on: input.values.occurred_on || new Date().toISOString().slice(0, 10),
+    note: input.values.note.trim() || null,
+  };
+  return unwrap(
+    input.id
+      ? await supabase
+          .from("vault_budget_entries")
+          .update(row)
+          .eq("id", input.id)
+          .select("*")
+          .single()
+      : await supabase
+          .from("vault_budget_entries")
+          .insert(row)
+          .select("*")
+          .single(),
+  );
+}
+export async function deleteVaultBudgetEntry(id: string): Promise<void> {
+  unwrap(await supabase.from("vault_budget_entries").delete().eq("id", id));
+}
+
+export async function listVaultTodos(): Promise<VaultTodo[]> {
+  return unwrap(
+    await supabase
+      .from("vault_todos")
+      .select("*")
+      .order("done", { ascending: true })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+  );
+}
+export async function addVaultTodo(title: string): Promise<VaultTodo> {
+  return unwrap(
+    await supabase
+      .from("vault_todos")
+      .insert({ title: title.trim(), sort_order: Date.now() % 1_000_000 })
+      .select("*")
+      .single(),
+  );
+}
+export async function updateVaultTodo(
+  id: string,
+  patch: Partial<Pick<VaultTodo, "title" | "done" | "sort_order">>,
+): Promise<void> {
+  unwrap(await supabase.from("vault_todos").update(patch).eq("id", id));
+}
+export async function deleteVaultTodo(id: string): Promise<void> {
+  unwrap(await supabase.from("vault_todos").delete().eq("id", id));
 }

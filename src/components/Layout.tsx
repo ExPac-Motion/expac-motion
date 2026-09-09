@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { isVaultOwner } from "../lib/flags";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
 
@@ -127,7 +128,22 @@ export default function Layout() {
   const name =
     (user?.user_metadata?.full_name as string | undefined) || user?.email || "";
 
-  const activeModule = NAV.find((m) => isModuleActive(m, pathname));
+  // The Personal Vault tab is only wired into Control Tower for its owner.
+  const nav: NavModule[] = isVaultOwner(user?.email)
+    ? NAV.map((m) =>
+        m.to === "/ops"
+          ? {
+              ...m,
+              children: [
+                ...(m.children ?? []),
+                { to: "/ops?tab=vault", label: "Personal Vault" },
+              ],
+            }
+          : m,
+      )
+    : NAV;
+
+  const activeModule = nav.find((m) => isModuleActive(m, pathname));
 
   return (
     <div className="app-shell">
@@ -137,7 +153,7 @@ export default function Layout() {
         </Link>
 
         <nav className="topbar-primary">
-          {NAV.map((m) => (
+          {nav.map((m) => (
             <Link
               key={m.label}
               to={m.to}

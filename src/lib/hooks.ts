@@ -26,6 +26,8 @@ import type {
   WebFormPatch,
   ShipmentDocument,
   Supplier,
+  VaultBudgetDraft,
+  VaultTodo,
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
 import { buildShipmentEmail } from "./mailTemplates";
@@ -1002,5 +1004,54 @@ export function useSetJobMilestone() {
     mutationFn: (input: { jobId: string; milestone: Milestone; note?: string }) =>
       db.setJobMilestone(input.jobId, input.milestone, input.note),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+}
+
+/* ---------- Personal Vault (Control Tower) ---------- */
+
+export function useVaultBudget() {
+  return useQuery({ queryKey: ["vault_budget"], queryFn: db.listVaultBudget });
+}
+export function useSaveVaultBudgetEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; values: VaultBudgetDraft }) =>
+      db.saveVaultBudgetEntry(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_budget"] }),
+  });
+}
+export function useDeleteVaultBudgetEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteVaultBudgetEntry,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_budget"] }),
+  });
+}
+
+export function useVaultTodos() {
+  return useQuery({ queryKey: ["vault_todos"], queryFn: db.listVaultTodos });
+}
+export function useAddVaultTodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (title: string) => db.addVaultTodo(title),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
+  });
+}
+export function useUpdateVaultTodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id: string;
+      patch: Partial<Pick<VaultTodo, "title" | "done" | "sort_order">>;
+    }) => db.updateVaultTodo(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
+  });
+}
+export function useDeleteVaultTodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteVaultTodo,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
   });
 }

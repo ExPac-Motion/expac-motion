@@ -10,11 +10,14 @@ import {
 import { todayIso } from "../lib/opsCalendar";
 import { trackableRef, trackingTone } from "../lib/tracking";
 import { isShipmentComplete } from "../lib/types";
+import { useAuth } from "../auth/AuthProvider";
+import { isVaultOwner } from "../lib/flags";
 import TasksNotes from "./ops/TasksNotes";
 import CalendarBoard from "./ops/CalendarBoard";
 import LiveTracking from "./ops/LiveTracking";
+import PersonalVaultPage from "./ops/PersonalVaultPage";
 
-type Tab = "tasks" | "calendar" | "tracking";
+type Tab = "tasks" | "calendar" | "tracking" | "vault";
 
 interface Chip {
   label: string;
@@ -25,8 +28,11 @@ interface Chip {
 
 export default function OpsControlTowerPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get("tab") as Tab) || "tasks";
+  const canVault = isVaultOwner(user?.email);
+  const requested = (params.get("tab") as Tab) || "tasks";
+  const tab: Tab = requested === "vault" && !canVault ? "tasks" : requested;
   const focus = params.get("focus") || undefined;
 
   const jobsQ = useJobs();
@@ -101,7 +107,7 @@ export default function OpsControlTowerPage() {
     <>
       <PageHeader eyebrow="Command centre" title="Control Tower" />
 
-      {chips.length > 0 && (
+      {tab !== "vault" && chips.length > 0 && (
         <div className="ct-band">
           {chips.map((c) => (
             <button
@@ -119,6 +125,7 @@ export default function OpsControlTowerPage() {
       {tab === "tasks" && <TasksNotes focus={focus} />}
       {tab === "calendar" && <CalendarBoard />}
       {tab === "tracking" && <LiveTracking />}
+      {tab === "vault" && canVault && <PersonalVaultPage />}
     </>
   );
 }
