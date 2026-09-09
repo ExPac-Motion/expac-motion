@@ -580,6 +580,71 @@ export default function QuoteBuilderPage() {
           <h2>Shipment Information</h2>
         </div>
         <div className="grid4">
+          {/* Row 1 */}
+          <div className="field">
+            <label>Shipment No</label>
+            <input
+              value={draft.reference}
+              readOnly
+              title="System-generated shipment number — set by the transport mode"
+              style={{ background: "#f0efe9", cursor: "not-allowed" }}
+            />
+          </div>
+          <div className="field">
+            <label>Mode</label>
+            <select
+              value={draft.mode}
+              onChange={(e) => setMode(e.target.value as QuoteDraft["mode"])}
+            >
+              {QUOTE_MODES.map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Incoterms</label>
+            <select
+              value={draft.incoterms}
+              onChange={(e) => set("incoterms", e.target.value)}
+            >
+              <option value="">— incoterms —</option>
+              {draft.incoterms &&
+                !INCOTERM_CODES.includes(draft.incoterms) && (
+                  <option value={draft.incoterms}>{draft.incoterms}</option>
+                )}
+              <optgroup label="Any mode (incl. air)">
+                {INCOTERMS_ANY_MODE.map((i) => (
+                  <option key={i.code} value={i.code}>
+                    {i.code} — {i.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Sea / inland waterway">
+                {INCOTERMS_SEA.map((i) => (
+                  <option key={i.code} value={i.code}>
+                    {i.code} — {i.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+          <div className="field">
+            <label>Status</label>
+            <select
+              value={draft.status}
+              onChange={(e) =>
+                set("status", e.target.value as QuoteDraft["status"])
+              }
+            >
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Row 2 */}
           <div className="field">
             <label>Customer/Importer</label>
             <select
@@ -629,18 +694,12 @@ export default function QuoteBuilderPage() {
             )}
           </div>
           <div className="field">
-            <label>Sales Person</label>
-            <select
-              value={draft.sales_person_id}
-              onChange={(e) => set("sales_person_id", e.target.value)}
-            >
-              <option value="">— unassigned —</option>
-              {salesPeople.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name || "—"}
-                </option>
-              ))}
-            </select>
+            <label>Reference</label>
+            <input
+              value={draft.customer_reference}
+              onChange={(e) => set("customer_reference", e.target.value)}
+              placeholder="Customer reference / PO"
+            />
           </div>
           <div className="field">
             <label>Shipper/Exporter</label>
@@ -657,75 +716,14 @@ export default function QuoteBuilderPage() {
             </select>
           </div>
           <div className="field">
-            <label>Agent (internal only)</label>
-            <select
-              value={draft.agent_id}
-              onChange={(e) => set("agent_id", e.target.value)}
-            >
-              <option value="">Select agent</option>
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
-            <label>Transporter (internal only)</label>
-            <select
-              value={draft.transporter_id}
-              onChange={(e) => set("transporter_id", e.target.value)}
-            >
-              <option value="">Select transporter</option>
-              {transporters.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
-            <label>Clearing Agent (internal only)</label>
-            <select
-              value={draft.clearing_agent_id}
-              onChange={(e) => set("clearing_agent_id", e.target.value)}
-            >
-              <option value="">Select clearing agent</option>
-              {clearingAgents.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
-            <label>Shipment No</label>
+            <label>Delivery terms</label>
             <input
-              value={draft.reference}
-              readOnly
-              title="System-generated shipment number — set by the transport mode"
-              style={{ background: "#f0efe9", cursor: "not-allowed" }}
+              value={draft.delivery_terms}
+              onChange={(e) => set("delivery_terms", e.target.value)}
             />
           </div>
-          <div className="field">
-            <label>Reference</label>
-            <input
-              value={draft.customer_reference}
-              onChange={(e) => set("customer_reference", e.target.value)}
-              placeholder="Customer reference / PO"
-            />
-          </div>
-          <div className="field">
-            <label>Valid Until</label>
-            <input
-              type="date"
-              value={draft.valid_until}
-              onChange={(e) => set("valid_until", e.target.value)}
-            />
-          </div>
+
+          {/* Row 3 */}
           <div className="field">
             <label>Commercial Value ($)</label>
             <input
@@ -734,33 +732,6 @@ export default function QuoteBuilderPage() {
               value={draft.commercial_value}
               onChange={(e) => set("commercial_value", e.target.value)}
             />
-          </div>
-          <div className="field">
-            <label>Incoterms</label>
-            <select
-              value={draft.incoterms}
-              onChange={(e) => set("incoterms", e.target.value)}
-            >
-              <option value="">— incoterms —</option>
-              {draft.incoterms &&
-                !INCOTERM_CODES.includes(draft.incoterms) && (
-                  <option value={draft.incoterms}>{draft.incoterms}</option>
-                )}
-              <optgroup label="Any mode (incl. air)">
-                {INCOTERMS_ANY_MODE.map((i) => (
-                  <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Sea / inland waterway">
-                {INCOTERMS_SEA.map((i) => (
-                  <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
           </div>
           <div className="field">
             <label>Insurance Amount ($)</label>
@@ -791,40 +762,20 @@ export default function QuoteBuilderPage() {
             </select>
           </div>
           <div className="field">
-            <label>Mode</label>
-            <select
-              value={draft.mode}
-              onChange={(e) => setMode(e.target.value as QuoteDraft["mode"])}
-            >
-              {QUOTE_MODES.map((m) => (
-                <option key={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Delivery terms</label>
+            <label>Valid Until</label>
             <input
-              value={draft.delivery_terms}
-              onChange={(e) => set("delivery_terms", e.target.value)}
+              type="date"
+              value={draft.valid_until}
+              onChange={(e) => set("valid_until", e.target.value)}
             />
           </div>
+
+          {/* Row 4 */}
           <datalist id="qb-locodes">
             {LOCODE_OPTIONS.map((o) => (
               <option key={o} value={o} />
             ))}
           </datalist>
-          <div className="field">
-            <label>Origin/Port of Load</label>
-            <input
-              list="qb-locodes"
-              value={draft.origin}
-              onChange={(e) => set("origin", e.target.value)}
-              placeholder="CNSHA — Shanghai, China"
-            />
-            <span className="hint">
-              Pick a UN/LOCODE or type your own (start with the 5-char code).
-            </span>
-          </div>
           <div className="field">
             <label>Destination/Port of Discharge</label>
             <input
@@ -838,39 +789,16 @@ export default function QuoteBuilderPage() {
             </span>
           </div>
           <div className="field">
-            <label>Carrier</label>
+            <label>Origin/Port of Load</label>
             <input
-              value={draft.shipping_line}
-              onChange={(e) => set("shipping_line", e.target.value)}
+              list="qb-locodes"
+              value={draft.origin}
+              onChange={(e) => set("origin", e.target.value)}
+              placeholder="CNSHA — Shanghai, China"
             />
-          </div>
-          <div className="field">
-            <label>Vessel Name</label>
-            <input
-              value={draft.vessel_name}
-              onChange={(e) => set("vessel_name", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>MBL No</label>
-            <input
-              value={draft.mbl_no}
-              onChange={(e) => set("mbl_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>HBL No</label>
-            <input
-              value={draft.hbl_no}
-              onChange={(e) => set("hbl_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>Container Number</label>
-            <input
-              value={draft.container_no}
-              onChange={(e) => set("container_no", e.target.value)}
-            />
+            <span className="hint">
+              Pick a UN/LOCODE or type your own (start with the 5-char code).
+            </span>
           </div>
           <div className="field">
             <label>ETD</label>
@@ -888,6 +816,38 @@ export default function QuoteBuilderPage() {
               onChange={(e) => set("eta", e.target.value)}
             />
           </div>
+
+          {/* Row 5 */}
+          <div className="field">
+            <label>Vessel Name</label>
+            <input
+              value={draft.vessel_name}
+              onChange={(e) => set("vessel_name", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Container Number</label>
+            <input
+              value={draft.container_no}
+              onChange={(e) => set("container_no", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>MBL No</label>
+            <input
+              value={draft.mbl_no}
+              onChange={(e) => set("mbl_no", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>HBL No</label>
+            <input
+              value={draft.hbl_no}
+              onChange={(e) => set("hbl_no", e.target.value)}
+            />
+          </div>
+
+          {/* Row 6 */}
           <div className="field">
             <label>MAWB No</label>
             <input
@@ -917,24 +877,80 @@ export default function QuoteBuilderPage() {
               onChange={(e) => set("flight_date", e.target.value)}
             />
           </div>
+
+          {/* Row 7 — internal only */}
           <div className="field">
-            <label>Agent/Airline Name</label>
+            <label>Agent (internal only)</label>
+            <select
+              value={draft.agent_id}
+              onChange={(e) => set("agent_id", e.target.value)}
+            >
+              <option value="">Select agent</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
+          </div>
+          <div className="field">
+            <label>Clearing Agent (internal only)</label>
+            <select
+              value={draft.clearing_agent_id}
+              onChange={(e) => set("clearing_agent_id", e.target.value)}
+            >
+              <option value="">Select clearing agent</option>
+              {clearingAgents.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
+          </div>
+          <div className="field">
+            <label>Agent/Airline Name (internal only)</label>
             <input
               value={draft.carrier_name}
               onChange={(e) => set("carrier_name", e.target.value)}
             />
+            <span className="hint">Not shown on the customer quotation.</span>
           </div>
           <div className="field">
-            <label>Status</label>
+            <label>Transporter (internal only)</label>
             <select
-              value={draft.status}
-              onChange={(e) =>
-                set("status", e.target.value as QuoteDraft["status"])
-              }
+              value={draft.transporter_id}
+              onChange={(e) => set("transporter_id", e.target.value)}
             >
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
+              <option value="">Select transporter</option>
+              {transporters.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
+          </div>
+
+          {/* Row 8 */}
+          <div className="field">
+            <label>Carrier</label>
+            <input
+              value={draft.shipping_line}
+              onChange={(e) => set("shipping_line", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Sales Person</label>
+            <select
+              value={draft.sales_person_id}
+              onChange={(e) => set("sales_person_id", e.target.value)}
+            >
+              <option value="">— unassigned —</option>
+              {salesPeople.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name || "—"}
                 </option>
               ))}
             </select>
