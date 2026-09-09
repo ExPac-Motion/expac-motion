@@ -543,7 +543,12 @@ tr.clickable:hover {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-bottom: 6px;
+  /* sit the toolbar up alongside the panel heading (like the Shipments
+     board's Bulk Edit button) instead of as a band above the table */
+  margin-top: -42px;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
 }
 table.dt {
   table-layout: fixed;
