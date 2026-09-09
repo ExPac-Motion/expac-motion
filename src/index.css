@@ -574,6 +574,12 @@ table.dt td {
 table.dt th {
   letter-spacing: 0.04em;
 }
+/* The table's own 1px top border scrolls away with the table, so redraw the
+   line above the headings on the sticky header cells themselves — keeps a
+   crisp top edge on the frozen header row while the list scrolls. */
+table.dt thead th {
+  box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line);
+}
 /* The row-actions column is pinned to the left: it never reorders, never
    resizes, and stays put while the rest of the table scrolls sideways. */
 table.dt th.dt-fixed,
