@@ -279,7 +279,7 @@ export default function ContactsPage({
       {
         key: "actions",
         fixed: true,
-        width: 150,
+        width: 180,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
