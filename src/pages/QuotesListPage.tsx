@@ -69,6 +69,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     flight_no: "",
     flight_date: "",
     carrier_name: "",
+    shipping_line: q.shipping_line ?? "",
     fx_usd_zar: String(q.fx_usd_zar ?? ""),
     fx_cny_zar: String(q.fx_cny_zar ?? ""),
     packing: q.packing_list_items ?? [],
