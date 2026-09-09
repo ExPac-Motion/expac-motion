@@ -35,6 +35,8 @@ interface Props<T> {
   rowKey: (row: T) => string;
   onRowClick?: (row: T) => void;
   rowClass?: (row: T) => string | undefined;
+  /** Extra controls rendered at the start of the toolbar, before "Save Grid". */
+  toolbar?: ReactNode;
   /** Extra classes on the <table> (e.g. "table--compact"). */
   className?: string;
 }
@@ -49,6 +51,7 @@ export default function DataTable<T>({
   onRowClick,
   rowClass,
   className,
+  toolbar,
 }: Props<T>) {
   const prefsQ = useTablePrefs(tableKey);
   const savePrefs = useSaveTablePrefs(tableKey);
@@ -249,6 +252,7 @@ export default function DataTable<T>({
   return (
     <div className="dt-wrap">
       <div className="dt-tools">
+        {toolbar}
         <button
           type="button"
           className={`btn btn-sm${dirty ? "" : " outline"}`}
