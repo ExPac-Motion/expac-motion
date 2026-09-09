@@ -144,18 +144,6 @@ export default function SalesPersonPage() {
             salesperson on each accepted quote.
           </p>
         </div>
-        <button
-          className="btn outline"
-          onClick={() => setBulkOpen(true)}
-          disabled={sel.count === 0}
-          title={
-            sel.count === 0
-              ? "Tick rows in the Actions column to bulk edit"
-              : undefined
-          }
-        >
-          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-        </button>
       </div>
 
       {isLoading ? (
@@ -171,6 +159,20 @@ export default function SalesPersonPage() {
           columns={columns}
           rows={people}
           rowKey={(p) => p.id}
+          toolbar={
+            <button
+              className="btn outline btn-sm"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the Actions column to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+            </button>
+          }
         />
       )}
 

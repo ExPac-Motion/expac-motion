@@ -584,7 +584,11 @@ table.dt thead th.dt-fixed {
   z-index: 5;
 }
 table.dt th.dt-th {
-  position: relative;
+  /* sticky (not just relative) so the whole header row — every column, not
+     only the pinned Actions cell — stays frozen while the list scrolls;
+     still anchors the absolutely-positioned resize handle */
+  position: sticky;
+  top: 0;
   cursor: grab;
   user-select: none;
 }
