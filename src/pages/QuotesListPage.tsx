@@ -13,6 +13,7 @@ import {
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
+import QuickMailModal from "../components/QuickMailModal";
 import QuoteDetailModal from "./QuoteDetailModal";
 import {
   useDeleteQuote,
@@ -95,6 +96,7 @@ export default function QuotesListPage() {
   const navigate = useNavigate();
   const { data: quotes, isLoading, isError, error } = useQuotes();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [mailing, setMailing] = useState<Quote | null>(null);
   const del = useDeleteQuote();
   const save = useSaveQuote();
   const bulkUpdate = useUpdateQuotesBulk();
@@ -149,7 +151,7 @@ export default function QuotesListPage() {
       {
         key: "actions",
         fixed: true,
-        width: 172,
+        width: 200,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
@@ -161,6 +163,8 @@ export default function QuotesListPage() {
           <RowActions
             selected={sel.isSelected(q.id)}
             onSelectToggle={() => sel.toggle(q.id)}
+            onMail={() => setMailing(q)}
+            mailTitle="Email the customer"
             onView={() => setOpenId(q.id)}
             onEdit={() => navigate(`/quotes/${q.id}`)}
             onDelete={() => onDelete(q)}
@@ -169,6 +173,14 @@ export default function QuotesListPage() {
         ),
       },
       // --- shown by default ---
+      {
+        key: "created",
+        header: "Created",
+        width: 110,
+        cellClass: "nowrap",
+        sortValue: (q) => q.created_at,
+        render: (q) => formatDate(q.created_at),
+      },
       {
         key: "shipment",
         header: "Shipment",
@@ -517,6 +529,15 @@ export default function QuotesListPage() {
 
       {openId && (
         <QuoteDetailModal quoteId={openId} onClose={() => setOpenId(null)} />
+      )}
+
+      {mailing && (
+        <QuickMailModal
+          to={mailing.client?.email ?? mailing.lead?.email ?? null}
+          company={mailing.client?.company ?? mailing.lead?.company ?? "customer"}
+          name={mailing.lead?.contact ?? null}
+          onClose={() => setMailing(null)}
+        />
       )}
 
       {bulkOpen && (

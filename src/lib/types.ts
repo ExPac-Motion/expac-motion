@@ -819,7 +819,7 @@ export interface Quote {
   updated_at: string;
   quote_lines: QuoteLine[];
   packing_list_items: PackingItem[];
-  client?: Pick<Client, "id" | "company"> | null;
+  client?: Pick<Client, "id" | "company" | "email"> | null;
   /** Set instead of `client` when the quote is against a not-yet-promoted lead. */
   lead?: Pick<
     Lead,
