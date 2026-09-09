@@ -164,7 +164,7 @@ export default function DataTable<T>({
       <div className="table-wrap">
         <table
           className={`dt${className ? " " + className : ""}`}
-          style={{ width: totalWidth, minWidth: "100%" }}
+          style={{ width: totalWidth }}
         >
           <colgroup>
             {orderedCols.map((c) => (

@@ -153,13 +153,13 @@ export default function QuotesListPage() {
       {
         key: "shipment",
         header: "Shipment",
-        width: 120,
+        width: 135,
         render: (q) => <span className="ref-link">{q.reference}</span>,
       },
       {
         key: "customer",
         header: "Customer",
-        width: 180,
+        width: 240,
         render: (q) => (
           <>
             {q.client?.company ?? q.lead?.company ?? "—"}
@@ -170,51 +170,51 @@ export default function QuotesListPage() {
       {
         key: "shipper",
         header: "Shipper",
-        width: 170,
+        width: 220,
         render: (q) => q.supplier?.company ?? "—",
       },
       {
         key: "reference",
         header: "Reference",
-        width: 130,
+        width: 150,
         render: (q) => q.customer_reference || "—",
       },
       {
         key: "lane",
         header: "Trade lane",
-        width: 130,
+        width: 150,
         cellClass: "nowrap",
         render: (q) => `${portCode(q.origin)} → ${portCode(q.destination)}`,
       },
-      { key: "mode", header: "Mode", width: 120, render: (q) => q.mode },
+      { key: "mode", header: "Mode", width: 130, render: (q) => q.mode },
       {
         key: "cost",
         header: "Total Cost",
-        width: 110,
+        width: 115,
         render: (q) => money(totalsByQuote.get(q.id)?.cost ?? 0),
       },
       {
         key: "value",
         header: "Total Value",
-        width: 110,
+        width: 115,
         render: (q) => money(totalsByQuote.get(q.id)?.sell ?? 0),
       },
       {
         key: "margin",
         header: "Margin",
-        width: 90,
+        width: 95,
         render: (q) => `${(totalsByQuote.get(q.id)?.margin ?? 0).toFixed(1)}%`,
       },
       {
         key: "profit",
         header: "Total Profit",
-        width: 110,
+        width: 115,
         render: (q) => money(totalsByQuote.get(q.id)?.gp ?? 0),
       },
       {
         key: "status",
         header: "Status",
-        width: 130,
+        width: 140,
         render: (q) => <StatusBadge status={q.status} />,
       },
     ],
