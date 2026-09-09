@@ -14,8 +14,12 @@ import {
   useVaultBudget,
   useVaultTodos,
 } from "../../lib/hooks";
-import { formatDate, money } from "../../lib/format";
-import type { VaultBudgetDraft, VaultExpenseDraft } from "../../lib/types";
+import { money } from "../../lib/format";
+import type {
+  VaultBudgetDraft,
+  VaultBudgetEntry,
+  VaultExpenseDraft,
+} from "../../lib/types";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
@@ -26,6 +30,14 @@ const emptyEntry = (): VaultBudgetDraft => ({
   amount: "",
   occurred_on: todayIso(),
   note: "",
+});
+
+const asDraft = (e: VaultBudgetEntry): VaultBudgetDraft => ({
+  kind: e.kind,
+  category: e.category ?? "",
+  amount: String(e.amount),
+  occurred_on: e.occurred_on,
+  note: e.note ?? "",
 });
 
 export default function PersonalVaultPage() {
@@ -91,6 +103,22 @@ function PersonalBudget() {
       toast("Deleted");
     } catch (e2) {
       error(e2 instanceof Error ? e2.message : "Could not delete");
+    }
+  }
+
+  async function patchEntry(
+    e: VaultBudgetEntry,
+    field: keyof VaultBudgetDraft,
+    value: string,
+  ) {
+    try {
+      await save.mutateAsync({
+        id: e.id,
+        values: { ...asDraft(e), [field]: value },
+      });
+      toast("Updated");
+    } catch (e2) {
+      error(e2 instanceof Error ? e2.message : "Could not save");
     }
   }
 
@@ -197,16 +225,60 @@ function PersonalBudget() {
             <tbody>
               {rows.map((e) => (
                 <tr key={e.id}>
-                  <td className="nowrap">{formatDate(e.occurred_on)}</td>
+                  <td className="nowrap">
+                    <input
+                      type="date"
+                      className="vault-inline"
+                      defaultValue={e.occurred_on}
+                      onChange={(ev) => {
+                        if (ev.target.value && ev.target.value !== e.occurred_on)
+                          patchEntry(e, "occurred_on", ev.target.value);
+                      }}
+                    />
+                  </td>
                   <td>
                     <span className={`vault-tag ${e.kind}`}>{e.kind}</span>
                   </td>
-                  <td>{e.category || "—"}</td>
-                  <td className="n nowrap">
-                    {e.kind === "expense" ? "−" : "+"}
-                    {money(Number(e.amount))}
+                  <td>
+                    <input
+                      className="vault-inline"
+                      placeholder="—"
+                      defaultValue={e.category ?? ""}
+                      onBlur={(ev) => {
+                        if (ev.target.value.trim() !== (e.category ?? ""))
+                          patchEntry(e, "category", ev.target.value);
+                      }}
+                    />
                   </td>
-                  <td>{e.note || "—"}</td>
+                  <td className="n nowrap">
+                    <span className="vault-amt-wrap">
+                      <span className="vault-sign">
+                        {e.kind === "expense" ? "−" : "+"}
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="vault-inline vault-amt"
+                        defaultValue={String(e.amount)}
+                        onBlur={(ev) => {
+                          if ((Number(ev.target.value) || 0) !== Number(e.amount))
+                            patchEntry(e, "amount", ev.target.value);
+                        }}
+                      />
+                    </span>
+                  </td>
+                  <td>
+                    <input
+                      className="vault-inline"
+                      placeholder="—"
+                      defaultValue={e.note ?? ""}
+                      onBlur={(ev) => {
+                        if (ev.target.value.trim() !== (e.note ?? ""))
+                          patchEntry(e, "note", ev.target.value);
+                      }}
+                    />
+                  </td>
                   <td>
                     <button
                       type="button"

@@ -3080,6 +3080,20 @@ table.dt th.dt-sortable {
   border-top: 1.5px solid var(--line);
   font-weight: 700;
 }
+.vault-amt-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+.vault-sign {
+  color: var(--muted);
+  flex: none;
+}
+.vault-amt {
+  text-align: right;
+  min-width: 0;
+}
 .vault-tag {
   font-size: 0.68rem;
   text-transform: uppercase;
