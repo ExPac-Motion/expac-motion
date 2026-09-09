@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   EmptyState,
   ErrorNote,
@@ -39,6 +39,27 @@ const asDraft = (e: VaultBudgetEntry): VaultBudgetDraft => ({
   occurred_on: e.occurred_on,
   note: e.note ?? "",
 });
+
+/** "2026-09-15" → "15/09/2026" (dd/mm/yyyy everywhere in the system). */
+function isoToDmy(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : iso;
+}
+/** "15/09/2026" (also - or . separators, 2-digit year) → ISO, or null. */
+function dmyToIso(s: string): string | null {
+  const m = s.trim().match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})$/);
+  if (!m) return null;
+  const d = m[1].padStart(2, "0");
+  const mo = m[2].padStart(2, "0");
+  const y = m[3].length === 2 ? `20${m[3]}` : m[3];
+  const iso = `${y}-${mo}-${d}`;
+  const dt = new Date(`${iso}T00:00:00Z`);
+  return Number.isNaN(dt.getTime()) ||
+    dt.getUTCMonth() + 1 !== Number(mo) ||
+    dt.getUTCDate() !== Number(d)
+    ? null
+    : iso;
+}
 
 export default function PersonalVaultPage() {
   return (
@@ -106,17 +127,10 @@ function PersonalBudget() {
     }
   }
 
-  async function patchEntry(
-    e: VaultBudgetEntry,
-    field: keyof VaultBudgetDraft,
-    value: string,
-  ) {
+  async function saveRow(id: string, values: VaultBudgetDraft) {
     try {
-      await save.mutateAsync({
-        id: e.id,
-        values: { ...asDraft(e), [field]: value },
-      });
-      toast("Updated");
+      await save.mutateAsync({ id, values });
+      toast("Saved");
     } catch (e2) {
       error(e2 instanceof Error ? e2.message : "Could not save");
     }
@@ -224,77 +238,127 @@ function PersonalBudget() {
             </thead>
             <tbody>
               {rows.map((e) => (
-                <tr key={e.id}>
-                  <td className="nowrap">
-                    <input
-                      type="date"
-                      className="vault-inline"
-                      defaultValue={e.occurred_on}
-                      onChange={(ev) => {
-                        if (ev.target.value && ev.target.value !== e.occurred_on)
-                          patchEntry(e, "occurred_on", ev.target.value);
-                      }}
-                    />
-                  </td>
-                  <td>
-                    <span className={`vault-tag ${e.kind}`}>{e.kind}</span>
-                  </td>
-                  <td>
-                    <input
-                      className="vault-inline"
-                      placeholder="—"
-                      defaultValue={e.category ?? ""}
-                      onBlur={(ev) => {
-                        if (ev.target.value.trim() !== (e.category ?? ""))
-                          patchEntry(e, "category", ev.target.value);
-                      }}
-                    />
-                  </td>
-                  <td className="n nowrap">
-                    <span className="vault-amt-wrap">
-                      <span className="vault-sign">
-                        {e.kind === "expense" ? "−" : "+"}
-                      </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="vault-inline vault-amt"
-                        defaultValue={String(e.amount)}
-                        onBlur={(ev) => {
-                          if ((Number(ev.target.value) || 0) !== Number(e.amount))
-                            patchEntry(e, "amount", ev.target.value);
-                        }}
-                      />
-                    </span>
-                  </td>
-                  <td>
-                    <input
-                      className="vault-inline"
-                      placeholder="—"
-                      defaultValue={e.note ?? ""}
-                      onBlur={(ev) => {
-                        if (ev.target.value.trim() !== (e.note ?? ""))
-                          patchEntry(e, "note", ev.target.value);
-                      }}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn ghost btn-sm"
-                      onClick={() => onDelete(e.id)}
-                    >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
+                <BudgetRow
+                  key={e.id}
+                  entry={e}
+                  saving={save.isPending}
+                  onSave={saveRow}
+                  onDelete={onDelete}
+                />
               ))}
             </tbody>
           </table>
         </div>
       )}
     </section>
+  );
+}
+
+/** One editable Personal Budget row: change the date (dd/mm/yyyy),
+ *  category, amount or note, then hit Save. */
+function BudgetRow({
+  entry,
+  saving,
+  onSave,
+  onDelete,
+}: {
+  entry: VaultBudgetEntry;
+  saving: boolean;
+  onSave: (id: string, values: VaultBudgetDraft) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [draft, setDraft] = useState<VaultBudgetDraft>(asDraft(entry));
+  const [dateText, setDateText] = useState(isoToDmy(entry.occurred_on));
+
+  // discard local edits if the row is refetched with new values
+  useEffect(() => {
+    setDraft(asDraft(entry));
+    setDateText(isoToDmy(entry.occurred_on));
+  }, [entry]);
+
+  const set = <K extends keyof VaultBudgetDraft>(
+    k: K,
+    v: VaultBudgetDraft[K],
+  ) => setDraft((d) => ({ ...d, [k]: v }));
+
+  const iso = dmyToIso(dateText);
+  const dateBad = dateText.trim() !== "" && iso === null;
+  const dirty =
+    (iso ?? entry.occurred_on) !== entry.occurred_on ||
+    draft.category !== (entry.category ?? "") ||
+    (Number(draft.amount) || 0) !== Number(entry.amount) ||
+    draft.note !== (entry.note ?? "");
+
+  function submit() {
+    if (!iso) return;
+    onSave(entry.id, { ...draft, occurred_on: iso });
+  }
+
+  return (
+    <tr className={dirty ? "vault-row-dirty" : undefined}>
+      <td className="nowrap">
+        <input
+          className={`vault-inline${dateBad ? " vault-bad" : ""}`}
+          value={dateText}
+          placeholder="dd/mm/yyyy"
+          onChange={(e) => setDateText(e.target.value)}
+        />
+      </td>
+      <td>
+        <span className={`vault-tag ${entry.kind}`}>{entry.kind}</span>
+      </td>
+      <td>
+        <input
+          className="vault-inline"
+          placeholder="—"
+          value={draft.category}
+          onChange={(e) => set("category", e.target.value)}
+        />
+      </td>
+      <td className="n nowrap">
+        <span className="vault-amt-wrap">
+          <span className="vault-sign">
+            {entry.kind === "expense" ? "−" : "+"}
+          </span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            className="vault-inline vault-amt"
+            value={draft.amount}
+            onChange={(e) => set("amount", e.target.value)}
+          />
+        </span>
+      </td>
+      <td>
+        <input
+          className="vault-inline"
+          placeholder="—"
+          value={draft.note}
+          onChange={(e) => set("note", e.target.value)}
+        />
+      </td>
+      <td>
+        <div className="vault-rowactions">
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={!dirty || dateBad || saving}
+            onClick={submit}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            className="btn ghost btn-sm"
+            onClick={() => onDelete(entry.id)}
+            title="Delete entry"
+          >
+            ✕
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }
 

@@ -3094,6 +3094,19 @@ table.dt th.dt-sortable {
   text-align: right;
   min-width: 0;
 }
+.vault-rowactions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.vault-row-dirty td {
+  background: #fffdf3;
+}
+.vault-inline.vault-bad {
+  border-color: #b3261e;
+  background: #fdecea;
+}
 .vault-tag {
   font-size: 0.68rem;
   text-transform: uppercase;
