@@ -8,6 +8,7 @@ import {
   RowActionsHead,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   useDeleteWebForm,
   useSaveWebForm,
@@ -581,6 +582,65 @@ export default function FormsPage() {
     }
   }
 
+  const columns = useMemo<DataColumn<WebForm>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 118,
+        header: <RowActionsHead />,
+        render: (f) => (
+          <RowActions
+            onEdit={() => setEditingId(f.id)}
+            onDelete={() => onDelete(f)}
+            onDuplicate={() => onDuplicate(f)}
+          />
+        ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        width: 260,
+        sortValue: (f) => f.name.toLowerCase(),
+        render: (f) => <strong className="row-name">{f.name}</strong>,
+      },
+      {
+        key: "fields",
+        header: "Fields",
+        width: 100,
+        sortValue: (f) => f.fields.length,
+        render: (f) => f.fields.length,
+      },
+      {
+        key: "live",
+        header: "Live",
+        width: 100,
+        sortValue: (f) => (f.active ? 1 : 0),
+        render: (f) =>
+          f.active ? (
+            <span className="ms-tag tone-done">live</span>
+          ) : (
+            <span className="ms-tag tone-start">off</span>
+          ),
+      },
+      {
+        key: "submissions",
+        header: "Submissions",
+        width: 130,
+        render: (f) => (
+          <button
+            className="btn ghost small"
+            onClick={() => setSubmissionsFor(f)}
+          >
+            View
+          </button>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   if (editing) {
     return <FormEditor form={editing} onBack={() => setEditingId(null)} />;
   }
@@ -608,53 +668,13 @@ export default function FormsPage() {
         ) : forms.length === 0 ? (
           <EmptyState>No forms yet.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="table--compact">
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead />
-                  </th>
-                  <th>Name</th>
-                  <th>Fields</th>
-                  <th>Live</th>
-                  <th>Submissions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {forms.map((f) => (
-                  <tr key={f.id}>
-                    <td>
-                      <RowActions
-                        onEdit={() => setEditingId(f.id)}
-                        onDelete={() => onDelete(f)}
-                        onDuplicate={() => onDuplicate(f)}
-                      />
-                    </td>
-                    <td>
-                      <strong className="row-name">{f.name}</strong>
-                    </td>
-                    <td>{f.fields.length}</td>
-                    <td>
-                      {f.active ? (
-                        <span className="ms-tag tone-done">live</span>
-                      ) : (
-                        <span className="ms-tag tone-start">off</span>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        className="btn ghost small"
-                        onClick={() => setSubmissionsFor(f)}
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="web-forms"
+            className="table--compact"
+            columns={columns}
+            rows={forms}
+            rowKey={(f) => f.id}
+          />
         )}
       </div>
 

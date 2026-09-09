@@ -10,6 +10,7 @@ import {
   SearchInput,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   useDeleteMailTemplate,
   useMailTemplates,
@@ -223,6 +224,49 @@ export default function TemplatesPage() {
     }
   }
 
+  const columns = useMemo<DataColumn<MailTemplate>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 118,
+        header: <RowActionsHead />,
+        render: (t) => (
+          <RowActions
+            onView={() => setViewing(t)}
+            onEdit={() => setEditing(t)}
+            onDelete={() => onDelete(t)}
+            onDuplicate={() => onDuplicate(t)}
+          />
+        ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        width: 240,
+        sortValue: (t) => t.name.toLowerCase(),
+        render: (t) => <strong className="row-name">{t.name}</strong>,
+      },
+      {
+        key: "subject",
+        header: "Subject",
+        width: 320,
+        sortValue: (t) => t.subject.toLowerCase(),
+        render: (t) => t.subject,
+      },
+      {
+        key: "updated",
+        header: "Last Edited",
+        width: 130,
+        cellClass: "nowrap",
+        sortValue: (t) => t.updated_at,
+        render: (t) => formatDate(t.updated_at),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   return (
     <>
       <div className="panel">
@@ -258,39 +302,13 @@ export default function TemplatesPage() {
               : "No templates match your search."}
           </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead />
-                  </th>
-                  <th>Name</th>
-                  <th>Subject</th>
-                  <th>Last Edited</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((t) => (
-                  <tr key={t.id}>
-                    <td>
-                      <RowActions
-                        onView={() => setViewing(t)}
-                        onEdit={() => setEditing(t)}
-                        onDelete={() => onDelete(t)}
-                        onDuplicate={() => onDuplicate(t)}
-                      />
-                    </td>
-                    <td>
-                      <strong className="row-name">{t.name}</strong>
-                    </td>
-                    <td>{t.subject}</td>
-                    <td className="nowrap">{formatDate(t.updated_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="mail-templates"
+            className="table--compact"
+            columns={columns}
+            rows={rows}
+            rowKey={(t) => t.id}
+          />
         )}
       </div>
 

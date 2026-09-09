@@ -10,6 +10,7 @@ import {
   useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   useProfiles,
   useQuotes,
@@ -66,6 +67,73 @@ export default function SalesPersonPage() {
   const isLoading = profilesQ.isLoading || quotesQ.isLoading;
   const isError = profilesQ.isError || quotesQ.isError;
 
+  const st = (id: string) => stats.get(id) ?? { revenue: 0, gp: 0 };
+  const columns = useMemo<DataColumn<Profile>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 110,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (p) => (
+          <RowActions
+            selected={sel.isSelected(p.id)}
+            onSelectToggle={() => sel.toggle(p.id)}
+            onView={() => setViewing(p)}
+            onEdit={() => setEditing(p)}
+          />
+        ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        width: 200,
+        sortValue: (p) => (p.full_name ?? "").toLowerCase(),
+        render: (p) => (
+          <strong className="row-name">{p.full_name || "—"}</strong>
+        ),
+      },
+      {
+        key: "revenue",
+        header: "Revenue (This Month)",
+        width: 170,
+        sortValue: (p) => st(p.id).revenue,
+        render: (p) => money(st(p.id).revenue),
+      },
+      {
+        key: "revenue_target",
+        header: "Revenue Target",
+        width: 150,
+        sortValue: (p) => p.sales_revenue_target,
+        render: (p) =>
+          p.sales_revenue_target > 0 ? money(p.sales_revenue_target) : "—",
+      },
+      {
+        key: "gp",
+        header: "Gross Profit (This Month)",
+        width: 190,
+        sortValue: (p) => st(p.id).gp,
+        render: (p) => money(st(p.id).gp),
+      },
+      {
+        key: "gp_target",
+        header: "GP Target",
+        width: 130,
+        sortValue: (p) => p.sales_gp_target,
+        render: (p) =>
+          p.sales_gp_target > 0 ? money(p.sales_gp_target) : "—",
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, stats],
+  );
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -97,54 +165,13 @@ export default function SalesPersonPage() {
       ) : people.length === 0 ? (
         <EmptyState>No team members yet — add one in Settings.</EmptyState>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th className="actions-col">
-                  <RowActionsHead
-                    checked={sel.allChecked}
-                    indeterminate={sel.someChecked}
-                    onToggle={sel.toggleAll}
-                  />
-                </th>
-                <th>Name</th>
-                <th>Revenue (This Month)</th>
-                <th>Revenue Target</th>
-                <th>Gross Profit (This Month)</th>
-                <th>GP Target</th>
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((p) => {
-                const s = stats.get(p.id) ?? { revenue: 0, gp: 0 };
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <RowActions
-                        selected={sel.isSelected(p.id)}
-                        onSelectToggle={() => sel.toggle(p.id)}
-                        onView={() => setViewing(p)}
-                        onEdit={() => setEditing(p)}
-                      />
-                    </td>
-                    <td>
-                      <strong className="row-name">{p.full_name || "—"}</strong>
-                    </td>
-                    <td>{money(s.revenue)}</td>
-                    <td>
-                      {p.sales_revenue_target > 0
-                        ? money(p.sales_revenue_target)
-                        : "—"}
-                    </td>
-                    <td>{money(s.gp)}</td>
-                    <td>{p.sales_gp_target > 0 ? money(p.sales_gp_target) : "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          tableKey="sales-person"
+          className="table--compact"
+          columns={columns}
+          rows={people}
+          rowKey={(p) => p.id}
+        />
       )}
 
       {viewing && (

@@ -9,6 +9,7 @@ import {
   RowActionsHead,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   useAllCampaignRecipients,
   useDeleteMailCampaign,
@@ -445,6 +446,61 @@ export default function CampaignsPage() {
     }
   }
 
+  const columns = useMemo<DataColumn<MailCampaign>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 90,
+        header: <RowActionsHead />,
+        render: (c) => (
+          <RowActions onView={() => setViewing(c)} onDelete={() => onDelete(c)} />
+        ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        width: 220,
+        sortValue: (c) => c.name.toLowerCase(),
+        render: (c) => <strong className="row-name">{c.name}</strong>,
+      },
+      {
+        key: "subject",
+        header: "Subject",
+        width: 280,
+        sortValue: (c) => c.subject.toLowerCase(),
+        render: (c) => c.subject,
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: 120,
+        sortValue: (c) => c.status,
+        render: (c) => (
+          <span className={`ms-tag tone-${campaignTone(c.status)}`}>
+            {c.status}
+          </span>
+        ),
+      },
+      {
+        key: "tracking",
+        header: "Tracking",
+        width: 160,
+        render: (c) => <TrackingCell t={trackingByCampaign.get(c.id)} />,
+      },
+      {
+        key: "sent",
+        header: "Sent",
+        width: 160,
+        cellClass: "nowrap",
+        sortValue: (c) => c.sent_at ?? "",
+        render: (c) => (c.sent_at ? formatDateTime(c.sent_at) : "—"),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trackingByCampaign],
+  );
+
   return (
     <>
       <div className="panel">
@@ -469,49 +525,13 @@ export default function CampaignsPage() {
         ) : rows.length === 0 ? (
           <EmptyState>No campaigns sent yet.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead />
-                  </th>
-                  <th>Name</th>
-                  <th>Subject</th>
-                  <th>Status</th>
-                  <th>Tracking</th>
-                  <th>Sent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <RowActions
-                        onView={() => setViewing(c)}
-                        onDelete={() => onDelete(c)}
-                      />
-                    </td>
-                    <td>
-                      <strong className="row-name">{c.name}</strong>
-                    </td>
-                    <td>{c.subject}</td>
-                    <td>
-                      <span className={`ms-tag tone-${campaignTone(c.status)}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td>
-                      <TrackingCell t={trackingByCampaign.get(c.id)} />
-                    </td>
-                    <td className="nowrap">
-                      {c.sent_at ? formatDateTime(c.sent_at) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="mail-campaigns"
+            className="table--compact"
+            columns={columns}
+            rows={rows}
+            rowKey={(c) => c.id}
+          />
         )}
       </div>
 
