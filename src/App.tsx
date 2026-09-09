@@ -12,6 +12,7 @@ import DashboardPage from "./pages/DashboardPage";
 import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
+import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
@@ -99,6 +100,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginRoute />} />
+          {import.meta.env.DEV && (
+            <Route path="/quotes/demo/print" element={<QuotePrintDemoPage />} />
+          )}
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/forms/:id" element={<FormPublicPage />} />
           <Route path="/portal/signup" element={<PortalSignupPage />} />

@@ -1792,7 +1792,12 @@ tr.clickable:hover {
   }
 }
 
-/* ============ Client quotation letterhead (QuotePrintPage) ============ */
+/* ============ Client quotation letterhead (QuotePrintPage) ============
+ * LOCKED LAYOUT — signed off (ExPac, 2026-09-09). Every `.qs-*` rule below
+ * (spacing, pagination, fonts, colours, the footer divider, the meta value
+ * column) is deliberate. Do NOT tweak without an explicit, specific request
+ * from the user. Verify any sanctioned change at /quotes/demo/print (DEV).
+ * ==================================================================== */
 .qs-wrap {
   background: #e9e7e0;
   min-height: 100vh;
@@ -1841,6 +1846,55 @@ tr.clickable:hover {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+/* Paginated quotation: a stack of fixed A4 pages, each with the full
+   letterhead header + banking/totals footer; the packing-list and charges
+   rows flow across pages (see QuotePrintPage's measure-and-distribute). */
+.qs-pageset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.qs-page {
+  width: 210mm;
+  min-height: 278mm;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  background: #fff;
+  color: var(--ink);
+  padding: 8mm 12mm;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+  font-size: 11px;
+  line-height: 1.4;
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --display: Arial, Helvetica, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.qs-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.qs-section + .qs-section {
+  margin-top: 2px;
+}
+/* the footer sits under the flowing body (not pulled up by the sheet's
+   margin-top:auto); this gap drops its divider line clear of the last row */
+.qs-page .qs-foot {
+  margin-top: 44px;
+}
+/* off-screen copy used only to measure header/footer/row heights */
+.qs-measure {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  box-shadow: none;
+}
+
 .qs-sheet h1 {
   font-family: var(--display);
   font-size: 30px;
@@ -2143,6 +2197,9 @@ tr.clickable:hover {
   table-layout: fixed;
 }
 .qs-charges td {
+  /* long service descriptions wrap inside the column instead of spilling
+     across Unit / Qty (the global `td` rule sets white-space: nowrap) */
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 .qs-charges th {
@@ -2195,6 +2252,8 @@ tr.clickable:hover {
   gap: 24px;
   /* absorb the slack above so the footer stays pinned to the page bottom */
   margin-top: auto;
+  /* divider above the footer, matching the rule under SERVICE DESCRIPTION */
+  border-top: 1.5px solid var(--ink);
   padding-top: 12px;
 }
 .qs-foot > div {
@@ -3399,25 +3458,44 @@ tr.clickable:hover {
     display: none !important;
   }
   .qs-toolbar,
-  .qs-note {
+  .qs-note,
+  .qs-measure {
     display: none !important;
   }
   .qs-wrap {
     background: #fff;
     padding: 0;
   }
-  .qs-sheet {
+  .qs-pageset {
+    gap: 0;
+  }
+  .qs-sheet,
+  .qs-page {
     box-shadow: none;
     width: auto;
     /* The @page margin owns the page margins, so content is physically
        constrained to the imageable area and can't clip on any edge (the big
        TO port code, the right-hand totals column). min-height fills the
        printable height (A4 297 − 16mm @page margin ≈ 281mm; a couple mm under
-       so a full page never spills a clipped second sheet) so the footer sits
-       at the bottom on a short quote. */
-    min-height: 279mm;
+       so a full page never spills a clipped blank sheet) so the footer sits
+       at the bottom of every page. */
+    min-height: 277mm;
     padding: 0;
     margin: 0;
+  }
+  /* every page but the last forces a page break after it */
+  .qs-page {
+    break-after: page;
+  }
+  .qs-page:last-child {
+    break-after: auto;
+  }
+  /* never split a row or a section header across the page boundary */
+  .qs-charges tr,
+  .qs-pk tr,
+  .qs-bar,
+  .qs-pkcaption {
+    break-inside: avoid;
   }
   @page {
     size: A4;
