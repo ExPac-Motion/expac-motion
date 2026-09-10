@@ -869,6 +869,22 @@ table.dt th.dt-sortable {
   letter-spacing: 0;
   color: var(--ink);
 }
+/* "Attach quotation" checkbox next to the Message heading */
+.field .merge-code-row label.attach-quote {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+.attach-quote input {
+  width: auto;
+  margin: 0;
+}
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

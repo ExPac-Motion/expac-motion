@@ -118,3 +118,16 @@ export function portCode(place: string | null | undefined): string {
   return first.toUpperCase().slice(0, 5);
 }
 
+/**
+ * App-wide naming for a generated/saved document: "<description> - <shipment
+ * number>", e.g. docName("Quotation", "SEA174070") -> "Quotation - SEA174070".
+ * No file extension — the caller (or the browser's Save dialog) adds it.
+ */
+export function docName(
+  description: string,
+  shipmentNumber: string | null | undefined,
+): string {
+  const ref = (shipmentNumber ?? "").trim();
+  return ref ? `${description} - ${ref}` : description;
+}
+

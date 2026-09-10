@@ -14,6 +14,7 @@ import {
   resolveMergeFields,
   type MergeContext,
 } from "../lib/mailMerge";
+import { buildQuotePdf } from "../lib/quotePdf";
 
 /**
  * Compose-and-send a one-off email to a customer / contact, straight from a
@@ -25,6 +26,7 @@ export default function QuickMailModal({
   company,
   name,
   merge,
+  quote,
   onClose,
 }: {
   to: string | null | undefined;
@@ -32,6 +34,8 @@ export default function QuickMailModal({
   name?: string | null;
   /** Extra merge-code values for this record (shipment no, lane, etc.). */
   merge?: MergeContext;
+  /** When set, offers "Attach quotation" — the customer quotation PDF. */
+  quote?: { id: string; reference: string };
   onClose: () => void;
 }) {
   const { data: templates } = useMailTemplates();
@@ -41,7 +45,9 @@ export default function QuickMailModal({
   const [subject, setSubject] = useState("");
   const [cc, setCc] = useState("");
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const [attachQuote, setAttachQuote] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "pdf" | "sending">("idle");
+  const sending = phase !== "idle";
   const subjectRef = useRef<HTMLInputElement>(null);
 
   const sig = settings?.mail_signature_html?.trim() || "";
@@ -82,8 +88,13 @@ export default function QuickMailModal({
       .filter(Boolean);
     const badCc = ccList.find((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
     if (badCc) return toastError(`Not a valid CC address: ${badCc}`);
-    setSending(true);
     try {
+      let attachments;
+      if (attachQuote && quote) {
+        setPhase("pdf");
+        attachments = [await buildQuotePdf(quote.id, quote.reference)];
+      }
+      setPhase("sending");
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
       const html = resolveMergeFields(body, mergeCtx);
@@ -94,6 +105,7 @@ export default function QuickMailModal({
         subject: resolveMergeFields(subject.trim(), mergeCtx),
         html,
         text: htmlToText(html),
+        attachments,
         fromName: settings?.mail_sender_name || undefined,
         replyTo: settings?.mail_reply_to || undefined,
       });
@@ -102,7 +114,7 @@ export default function QuickMailModal({
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not send");
     } finally {
-      setSending(false);
+      setPhase("idle");
     }
   }
 
@@ -149,7 +161,19 @@ export default function QuickMailModal({
         />
       </div>
       <div className="field">
-        <label>Message</label>
+        <div className="merge-code-row">
+          <label>Message</label>
+          {quote && (
+            <label className="attach-quote">
+              <input
+                type="checkbox"
+                checked={attachQuote}
+                onChange={(e) => setAttachQuote(e.target.checked)}
+              />
+              Attach “Quotation - {quote.reference}.pdf”
+            </label>
+          )}
+        </div>
         <RichTextEditor
           value={body}
           onChange={setBody}
@@ -184,7 +208,11 @@ export default function QuickMailModal({
           onClick={onSend}
           disabled={sending || !to}
         >
-          {sending ? "Sending…" : "Send Email"}
+          {phase === "pdf"
+            ? "Preparing quotation…"
+            : phase === "sending"
+              ? "Sending…"
+              : "Send Email"}
         </button>
       </div>
     </Modal>

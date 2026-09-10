@@ -1,5 +1,11 @@
 import { supabase } from "./supabase";
 
+export interface MailAttachment {
+  filename: string;
+  /** base64-encoded file content, no data: prefix. */
+  content: string;
+}
+
 export interface SendMailInput {
   jobId?: string;
   to: string[];
@@ -8,6 +14,7 @@ export interface SendMailInput {
   subject: string;
   html: string;
   text: string;
+  attachments?: MailAttachment[];
   /** Overrides the sender display name (address stays the verified domain). */
   fromName?: string;
   replyTo?: string;

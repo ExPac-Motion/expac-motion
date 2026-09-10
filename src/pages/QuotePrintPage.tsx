@@ -32,7 +32,7 @@ import {
   type CategoryGroup,
   type PackingTotals,
 } from "../lib/calc";
-import { formatDate, money, portCode, usd } from "../lib/format";
+import { docName, formatDate, money, portCode, usd } from "../lib/format";
 import { COMPANY } from "../lib/company";
 import type { PackingItem } from "../lib/types";
 
@@ -607,9 +607,10 @@ export default function QuotePrintPage() {
   const { data: clients } = useClients();
   const { data: settings } = useCompanySettings();
 
+  // Drives the filename the browser's Print → Save as PDF proposes.
   useEffect(() => {
     const previous = document.title;
-    if (q?.reference) document.title = q.reference;
+    if (q?.reference) document.title = docName("Quotation", q.reference);
     return () => {
       document.title = previous;
     };
