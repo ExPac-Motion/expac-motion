@@ -1,4 +1,3 @@
-import { COMPANY } from "./company";
 import { formatDate } from "./format";
 import { LOCODES } from "./locodes";
 import { resolveMergeFields, type MergeContext } from "./mailMerge";
@@ -149,6 +148,8 @@ export function shipmentCommsTemplate(
 /** Merge-code values for a shipment-notification email. */
 export function shipmentMergeContext(job: Job): MergeContext {
   return {
+    // {{ contact.name }} — the customer's contact person, else the company.
+    name: job.client?.contact || job.client?.company || "Customer",
     customerName: job.client?.company || "Customer",
     company: job.client?.company ?? "",
     supplierName: job.supplier?.company ?? "",
@@ -192,9 +193,9 @@ export function renderShipmentEmail(
 export function shipmentEmailHtml(text: string): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Plain text in the house font — no logo image (it rendered as a broken
+  // attachment in Outlook); branding lives in the signature.
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
-  <img src="https://expac.co.za${COMPANY.logoPrint}" alt="EXPAC Forwarding" style="max-height:46px;margin-bottom:8px" />
-  <div style="border-top:3px solid #8cbc43;margin:6px 0 14px"></div>
   <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${esc(text)}</pre>
 </div>`;
 }

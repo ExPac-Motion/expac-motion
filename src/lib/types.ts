@@ -917,7 +917,12 @@ export interface Job {
   etd: string | null;
   eta: string | null;
   created_at: string;
-  client?: (Pick<Client, "id" | "company"> & { email?: string | null }) | null;
+  client?:
+    | (Pick<Client, "id" | "company"> & {
+        email?: string | null;
+        contact?: string | null;
+      })
+    | null;
   supplier?: (Pick<Supplier, "id" | "company"> & { email?: string | null }) | null;
   job_events?: JobEvent[];
 }

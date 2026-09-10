@@ -514,7 +514,7 @@ export async function acceptQuote(quoteId: string): Promise<string> {
 
 /* ---------- Jobs ---------- */
 const JOB_SELECT =
-  "*, client:clients(id,company,email), supplier:suppliers(id,company,email), job_events(*)";
+  "*, client:clients(id,company,email,contact), supplier:suppliers(id,company,email), job_events(*)";
 
 export async function listJobs(): Promise<Job[]> {
   const rows = unwrap<Job[]>(
