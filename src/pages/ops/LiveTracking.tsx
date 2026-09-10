@@ -98,9 +98,16 @@ export default function LiveTracking() {
       {
         key: "shipment",
         header: "Shipment",
-        width: 135,
+        width: 220,
         sortValue: (j) => j.reference,
-        render: (j) => <span className="ref-link">{j.reference}</span>,
+        render: (j) => (
+          <div style={{ lineHeight: 1.35 }}>
+            <span className="ref-link">{j.reference}</span>
+            <div className="hint">
+              {j.supplier?.company ?? "—"} → {j.client?.company ?? "—"}
+            </div>
+          </div>
+        ),
       },
       {
         key: "mode",
