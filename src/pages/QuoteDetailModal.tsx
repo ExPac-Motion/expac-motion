@@ -376,7 +376,7 @@ function Field({ label, value }: { label: string; value: string }) {
       <div className="qd-label" style={{ marginBottom: 4 }}>
         {label}
       </div>
-      <strong>{value}</strong>
+      <div>{value}</div>
     </div>
   );
 }
