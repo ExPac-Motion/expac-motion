@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
+import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
@@ -790,12 +791,28 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
   const uploadAsset = useUploadMailAsset();
   const { toast, error: toastError } = useToast();
   const [subject, setSubject] = useState("");
+  const [cc, setCc] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const subjectRef = useRef<HTMLInputElement>(null);
+
+  const sig = settings?.mail_signature_html?.trim() || "";
+  const withSig = (html: string) => (sig ? `${html}<br><br>${sig}` : html);
+
+  // Seed the editor with the saved signature once settings resolve, so it is
+  // visible in the message body and the operator can edit or delete it before
+  // sending. Only seeds an untouched (empty) body.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || !settings) return;
+    seeded.current = true;
+    setBody((b) => (b.trim() ? b : sig ? `<br><br>${sig}` : b));
+  }, [settings, sig]);
 
   const mergeCtx = {
     name: lead.contact || lead.company,
     company: lead.company,
+    customerName: lead.company,
     unsubscribeUrl: `${window.location.origin}/unsubscribe`,
   };
 
@@ -803,19 +820,26 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
     const t = templates?.find((x) => x.id === id);
     if (!t) return;
     setSubject(t.subject);
-    setBody(t.body);
+    setBody(withSig(t.body));
   }
 
   async function onSend() {
     if (!lead.email) return toastError("This lead has no email address");
     if (!subject.trim()) return toastError("Subject is required");
+    const ccList = cc
+      .split(/[,;\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const badCc = ccList.find((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+    if (badCc) return toastError(`Not a valid CC address: ${badCc}`);
     setSending(true);
     try {
-      let html = resolveMergeFields(body, mergeCtx);
-      const sig = settings?.mail_signature_html?.trim();
-      if (sig) html += `<br><br>${sig}`;
+      // The signature already lives in the body (seeded on open), so it is not
+      // appended again here.
+      const html = resolveMergeFields(body, mergeCtx);
       await sendMail({
         to: [lead.email],
+        cc: ccList.length ? ccList : undefined,
         subject: resolveMergeFields(subject.trim(), mergeCtx),
         html,
         text: htmlToText(html),
@@ -838,6 +862,15 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
         <strong>{lead.email || "— no email on this lead —"}</strong>
       </div>
       <div className="field">
+        <label>CC</label>
+        <input
+          value={cc}
+          onChange={(e) => setCc(e.target.value)}
+          placeholder="cc@example.com, another@example.com"
+        />
+        <span className="hint">Separate multiple addresses with a comma.</span>
+      </div>
+      <div className="field">
         <label>Start from a template (optional)</label>
         <select
           defaultValue=""
@@ -854,8 +887,15 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
         </select>
       </div>
       <div className="field">
-        <label>Subject</label>
-        <input value={subject} onChange={(e) => setSubject(e.target.value)} />
+        <div className="merge-code-row">
+          <label>Subject</label>
+          <MergeCodeMenu targetRef={subjectRef} onChange={setSubject} />
+        </div>
+        <input
+          ref={subjectRef}
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
       </div>
       <div className="field">
         <label>Message</label>
@@ -865,8 +905,10 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
           onUploadImage={(f) => uploadAsset.mutateAsync(f)}
         />
         <span className="hint">
-          Your saved signature is added automatically. Sends from{" "}
-          {settings?.mail_sender_name || "the configured sender"}.
+          {sig
+            ? "Your saved signature is included below — edit or remove it as needed. "
+            : ""}
+          Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>
       </div>
       <div

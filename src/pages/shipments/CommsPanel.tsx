@@ -1,7 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Loading } from "../../components/common";
+import MergeCodeMenu from "../../components/MergeCodeMenu";
 import { useToast } from "../../components/Toast";
-import { useAddNote, useMessages, useSendMessage } from "../../lib/hooks";
+import {
+  useAddNote,
+  useCompanySettings,
+  useMessages,
+  useSendMessage,
+} from "../../lib/hooks";
 import { buildShipmentEmail } from "../../lib/mailTemplates";
 import { formatDateTime } from "../../lib/format";
 import type { Job, Message, MessageStatus } from "../../lib/types";
@@ -25,9 +31,11 @@ export default function CommsPanel({ job }: { job: Job }) {
   const msgsQ = useMessages(job.id);
   const send = useSendMessage();
   const addNote = useAddNote();
+  const { data: settings } = useCompanySettings();
 
   const [tab, setTab] = useState<"email" | "note">("email");
   const [remarks, setRemarks] = useState("");
+  const remarksRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState("");
   const [ccText, setCcText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -51,8 +59,9 @@ export default function CommsPanel({ job }: { job: Job }) {
   }
 
   const preview = useMemo(
-    () => buildShipmentEmail(job, undefined, remarks).text,
-    [job, remarks],
+    () =>
+      buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms).text,
+    [job, remarks, settings],
   );
 
   const messages = msgsQ.data ?? [];
@@ -146,8 +155,12 @@ export default function CommsPanel({ job }: { job: Job }) {
             />
           </div>
           <div className="field">
-            <label>Remarks (your message)</label>
+            <div className="merge-code-row">
+              <label>Remarks (your message)</label>
+              <MergeCodeMenu targetRef={remarksRef} onChange={setRemarks} />
+            </div>
             <textarea
+              ref={remarksRef}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Good day, …"

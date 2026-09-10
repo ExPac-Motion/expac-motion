@@ -1,5 +1,12 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import Modal from "../../components/Modal";
+import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
 import {
   EmptyState,
@@ -85,6 +92,7 @@ function TemplateEditForm({
 }) {
   const uploadAsset = useUploadMailAsset();
   const { error: toastError } = useToast();
+  const subjectRef = useRef<HTMLInputElement>(null);
   const [bodyHtml, setBodyHtml] = useState(template?.body ?? "");
   const [attachments, setAttachments] = useState<MailTemplateAttachment[]>(
     template?.attachments ?? [],
@@ -125,8 +133,15 @@ function TemplateEditForm({
         <input name="name" defaultValue={template?.name ?? ""} autoFocus />
       </div>
       <div className="field">
-        <label>Subject (defaults to the template name if left blank)</label>
-        <input name="subject" defaultValue={template?.subject ?? ""} />
+        <div className="merge-code-row">
+          <label>Subject (defaults to the template name if left blank)</label>
+          <MergeCodeMenu targetRef={subjectRef} />
+        </div>
+        <input
+          ref={subjectRef}
+          name="subject"
+          defaultValue={template?.subject ?? ""}
+        />
       </div>
       <div className="field">
         <label>Body</label>

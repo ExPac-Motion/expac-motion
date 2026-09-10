@@ -852,6 +852,23 @@ table.dt th.dt-sortable {
   letter-spacing: 0;
   font-weight: 400;
 }
+/* Label row with a trailing "{ }" merge-code picker */
+.merge-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field select.merge-code-menu {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 3px 26px 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -954,8 +971,12 @@ table.dt th.dt-sortable {
   max-height: 420px;
   overflow-y: auto;
   padding: 12px;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  /* Default email writing font — Aptos 11px. Keep in sync with
+     src/lib/mailStyle.ts (EMAIL_FONT_STACK / EMAIL_FONT_SIZE_PX). */
+  font-family: Aptos, "Aptos Display", Calibri, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.55;
 }
 .rte-body:focus {
   outline: none;

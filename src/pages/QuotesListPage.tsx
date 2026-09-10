@@ -536,6 +536,15 @@ export default function QuotesListPage() {
           to={mailing.client?.email ?? mailing.lead?.email ?? null}
           company={mailing.client?.company ?? mailing.lead?.company ?? "customer"}
           name={mailing.lead?.contact ?? null}
+          merge={{
+            shipmentNumber: mailing.reference,
+            quoteReference: mailing.reference,
+            customerReference: mailing.customer_reference ?? "",
+            origin: portCode(mailing.origin),
+            destination: portCode(mailing.destination),
+            mode: mailing.mode,
+            validUntil: mailing.valid_until ?? "",
+          }}
           onClose={() => setMailing(null)}
         />
       )}

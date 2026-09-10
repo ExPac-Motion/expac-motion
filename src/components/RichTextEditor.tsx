@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode 
 import { useToast } from "./Toast";
 import { rewriteCopy, type RewriteAction, type RewriteTone } from "../lib/ai";
 import { useMediaAssets, useRecordMediaAsset } from "../lib/hooks";
+import { MERGE_CODES } from "../lib/mailMerge";
+import { EMAIL_FONT_STACK } from "../lib/mailStyle";
 
-const MERGE_TAGS = [
-  { label: "Contact Name", value: "{{ contact.name }}" },
-  { label: "Contact Company", value: "{{ contact.company }}" },
-];
+const MERGE_TAGS = MERGE_CODES.map((c) => ({ label: c.label, value: c.token }));
 
-/** Email-safe families. Value is the full stack applied to the selection. */
+/** Email-safe families. Value is the full stack applied to the selection.
+ *  Aptos (the app-wide default email font) is first. */
 const FONT_FAMILIES = [
+  { label: "Aptos (default)", value: EMAIL_FONT_STACK },
   {
     label: "System",
     value:
@@ -338,6 +339,7 @@ export default function RichTextEditor({
         <textarea
           className="rte-code"
           rows={12}
+          spellCheck={false}
           value={codeText}
           onChange={(e) => setCodeText(e.target.value)}
         />
@@ -347,6 +349,8 @@ export default function RichTextEditor({
           className="rte-body"
           contentEditable
           suppressContentEditableWarning
+          spellCheck
+          lang="en"
           onInput={emit}
           onBlur={emit}
           onMouseUp={rememberSelection}

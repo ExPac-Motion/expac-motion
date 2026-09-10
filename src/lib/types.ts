@@ -28,6 +28,23 @@ export type ProfilePatch = Partial<
   Pick<Profile, "full_name" | "role" | "sales_revenue_target" | "sales_gp_target">
 >;
 
+/** The four freight groups that get their own shipment-notification email. */
+export type ShipmentModeKey = "air" | "sea" | "courier" | "road";
+
+export interface ShipmentCommsTemplate {
+  /** Email subject line (merge codes allowed). */
+  subject: string;
+  /** Plain-text email body (merge codes allowed). */
+  body: string;
+}
+
+/** Per-mode overrides of the built-in shipment-notification templates.
+ *  Stored as a jsonb blob on company_settings; missing keys / fields fall
+ *  back to the defaults in mailTemplates.ts. */
+export type ShipmentCommsConfig = Partial<
+  Record<ShipmentModeKey, Partial<ShipmentCommsTemplate>>
+>;
+
 export interface CompanySettings {
   id: number;
   legal_name: string;
@@ -49,6 +66,8 @@ export interface CompanySettings {
   mail_sender_name: string;
   mail_reply_to: string;
   mail_signature_html: string;
+  /** Per-mode shipment-notification template overrides. */
+  shipment_comms: ShipmentCommsConfig;
   updated_at: string;
 }
 export type CompanySettingsPatch = Partial<

@@ -48,12 +48,12 @@ const NAV: NavModule[] = [
     to: "/quotes",
     label: "Quotations",
     children: [
+      { to: "/quotes", label: "All Quotes" },
       { to: "/quotes?status=open", label: "New Lead" },
       { to: "/quotes?status=sent", label: "Quote Sent" },
       { to: "/quotes?status=accepted", label: "Quote Accepted" },
       { to: "/quotes?status=completed", label: "Completed" },
       { to: "/quotes?status=lost", label: "Not Proceeding" },
-      { to: "/quotes", label: "All Quotes" },
     ],
   },
   { to: "/import-vat-duty", label: "Customs Charges" },

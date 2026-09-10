@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
+import MergeCodeMenu from "./MergeCodeMenu";
 import RichTextEditor from "./RichTextEditor";
 import { useToast } from "./Toast";
 import {
@@ -8,7 +9,11 @@ import {
   useUploadMailAsset,
 } from "../lib/hooks";
 import { sendMail } from "../lib/mail";
-import { htmlToText, resolveMergeFields } from "../lib/mailMerge";
+import {
+  htmlToText,
+  resolveMergeFields,
+  type MergeContext,
+} from "../lib/mailMerge";
 
 /**
  * Compose-and-send a one-off email to a customer / contact, straight from a
@@ -19,11 +24,14 @@ export default function QuickMailModal({
   to,
   company,
   name,
+  merge,
   onClose,
 }: {
   to: string | null | undefined;
   company: string;
   name?: string | null;
+  /** Extra merge-code values for this record (shipment no, lane, etc.). */
+  merge?: MergeContext;
   onClose: () => void;
 }) {
   const { data: templates } = useMailTemplates();
@@ -31,32 +39,56 @@ export default function QuickMailModal({
   const uploadAsset = useUploadMailAsset();
   const { toast, error: toastError } = useToast();
   const [subject, setSubject] = useState("");
+  const [cc, setCc] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const subjectRef = useRef<HTMLInputElement>(null);
 
-  const mergeCtx = {
+  const sig = settings?.mail_signature_html?.trim() || "";
+  const withSig = (html: string) => (sig ? `${html}<br><br>${sig}` : html);
+
+  // Seed the editor with the saved signature once settings resolve, so it is
+  // visible in the message body and the operator can edit or delete it before
+  // sending. Only seeds an untouched (empty) body.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || !settings) return;
+    seeded.current = true;
+    setBody((b) => (b.trim() ? b : sig ? `<br><br>${sig}` : b));
+  }, [settings, sig]);
+
+  const mergeCtx: MergeContext = {
     name: name || company,
     company,
+    customerName: company,
     unsubscribeUrl: `${window.location.origin}/unsubscribe`,
+    ...merge,
   };
 
   function applyTemplate(id: string) {
     const t = templates?.find((x) => x.id === id);
     if (!t) return;
     setSubject(t.subject);
-    setBody(t.body);
+    setBody(withSig(t.body));
   }
 
   async function onSend() {
     if (!to) return toastError("This customer has no email address");
     if (!subject.trim()) return toastError("Subject is required");
+    const ccList = cc
+      .split(/[,;\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const badCc = ccList.find((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+    if (badCc) return toastError(`Not a valid CC address: ${badCc}`);
     setSending(true);
     try {
-      let html = resolveMergeFields(body, mergeCtx);
-      const sig = settings?.mail_signature_html?.trim();
-      if (sig) html += `<br><br>${sig}`;
+      // The signature already lives in the body (seeded on open), so it is not
+      // appended again here.
+      const html = resolveMergeFields(body, mergeCtx);
       await sendMail({
         to: [to],
+        cc: ccList.length ? ccList : undefined,
         subject: resolveMergeFields(subject.trim(), mergeCtx),
         html,
         text: htmlToText(html),
@@ -79,6 +111,15 @@ export default function QuickMailModal({
         <strong>{to || "— no email on this customer —"}</strong>
       </div>
       <div className="field">
+        <label>CC</label>
+        <input
+          value={cc}
+          onChange={(e) => setCc(e.target.value)}
+          placeholder="cc@example.com, another@example.com"
+        />
+        <span className="hint">Separate multiple addresses with a comma.</span>
+      </div>
+      <div className="field">
         <label>Start from a template (optional)</label>
         <select
           defaultValue=""
@@ -95,8 +136,15 @@ export default function QuickMailModal({
         </select>
       </div>
       <div className="field">
-        <label>Subject</label>
-        <input value={subject} onChange={(e) => setSubject(e.target.value)} />
+        <div className="merge-code-row">
+          <label>Subject</label>
+          <MergeCodeMenu targetRef={subjectRef} onChange={setSubject} />
+        </div>
+        <input
+          ref={subjectRef}
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
       </div>
       <div className="field">
         <label>Message</label>
@@ -106,8 +154,10 @@ export default function QuickMailModal({
           onUploadImage={(f) => uploadAsset.mutateAsync(f)}
         />
         <span className="hint">
-          Your saved signature is added automatically. Sends from{" "}
-          {settings?.mail_sender_name || "the configured sender"}.
+          {sig
+            ? "Your saved signature is included below — edit or remove it as needed. "
+            : ""}
+          Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>
       </div>
       <div

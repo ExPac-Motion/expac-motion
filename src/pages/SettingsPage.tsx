@@ -1,25 +1,45 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
+import MergeCodeMenu from "../components/MergeCodeMenu";
 import RichTextEditor from "../components/RichTextEditor";
 import { useToast } from "../components/Toast";
 import {
   useCompanySettings,
+  useJobs,
   useProfiles,
   useUpdateCompanySettings,
   useUpdateProfile,
   useUploadMailAsset,
 } from "../lib/hooks";
-import type { CompanySettingsPatch, Profile, UserRole } from "../lib/types";
+import { SHIPMENT_MERGE_CODES } from "../lib/mailMerge";
+import {
+  DEFAULT_SHIPMENT_COMMS,
+  renderShipmentEmail,
+  SHIPMENT_MODE_KEYS,
+  SHIPMENT_MODE_LABEL,
+  shipmentCommsTemplate,
+  shipmentModeKey,
+} from "../lib/mailTemplates";
+import type {
+  CompanySettingsPatch,
+  Job,
+  Profile,
+  ShipmentCommsConfig,
+  ShipmentCommsTemplate,
+  ShipmentModeKey,
+  UserRole,
+} from "../lib/types";
 import { formatDate } from "../lib/format";
 
-type Tab = "company" | "defaults" | "team" | "email";
+type Tab = "company" | "defaults" | "team" | "email" | "comms";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company Details" },
   { key: "defaults", label: "Quote Defaults" },
   { key: "team", label: "Team" },
   { key: "email", label: "Email" },
+  { key: "comms", label: "Shipment Comms" },
 ];
 
 export default function SettingsPage() {
@@ -45,6 +65,7 @@ export default function SettingsPage() {
         {tab === "defaults" && <DefaultsTab />}
         {tab === "team" && <TeamTab />}
         {tab === "email" && <EmailTab />}
+        {tab === "comms" && <ShipmentCommsTab />}
       </div>
     </>
   );
@@ -381,6 +402,219 @@ function EmailTab() {
             environment variables.
           </p>
         </div>
+      </div>
+    </>
+  );
+}
+
+function ShipmentCommsTab() {
+  const { data, isLoading, isError, error } = useCompanySettings();
+  const jobsQ = useJobs();
+
+  if (isLoading) return <Loading />;
+  if (isError || !data) return <ErrorNote error={error} />;
+
+  return (
+    <ShipmentCommsEditor
+      config={data.shipment_comms ?? {}}
+      jobs={jobsQ.data ?? []}
+    />
+  );
+}
+
+function ShipmentCommsEditor({
+  config,
+  jobs,
+}: {
+  config: ShipmentCommsConfig;
+  jobs: Job[];
+}) {
+  const update = useUpdateCompanySettings();
+  const { toast, error: toastError } = useToast();
+
+  const [drafts, setDrafts] = useState<
+    Record<ShipmentModeKey, ShipmentCommsTemplate>
+  >(
+    () =>
+      Object.fromEntries(
+        SHIPMENT_MODE_KEYS.map((k) => [k, shipmentCommsTemplate(k, config)]),
+      ) as Record<ShipmentModeKey, ShipmentCommsTemplate>,
+  );
+  const [activeKey, setActiveKey] = useState<ShipmentModeKey>("sea");
+  const [previewId, setPreviewId] = useState<string>("");
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  const draft = drafts[activeKey];
+  const setDraft = (patch: Partial<ShipmentCommsTemplate>) =>
+    setDrafts((d) => ({ ...d, [activeKey]: { ...d[activeKey], ...patch } }));
+
+  const modeJobs = useMemo(
+    () => jobs.filter((j) => shipmentModeKey(j.mode) === activeKey),
+    [jobs, activeKey],
+  );
+  const previewJob =
+    modeJobs.find((j) => j.id === previewId) ??
+    modeJobs[0] ??
+    jobs[0] ??
+    null;
+  const preview = previewJob
+    ? renderShipmentEmail(previewJob, draft, "")
+    : null;
+
+  const dft = DEFAULT_SHIPMENT_COMMS[activeKey];
+  const isDefault = draft.subject === dft.subject && draft.body === dft.body;
+
+  async function onSave() {
+    const next: ShipmentCommsConfig = {};
+    for (const k of SHIPMENT_MODE_KEYS) {
+      const base = DEFAULT_SHIPMENT_COMMS[k];
+      const cur = drafts[k];
+      if (cur.subject !== base.subject || cur.body !== base.body) {
+        next[k] = { subject: cur.subject, body: cur.body };
+      }
+    }
+    try {
+      await update.mutateAsync({ shipment_comms: next });
+      toast("Shipment comms templates saved");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not save");
+    }
+  }
+
+  return (
+    <>
+      <p className="muted" style={{ marginTop: 0 }}>
+        The customer update email sent from a shipment's Comms panel. Each
+        freight group has its own template — edit the wording and drop in{" "}
+        <code>{"{{ shipment.number }}"}</code>-style codes. The preview renders a
+        real shipment; missing values show blank.
+      </p>
+
+      <div
+        style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}
+      >
+        {SHIPMENT_MODE_KEYS.map((k) => (
+          <button
+            key={k}
+            className={`subnav-tab${activeKey === k ? " active" : ""}`}
+            onClick={() => setActiveKey(k)}
+          >
+            {SHIPMENT_MODE_LABEL[k]}
+          </button>
+        ))}
+      </div>
+
+      <div className="field">
+        <div className="merge-code-row">
+          <label>Subject</label>
+          <MergeCodeMenu
+            targetRef={subjectRef}
+            onChange={(v) => setDraft({ subject: v })}
+            codes={SHIPMENT_MERGE_CODES}
+          />
+        </div>
+        <input
+          ref={subjectRef}
+          value={draft.subject}
+          onChange={(e) => setDraft({ subject: e.target.value })}
+        />
+      </div>
+
+      <div className="field">
+        <div className="merge-code-row">
+          <label>Email body — {SHIPMENT_MODE_LABEL[activeKey]}</label>
+          <MergeCodeMenu
+            targetRef={bodyRef}
+            onChange={(v) => setDraft({ body: v })}
+            codes={SHIPMENT_MERGE_CODES}
+          />
+        </div>
+        <textarea
+          ref={bodyRef}
+          rows={20}
+          value={draft.body}
+          onChange={(e) => setDraft({ body: e.target.value })}
+          style={{
+            fontFamily: "ui-monospace, Consolas, monospace",
+            fontSize: "0.8rem",
+          }}
+        />
+        <span className="hint">
+          {isDefault ? (
+            "Using the built-in default."
+          ) : (
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setDraft({ ...dft })}
+            >
+              Reset this template to the default
+            </button>
+          )}
+        </span>
+      </div>
+
+      <div className="field">
+        <label>Preview against shipment</label>
+        <select
+          value={previewJob?.id ?? ""}
+          onChange={(e) => setPreviewId(e.target.value)}
+        >
+          {modeJobs.length === 0 && jobs.length > 0 && (
+            <option value="">
+              (no {SHIPMENT_MODE_LABEL[activeKey]} shipments yet — showing any)
+            </option>
+          )}
+          {(modeJobs.length ? modeJobs : jobs).map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.reference} — {j.client?.company ?? "—"}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {preview ? (
+        <div className="field">
+          <label>Preview</label>
+          <div
+            style={{
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              padding: 14,
+              background: "var(--white)",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>
+              {preview.subject}
+            </div>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                margin: 0,
+                fontFamily:
+                  "Aptos, 'Aptos Display', Calibri, 'Segoe UI', sans-serif",
+                fontSize: "11px",
+                lineHeight: 1.55,
+              }}
+            >
+              {preview.text}
+            </pre>
+          </div>
+        </div>
+      ) : (
+        <EmptyState>Add a shipment to see a preview.</EmptyState>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+        <button
+          type="button"
+          className="btn"
+          onClick={onSave}
+          disabled={update.isPending}
+        >
+          {update.isPending ? "Saving…" : "Save Shipment Comms"}
+        </button>
       </div>
     </>
   );

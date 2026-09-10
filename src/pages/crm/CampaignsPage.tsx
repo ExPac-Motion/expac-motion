@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Modal from "../../components/Modal";
+import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
 import {
   EmptyState,
@@ -177,6 +178,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const subjectRef = useRef<HTMLInputElement>(null);
   const [templateId, setTemplateId] = useState("");
   const [statusIds, setStatusIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -291,8 +293,15 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="field">
-        <label>Subject</label>
-        <input value={subject} onChange={(e) => setSubject(e.target.value)} />
+        <div className="merge-code-row">
+          <label>Subject</label>
+          <MergeCodeMenu targetRef={subjectRef} onChange={setSubject} />
+        </div>
+        <input
+          ref={subjectRef}
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
       </div>
       <div className="field">
         <label>Body</label>

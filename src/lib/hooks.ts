@@ -385,8 +385,13 @@ export function useSendMessage() {
       cc: string[];
     }) => {
       const { job, remarks, to, cc } = input;
-      const mail = buildShipmentEmail(job, undefined, remarks);
       const settings = await db.getCompanySettings().catch(() => null);
+      const mail = buildShipmentEmail(
+        job,
+        undefined,
+        remarks,
+        settings?.shipment_comms,
+      );
       try {
         const { id } = await sendMail({
           jobId: job.id,
