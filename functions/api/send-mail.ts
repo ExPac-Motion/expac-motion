@@ -23,15 +23,16 @@ function json(data, status) {
   });
 }
 
-// Default email typography — Aptos 11px, with a fallback stack for clients that
-// don't ship it. Kept in sync with src/lib/mailStyle.ts (that module is in the
-// Vite build and can't be imported here).
+// Default email typography — Aptos 11pt (matches Word / Outlook), with a
+// fallback stack for clients that don't ship Aptos. Kept in sync with
+// src/lib/mailStyle.ts (that module is in the Vite build and can't be imported
+// here).
 const EMAIL_FONT_STACK =
   "Aptos, 'Aptos Display', Calibri, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const EMAIL_BODY_STYLE =
-  "font-family:" + EMAIL_FONT_STACK + ";font-size:11px;line-height:1.55;color:#2e2e2e";
+  "font-family:" + EMAIL_FONT_STACK + ";font-size:11pt;line-height:1.55;color:#2e2e2e";
 
-/** Wrap composed body HTML so every outgoing email defaults to Aptos 11px.
+/** Wrap composed body HTML so every outgoing email defaults to Aptos 11pt.
  *  Idempotent — a body already wrapped by us is left alone. */
 function withDefaultFont(html) {
   if (!html) return html;

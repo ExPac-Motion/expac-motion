@@ -594,7 +594,7 @@ function ShipmentCommsEditor({
                 margin: 0,
                 fontFamily:
                   "Aptos, 'Aptos Display', Calibri, 'Segoe UI', sans-serif",
-                fontSize: "11px",
+                fontSize: "11pt",
                 lineHeight: 1.55,
               }}
             >

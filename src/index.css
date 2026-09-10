@@ -971,11 +971,11 @@ table.dt th.dt-sortable {
   max-height: 420px;
   overflow-y: auto;
   padding: 12px;
-  /* Default email writing font — Aptos 11px. Keep in sync with
-     src/lib/mailStyle.ts (EMAIL_FONT_STACK / EMAIL_FONT_SIZE_PX). */
+  /* Default email writing font — Aptos 11pt (matches Word / Outlook). Keep in
+     sync with src/lib/mailStyle.ts (EMAIL_FONT_STACK / EMAIL_FONT_SIZE). */
   font-family: Aptos, "Aptos Display", Calibri, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
-  font-size: 11px;
+  font-size: 11pt;
   line-height: 1.55;
 }
 .rte-body:focus {
@@ -1466,6 +1466,10 @@ table.dt th.dt-sortable {
 .charge-table th,
 .charge-table td {
   padding: 8px 6px;
+}
+/* Column headings in the blue used for form-field labels */
+.charge-table th {
+  color: rgb(36, 91, 198);
 }
 .charge-table input,
 .charge-table select {

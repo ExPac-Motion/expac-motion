@@ -14,10 +14,12 @@
 export const EMAIL_FONT_STACK =
   "Aptos, 'Aptos Display', Calibri, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-/** Normal writing size for email bodies. */
-export const EMAIL_FONT_SIZE_PX = 11;
+/** Normal writing size for email bodies. Points, to match Word / Outlook
+ *  (Aptos 11pt is the Office default) — email clients honour pt in inline
+ *  styles. Roughly 14.7px. */
+export const EMAIL_FONT_SIZE = "11pt";
 
 /** Inline style string for an email body wrapper. */
 export const EMAIL_BODY_STYLE =
-  `font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE_PX}px;` +
+  `font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};` +
   `line-height:1.55;color:#2e2e2e`;

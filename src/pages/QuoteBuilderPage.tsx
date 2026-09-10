@@ -22,6 +22,7 @@ import {
   groupByCategory,
   impliedMargin,
   insuranceAmount,
+  CUSTOMS_DUTY_CODE,
   CUSTOMS_VAT_CODE,
   SERVICE_FEE_CODES,
   serviceFeePrefillZar,
@@ -439,7 +440,8 @@ export default function QuoteBuilderPage() {
         const recompute =
           ("buy" in patch || "margin" in patch || "cur" in patch) &&
           !SERVICE_FEE_CODES.includes(mergedCode) &&
-          mergedCode !== CUSTOMS_VAT_CODE;
+          mergedCode !== CUSTOMS_VAT_CODE &&
+          mergedCode !== CUSTOMS_DUTY_CODE;
         if (recompute) {
           merged.sell = sellFromBuy(
             merged.buy,
@@ -480,6 +482,14 @@ export default function QuoteBuilderPage() {
         draft?.commercial_value,
       );
       patch.sell = prefill > 0 ? Number(prefill.toFixed(2)) : "";
+    }
+    // Customs Duty: sell-only disbursement — type the amount into Sell (R).
+    // Billed to the client at cost (no margin) and always zero-rated for VAT.
+    if (code === CUSTOMS_DUTY_CODE) {
+      patch.buy = 0;
+      patch.margin = 0;
+      patch.qty = 1;
+      patch.vat_pct = 0;
     }
     setLineFields(index, patch);
   }
@@ -1257,12 +1267,17 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
-                      // Sell-only lines — service fees (IN-01 / FW-01 / DIS-01 /
-                      // CU-05) and Customs VAT (CU-02, whole amount is VAT):
-                      // no buy cost, the figure is typed straight into Sell (R).
-                      const isServiceFee =
-                        SERVICE_FEE_CODES.includes(String(l.code ?? "")) ||
-                        String(l.code ?? "") === CUSTOMS_VAT_CODE;
+                      // Sell-only lines — the figure is typed straight into
+                      // Sell (R), with Buy / Margin / Sell ($) / Total Buy
+                      // dashed: service fees (IN-01 / FW-01 / DIS-01 / CU-05),
+                      // Customs VAT (CU-02, whole amount is VAT) and Customs
+                      // Duty (CU-03, a pass-through disbursement, zero-rated).
+                      const code = String(l.code ?? "");
+                      const isSellOnly =
+                        SERVICE_FEE_CODES.includes(code) ||
+                        code === CUSTOMS_VAT_CODE ||
+                        code === CUSTOMS_DUTY_CODE;
+                      const isCustomsDuty = code === CUSTOMS_DUTY_CODE;
                       return (
                       <tr key={i}>
                         <td className="c-code">
@@ -1351,14 +1366,14 @@ export default function QuoteBuilderPage() {
                           />
                         </td>
                         <td className="num">
-                          {isServiceFee ? (
+                          {isSellOnly ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value=""
                               placeholder="—"
-                              title="Service fee — no buy cost, priced only in Sell (R)"
+                              title="Sell-only line — no buy cost, priced only in Sell (R)"
                             />
                           ) : (
                             <input
@@ -1370,14 +1385,14 @@ export default function QuoteBuilderPage() {
                           )}
                         </td>
                         <td className="num">
-                          {isServiceFee ? (
+                          {isSellOnly ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value=""
                               placeholder="—"
-                              title="Service fee — no markup, priced only in Sell (R)"
+                              title="Sell-only line — no markup, priced only in Sell (R)"
                             />
                           ) : (
                             <input
@@ -1389,23 +1404,35 @@ export default function QuoteBuilderPage() {
                           )}
                         </td>
                         <td className="num">
-                          <input
-                            type="number"
-                            step="any"
-                            value={String(l.vat_pct ?? "")}
-                            onChange={(e) => setLine(i, "vat_pct", e.target.value)}
-                            title="VAT % on this line's ZAR total (0 = zero-rated)"
-                          />
+                          {isCustomsDuty ? (
+                            <input
+                              type="number"
+                              readOnly
+                              tabIndex={-1}
+                              value="0"
+                              title="Customs Duty is always zero-rated for VAT"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              step="any"
+                              value={String(l.vat_pct ?? "")}
+                              onChange={(e) =>
+                                setLine(i, "vat_pct", e.target.value)
+                              }
+                              title="VAT % on this line's ZAR total (0 = zero-rated)"
+                            />
+                          )}
                         </td>
                         <td className="num">
-                          {isServiceFee ? (
+                          {isSellOnly ? (
                             <input
                               type="number"
                               readOnly
                               tabIndex={-1}
                               value=""
                               placeholder="—"
-                              title="Service fee — priced directly in Sell (R)"
+                              title="Sell-only line — priced directly in Sell (R)"
                             />
                           ) : (
                             <input
@@ -1418,7 +1445,7 @@ export default function QuoteBuilderPage() {
                           )}
                         </td>
                         <td className="num">
-                          {isServiceFee ? (
+                          {isSellOnly ? (
                             <input
                               type="number"
                               step="any"
@@ -1427,7 +1454,7 @@ export default function QuoteBuilderPage() {
                               onChange={(e) =>
                                 setLineFields(i, { sell: e.target.value })
                               }
-                              title="Service fee — type the sell (R) amount"
+                              title="Sell-only line — type the Sell (R) amount"
                             />
                           ) : (
                             <input
@@ -1443,11 +1470,11 @@ export default function QuoteBuilderPage() {
                           <input
                             type="number"
                             readOnly
-                            value={isServiceFee ? "" : lineBuyTotal(l).toFixed(2)}
-                            placeholder={isServiceFee ? "—" : undefined}
+                            value={isSellOnly ? "" : lineBuyTotal(l).toFixed(2)}
+                            placeholder={isSellOnly ? "—" : undefined}
                             title={
-                              isServiceFee
-                                ? "Service fee — no buy cost"
+                              isSellOnly
+                                ? "Sell-only line — no buy cost"
                                 : `Qty × Buy in ${l.cur} — foreign purchase total`
                             }
                             tabIndex={-1}

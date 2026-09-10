@@ -2,7 +2,7 @@ import { COMPANY } from "./company";
 import { formatDate } from "./format";
 import { LOCODES } from "./locodes";
 import { resolveMergeFields, type MergeContext } from "./mailMerge";
-import { EMAIL_FONT_STACK } from "./mailStyle";
+import { EMAIL_FONT_SIZE, EMAIL_FONT_STACK } from "./mailStyle";
 import type {
   Job,
   JobTracking,
@@ -192,10 +192,10 @@ export function renderShipmentEmail(
 export function shipmentEmailHtml(text: string): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return `<div style="font-family:${EMAIL_FONT_STACK};font-size:11px;color:#2e2e2e;line-height:1.55;max-width:640px">
+  return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   <img src="https://expac.co.za${COMPANY.logoPrint}" alt="EXPAC Forwarding" style="max-height:46px;margin-bottom:8px" />
   <div style="border-top:3px solid #8cbc43;margin:6px 0 14px"></div>
-  <pre style="font-family:${EMAIL_FONT_STACK};font-size:11px;white-space:pre-wrap;margin:0">${esc(text)}</pre>
+  <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${esc(text)}</pre>
 </div>`;
 }
 

@@ -300,6 +300,14 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
     };
   }
 
+  // Customs Duty (CU-03): a recoverable disbursement. The operator types the
+  // amount once into Sell (R); it is billed to the client at cost (buy mirrors
+  // sell, so the line makes no margin) and is always zero-rated for VAT.
+  if (line.code === CUSTOMS_DUTY_CODE) {
+    const amt = Number(line.sell) || 0;
+    return { ...line, qty, buy: amt, margin: 0, vat_pct: 0, sell: amt };
+  }
+
   return {
     ...line,
     qty,
