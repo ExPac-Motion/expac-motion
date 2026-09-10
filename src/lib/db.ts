@@ -16,6 +16,9 @@ import type {
   JobInsert,
   JobPatch,
   JobTracking,
+  TrackingEvent,
+  ClientJobTracking,
+  ClientTrackingEvent,
   Message,
   MessagePatch,
   Milestone,
@@ -631,6 +634,16 @@ export async function upsertJobTracking(
   );
 }
 
+export async function listTrackingEvents(jobId: string): Promise<TrackingEvent[]> {
+  return unwrap<TrackingEvent[]>(
+    await supabase
+      .from("tracking_events")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("occurred_at", { ascending: true }),
+  );
+}
+
 /* ---------- Shipment Comms (messages) ---------- */
 export async function listMessages(jobId: string): Promise<Message[]> {
   return unwrap<Message[]>(
@@ -740,6 +753,24 @@ export async function listMyJobs(): Promise<ClientJob[]> {
       .from("client_jobs")
       .select("*")
       .order("created_at", { ascending: false }),
+  );
+}
+
+export async function listMyJobTracking(): Promise<ClientJobTracking[]> {
+  return unwrap<ClientJobTracking[]>(
+    await supabase.from("client_job_tracking").select("*"),
+  );
+}
+
+export async function listMyTrackingEvents(
+  jobId: string,
+): Promise<ClientTrackingEvent[]> {
+  return unwrap<ClientTrackingEvent[]>(
+    await supabase
+      .from("client_tracking_events")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("occurred_at", { ascending: true }),
   );
 }
 

@@ -314,3 +314,13 @@ export function trackingRowFrom(
     synced_at: new Date().toISOString(),
   };
 }
+
+/* ================================================================== *
+ *  Push-first tracking
+ *
+ *  Ocean + air now run push-first: register the shipment once with
+ *  ShipsGo (the existing fetchTracking() POST via /api/track), then
+ *  functions/api/tracking-webhook.ts folds every ShipsGo update into
+ *  job_tracking + tracking_events. Nothing polls; the manual Refresh
+ *  stays only as a re-sync fallback.
+ * ================================================================== */

@@ -17,11 +17,13 @@
     "@tanstack/react-query": "^5.102.8",
     "html2canvas-pro": "^1.6.7",
     "jspdf": "^4.2.1",
+    "leaflet": "^1.9.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

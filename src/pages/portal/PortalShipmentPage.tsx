@@ -5,11 +5,14 @@ import { useToast } from "../../components/Toast";
 import {
   useMyDocuments,
   useMyJobs,
+  useMyJobTracking,
   useMyMessages,
+  useMyTrackingEvents,
   useSendMyMessage,
 } from "../../lib/hooks";
 import { getMyDocumentUrl } from "../../lib/db";
-import { formatDate, portCode } from "../../lib/format";
+import { formatDate, formatDateTime, portCode } from "../../lib/format";
+import TrackingMap from "../../components/TrackingMap";
 
 export default function PortalShipmentPage() {
   const { id } = useParams();
@@ -17,6 +20,10 @@ export default function PortalShipmentPage() {
   const { toast, error: toastError } = useToast();
   const jobsQ = useMyJobs();
   const job = jobsQ.data?.find((j) => j.id === id);
+  const trackingQ = useMyJobTracking();
+  const tracking = trackingQ.data?.find((t) => t.job_id === id);
+  const trkEventsQ = useMyTrackingEvents(id);
+  const trkEvents = trkEventsQ.data ?? [];
   const docsQ = useMyDocuments(id);
   const messagesQ = useMyMessages(id);
   const sendMessage = useSendMyMessage();
@@ -63,18 +70,104 @@ export default function PortalShipmentPage() {
       <div className="panel">
         <div className="grid2">
           <Field label="Mode" value={job.mode} />
-          <Field label="Status" value={job.shipment_status || job.milestone} />
+          <Field
+            label="Status"
+            value={tracking?.status || job.shipment_status || job.milestone}
+          />
           <Field label="Shipper" value={job.supplier_company ?? "—"} />
-          <Field label="Carrier" value={job.carrier_name || "—"} />
+          <Field
+            label="Carrier"
+            value={tracking?.carrier || job.carrier_name || "—"}
+          />
+          <Field
+            label="Vessel"
+            value={tracking?.vessel_name || job.vessel_name || "—"}
+          />
           <Field label="Port of Load" value={portCode(job.origin)} />
           <Field label="Port of Discharge" value={portCode(job.destination)} />
-          <Field label="ETD" value={formatDate(job.etd)} />
-          <Field label="ETA" value={formatDate(job.eta)} />
+          <Field
+            label="ETD"
+            value={formatDate(tracking?.etd || job.etd)}
+          />
+          <Field
+            label="ETA"
+            value={formatDate(
+              tracking?.pod_ata || tracking?.pod_eta || tracking?.eta || job.eta,
+            )}
+          />
           <Field
             label="Provisional Delivery"
             value={formatDate(job.provisional_delivery_date)}
           />
         </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Live Tracking</h2>
+          </div>
+        </div>
+        {!tracking ? (
+          <EmptyState>
+            Tracking will appear here once the shipment is on the water / in the
+            air.
+          </EmptyState>
+        ) : (
+          <>
+            <TrackingMap
+              height={300}
+              pol={
+                tracking.pol_lat != null
+                  ? { lat: tracking.pol_lat, lon: tracking.pol_lon, label: tracking.pol }
+                  : null
+              }
+              pod={
+                tracking.pod_lat != null
+                  ? { lat: tracking.pod_lat, lon: tracking.pod_lon, label: tracking.pod }
+                  : null
+              }
+              vessel={
+                tracking.vessel_lat != null
+                  ? {
+                      lat: tracking.vessel_lat,
+                      lon: tracking.vessel_lon,
+                      label: tracking.vessel_name,
+                      at: tracking.position_at,
+                    }
+                  : null
+              }
+              events={trkEvents.map((e) => ({
+                lat: e.lat,
+                lon: e.lon,
+                description: e.description,
+                occurred_at: e.occurred_at,
+                is_actual: e.is_actual,
+              }))}
+            />
+            {trkEvents.length > 0 && (
+              <ol className="trk-timeline" style={{ marginTop: 12 }}>
+                {trkEvents
+                  .slice()
+                  .reverse()
+                  .map((e) => (
+                    <li key={e.id} className={e.is_actual ? "done" : ""}>
+                      <span className="trk-when">
+                        {formatDateTime(e.occurred_at)}
+                      </span>
+                      <span className="trk-where">
+                        {e.description || e.location || "—"}
+                        {e.vessel_name && (
+                          <span className="muted small"> · {e.vessel_name}</span>
+                        )}
+                      </span>
+                      <span className="trk-tick">{e.is_actual ? "✓" : "•"}</span>
+                    </li>
+                  ))}
+              </ol>
+            )}
+          </>
+        )}
       </div>
 
       <div className="panel">

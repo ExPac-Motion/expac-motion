@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import * as db from "./db";
+import { supabase } from "./supabase";
 import type {
   Client,
   CompanySettingsPatch,
@@ -348,9 +350,52 @@ export function useDeleteOpsTask() {
 }
 
 /* ---------- Ops Control Tower: Live Tracking ---------- */
+
+/** Live subscription: the ShipsGo webhook writes job_tracking / tracking_events
+ *  with the service-role key, so we lean on Supabase Realtime to refresh the
+ *  affected queries the instant a push lands (no manual Refresh). */
+function useTrackingRealtime(queryKeys: string[][]) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    // Unique channel name per mount — supabase-js caches channels by name and
+    // rejects .on() after .subscribe(), which StrictMode's double-mount trips.
+    const bump = () =>
+      queryKeys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
+    // Random channel name per mount — supabase-js caches channels by name and
+    // throws if .on() runs on one already subscribed (StrictMode double-mount).
+    const channel = supabase
+      .channel(`tracking-live-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_tracking" },
+        bump,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tracking_events" },
+        bump,
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
 export function useJobTracking() {
+  useTrackingRealtime([["job_tracking"], ["tracking_events"]]);
   return useQuery({ queryKey: ["job_tracking"], queryFn: db.listJobTracking });
 }
+
+export function useTrackingEvents(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["tracking_events", jobId],
+    queryFn: () => db.listTrackingEvents(jobId as string),
+    enabled: Boolean(jobId),
+  });
+}
+
 export function useRefreshTracking() {
   const qc = useQueryClient();
   return useMutation({
@@ -484,6 +529,23 @@ export function useMyQuoteLines(quoteId: string | undefined) {
 }
 export function useMyJobs() {
   return useQuery({ queryKey: ["my_jobs"], queryFn: db.listMyJobs });
+}
+/** Portal tracking — polled (a client can't subscribe to job_tracking under
+ *  RLS; refetching every 2 min is plenty for a customer view). */
+export function useMyJobTracking() {
+  return useQuery({
+    queryKey: ["my_job_tracking"],
+    queryFn: db.listMyJobTracking,
+    refetchInterval: 120_000,
+  });
+}
+export function useMyTrackingEvents(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["my_tracking_events", jobId],
+    queryFn: () => db.listMyTrackingEvents(jobId as string),
+    enabled: Boolean(jobId),
+    refetchInterval: 120_000,
+  });
 }
 export function useMyMessages(jobId: string | undefined) {
   return useQuery({

@@ -4,14 +4,15 @@ import { EmptyState, ErrorNote, Loading } from "../../components/common";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
-import { useJobTracking, useJobs, useRefreshTracking } from "../../lib/hooks";
-import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import {
-  etaSlipped,
-  shipsgoEmbedUrl,
-  trackableRef,
-  trackingTone,
-} from "../../lib/tracking";
+  useJobTracking,
+  useJobs,
+  useRefreshTracking,
+  useTrackingEvents,
+} from "../../lib/hooks";
+import { formatDate, formatDateTime, portCode } from "../../lib/format";
+import { etaSlipped, trackableRef, trackingTone } from "../../lib/tracking";
+import TrackingMap from "../../components/TrackingMap";
 import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
 
 export default function LiveTracking() {
@@ -216,9 +217,10 @@ export default function LiveTracking() {
           </div>
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
-          Data is pulled from ShipsGo on demand. The live pull runs on the
-          deployed site; here in dev the last saved result is shown. Click a row
-          for the live map.
+          ShipsGo pushes updates automatically once a shipment is registered —
+          this board and the customer portal refresh live as they arrive.
+          <strong> Refresh</strong> registers a new number / forces a re-sync
+          (runs on the deployed site). Click a row for the live map.
         </p>
       </div>
 
@@ -279,6 +281,8 @@ function TrackMapModal({
   onClose: () => void;
 }) {
   const ref = trackableRef(job);
+  const eventsQ = useTrackingEvents(job.id);
+  const events = eventsQ.data ?? [];
   return (
     <Modal
       title={`${job.reference} — live tracking`}
@@ -292,23 +296,40 @@ function TrackMapModal({
         </p>
       }
     >
-      <iframe
-        className="trk-map"
-        src={shipsgoEmbedUrl()}
-        title="ShipsGo live map"
-        loading="lazy"
+      <TrackingMap
+        height={440}
+        pol={
+          tracking?.pol_lat != null
+            ? { lat: tracking.pol_lat, lon: tracking.pol_lon, label: tracking.pol }
+            : null
+        }
+        pod={
+          tracking?.pod_lat != null
+            ? { lat: tracking.pod_lat, lon: tracking.pod_lon, label: tracking.pod }
+            : null
+        }
+        vessel={
+          tracking?.vessel_lat != null
+            ? {
+                lat: tracking.vessel_lat,
+                lon: tracking.vessel_lon,
+                label: tracking.vessel_name,
+                at: tracking.position_at,
+              }
+            : null
+        }
+        events={events.map((e) => ({
+          lat: e.lat,
+          lon: e.lon,
+          description: e.description,
+          occurred_at: e.occurred_at,
+          is_actual: e.is_actual,
+        }))}
       />
-      {ref && (
-        <p className="hint" style={{ margin: "8px 0 0" }}>
-          Open the panel (top-right of the map) and search{" "}
-          <strong>{ref.value}</strong> under{" "}
-          <strong>{ref.type === "air" ? "AIR" : "OCEAN"}</strong> to plot this
-          shipment.
-        </p>
-      )}
       <TrackDetail
         job={job}
         tracking={tracking}
+        events={events}
         refValue={ref?.value ?? ""}
       />
     </Modal>
@@ -318,23 +339,44 @@ function TrackMapModal({
 function TrackDetail({
   job,
   tracking,
+  events,
   refValue,
 }: {
   job: Job;
   tracking: JobTracking | undefined;
+  events: import("../../lib/types").TrackingEvent[];
   refValue: string;
 }) {
   if (!tracking) {
     return (
       <div className="trk-detail">
         <p className="hint">
-          No pull yet. Hit <strong>Refresh</strong> on the deployed site to fetch
-          the movements for {refValue}.
+          Not registered yet. Hit <strong>Refresh</strong> on the deployed site
+          to register {refValue} with ShipsGo — after that, updates arrive
+          automatically.
         </p>
       </div>
     );
   }
-  const moves = tracking.movements ?? [];
+  // Prefer the tracking_events table; fall back to the legacy movements blob.
+  const rows =
+    events.length > 0
+      ? events.map((e) => ({
+          code: e.event_code || "",
+          date: e.occurred_at,
+          description: e.description || e.location || "",
+          vessel: e.vessel_name,
+          voyage: e.voyage,
+          done: e.is_actual,
+        }))
+      : (tracking.movements ?? []).map((m) => ({
+          code: m.code,
+          date: m.date,
+          description: m.description || m.location || "",
+          vessel: m.vessel,
+          voyage: m.voyage,
+          done: m.done,
+        }));
   return (
     <div className="trk-detail">
       <div className="trk-detail-head">
@@ -344,9 +386,11 @@ function TrackDetail({
         <span>
           <b>Carrier</b> {tracking.carrier ?? "—"}
         </span>
-        <span>
-          <b>Reference</b> {job.reference}
-        </span>
+        {tracking.vessel_name && (
+          <span>
+            <b>Vessel</b> {tracking.vessel_name}
+          </span>
+        )}
         <span>
           <b>{tracking.ref_type === "air" ? "AWB" : "Container / BL"}</b> {refValue}
         </span>
@@ -359,19 +403,21 @@ function TrackDetail({
         <div className="trk-line" />
         <div>
           <div className="trk-port">{tracking.pod ?? portCode(job.destination)}</div>
-          <div className="hint">{formatDate(tracking.eta)}</div>
+          <div className="hint">
+            {formatDate(tracking.pod_eta ?? tracking.eta)}
+          </div>
         </div>
       </div>
-      {moves.length === 0 ? (
-        <p className="hint">No movements recorded.</p>
+      {rows.length === 0 ? (
+        <p className="hint">No movements recorded yet.</p>
       ) : (
         <ol className="trk-timeline">
-          {moves.map((m, i) => (
+          {rows.map((m, i) => (
             <li key={i} className={m.done ? "done" : ""}>
               <span className="trk-code">{m.code || "—"}</span>
               <span className="trk-when">{formatDate(m.date)}</span>
               <span className="trk-where">
-                {m.description || m.location || "—"}
+                {m.description || "—"}
                 {m.vessel && <span className="hint"> · {m.vessel}</span>}
                 {m.voyage && <span className="hint"> {m.voyage}</span>}
               </span>

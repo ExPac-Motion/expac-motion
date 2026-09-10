@@ -912,6 +912,8 @@ export interface Job {
   provisional_delivery_date: string | null;
   /** Carrier / airline name, seeded from the quote; shown on the board. */
   carrier_name: string | null;
+  /** Carrier SCAC — set for a bill-of-lading tracking registration. */
+  scac: string | null;
   etd: string | null;
   eta: string | null;
   created_at: string;
@@ -1066,17 +1068,95 @@ export interface JobTracking {
   ref_type: "ocean" | "air" | null;
   ref_value: string | null;
   carrier: string | null;
+  /** Legacy ShipsGo id — kept for old rows, no longer written. */
   shipsgo_id: string | null;
+  /** Tracking provider (e.g. "terminal49"). */
+  provider: string | null;
+  /** The provider's shipment id, reused on every push. */
+  provider_ref: string | null;
+  /** Registration lifecycle: pending | registered | failed. */
+  tracking_status: string | null;
+  registered_at: string | null;
   status: string | null;
   pol: string | null;
   pod: string | null;
   etd: string | null;
   eta: string | null;
+  /** Precise carrier ETA / actual arrival at the port of discharge. */
+  pod_eta: string | null;
+  pod_ata: string | null;
+  vessel_name: string | null;
+  vessel_imo: string | null;
+  voyage: string | null;
+  pol_lat: number | null;
+  pol_lon: number | null;
+  pod_lat: number | null;
+  pod_lon: number | null;
+  vessel_lat: number | null;
+  vessel_lon: number | null;
+  position_at: string | null;
   last_event: string | null;
+  /** Legacy blob — new events land in the tracking_events table. */
   movements: TrackingMovement[];
   raw: unknown;
   synced_at: string | null;
   created_at: string;
+}
+
+export interface TrackingEvent {
+  id: string;
+  job_id: string;
+  provider: string;
+  provider_event_id: string | null;
+  event_code: string | null;
+  description: string | null;
+  location: string | null;
+  locode: string | null;
+  lat: number | null;
+  lon: number | null;
+  vessel_name: string | null;
+  voyage: string | null;
+  occurred_at: string | null;
+  is_actual: boolean;
+  created_at: string;
+}
+
+/** Portal-safe tracking view (client_job_tracking) — no internal fields. */
+export interface ClientJobTracking {
+  job_id: string;
+  status: string | null;
+  carrier: string | null;
+  pol: string | null;
+  pod: string | null;
+  etd: string | null;
+  eta: string | null;
+  pod_eta: string | null;
+  pod_ata: string | null;
+  last_event: string | null;
+  vessel_name: string | null;
+  voyage: string | null;
+  pol_lat: number | null;
+  pol_lon: number | null;
+  pod_lat: number | null;
+  pod_lon: number | null;
+  vessel_lat: number | null;
+  vessel_lon: number | null;
+  position_at: string | null;
+  synced_at: string | null;
+}
+
+export interface ClientTrackingEvent {
+  id: string;
+  job_id: string;
+  event_code: string | null;
+  description: string | null;
+  location: string | null;
+  lat: number | null;
+  lon: number | null;
+  vessel_name: string | null;
+  voyage: string | null;
+  occurred_at: string | null;
+  is_actual: boolean;
 }
 
 /** Draft shape used by the quote builder before a row exists in the DB. */
