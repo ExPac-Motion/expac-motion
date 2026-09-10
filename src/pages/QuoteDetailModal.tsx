@@ -129,7 +129,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         <Field label="Mode" value={q.mode} />
         <Field label="Incoterms" value={q.incoterms || "—"} />
         <div>
-          <div className="hint" style={{ marginBottom: 4 }}>
+          <div className="qd-label" style={{ marginBottom: 4 }}>
             Status
           </div>
           <StatusBadge status={q.status} />
@@ -373,7 +373,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="hint" style={{ marginBottom: 4 }}>
+      <div className="qd-label" style={{ marginBottom: 4 }}>
         {label}
       </div>
       <strong>{value}</strong>

@@ -819,7 +819,9 @@ table.dt th.dt-sortable {
   gap: 6px;
   margin-bottom: 14px;
 }
-.field label {
+.field label,
+/* read-only field labels in the Quote view popup — same blue as form labels */
+.qd-label {
   font-size: 0.75rem;
   font-weight: 700;
   /* blue so the field labels stand out from the black values when scanning */
