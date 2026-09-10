@@ -123,7 +123,18 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         </p>
       }
     >
+      {/* Field order mirrors the Quote Builder's Shipment Information grid. */}
       <div className="grid4" style={{ margin: "4px 0 14px" }}>
+        <Field label="Shipment No" value={q.reference} />
+        <Field label="Mode" value={q.mode} />
+        <Field label="Incoterms" value={q.incoterms || "—"} />
+        <div>
+          <div className="hint" style={{ marginBottom: 4 }}>
+            Status
+          </div>
+          <StatusBadge status={q.status} />
+        </div>
+
         <Field
           label="Customer/Importer"
           value={
@@ -131,44 +142,43 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
             (q.lead?.company ? `${q.lead.company} (lead)` : "—")
           }
         />
-        <Field label="Shipper/Exporter" value={q.supplier?.company ?? "—"} />
-        <Field label="Agent (internal)" value={q.agent?.company ?? "—"} />
-        <Field
-          label="Transporter (internal)"
-          value={q.transporter?.company ?? "—"}
-        />
-        <Field
-          label="Clearing Agent (internal)"
-          value={q.clearing_agent?.company ?? "—"}
-        />
-        <Field label="Shipment No" value={q.reference} />
         <Field label="Reference" value={q.customer_reference || "—"} />
-        <Field label="Valid Until" value={formatDate(q.valid_until)} />
+        <Field label="Shipper/Exporter" value={q.supplier?.company ?? "—"} />
+        <Field label="Delivery terms" value={q.delivery_terms || "—"} />
+
         <Field label="Commercial Value ($)" value={usd(q.commercial_value)} />
-        <Field label="Incoterms" value={q.incoterms || "—"} />
         <Field label="Insurance Amount ($)" value={usd(q.insurance_amount)} />
         <Field label="Commodity" value={q.commodity || "—"} />
-        <Field label="Mode" value={q.mode} />
-        <Field label="Delivery terms" value={q.delivery_terms || "—"} />
+        <Field label="Valid Until" value={formatDate(q.valid_until)} />
+
+        <Field
+          label="Destination/Port of Discharge"
+          value={q.destination || "—"}
+        />
         <Field label="Origin/Port of Load" value={q.origin || "—"} />
-        <Field label="Destination/Port of Discharge" value={q.destination || "—"} />
-        <Field label="Vessel Name" value={q.vessel_name || "—"} />
-        <Field label="MBL No" value={q.mbl_no || "—"} />
-        <Field label="HBL No" value={q.hbl_no || "—"} />
-        <Field label="Container Number" value={q.container_no || "—"} />
         <Field label="ETD" value={formatDate(q.etd)} />
         <Field label="ETA" value={formatDate(q.eta)} />
+
+        <Field label="Vessel Name" value={q.vessel_name || "—"} />
+        <Field label="Container Number" value={q.container_no || "—"} />
+        <Field label="MBL No" value={q.mbl_no || "—"} />
+        <Field label="HBL No" value={q.hbl_no || "—"} />
+
         <Field label="MAWB No" value={q.mawb_no || "—"} />
         <Field label="HAWB No" value={q.hawb_no || "—"} />
         <Field label="Flight No" value={q.flight_no || "—"} />
         <Field label="Flight Date" value={formatDate(q.flight_date)} />
+
+        <Field label="Agent (internal)" value={q.agent?.company ?? "—"} />
+        <Field
+          label="Clearing Agent (internal)"
+          value={q.clearing_agent?.company ?? "—"}
+        />
         <Field label="Agent/Airline Name" value={q.carrier_name || "—"} />
-        <div>
-          <div className="hint" style={{ marginBottom: 4 }}>
-            Status
-          </div>
-          <StatusBadge status={q.status} />
-        </div>
+        <Field
+          label="Transporter (internal)"
+          value={q.transporter?.company ?? "—"}
+        />
       </div>
 
       {packing.length > 0 && (
