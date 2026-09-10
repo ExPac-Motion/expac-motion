@@ -4,6 +4,7 @@ import MergeCodeMenu from "../../components/MergeCodeMenu";
 import { useToast } from "../../components/Toast";
 import {
   useAddNote,
+  useClientContacts,
   useCompanySettings,
   useMessages,
   useSendMessage,
@@ -40,11 +41,34 @@ export default function CommsPanel({ job }: { job: Job }) {
   const [ccText, setCcText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
 
-  const recipients: Recipient[] = [];
-  if (job.client?.email)
-    recipients.push({ label: "Customer", email: job.client.email });
-  if (job.supplier?.email)
-    recipients.push({ label: "Shipper", email: job.supplier.email });
+  const contactsQ = useClientContacts(job.client_id ?? undefined);
+
+  // Customer (primary + every extra contact with an email) then the shipper,
+  // de-duplicated by address.
+  const recipients = useMemo<Recipient[]>(() => {
+    const out: Recipient[] = [];
+    const seen = new Set<string>();
+    const add = (label: string, email: string | null | undefined) => {
+      const e = (email ?? "").trim();
+      if (!e || seen.has(e.toLowerCase())) return;
+      seen.add(e.toLowerCase());
+      out.push({ label, email: e });
+    };
+    add("Customer", job.client?.email);
+    for (const c of contactsQ.data ?? []) {
+      add(
+        `Customer · ${c.name}${c.role ? ` (${c.role})` : ""}`,
+        c.email,
+      );
+    }
+    add("Shipper", job.supplier?.email);
+    return out;
+  }, [job.client?.email, job.supplier?.email, contactsQ.data]);
+
+  const customerEmails = useMemo(
+    () => recipients.filter((r) => r.label.startsWith("Customer")).map((r) => r.email),
+    [recipients],
+  );
 
   const [checked, setChecked] = useState<Set<string>>(
     () => new Set(job.client?.email ? [job.client.email] : []),
@@ -135,6 +159,37 @@ export default function CommsPanel({ job }: { job: Job }) {
                 No email on the customer or shipper record.
               </span>
             )}
+            {customerEmails.length > 1 && (
+              <div className="hint" style={{ margin: "0 0 4px" }}>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() =>
+                    setChecked((prev) => {
+                      const next = new Set(prev);
+                      customerEmails.forEach((e) => next.add(e));
+                      return next;
+                    })
+                  }
+                >
+                  CC all customer contacts
+                </button>{" "}
+                ·{" "}
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() =>
+                    setChecked((prev) => {
+                      const next = new Set(prev);
+                      customerEmails.forEach((e) => next.delete(e));
+                      return next;
+                    })
+                  }
+                >
+                  clear
+                </button>
+              </div>
+            )}
             {recipients.map((r) => (
               <label key={r.email} className="check">
                 <input
@@ -165,6 +220,8 @@ export default function CommsPanel({ job }: { job: Job }) {
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Good day, …"
               rows={4}
+              spellCheck
+              lang="en"
             />
           </div>
           {showPreview && <pre className="msg-preview">{preview}</pre>}
@@ -189,6 +246,8 @@ export default function CommsPanel({ job }: { job: Job }) {
               onChange={(e) => setNote(e.target.value)}
               rows={4}
               placeholder="Not emailed to anyone."
+              spellCheck
+              lang="en"
             />
           </div>
           <button
