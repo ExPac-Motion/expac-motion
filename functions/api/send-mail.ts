@@ -11,7 +11,7 @@
  *      `x-cron-key` header instead of a user JWT)
  *
  * Request (POST /api/send-mail):
- *   { jobId, to: string[], cc?: string[], subject, html, text, fromName?, replyTo? }
+ *   { jobId, to: string[], cc?: string[], bcc?: string[], subject, html, text, fromName?, replyTo? }
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
@@ -74,6 +74,10 @@ export async function onRequestPost(context) {
 
   const to = Array.isArray(body.to) ? body.to.filter(Boolean) : [];
   const cc = Array.isArray(body.cc) ? body.cc.filter(Boolean) : [];
+  const bccIn = Array.isArray(body.bcc) ? body.bcc.filter(Boolean) : [];
+  // Drop any bcc address that's already a visible recipient.
+  const visible = new Set([...to, ...cc].map((a) => String(a).toLowerCase()));
+  const bcc = bccIn.filter((a) => !visible.has(String(a).toLowerCase()));
   if (to.length === 0) return json({ error: "No recipients." }, 400);
   if (!body.subject || (!body.html && !body.text)) {
     return json({ error: "subject and html/text are required." }, 400);
@@ -104,6 +108,7 @@ export async function onRequestPost(context) {
     headers: body.jobId ? { "X-Shipment-Id": String(body.jobId) } : undefined,
   };
   if (cc.length) payload.cc = cc;
+  if (bcc.length) payload.bcc = bcc;
 
   let res;
   try {

@@ -33,7 +33,7 @@ import type {
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
 import { buildShipmentEmail } from "./mailTemplates";
 import { resolveMergeFields, htmlToText } from "./mailMerge";
-import { sendMail } from "./mail";
+import { sendMail, SUPPORT_BCC } from "./mail";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -397,6 +397,7 @@ export function useSendMessage() {
           jobId: job.id,
           to,
           cc,
+          bcc: SUPPORT_BCC,
           subject: mail.subject,
           html: mail.html,
           text: mail.text,

@@ -4,6 +4,7 @@ export interface SendMailInput {
   jobId?: string;
   to: string[];
   cc?: string[];
+  bcc?: string[];
   subject: string;
   html: string;
   text: string;
@@ -11,6 +12,11 @@ export interface SendMailInput {
   fromName?: string;
   replyTo?: string;
 }
+
+/** Standing rule: support@ is blind-copied on every Shipment Comms message and
+ *  every Quick Mail (one-off customer / lead email). Campaigns and automated
+ *  follow-ups are excluded. */
+export const SUPPORT_BCC = ["support@expac.co.za"];
 
 interface SendMailResult {
   id?: string;

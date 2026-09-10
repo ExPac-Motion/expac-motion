@@ -40,7 +40,7 @@ import {
   useUploadMailAsset,
 } from "../../lib/hooks";
 import { createLeadContacts, listLeadContacts } from "../../lib/db";
-import { sendMail } from "../../lib/mail";
+import { sendMail, SUPPORT_BCC } from "../../lib/mail";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
 import { formatDate, normalizeWebsite } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
@@ -797,16 +797,17 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
   const subjectRef = useRef<HTMLInputElement>(null);
 
   const sig = settings?.mail_signature_html?.trim() || "";
-  const withSig = (html: string) => (sig ? `${html}<br><br>${sig}` : html);
+  const withSig = (html: string) => (sig ? `${html}<br>${sig}` : html);
 
   // Seed the editor with the saved signature once settings resolve, so it is
   // visible in the message body and the operator can edit or delete it before
-  // sending. Only seeds an untouched (empty) body.
+  // sending. One blank line above it to start typing. Only seeds an untouched
+  // (empty) body.
   const seeded = useRef(false);
   useEffect(() => {
     if (seeded.current || !settings) return;
     seeded.current = true;
-    setBody((b) => (b.trim() ? b : sig ? `<br><br>${sig}` : b));
+    setBody((b) => (b.trim() ? b : sig ? `<br>${sig}` : b));
   }, [settings, sig]);
 
   const mergeCtx = {
@@ -840,6 +841,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
       await sendMail({
         to: [lead.email],
         cc: ccList.length ? ccList : undefined,
+        bcc: SUPPORT_BCC,
         subject: resolveMergeFields(subject.trim(), mergeCtx),
         html,
         text: htmlToText(html),
