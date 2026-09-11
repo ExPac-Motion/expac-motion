@@ -1887,10 +1887,13 @@ table.dt th.dt-sortable {
 
 /* ---------- Public shipment-tracking page (/track) ---------- */
 .track-page {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: var(--paper);
 }
 .track-hero {
+  flex: none;
   background: var(--ink);
   padding: 48px 24px 40px;
 }
@@ -1929,6 +1932,7 @@ table.dt th.dt-sortable {
 }
 .track-content {
   position: relative;
+  flex: 1;
 }
 .track-content::before,
 .track-content::after {
