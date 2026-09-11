@@ -346,7 +346,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
       {
         key: "shipment_status",
-        header: "Shipment Status",
+        header: mode === "completed" ? "Shipment Status" : "Status",
         width: 170,
         sortValue: (j) =>
           SHIPMENT_STATUSES.indexOf(
