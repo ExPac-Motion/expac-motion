@@ -1720,7 +1720,10 @@ table.dt th.dt-sortable {
   min-width: 0;
   font-size: 1rem;
 }
-.value-currency-select {
+/* Two classes to out-specificity the base ".field select { width: 100% }"
+   rule — otherwise that wins (class+element beats a single class) and the
+   select swallows the whole row, squeezing the amount input to nothing. */
+.value-currency-row .value-currency-select {
   width: 64px;
   min-width: 64px;
   flex: 0 0 auto;
