@@ -708,6 +708,7 @@ function QuoteValueEditor({
 }) {
   const save = useSetQuoteOpportunityValue();
   const { toast, error: toastError } = useToast();
+  const [editing, setEditing] = useState(false);
   const [text, setText] = useState(manual != null ? String(manual) : "");
 
   // Re-sync if the stored value changes (another edit, a refetch).
@@ -718,6 +719,7 @@ function QuoteValueEditor({
   }
 
   async function commit() {
+    setEditing(false);
     const trimmed = text.trim();
     if (trimmed !== "" && !Number.isFinite(Number(trimmed))) {
       setText(manual != null ? String(manual) : "");
@@ -736,13 +738,18 @@ function QuoteValueEditor({
 
   return (
     <input
-      type="number"
-      step="any"
+      type="text"
       inputMode="decimal"
-      value={text}
+      // Editing shows the raw editable number; at rest it shows the
+      // formatted currency (a plain number input can't render "R"/commas).
+      value={editing ? text : manual != null ? money(manual) : ""}
       placeholder={money(computed)}
       title="Manual opportunity value — leave blank to use the quotation total"
       disabled={save.isPending}
+      onFocus={() => {
+        setEditing(true);
+        setText(manual != null ? String(manual) : "");
+      }}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
