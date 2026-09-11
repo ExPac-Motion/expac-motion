@@ -64,9 +64,16 @@ export default function LiveTracking() {
   async function onRefresh(job: Job) {
     setBusyId(job.id);
     try {
+      const existing = trackingByJob.get(job.id);
+      const ref = trackableRef(job);
+      // A stored ShipsGo id only applies to the number it was resolved
+      // against. If the container/AWB/MBL on the job changed since the last
+      // sync, the id is stale — force a fresh lookup by number instead of
+      // re-fetching whatever the old number pointed to.
+      const sameRef = !!ref && existing?.ref_value === ref.value;
       await refresh.mutateAsync({
         job,
-        shipsgoId: trackingByJob.get(job.id)?.shipsgo_id ?? null,
+        shipsgoId: sameRef ? (existing?.shipsgo_id ?? null) : null,
       });
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not refresh");
