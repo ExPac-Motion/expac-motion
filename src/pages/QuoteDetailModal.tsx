@@ -17,7 +17,7 @@ import {
   sellInCur,
   volumetricFactor,
 } from "../lib/calc";
-import { formatDate, money, plainAmount } from "../lib/format";
+import { currencyAmount, formatDate, money } from "../lib/format";
 import { WON_QUOTE_STATUSES } from "../lib/types";
 
 interface Props {
@@ -146,8 +146,14 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         <Field label="Shipper/Exporter" value={q.supplier?.company ?? "—"} />
         <Field label="Delivery terms" value={q.delivery_terms || "—"} />
 
-        <Field label="Commercial Value" value={plainAmount(q.commercial_value)} />
-        <Field label="Insurance Amount" value={plainAmount(q.insurance_amount)} />
+        <Field
+          label="Commercial Value"
+          value={currencyAmount(q.commercial_value, q.value_currency)}
+        />
+        <Field
+          label="Insurance Amount"
+          value={currencyAmount(q.insurance_amount, q.value_currency)}
+        />
         <Field label="Commodity" value={q.commodity || "—"} />
         <Field label="Valid Until" value={formatDate(q.valid_until)} />
 

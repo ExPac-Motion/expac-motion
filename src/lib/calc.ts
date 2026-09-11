@@ -67,6 +67,22 @@ export function buyRate(cur: QuoteLine["cur"], fx: FxRates): number {
   return 1; // ZAR
 }
 
+/**
+ * Converts an already-computed ZAR amount for display in a quote's chosen
+ * Sell Currency, using the same fx rate already on the quote. VAT and every
+ * other calculation stay in ZAR internally -- this only affects what figure
+ * is shown to the customer. Null/undefined/"ZAR" currency = unchanged.
+ */
+export function convertZar(
+  amountZar: number,
+  currency: QuoteLine["cur"] | null | undefined,
+  fx: FxRates,
+): number {
+  if (!currency || currency === "ZAR") return amountZar;
+  const rate = buyRate(currency, fx);
+  return rate ? amountZar / rate : amountZar;
+}
+
 /** Sell unit rate in the line's own currency = buy x (1 + margin%/100). */
 export function sellInCur(
   buy: number | string,
@@ -107,6 +123,13 @@ export function lineTotal(l: QuoteLine): number {
 /** Foreign purchase total in the line's own currency: qty x buy (pre-FX). */
 export function lineBuyTotal(l: Pick<QuoteLine, "qty" | "buy">): number {
   return (Number(l.qty) || 0) * (Number(l.buy) || 0);
+}
+
+/** Foreign sell total in the line's own currency: qty x sellInCur (pre-FX). */
+export function lineSellTotal(
+  l: Pick<QuoteLine, "qty" | "buy" | "margin">,
+): number {
+  return (Number(l.qty) || 0) * sellInCur(l.buy, l.margin);
 }
 
 /** VAT % applied to a line (0 when unset / zero-rated). */

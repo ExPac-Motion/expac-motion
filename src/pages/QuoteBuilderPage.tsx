@@ -20,6 +20,7 @@ import {
   autoQty,
   buyRate,
   chargeTotals,
+  convertZar,
   groupByCategory,
   impliedMargin,
   insuranceAmount,
@@ -29,6 +30,7 @@ import {
   serviceFeePrefillZar,
   lineTotal,
   lineBuyTotal,
+  lineSellTotal,
   packingRow,
   packingTotals,
   resolveLines,
@@ -42,6 +44,7 @@ import { fetchZarRates } from "../lib/fx";
 import {
   AUTO_REFERENCE,
   money,
+  moneyCur,
   newReference,
   referencePrefix,
   todayPlusDays,
@@ -60,6 +63,7 @@ import {
   STATUS_ORDER,
   type ChargeCategory,
   type Commodity,
+  type LineCurrency,
   type PackingItem,
   type Quote,
   type QuoteDraft,
@@ -136,6 +140,8 @@ function blankDraft(): QuoteDraft {
     fx_usd_zar: "18.50",
     fx_cny_zar: "2.60",
     fx_eur_zar: "20.00",
+    sell_currency: "",
+    value_currency: "ZAR",
     packing: [newPackingItem(0)],
     lines: [newLine("International Freight Charges", 0)],
   };
@@ -179,6 +185,8 @@ function draftFromQuote(q: Quote): QuoteDraft {
     fx_usd_zar: q.fx_usd_zar != null ? String(q.fx_usd_zar) : "0",
     fx_cny_zar: q.fx_cny_zar != null ? String(q.fx_cny_zar) : "0",
     fx_eur_zar: q.fx_eur_zar != null ? String(q.fx_eur_zar) : "0",
+    sell_currency: q.sell_currency ?? "",
+    value_currency: q.value_currency ?? "ZAR",
     packing: (q.packing_list_items ?? []).map((p, i) => ({
       position: i,
       length_cm: p.length_cm ?? 0,
@@ -329,6 +337,7 @@ export default function QuoteBuilderPage() {
     () => chargeTotals(resolvedLines, fx),
     [resolvedLines, fx],
   );
+  const sellCur = (draft?.sell_currency || null) as LineCurrency | null;
   const groups = useMemo(
     () => groupByCategory(resolvedLines),
     [resolvedLines],
@@ -763,22 +772,39 @@ export default function QuoteBuilderPage() {
           {/* Row 3 */}
           <div className="field">
             <label>Commercial Value</label>
-            <input
-              type="number"
-              step="any"
-              value={draft.commercial_value}
-              onChange={(e) => set("commercial_value", e.target.value)}
-            />
+            <div className="value-currency-row">
+              <input
+                type="number"
+                step="any"
+                value={draft.commercial_value}
+                onChange={(e) => set("commercial_value", e.target.value)}
+              />
+              <select
+                className="value-currency-select"
+                value={draft.value_currency}
+                onChange={(e) => set("value_currency", e.target.value)}
+                title="Currency the Commercial Value / Insurance Amount were captured in"
+              >
+                {LINE_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="field">
             <label>Insurance Amount</label>
-            <input
-              type="number"
-              readOnly
-              tabIndex={-1}
-              value={insuranceAmount(draft.commercial_value).toFixed(2)}
-              title="0.50% of Commercial Value"
-            />
+            <div className="value-currency-row">
+              <input
+                type="number"
+                readOnly
+                tabIndex={-1}
+                value={insuranceAmount(draft.commercial_value).toFixed(2)}
+                title="0.50% of Commercial Value"
+              />
+              <span className="value-currency-badge">{draft.value_currency}</span>
+            </div>
           </div>
           <div className="field">
             <label>Commodity</label>
@@ -1309,12 +1335,13 @@ export default function QuoteBuilderPage() {
                       <th className="c-cur">Cur</th>
                       <th className="c-unit">Unit</th>
                       <th className="num">Qty</th>
-                      <th className="num">Buy ($)</th>
+                      <th className="num">Buy</th>
                       <th className="num">Margin (%)</th>
                       <th className="num">VAT (%)</th>
-                      <th className="num">Sell ($)</th>
+                      <th className="num">Sell</th>
                       <th className="num">Sell (R)</th>
-                      <th className="num">Total Buy ($)</th>
+                      <th className="num">Total Buy</th>
+                      <th className="num">Total Sell</th>
                       <th className="num">Line total (R)</th>
                       <th />
                     </tr>
@@ -1324,7 +1351,7 @@ export default function QuoteBuilderPage() {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
                       // Sell-only lines — the figure is typed straight into
-                      // Sell (R), with Buy / Margin / Sell ($) / Total Buy
+                      // Sell (R), with Buy / Margin / Sell / Total Buy
                       // dashed: service fees (IN-01 / FW-01 / DIS-01 / CU-05),
                       // Customs VAT (CU-02, whole amount is VAT) and Customs
                       // Duty (CU-03, a pass-through disbursement, zero-rated).
@@ -1517,7 +1544,7 @@ export default function QuoteBuilderPage() {
                               type="number"
                               readOnly
                               value={(Number(l.sell) || 0).toFixed(2)}
-                              title="Sell ($) converted at the currency rate"
+                              title="Sell, in the line's currency, before ZAR conversion"
                               tabIndex={-1}
                             />
                           )}
@@ -1532,6 +1559,20 @@ export default function QuoteBuilderPage() {
                               isSellOnly
                                 ? "Sell-only line — no buy cost"
                                 : `Qty × Buy in ${l.cur} — foreign purchase total`
+                            }
+                            tabIndex={-1}
+                          />
+                        </td>
+                        <td className="num">
+                          <input
+                            type="number"
+                            readOnly
+                            value={isSellOnly ? "" : lineSellTotal(l).toFixed(2)}
+                            placeholder={isSellOnly ? "—" : undefined}
+                            title={
+                              isSellOnly
+                                ? "Sell-only line — priced directly in ZAR"
+                                : `Qty × Sell in ${l.cur} — foreign sell total, before ZAR conversion`
                             }
                             tabIndex={-1}
                           />
@@ -1573,6 +1614,34 @@ export default function QuoteBuilderPage() {
           </div>
         ))}
 
+        <div className="sell-currency-row">
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={!!draft.sell_currency}
+              onChange={(e) =>
+                set("sell_currency", e.target.checked ? "USD" : "")
+              }
+            />
+            Quote &amp; invoice customer totals in a foreign currency
+          </label>
+          {draft.sell_currency && (
+            <select
+              value={draft.sell_currency}
+              onChange={(e) => set("sell_currency", e.target.value)}
+            >
+              {LINE_CURRENCIES.filter((c) => c !== "ZAR").map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
+          <span className="hint">
+            Uses this quote's own {draft.sell_currency || "…"} → ZAR rate above.
+            Internal cost / margin stay in ZAR.
+          </span>
+        </div>
         <div className="totals">
           <div className="t">
             <div className="label">Internal cost (ZAR)</div>
@@ -1588,16 +1657,26 @@ export default function QuoteBuilderPage() {
           </div>
           <div className="t">
             <div className="label">Customer total (excl. VAT)</div>
-            <div className="val">{money(totals.sell)}</div>
+            <div className="val">
+              {sellCur
+                ? moneyCur(convertZar(totals.sell, sellCur, fx), sellCur)
+                : money(totals.sell)}
+            </div>
           </div>
           <div className="t">
             <div className="label">VAT</div>
-            <div className="val">{money(totals.vat)}</div>
+            <div className="val">
+              {sellCur
+                ? moneyCur(convertZar(totals.vat, sellCur, fx), sellCur)
+                : money(totals.vat)}
+            </div>
           </div>
           <div className="t">
             <div className="label">Customer total (incl. VAT)</div>
             <div className="val" style={{ color: "var(--green-dark)" }}>
-              {money(totals.sellIncl)}
+              {sellCur
+                ? moneyCur(convertZar(totals.sellIncl, sellCur, fx), sellCur)
+                : money(totals.sellIncl)}
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { packingTotals, volumetricFactor } from "../lib/calc";
 import type { CategoryGroup, PackingTotals } from "../lib/calc";
-import type { PackingItem, QuoteLine } from "../lib/types";
+import type { LineCurrency, PackingItem, QuoteLine } from "../lib/types";
 import { COMPANY } from "../lib/company";
 import { QuoteSheet, type QuoteSheetData } from "./QuotePrintPage";
 
@@ -11,6 +11,7 @@ import { QuoteSheet, type QuoteSheetData } from "./QuotePrintPage";
  *   /quotes/demo/print            ~ 2 pages
  *   /quotes/demo/print?lines=40   ~ 3+ pages
  *   /quotes/demo/print?lines=3    single page
+ *   /quotes/demo/print?sell=EUR   Sell Currency conversion preview
  * Route is only registered when import.meta.env.DEV — it can't reach prod.
  */
 
@@ -66,6 +67,7 @@ export default function QuotePrintDemoPage() {
   );
   const vFactor = volumetricFactor("Sea Freight (LCL)");
   const pack: PackingTotals = packingTotals(packingRows, vFactor);
+  const sellCurrency = (params.get("sell") as LineCurrency | null) || null;
 
   const data: QuoteSheetData = {
     company: COMPANY,
@@ -101,6 +103,8 @@ export default function QuotePrintDemoPage() {
     vFactor,
     pack,
     groups,
+    sellCurrency,
+    fx: { usd: 18.5, cny: 2.55, eur: 20.1 },
   };
 
   return (

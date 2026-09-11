@@ -18,6 +18,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { useClients, useCompanySettings, useQuote } from "../lib/hooks";
 import {
+  convertZar,
   fxOf,
   groupByCategory,
   isVatOnlyLine,
@@ -30,11 +31,19 @@ import {
   resolveLines,
   volumetricFactor,
   type CategoryGroup,
+  type FxRates,
   type PackingTotals,
 } from "../lib/calc";
-import { docName, formatDate, money, plainAmount, portCode } from "../lib/format";
+import {
+  currencyAmount,
+  docName,
+  formatDate,
+  money,
+  moneyCur,
+  portCode,
+} from "../lib/format";
 import { COMPANY } from "../lib/company";
-import type { PackingItem } from "../lib/types";
+import type { LineCurrency, PackingItem } from "../lib/types";
 
 function n2(v: number | string | null | undefined): string {
   return (Number(v) || 0).toLocaleString("en-ZA", {
@@ -77,6 +86,10 @@ export interface QuoteSheetData {
   vFactor: number;
   pack: PackingTotals;
   groups: CategoryGroup[];
+  /** When set (not null/"ZAR"), the Sell/Total figures below display converted
+   *  into this currency instead of ZAR, using `fx` — see convertZar(). */
+  sellCurrency: LineCurrency | null;
+  fx: FxRates;
 }
 
 type Section = {
@@ -114,7 +127,17 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
     vFactor,
     pack,
     groups,
+    sellCurrency,
+    fx,
   } = data;
+
+  // Customer-facing Sell/Total figures, converted from their computed ZAR
+  // amount into the quote's Sell Currency when one is set (VAT/margin math
+  // itself stays ZAR throughout — this only changes what's displayed).
+  const disp = (zar: number) =>
+    sellCurrency && sellCurrency !== "ZAR"
+      ? moneyCur(convertZar(zar, sellCurrency, fx), sellCurrency)
+      : money(zar);
 
   let exclusive = 0;
   let vatTotal = 0;
@@ -221,23 +244,23 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
       <div className="qs-totals">
         <div className="row">
           <b>Total Discount:</b>
-          <span>{money(discountTotal)}</span>
+          <span>{disp(discountTotal)}</span>
         </div>
         <div className="row">
           <b>Total Exclusive:</b>
-          <span>{money(exclusive)}</span>
+          <span>{disp(exclusive)}</span>
         </div>
         <div className="row">
           <b>Total VAT:</b>
-          <span>{money(vatTotal)}</span>
+          <span>{disp(vatTotal)}</span>
         </div>
         <div className="row">
           <b>Sub Total:</b>
-          <span>{money(subTotal)}</span>
+          <span>{disp(subTotal)}</span>
         </div>
         <div className="row grand">
           <span>Grand Total:</span>
-          <span>{money(grand)}</span>
+          <span>{disp(grand)}</span>
         </div>
       </div>
     </div>
@@ -367,10 +390,12 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
               </td>
               <td>{l.unit || "—"}</td>
               <td className="n">{n2(l.qty)}</td>
-              <td className="n">{money(isVatOnlyLine(l) ? 0 : l.sell)}</td>
+              <td className="n">
+                {disp(isVatOnlyLine(l) ? 0 : Number(l.sell) || 0)}
+              </td>
               <td className="n">{n2(lineVatPct(l))}%</td>
-              <td className="n">{money(ex)}</td>
-              <td className="n">{money(incl)}</td>
+              <td className="n">{disp(ex)}</td>
+              <td className="n">{disp(incl)}</td>
             </tr>
           ),
         });
@@ -382,8 +407,8 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
             <td className="n" colSpan={5}>
               Subtotal
             </td>
-            <td className="n">{money(gEx)}</td>
-            <td className="n">{money(gIncl)}</td>
+            <td className="n">{disp(gEx)}</td>
+            <td className="n">{disp(gIncl)}</td>
           </tr>
         ),
       });
@@ -680,9 +705,11 @@ export default function QuotePrintPage() {
       ["Valid Until", formatDate(q.valid_until)],
       ["Origin / Port of Load", q.origin || "—"],
       ["Destination / Port of Discharge", q.destination || "—"],
-      ["Commercial Value", plainAmount(q.commercial_value)],
-      ["Insurance Amount", plainAmount(q.insurance_amount)],
+      ["Commercial Value", currencyAmount(q.commercial_value, q.value_currency)],
+      ["Insurance Amount", currencyAmount(q.insurance_amount, q.value_currency)],
     ],
+    sellCurrency: q.sell_currency ?? null,
+    fx,
     reference: q.reference,
     mode: q.mode,
     createdAt: q.created_at,
@@ -706,8 +733,10 @@ export default function QuotePrintPage() {
         </button>
       </div>
       <div className="qs-note">
-        Customer quotation. Sell prices are in ZAR — internal buy cost, margin and
-        FX are not shown. VAT is charged per line at the rate set on the quotation.
+        Customer quotation. Sell prices are in{" "}
+        {q.sell_currency && q.sell_currency !== "ZAR" ? q.sell_currency : "ZAR"}{" "}
+        — internal buy cost, margin and FX are not shown. VAT is charged per
+        line at the rate set on the quotation.
       </div>
       <QuoteSheet data={data} />
     </div>

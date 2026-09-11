@@ -414,6 +414,8 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_packing: packing,
       p_consignee_id: draft.consignee_id || null,
       p_fx_eur_zar: Number(draft.fx_eur_zar) || 0,
+      p_sell_currency: draft.sell_currency || null,
+      p_value_currency: draft.value_currency || "ZAR",
     }),
   );
   return id;

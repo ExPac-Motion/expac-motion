@@ -9,6 +9,29 @@ export function money(n: number | string | null | undefined): string {
   );
 }
 
+const CURRENCY_SYMBOL: Record<string, string> = {
+  ZAR: "R ",
+  USD: "$ ",
+  CNY: "¥ ",
+  EUR: "€ ",
+};
+
+/** Money in an arbitrary currency (symbol + comma-grouped 2dp), e.g. "€ 1 234.56". */
+export function moneyCur(
+  n: number | string | null | undefined,
+  currency: string | null | undefined,
+): string {
+  const v = Number(n) || 0;
+  const cur = currency || "ZAR";
+  return (
+    (CURRENCY_SYMBOL[cur] ?? `${cur} `) +
+    v.toLocaleString("en-ZA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
+}
+
 export function num(n: number | string | null | undefined): number {
   return Number(n) || 0;
 }
@@ -22,6 +45,22 @@ export function plainAmount(n: number | string | null | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+/** Comma-grouped amount with its currency code appended, e.g. "25 000.00 USD" —
+ *  for a figure like Commercial Value that isn't always in the same currency.
+ *  "—" when unset. */
+export function currencyAmount(
+  n: number | string | null | undefined,
+  currency?: string | null,
+): string {
+  if (n === null || n === undefined || n === "") return "—";
+  const v = Number(n) || 0;
+  const amt = v.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return currency ? `${amt} ${currency}` : amt;
 }
 
 /** USD amount, or "—" when unset. */

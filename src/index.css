@@ -1709,6 +1709,37 @@ table.dt th.dt-sortable {
   width: auto;
   max-width: 150px;
 }
+.value-currency-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.value-currency-row input {
+  flex: 1;
+  min-width: 0;
+}
+.value-currency-select {
+  width: auto;
+  min-width: 66px;
+  flex: 0 0 auto;
+}
+.value-currency-badge {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b6f66;
+  padding: 0 4px;
+}
+.sell-currency-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.sell-currency-row select {
+  width: auto;
+  min-width: 90px;
+}
 .totals {
   display: flex;
   justify-content: flex-end;

@@ -24,10 +24,10 @@ import {
 } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
 import {
+  currencyAmount,
   formatDate,
   money,
   newReference,
-  plainAmount,
   portCode,
   todayPlusDays,
 } from "../lib/format";
@@ -89,6 +89,8 @@ function draftFromQuote(q: Quote): QuoteDraft {
     fx_usd_zar: String(q.fx_usd_zar ?? ""),
     fx_cny_zar: String(q.fx_cny_zar ?? ""),
     fx_eur_zar: String(q.fx_eur_zar ?? ""),
+    sell_currency: q.sell_currency ?? "",
+    value_currency: q.value_currency ?? "ZAR",
     packing: q.packing_list_items ?? [],
     lines: q.quote_lines ?? [],
   };
@@ -292,7 +294,7 @@ export default function QuotesListPage() {
         width: 140,
         defaultHidden: true,
         sortValue: (q) => Number(q.commercial_value) || 0,
-        render: (q) => plainAmount(q.commercial_value),
+        render: (q) => currencyAmount(q.commercial_value, q.value_currency),
       },
       {
         key: "insurance_amount",
@@ -301,7 +303,7 @@ export default function QuotesListPage() {
         width: 140,
         defaultHidden: true,
         sortValue: (q) => Number(q.insurance_amount) || 0,
-        render: (q) => plainAmount(q.insurance_amount),
+        render: (q) => currencyAmount(q.insurance_amount, q.value_currency),
       },
       {
         key: "commodity",

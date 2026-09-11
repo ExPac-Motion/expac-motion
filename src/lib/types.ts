@@ -873,6 +873,12 @@ export interface Quote {
   fx_usd_zar: number;
   fx_cny_zar: number;
   fx_eur_zar: number;
+  /** When set, the customer-facing Sell/Total figures display converted
+   *  into this currency instead of ZAR (same fx rate as above). Null = ZAR. */
+  sell_currency: LineCurrency | null;
+  /** Currency Commercial Value / Insurance Amount were captured in — they're
+   *  customer-supplied and not always ZAR. Defaults to 'ZAR'. */
+  value_currency: LineCurrency;
   created_at: string;
   updated_at: string;
   quote_lines: QuoteLine[];
@@ -1287,6 +1293,8 @@ export interface QuoteDraft {
   fx_usd_zar: string;
   fx_cny_zar: string;
   fx_eur_zar: string;
+  sell_currency: string;
+  value_currency: string;
   packing: PackingItem[];
   lines: QuoteLine[];
 }
