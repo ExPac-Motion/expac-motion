@@ -38,12 +38,12 @@ export default function PublicTrackPage() {
     }
   }
 
-  const contentStyle = {
-    "--track-content-bg": `url(${trackHeroBg})`,
+  const pageStyle = {
+    "--track-page-bg": `url(${trackHeroBg})`,
   } as CSSProperties;
 
   return (
-    <div className="track-page">
+    <div className="track-page" style={pageStyle}>
       <header className="track-hero">
         <div className="track-hero-inner">
           <div className="brand">
@@ -76,7 +76,7 @@ export default function PublicTrackPage() {
         </div>
       </header>
 
-      <div className="track-content" style={contentStyle}>
+      <div className="track-content">
         <div className="track-content-inner">
           {state === "notfound" && (
             <div className="panel">

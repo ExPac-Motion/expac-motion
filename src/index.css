@@ -1887,12 +1887,31 @@ table.dt th.dt-sortable {
 
 /* ---------- Public shipment-tracking page (/track) ---------- */
 .track-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background: var(--paper);
 }
+/* Fixed to the viewport so it never resizes/re-crops as the page grows
+   taller after a search result renders; the opaque hero simply paints
+   over it, so it only ever shows below the hero. */
+.track-page::before,
+.track-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+.track-page::before {
+  background: var(--track-page-bg) center / cover no-repeat;
+}
+.track-page::after {
+  background: rgba(20, 22, 20, 0.55);
+}
 .track-hero {
+  position: relative;
+  z-index: 1;
   flex: none;
   background: var(--ink);
   padding: 48px 24px 40px;
@@ -1932,24 +1951,10 @@ table.dt th.dt-sortable {
 }
 .track-content {
   position: relative;
+  z-index: 1;
   flex: 1;
 }
-.track-content::before,
-.track-content::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-.track-content::before {
-  background: var(--track-content-bg) center / cover no-repeat;
-}
-.track-content::after {
-  background: rgba(20, 22, 20, 0.55);
-}
 .track-content-inner {
-  position: relative;
-  z-index: 1;
   max-width: 1100px;
   margin: 0 auto;
   padding: 28px 24px 56px;
