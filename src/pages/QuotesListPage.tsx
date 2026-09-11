@@ -27,9 +27,9 @@ import {
   formatDate,
   money,
   newReference,
+  plainAmount,
   portCode,
   todayPlusDays,
-  usd,
 } from "../lib/format";
 import {
   STATUS_LABEL,
@@ -88,6 +88,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     shipping_line: q.shipping_line ?? "",
     fx_usd_zar: String(q.fx_usd_zar ?? ""),
     fx_cny_zar: String(q.fx_cny_zar ?? ""),
+    fx_eur_zar: String(q.fx_eur_zar ?? ""),
     packing: q.packing_list_items ?? [],
     lines: q.quote_lines ?? [],
   };
@@ -286,21 +287,21 @@ export default function QuotesListPage() {
       },
       {
         key: "commercial_value",
-        header: "Commercial Value ($)",
+        header: "Commercial Value",
         label: "Commercial Value",
         width: 140,
         defaultHidden: true,
         sortValue: (q) => Number(q.commercial_value) || 0,
-        render: (q) => usd(q.commercial_value),
+        render: (q) => plainAmount(q.commercial_value),
       },
       {
         key: "insurance_amount",
-        header: "Insurance Amount ($)",
+        header: "Insurance Amount",
         label: "Insurance Amount",
         width: 140,
         defaultHidden: true,
         sortValue: (q) => Number(q.insurance_amount) || 0,
-        render: (q) => usd(q.insurance_amount),
+        render: (q) => plainAmount(q.insurance_amount),
       },
       {
         key: "commodity",

@@ -18,6 +18,7 @@ import {
 } from "../lib/hooks";
 import {
   autoQty,
+  buyRate,
   chargeTotals,
   groupByCategory,
   impliedMargin,
@@ -37,7 +38,7 @@ import {
   type FxRates,
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
-import { fetchLiveRates } from "../lib/fx";
+import { fetchZarRates } from "../lib/fx";
 import {
   AUTO_REFERENCE,
   money,
@@ -134,6 +135,7 @@ function blankDraft(): QuoteDraft {
     shipping_line: "",
     fx_usd_zar: "18.50",
     fx_cny_zar: "2.60",
+    fx_eur_zar: "20.00",
     packing: [newPackingItem(0)],
     lines: [newLine("International Freight Charges", 0)],
   };
@@ -176,6 +178,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     shipping_line: q.shipping_line ?? "",
     fx_usd_zar: q.fx_usd_zar != null ? String(q.fx_usd_zar) : "0",
     fx_cny_zar: q.fx_cny_zar != null ? String(q.fx_cny_zar) : "0",
+    fx_eur_zar: q.fx_eur_zar != null ? String(q.fx_eur_zar) : "0",
     packing: (q.packing_list_items ?? []).map((p, i) => ({
       position: i,
       length_cm: p.length_cm ?? 0,
@@ -189,11 +192,12 @@ function draftFromQuote(q: Quote): QuoteDraft {
       const fx: FxRates = {
         usd: Number(q.fx_usd_zar) || 0,
         cny: Number(q.fx_cny_zar) || 0,
+        eur: Number(q.fx_eur_zar) || 0,
       };
       const cur = (l.cur as QuoteLine["cur"]) ?? "USD";
       let buy = Number(l.buy) || 0;
       const storedSell = Number(l.sell) || 0;
-      const rate = cur === "USD" ? fx.usd : cur === "CNY" ? fx.cny : 1;
+      const rate = buyRate(cur, fx);
       // Legacy sell-only line (no buy): treat the stored sell as the buy basis.
       if (buy <= 0 && storedSell > 0 && rate > 0) buy = storedSell / rate;
       const margin =
@@ -289,6 +293,7 @@ export default function QuoteBuilderPage() {
             ...d,
             fx_usd_zar: String(s.default_fx_usd_zar),
             fx_cny_zar: String(s.default_fx_cny_zar),
+            fx_eur_zar: String(s.default_fx_eur_zar),
             incoterms: d.incoterms || s.default_incoterm,
           }
         : d,
@@ -299,8 +304,9 @@ export default function QuoteBuilderPage() {
     () => ({
       usd: Number(draft?.fx_usd_zar) || 0,
       cny: Number(draft?.fx_cny_zar) || 0,
+      eur: Number(draft?.fx_eur_zar) || 0,
     }),
-    [draft?.fx_usd_zar, draft?.fx_cny_zar],
+    [draft?.fx_usd_zar, draft?.fx_cny_zar, draft?.fx_eur_zar],
   );
   const vFactor = volumetricFactor(draft?.mode);
   const packTotals = useMemo(
@@ -370,15 +376,20 @@ export default function QuoteBuilderPage() {
   }
 
   function fxOfDraft(d: QuoteDraft): FxRates {
-    return { usd: Number(d.fx_usd_zar) || 0, cny: Number(d.fx_cny_zar) || 0 };
+    return {
+      usd: Number(d.fx_usd_zar) || 0,
+      cny: Number(d.fx_cny_zar) || 0,
+      eur: Number(d.fx_eur_zar) || 0,
+    };
   }
 
   async function getLiveRates() {
     setFxLoading(true);
     try {
-      const r = await fetchLiveRates();
-      setFx("fx_usd_zar", r.usdZar.toFixed(4));
-      setFx("fx_cny_zar", r.cnyZar.toFixed(4));
+      const r = await fetchZarRates();
+      setFx("fx_usd_zar", r.rate("USD").toFixed(4));
+      setFx("fx_cny_zar", r.rate("CNY").toFixed(4));
+      setFx("fx_eur_zar", r.rate("EUR").toFixed(4));
       setFxAsOf(r.asOf);
       toast("Live rates applied");
     } catch (e) {
@@ -389,7 +400,7 @@ export default function QuoteBuilderPage() {
   }
 
   // FX rate change: recompute every line's sell.
-  function setFx(key: "fx_usd_zar" | "fx_cny_zar", value: string) {
+  function setFx(key: "fx_usd_zar" | "fx_cny_zar" | "fx_eur_zar", value: string) {
     setDraft((d) => {
       if (!d) return d;
       const next = { ...d, [key]: value };
@@ -751,7 +762,7 @@ export default function QuoteBuilderPage() {
 
           {/* Row 3 */}
           <div className="field">
-            <label>Commercial Value ($)</label>
+            <label>Commercial Value</label>
             <input
               type="number"
               step="any"
@@ -760,7 +771,7 @@ export default function QuoteBuilderPage() {
             />
           </div>
           <div className="field">
-            <label>Insurance Amount ($)</label>
+            <label>Insurance Amount</label>
             <input
               type="number"
               readOnly
@@ -1220,6 +1231,35 @@ export default function QuoteBuilderPage() {
               onChange={(e) => setFx("fx_cny_zar", e.target.value)}
             />
           </div>
+          {Number(draft.fx_eur_zar) > 0 && (
+            <div>
+              <label>EUR → ZAR</label>
+              <input
+                type="number"
+                step="0.01"
+                value={draft.fx_eur_zar}
+                onChange={(e) => setFx("fx_eur_zar", e.target.value)}
+              />
+            </div>
+          )}
+          {Number(draft.fx_eur_zar) <= 0 && (
+            <select
+              className="fx-add-currency"
+              value=""
+              title="Add another quoting currency"
+              onChange={(e) => {
+                if (e.target.value === "EUR") {
+                  setFx(
+                    "fx_eur_zar",
+                    String(settingsQ.data?.default_fx_eur_zar || "20.00"),
+                  );
+                }
+              }}
+            >
+              <option value="">+ Add currency</option>
+              <option value="EUR">EUR</option>
+            </select>
+          )}
           <button
             type="button"
             className="btn small outline"

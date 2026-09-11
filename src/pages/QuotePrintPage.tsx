@@ -32,7 +32,7 @@ import {
   type CategoryGroup,
   type PackingTotals,
 } from "../lib/calc";
-import { docName, formatDate, money, portCode, usd } from "../lib/format";
+import { docName, formatDate, money, plainAmount, portCode } from "../lib/format";
 import { COMPANY } from "../lib/company";
 import type { PackingItem } from "../lib/types";
 
@@ -616,7 +616,7 @@ export default function QuotePrintPage() {
     };
   }, [q?.reference]);
 
-  const fx = useMemo(() => (q ? fxOf(q) : { usd: 0, cny: 0 }), [q]);
+  const fx = useMemo(() => (q ? fxOf(q) : { usd: 0, cny: 0, eur: 0 }), [q]);
   const vFactor = volumetricFactor(q?.mode);
   const pack = useMemo(
     () => packingTotals(q?.packing_list_items ?? [], vFactor),
@@ -680,8 +680,8 @@ export default function QuotePrintPage() {
       ["Valid Until", formatDate(q.valid_until)],
       ["Origin / Port of Load", q.origin || "—"],
       ["Destination / Port of Discharge", q.destination || "—"],
-      ["Commercial Value ($)", usd(q.commercial_value)],
-      ["Insurance Amount ($)", usd(q.insurance_amount)],
+      ["Commercial Value", plainAmount(q.commercial_value)],
+      ["Insurance Amount", plainAmount(q.insurance_amount)],
     ],
     reference: q.reference,
     mode: q.mode,

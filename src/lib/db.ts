@@ -333,6 +333,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     fx: {
       usd: Number(draft.fx_usd_zar) || 0,
       cny: Number(draft.fx_cny_zar) || 0,
+      eur: Number(draft.fx_eur_zar) || 0,
     },
     pack,
     commercialValue: draft.commercial_value,
@@ -412,6 +413,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_lines: lines,
       p_packing: packing,
       p_consignee_id: draft.consignee_id || null,
+      p_fx_eur_zar: Number(draft.fx_eur_zar) || 0,
     }),
   );
   return id;

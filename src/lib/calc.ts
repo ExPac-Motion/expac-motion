@@ -44,22 +44,26 @@ export interface ChargeTotals {
 export interface FxRates {
   usd: number;
   cny: number;
+  eur: number;
 }
 
 /** Pulls FX rates off a quote (or draft-like object) with safe fallbacks. */
 export function fxOf(q: {
   fx_usd_zar?: number | string | null;
   fx_cny_zar?: number | string | null;
+  fx_eur_zar?: number | string | null;
 }): FxRates {
   return {
     usd: Number(q?.fx_usd_zar) || 0,
     cny: Number(q?.fx_cny_zar) || 0,
+    eur: Number(q?.fx_eur_zar) || 0,
   };
 }
 
 export function buyRate(cur: QuoteLine["cur"], fx: FxRates): number {
   if (cur === "USD") return fx.usd;
   if (cur === "CNY") return fx.cny;
+  if (cur === "EUR") return fx.eur;
   return 1; // ZAR
 }
 
@@ -220,6 +224,7 @@ export function intlFreightBuyUsd(lines: QuoteLine[], fx: FxRates): number {
       const amt = (Number(l.qty) || 0) * (Number(l.buy) || 0);
       if (l.cur === "USD") return s + amt;
       if (l.cur === "CNY") return s + (fx.usd ? (amt * fx.cny) / fx.usd : 0);
+      if (l.cur === "EUR") return s + (fx.usd ? (amt * fx.eur) / fx.usd : 0);
       return s + (fx.usd ? amt / fx.usd : 0); // ZAR
     }, 0);
 }
@@ -329,7 +334,7 @@ export function lineCostZar(l: QuoteLine, fx: FxRates): number {
 
 export function chargeTotals(
   lines: QuoteLine[] | null | undefined,
-  fx: FxRates = { usd: 0, cny: 0 },
+  fx: FxRates = { usd: 0, cny: 0, eur: 0 },
 ): ChargeTotals {
   let cost = 0;
   let sell = 0;

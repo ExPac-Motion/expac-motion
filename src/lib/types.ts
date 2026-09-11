@@ -64,6 +64,7 @@ export interface CompanySettings {
   bank_details: string;
   default_fx_usd_zar: number;
   default_fx_cny_zar: number;
+  default_fx_eur_zar: number;
   default_vat_pct: number;
   default_incoterm: string;
   sales_revenue_target: number;
@@ -670,8 +671,8 @@ export const CHARGE_CATEGORIES: ChargeCategory[] = [
   "Customs Clearance, VAT and Duty Charges",
 ];
 
-export type LineCurrency = "USD" | "CNY" | "ZAR";
-export const LINE_CURRENCIES: LineCurrency[] = ["USD", "CNY", "ZAR"];
+export type LineCurrency = "USD" | "CNY" | "ZAR" | "EUR";
+export const LINE_CURRENCIES: LineCurrency[] = ["USD", "CNY", "ZAR", "EUR"];
 
 export interface Incoterm {
   code: string;
@@ -871,6 +872,7 @@ export interface Quote {
   shipping_line: string | null;
   fx_usd_zar: number;
   fx_cny_zar: number;
+  fx_eur_zar: number;
   created_at: string;
   updated_at: string;
   quote_lines: QuoteLine[];
@@ -1284,6 +1286,7 @@ export interface QuoteDraft {
   shipping_line: string;
   fx_usd_zar: string;
   fx_cny_zar: string;
+  fx_eur_zar: string;
   packing: PackingItem[];
   lines: QuoteLine[];
 }

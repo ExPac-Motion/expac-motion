@@ -13,6 +13,17 @@ export function num(n: number | string | null | undefined): number {
   return Number(n) || 0;
 }
 
+/** Plain comma-grouped amount, no currency symbol — for a figure that isn't
+ *  always in the same currency (e.g. Commercial Value). "—" when unset. */
+export function plainAmount(n: number | string | null | undefined): string {
+  if (n === null || n === undefined || n === "") return "—";
+  const v = Number(n) || 0;
+  return v.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /** USD amount, or "—" when unset. */
 export function usd(n: number | string | null | undefined): string {
   if (n === null || n === undefined || n === "") return "—";
