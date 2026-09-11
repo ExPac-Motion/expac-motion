@@ -38,7 +38,7 @@ import {
   DELIVERED_STATUS,
   MILESTONE_BY_STATUS,
   SHIPMENT_STATUSES,
-  shipmentStatusTone,
+  shipmentStatusSlug,
   type Job,
   type JobPatch,
   type ShipmentDocument,
@@ -354,7 +354,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           ),
         render: (j) => (
           <select
-            className={`job-status is-${shipmentStatusTone(j.shipment_status ?? "")}`}
+            className={`job-status is-${shipmentStatusSlug(j.shipment_status)}`}
             value={j.shipment_status ?? ""}
             onChange={(e) => save(j.id, { shipment_status: e.target.value })}
           >

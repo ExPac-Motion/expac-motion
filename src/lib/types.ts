@@ -577,20 +577,11 @@ export const SHIPMENT_STATUSES: string[] = [
   "Delivered",
 ];
 
-/** Colour band for a status pill: 'start' | 'mid' | 'done' | 'alert'. */
-export function shipmentStatusTone(s: string | null | undefined): string {
-  switch (s) {
-    case "Detained":
-      return "alert";
-    case "Delivered":
-      return "done";
-    case "Created":
-    case "Booked":
-      return "start";
-    default: // Collected, Received, Loaded, Departed, In Transit, Arrived,
-      // Unloaded, Customs, Released, On-Delivery
-      return "mid";
-  }
+/** CSS-class-safe slug for a status pill — each status gets its own colour. */
+export function shipmentStatusSlug(s: string | null | undefined): string {
+  const v = (s ?? "").trim();
+  if (!v) return "unset";
+  return v.toLowerCase().replace(/\s+/g, "-");
 }
 
 /**
