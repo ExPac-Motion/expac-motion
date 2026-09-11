@@ -1904,7 +1904,7 @@ table.dt th.dt-sortable {
   z-index: 0;
 }
 .track-page::before {
-  background: var(--track-page-bg) center / cover no-repeat;
+  background: var(--track-page-bg) center / contain no-repeat;
 }
 .track-page::after {
   background: rgba(20, 22, 20, 0.55);
