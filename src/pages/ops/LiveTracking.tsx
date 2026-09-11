@@ -53,7 +53,7 @@ export default function LiveTracking() {
     for (const j of trackable) {
       const t = trackingByJob.get(j.id);
       const tone = trackingTone(t?.status ?? j.shipment_status);
-      if (tone === "alert" || j.shipment_status === "Customs Detained") exceptions += 1;
+      if (tone === "alert" || j.shipment_status === "Detained") exceptions += 1;
       else onTrack += 1;
       const eta = t?.eta ?? j.eta;
       if (eta && eta >= today && eta <= in7) arriving += 1;

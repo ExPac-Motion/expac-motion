@@ -75,7 +75,7 @@ export default function OpsControlTowerPage() {
     const exceptions = activeJobs.filter((j) => {
       const t = trackByJob.get(j.id);
       return (
-        j.shipment_status === "Customs Detained" ||
+        j.shipment_status === "Detained" ||
         trackingTone(t?.status) === "alert"
       );
     }).length;

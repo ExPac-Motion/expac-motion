@@ -561,44 +561,35 @@ export const MILESTONES: Milestone[] = ["Booked", "In Transit", "Customs", "Deli
  * (`jobs.shipment_status`) — edit this list as the workflow changes.
  */
 export const SHIPMENT_STATUSES: string[] = [
+  "Created",
   "Booked",
-  "Loaded for Flight",
-  "Customs Cleared",
-  "Customs Detained",
-  "Arrived at Destination",
   "Collected",
-  "Vessel Booked",
+  "Received",
+  "Loaded",
   "Departed",
   "In Transit",
-  "Vessel Arrived",
-  "Vessel Working",
-  "Container Unlanded",
-  "Collected from Port",
-  "Out on Delivery",
+  "Arrived",
+  "Unloaded",
+  "Customs",
+  "Detained",
+  "Released",
+  "On-Delivery",
   "Delivered",
 ];
 
 /** Colour band for a status pill: 'start' | 'mid' | 'done' | 'alert'. */
 export function shipmentStatusTone(s: string | null | undefined): string {
   switch (s) {
-    case "Customs Detained":
+    case "Detained":
       return "alert";
-    case "Customs Cleared":
-    case "Arrived at Destination":
-    case "Collected":
-    case "Vessel Arrived":
-    case "Collected from Port":
     case "Delivered":
       return "done";
-    case "Loaded for Flight":
-    case "Departed":
-    case "In Transit":
-    case "Vessel Working":
-    case "Container Unlanded":
-    case "Out on Delivery":
-      return "mid";
-    default: // Booked, Vessel Booked
+    case "Created":
+    case "Booked":
       return "start";
+    default: // Collected, Received, Loaded, Departed, In Transit, Arrived,
+      // Unloaded, Customs, Released, On-Delivery
+      return "mid";
   }
 }
 
@@ -608,20 +599,19 @@ export function shipmentStatusTone(s: string | null | undefined): string {
  * Statuses not listed here leave the milestone unchanged.
  */
 export const MILESTONE_BY_STATUS: Record<string, Milestone> = {
+  Created: "Booked",
   Booked: "Booked",
-  "Vessel Booked": "Booked",
-  "Loaded for Flight": "In Transit",
+  Collected: "Booked",
+  Received: "Booked",
+  Loaded: "In Transit",
   Departed: "In Transit",
   "In Transit": "In Transit",
-  "Vessel Arrived": "In Transit",
-  "Vessel Working": "In Transit",
-  "Container Unlanded": "In Transit",
-  "Customs Cleared": "Customs",
-  "Customs Detained": "Customs",
-  "Arrived at Destination": "Customs",
-  "Collected from Port": "Customs",
-  Collected: "Delivered",
-  "Out on Delivery": "Delivered",
+  Arrived: "In Transit",
+  Unloaded: "In Transit",
+  Customs: "Customs",
+  Detained: "Customs",
+  Released: "Customs",
+  "On-Delivery": "Delivered",
   Delivered: "Delivered",
 };
 
