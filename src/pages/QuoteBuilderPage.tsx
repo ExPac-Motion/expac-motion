@@ -61,6 +61,7 @@ import {
   QUOTE_MODES,
   STATUS_LABEL,
   STATUS_ORDER,
+  WON_QUOTE_STATUSES,
   type ChargeCategory,
   type Commodity,
   type LineCurrency,
@@ -369,15 +370,20 @@ export default function QuoteBuilderPage() {
     setDraft((d) => (d ? { ...d, [key]: value } : d));
   }
 
-  // Mode change: on an unsaved quote, re-prefix an auto-generated reference so
-  // it tracks the mode (AIR/SEA/RDX/CX) while keeping the same 6-digit sequence.
-  // A hand-typed reference or a saved quote's reference is left untouched.
+  // Mode change: re-prefix an auto-generated reference so it tracks the mode
+  // (AIR/SEA/RDX/CX) while keeping the same 6-digit sequence. Runs for any
+  // quote that hasn't been won yet (accepted/completed already has a job
+  // carrying this same shipment number — that one's left alone once live).
+  // A hand-typed reference is always left untouched.
   function setMode(mode: QuoteDraft["mode"]) {
     setDraft((d) => {
       if (!d) return d;
       const next = { ...d, mode };
       const ref = d.reference.trim();
-      if (d.id === null && AUTO_REFERENCE.test(ref)) {
+      if (
+        !WON_QUOTE_STATUSES.includes(d.status) &&
+        AUTO_REFERENCE.test(ref)
+      ) {
         next.reference = referencePrefix(mode) + ref.slice(-6);
       }
       return next;
