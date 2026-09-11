@@ -106,6 +106,7 @@ function blankDraft(): QuoteDraft {
     lead_id: "",
     sales_person_id: "",
     supplier_id: "",
+    consignee_id: "",
     agent_id: "",
     transporter_id: "",
     clearing_agent_id: "",
@@ -147,6 +148,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     lead_id: q.lead_id ?? "",
     sales_person_id: q.sales_person_id ?? "",
     supplier_id: q.supplier_id ?? "",
+    consignee_id: q.consignee_id ?? "",
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
     clearing_agent_id: q.clearing_agent_id ?? "",
@@ -721,6 +723,20 @@ export default function QuoteBuilderPage() {
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.company}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Consignee/Delivery Point</label>
+            <select
+              value={draft.consignee_id}
+              onChange={(e) => set("consignee_id", e.target.value)}
+            >
+              <option value="">Same as Customer/Importer</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company}
                 </option>
               ))}
             </select>

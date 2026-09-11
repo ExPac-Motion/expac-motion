@@ -78,8 +78,8 @@ export default function QuotePrintDemoPage() {
       ["Address", "1 Sample Road, Testville, South Africa"],
     ],
     shipment: [
-      ["Customer / Importer", "Demo Customer (Pty) Ltd"],
       ["Shipper / Exporter", "Overseas Supplier Co."],
+      ["Consignee / Delivery Point", "Demo Customer (Pty) Ltd"],
       ["Reference", "SEA999001"],
       ["Mode", "Sea Freight (LCL)"],
       ["Commodity", "General Cargo"],

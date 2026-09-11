@@ -834,6 +834,10 @@ export interface Quote {
   /** Attributed sales rep — a Sales CRM concept, independent of lead_id. */
   sales_person_id: string | null;
   supplier_id: string | null;
+  /** Who the goods are delivered to, when different from the paying
+   *  Customer/Importer (client_id) — e.g. the customer's own customer.
+   *  Unset falls back to the Customer everywhere it's shown. */
+  consignee_id: string | null;
   /** Agent / transporter / clearing agent — internal only, never shown to the customer. */
   agent_id: string | null;
   transporter_id: string | null;
@@ -878,6 +882,7 @@ export interface Quote {
     "id" | "company" | "contact" | "email" | "phone" | "address" | "vat_no"
   > | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
+  consignee?: Pick<Client, "id" | "company"> | null;
   agent?: Pick<Agent, "id" | "company"> | null;
   transporter?: Pick<Transporter, "id" | "company"> | null;
   clearing_agent?: Pick<ClearingAgent, "id" | "company"> | null;
@@ -1251,6 +1256,7 @@ export interface QuoteDraft {
   lead_id: string;
   sales_person_id: string;
   supplier_id: string;
+  consignee_id: string;
   agent_id: string;
   transporter_id: string;
   clearing_agent_id: string;

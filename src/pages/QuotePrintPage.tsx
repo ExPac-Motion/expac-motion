@@ -667,8 +667,11 @@ export default function QuotePrintPage() {
       ["Address", party?.address || "To Be Confirmed"],
     ],
     shipment: [
-      ["Customer / Importer", q.client?.company ?? q.lead?.company ?? "—"],
       ["Shipper / Exporter", q.supplier?.company ?? "—"],
+      [
+        "Consignee / Delivery Point",
+        q.consignee?.company ?? q.client?.company ?? q.lead?.company ?? "—",
+      ],
       ["Reference", q.reference],
       ["Mode", q.mode],
       ["Commodity", q.commodity || "—"],

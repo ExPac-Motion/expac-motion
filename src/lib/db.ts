@@ -293,7 +293,7 @@ export async function deleteClearingAgent(id: string): Promise<void> {
 
 /* ---------- Quotes ---------- */
 const QUOTE_SELECT =
-  "*, quote_lines(*), packing_list_items(*), client:clients(id,company,email), lead:leads(id,company,contact,email,phone,address,vat_no), supplier:suppliers(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
+  "*, quote_lines(*), packing_list_items(*), client:clients!quotes_client_id_fkey(id,company,email), lead:leads(id,company,contact,email,phone,address,vat_no), supplier:suppliers(id,company), consignee:clients!quotes_consignee_id_fkey(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
 
 function sortLines(q: Quote): Quote {
   q.quote_lines = [...(q.quote_lines || [])].sort(
@@ -411,6 +411,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_fx_cny_zar: Number(draft.fx_cny_zar) || 0,
       p_lines: lines,
       p_packing: packing,
+      p_consignee_id: draft.consignee_id || null,
     }),
   );
   return id;
