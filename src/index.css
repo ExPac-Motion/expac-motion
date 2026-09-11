@@ -1887,30 +1887,11 @@ table.dt th.dt-sortable {
 
 /* ---------- Public shipment-tracking page (/track) ---------- */
 .track-page {
-  position: relative;
   min-height: 100vh;
   background: var(--paper);
 }
-.track-page::before,
-.track-page::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-}
-.track-page::before {
-  background: var(--track-hero-bg) center 35% / cover no-repeat;
-}
-.track-page::after {
-  background: rgba(20, 22, 20, 0.62);
-}
-.track-hero,
-.track-content {
-  position: relative;
-  z-index: 1;
-}
 .track-hero {
-  background: transparent;
+  background: var(--ink);
   padding: 48px 24px 40px;
 }
 .track-hero-inner {

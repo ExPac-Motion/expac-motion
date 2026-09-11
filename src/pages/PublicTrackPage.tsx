@@ -1,6 +1,5 @@
-import { useState, type FormEvent, type CSSProperties } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import trackHeroBg from "../assets/track-hero-plane.png";
 import TrackingMap from "../components/TrackingMap";
 import { trackShipment } from "../lib/db";
 import { formatDate, formatDateTime, portCode } from "../lib/format";
@@ -38,12 +37,8 @@ export default function PublicTrackPage() {
     }
   }
 
-  const pageStyle = {
-    "--track-hero-bg": `url(${trackHeroBg})`,
-  } as CSSProperties;
-
   return (
-    <div className="track-page" style={pageStyle}>
+    <div className="track-page">
       <header className="track-hero">
         <div className="track-hero-inner">
           <div className="brand">
