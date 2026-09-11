@@ -2,8 +2,9 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { claimClientInvite, getInvite } from "../../lib/db";
-import { PORTAL_SIGNUP_ENABLED } from "../../lib/flags";
+import { PORTAL_SIGNUP_ENABLED, PORTAL_SIGNUP_NOTIFY_EMAIL } from "../../lib/flags";
 import { useInvite } from "../../lib/hooks";
+import { sendMail } from "../../lib/mail";
 
 /**
  * Reached via a link staff shares with a customer (?token=...). Signs the
@@ -110,14 +111,7 @@ export default function PortalSignupPage() {
   }
 
   if (!token) {
-    return (
-      <div className="auth-wrap">
-        <div className="auth-card">
-          <h1>Invalid link</h1>
-          <p className="sub">This portal sign-up link is missing its invite code.</p>
-        </div>
-      </div>
-    );
+    return <SelfServeSignup />;
   }
 
   if (inviteQ.isLoading) {
@@ -207,4 +201,184 @@ export default function PortalSignupPage() {
       </form>
     </div>
   );
+}
+
+/**
+ * No-invite path: a prospective customer who reaches /portal/signup with no
+ * token requests access directly. handle_new_user() (0068) creates their
+ * profile as role='client', portal_status='pending' the instant the auth
+ * user is created — never role='user' (staff) even momentarily, unlike the
+ * app's other signup path on /login. They can sign in right away, but
+ * PortalProtected (App.tsx) shows only a "waiting on approval" screen until
+ * staff runs approve_portal_signup() from Customers.
+ */
+function SelfServeSignup() {
+  const navigate = useNavigate();
+  const { signUp, signIn } = useAuth();
+
+  const [fullName, setFullName] = useState("");
+  const [company, setCompany] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setErr("");
+    setNotice("");
+    setBusy(true);
+    try {
+      await signUp(email, password, fullName, {
+        signup_kind: "portal",
+        company: company.trim(),
+      });
+      try {
+        await signIn(email, password);
+      } catch {
+        setAwaitingConfirmation(true);
+        setNotice(
+          "Check your email to confirm your account, then come back here and click Continue.",
+        );
+        return;
+      }
+      await notifyStaffOfSignup(fullName, email, company.trim());
+      navigate("/portal", { replace: true });
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onContinueAfterConfirmation(e: FormEvent) {
+    e.preventDefault();
+    setErr("");
+    setBusy(true);
+    try {
+      await signIn(email, password);
+      await notifyStaffOfSignup(fullName, email, company.trim());
+      navigate("/portal", { replace: true });
+    } catch (e2) {
+      setErr(
+        e2 instanceof Error
+          ? e2.message
+          : "Still can't sign you in — make sure you clicked the confirmation link first.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="auth-wrap">
+      <form
+        className="auth-card"
+        onSubmit={awaitingConfirmation ? onContinueAfterConfirmation : onSubmit}
+      >
+        <div className="brand">
+          <div className="brand-mark">E</div>
+          <div>
+            <div className="brand-name">ExPac</div>
+            <div className="brand-sub" style={{ color: "#9aa39a" }}>
+              CUSTOMER PORTAL
+            </div>
+          </div>
+        </div>
+        <h1>Request portal access</h1>
+        <p className="sub">
+          Tell us who you are and we'll set up your login once ExPac
+          Forwarding approves the request.
+        </p>
+
+        {err && <div className="auth-error">{err}</div>}
+        {notice && (
+          <div
+            className="auth-error"
+            style={{ background: "#e5f3d9", color: "#4a6b1f" }}
+          >
+            {notice}
+          </div>
+        )}
+
+        <div className="field">
+          <label>Your name</label>
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            autoComplete="name"
+            disabled={awaitingConfirmation}
+            required
+          />
+        </div>
+        <div className="field">
+          <label>Company</label>
+          <input
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            autoComplete="organization"
+            disabled={awaitingConfirmation}
+            required
+          />
+        </div>
+        <div className="field">
+          <label>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            disabled={awaitingConfirmation}
+            required
+          />
+        </div>
+        <div className="field">
+          <label>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            minLength={6}
+            disabled={awaitingConfirmation}
+            required
+          />
+        </div>
+
+        <button
+          className="btn"
+          type="submit"
+          disabled={busy}
+          style={{ width: "100%", justifyContent: "center" }}
+        >
+          {busy
+            ? "Please wait…"
+            : awaitingConfirmation
+              ? "Continue"
+              : "Request access"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/** Best-effort — a failed/unavailable notification (e.g. no /api/* in dev)
+ *  must never block the customer's own signup from completing. */
+async function notifyStaffOfSignup(
+  fullName: string,
+  email: string,
+  company: string,
+): Promise<void> {
+  try {
+    await sendMail({
+      to: [PORTAL_SIGNUP_NOTIFY_EMAIL],
+      subject: `New portal signup awaiting approval: ${company || email}`,
+      text: `${fullName} (${email}) requested customer portal access for "${company || "—"}".\n\nApprove or reject it from Customers in the app.`,
+      html: `<p><strong>${fullName}</strong> (${email}) requested customer portal access for "<strong>${company || "—"}</strong>".</p><p>Approve or reject it from Customers in the app.</p>`,
+    });
+  } catch {
+    // See doc comment above.
+  }
 }

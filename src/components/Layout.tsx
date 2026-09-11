@@ -58,7 +58,14 @@ const NAV: NavModule[] = [
   },
   { to: "/import-vat-duty", label: "Customs Charges" },
   { to: "/rates", label: "Rates & Tariff" },
-  { to: "/clients", label: "Customers" },
+  {
+    to: "/clients",
+    label: "Customers",
+    children: [
+      { to: "/clients", label: "All Customers" },
+      { to: "/clients?tab=portal-access", label: "Portal Access" },
+    ],
+  },
   {
     to: "/suppliers",
     label: "Suppliers",

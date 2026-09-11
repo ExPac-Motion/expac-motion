@@ -132,18 +132,69 @@ export const DEFAULT_SHIPMENT_COMMS: Record<
   },
 };
 
-/** The effective template for a mode: stored overrides on top of the default. */
-export function shipmentCommsTemplate(
+/** The effective template for a mode: stored overrides on top of a set of
+ *  built-in defaults (DEFAULT_SHIPMENT_COMMS or DEFAULT_SHIPMENT_REPLIES). */
+function resolveTemplate(
   key: ShipmentModeKey,
-  config?: ShipmentCommsConfig | null,
+  config: ShipmentCommsConfig | null | undefined,
+  defaults: Record<ShipmentModeKey, ShipmentCommsTemplate>,
 ): ShipmentCommsTemplate {
-  const base = DEFAULT_SHIPMENT_COMMS[key];
+  const base = defaults[key];
   const over = config?.[key];
   return {
     subject: over?.subject?.trim() ? over.subject : base.subject,
     body: over?.body?.trim() ? over.body : base.body,
   };
 }
+
+export function shipmentCommsTemplate(
+  key: ShipmentModeKey,
+  config?: ShipmentCommsConfig | null,
+): ShipmentCommsTemplate {
+  return resolveTemplate(key, config, DEFAULT_SHIPMENT_COMMS);
+}
+
+export function shipmentReplyTemplate(
+  key: ShipmentModeKey,
+  config?: ShipmentCommsConfig | null,
+): ShipmentCommsTemplate {
+  return resolveTemplate(key, config, DEFAULT_SHIPMENT_REPLIES);
+}
+
+/** A quick chat-style reply within an existing thread — no shipment-data
+ *  block, just the operator's message and the signature. Same per-mode
+ *  override shape as Shipment Comms (Settings → Shipment Replies), but the
+ *  built-in defaults are identical across modes since there's no
+ *  mode-specific data to show. */
+const REPLY_BODY = `{{ remarks }}
+
+Kind Regards
+
+Oliver | Support | ExPac Forwarding
+Air and Ocean Freight Clearing & Forwarding, Great Voyages Starts Here”
+
+T: +27 (0) 11 568 8281 | WA: +27 (0) 82 682 3332 | F: +27 (0) 86 482 2371
+E: support@expac.co.za | Office: admin@expac.co.za | Portal: www.expac.co.za
+Postal Address: PostNet Suite 84, Private Bag X1015, Lyttelton, 0140
+
+Our team operates flexibly across multiple time zones, allowing us to provide responsive support
+and seamless collaboration no matter where you are located. This means faster turnarounds, greater
+availability, and a workflow that adapts to your schedule.`;
+
+const REPLY_TEMPLATE: ShipmentCommsTemplate = {
+  subject: "Re: Shipment {{ shipment.number }}",
+  body: REPLY_BODY,
+};
+
+export const DEFAULT_SHIPMENT_REPLIES: Record<
+  ShipmentModeKey,
+  ShipmentCommsTemplate
+> = {
+  sea: REPLY_TEMPLATE,
+  air: REPLY_TEMPLATE,
+  courier: REPLY_TEMPLATE,
+  road: REPLY_TEMPLATE,
+};
 
 /** Merge-code values for a shipment-notification email. */
 export function shipmentMergeContext(job: Job): MergeContext {
@@ -212,6 +263,22 @@ export function buildShipmentEmail(
   config?: ShipmentCommsConfig | null,
 ): BuiltEmail {
   const tpl = shipmentCommsTemplate(shipmentModeKey(job.mode), config);
+  const { subject, text } = renderShipmentEmail(job, tpl, remarks);
+  return { subject, text, html: shipmentEmailHtml(text) };
+}
+
+/**
+ * A quick chat-style reply within an existing thread (Settings → Shipment
+ * Replies, or the built-in default) — just the operator's message and
+ * signature, no shipment-data block. Use for ongoing back-and-forth;
+ * buildShipmentEmail is still there for a full status-update notification.
+ */
+export function buildShipmentReply(
+  job: Job,
+  remarks: string,
+  config?: ShipmentCommsConfig | null,
+): BuiltEmail {
+  const tpl = shipmentReplyTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
   return { subject, text, html: shipmentEmailHtml(text) };
 }

@@ -25,10 +25,13 @@ import {
   useDeleteJob,
   useDeleteShipmentDocument,
   useJobs,
+  useMarkJobMessagesRead,
   useSetJobMilestone,
   useShipmentDocuments,
+  useUnreadMessages,
   useUpdateJob,
   useUpdateJobsBulk,
+  useUpdateShipmentDocument,
   useUploadShipmentDocument,
 } from "../lib/hooks";
 import { getShipmentDocumentUrl } from "../lib/db";
@@ -36,6 +39,7 @@ import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import {
   DELIVERED_STATUS,
+  DOCUMENT_TYPES,
   MILESTONE_BY_STATUS,
   SHIPMENT_STATUSES,
   shipmentStatusSlug,
@@ -183,10 +187,17 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [viewing, setViewing] = useState<Job | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const unreadMessagesQ = useUnreadMessages();
+  const unreadJobIds = useMemo(
+    () => new Set((unreadMessagesQ.data ?? []).map((m) => m.job_id)),
+    [unreadMessagesQ.data],
+  );
+  const markRead = useMarkJobMessagesRead();
 
   function openComms(j: Job) {
     setCommsJob(j);
     setRailOpen(true);
+    if (unreadJobIds.has(j.id)) markRead.mutate(j.id);
   }
 
   async function onDeleteJob(j: Job) {
@@ -285,6 +296,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             onSelectToggle={() => sel.toggle(j.id)}
             onMail={() => openComms(j)}
             mailTitle="Messages / email the customer"
+            mailUnread={unreadJobIds.has(j.id)}
             onView={() => setViewing(j)}
             onEdit={() => setEditingJob(j)}
             onDelete={() => onDeleteJob(j)}
@@ -458,7 +470,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, mode],
+    [sel, mode, unreadJobIds],
   );
 
   return (
@@ -664,19 +676,34 @@ function bytesLabel(n: number | null): string {
 function DocumentsSection({ job }: { job: Job }) {
   const { data, isLoading } = useShipmentDocuments(job.id);
   const upload = useUploadShipmentDocument();
+  const updateDoc = useUpdateShipmentDocument();
   const del = useDeleteShipmentDocument();
   const { toast, error: toastError } = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
+  const [docType, setDocType] = useState<string>(DOCUMENT_TYPES[0]);
+  const [visibleToClient, setVisibleToClient] = useState(false);
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     try {
-      await upload.mutateAsync({ jobId: job.id, file });
+      await upload.mutateAsync({ jobId: job.id, file, docType, visibleToClient });
       toast("Document uploaded");
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not upload");
+    }
+  }
+
+  async function onToggleVisible(doc: ShipmentDocument) {
+    try {
+      await updateDoc.mutateAsync({
+        id: doc.id,
+        jobId: job.id,
+        patch: { visible_to_client: !doc.visible_to_client },
+      });
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not update");
     }
   }
 
@@ -715,13 +742,37 @@ function DocumentsSection({ job }: { job: Job }) {
         }}
       >
         <strong>Documents</strong>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Link
             className="btn outline small"
             to={`/jobs/${job.id}/documents/delivery-instruction/print`}
           >
             Delivery Instructions
           </Link>
+          <select
+            value={docType}
+            onChange={(e) => setDocType(e.target.value)}
+            title="Document type"
+            style={{ width: "auto" }}
+          >
+            {DOCUMENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <label
+            className="check small"
+            style={{ whiteSpace: "nowrap" }}
+            title="Show this document in the customer's portal"
+          >
+            <input
+              type="checkbox"
+              checked={visibleToClient}
+              onChange={(e) => setVisibleToClient(e.target.checked)}
+            />
+            Visible to customer
+          </label>
           <button
             type="button"
             className="btn small"
@@ -761,11 +812,22 @@ function DocumentsSection({ job }: { job: Job }) {
                 title="Open / download"
               >
                 {doc.name}
+                {doc.doc_type && (
+                  <span className="muted small"> · {doc.doc_type}</span>
+                )}
               </button>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className="muted small">
                   {bytesLabel(doc.size_bytes)} · {formatDate(doc.created_at)}
                 </span>
+                <button
+                  type="button"
+                  className={`btn outline small${doc.visible_to_client ? " on" : ""}`}
+                  title="Toggle visibility in the customer's portal"
+                  onClick={() => onToggleVisible(doc)}
+                >
+                  {doc.visible_to_client ? "Visible to customer" : "Staff only"}
+                </button>
                 <button
                   className="row-icon-btn danger"
                   title="Delete"

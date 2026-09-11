@@ -126,6 +126,7 @@ export function RowActions({
   onSelectToggle,
   onMail,
   mailTitle = "Send a message",
+  mailUnread = false,
   onView,
   onEdit,
   onDelete,
@@ -137,6 +138,8 @@ export function RowActions({
   /** When set, a mail icon is shown first (after the checkbox). */
   onMail?: () => void;
   mailTitle?: string;
+  /** Badges the mail icon — an unread customer reply is waiting. */
+  mailUnread?: boolean;
   /** Each icon is omitted when its handler isn't passed (e.g. config lists
    *  that are view + edit only, or a sent campaign that can't be edited). */
   onView?: () => void;
@@ -162,8 +165,13 @@ export function RowActions({
         <input type="checkbox" onClick={(e) => e.stopPropagation()} />
       )}
       {onMail && (
-        <button className="row-icon-btn" title={mailTitle} onClick={stop(onMail)}>
+        <button
+          className={`row-icon-btn${mailUnread ? " has-unread" : ""}`}
+          title={mailUnread ? `${mailTitle} — new reply` : mailTitle}
+          onClick={stop(onMail)}
+        >
           {ROW_ICON.mail}
+          {mailUnread && <span className="row-icon-dot" />}
         </button>
       )}
       {onView && (

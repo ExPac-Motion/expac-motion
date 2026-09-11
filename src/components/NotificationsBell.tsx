@@ -8,6 +8,7 @@ import {
   useOpportunities,
   useOpsTasks,
   useQuotes,
+  useUnreadMessages,
 } from "../lib/hooks";
 import { timeAgo } from "../lib/format";
 
@@ -94,6 +95,7 @@ export default function NotificationsBell() {
   const tasks = useOpsTasks().data;
   const campaigns = useMailCampaigns().data;
   const followUps = useFollowUpLog().data;
+  const unreadMessages = useUnreadMessages().data;
 
   const notes = useMemo<Note[]>(() => {
     const cutoff = now - 30 * DAY;
@@ -173,6 +175,18 @@ export default function NotificationsBell() {
           to: "/crm?tab=campaigns",
         });
 
+    const jobById = new Map((jobs ?? []).map((j) => [j.id, j]));
+    for (const m of unreadMessages ?? []) {
+      const j = jobById.get(m.job_id);
+      out.push({
+        id: `msg-${m.id}`,
+        domain: "mail",
+        text: `New reply — ${j?.reference ?? "shipment"}`,
+        when: m.created_at,
+        to: "/jobs",
+      });
+    }
+
     for (const f of followUps ?? [])
       if (recent(f.created_at))
         out.push({
@@ -201,7 +215,7 @@ export default function NotificationsBell() {
       return true;
     });
     return capped.slice(0, 40);
-  }, [now, leads, quotes, jobs, opps, tasks, campaigns, followUps]);
+  }, [now, leads, quotes, jobs, opps, tasks, campaigns, followUps, unreadMessages]);
 
   const unread = notes.filter((n) => new Date(n.when).getTime() > seen).length;
 

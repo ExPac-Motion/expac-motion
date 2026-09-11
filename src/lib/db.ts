@@ -32,6 +32,8 @@ import type {
   ClientMessage,
   ClientQuote,
   ClientQuoteLine,
+  ClientRateSheetItem,
+  ClientSupplier,
   Profile,
   ProfilePatch,
   Quote,
@@ -685,6 +687,34 @@ export async function listMessagesForJobs(jobIds: string[]): Promise<Message[]> 
   );
 }
 
+/** Unread customer replies (direction='in', read_at null) — lights up the
+ *  mail icon on Active Shipments and feeds the notif bell. */
+export async function listUnreadMessages(): Promise<
+  Pick<Message, "id" | "job_id" | "body" | "created_at">[]
+> {
+  return unwrap<Pick<Message, "id" | "job_id" | "body" | "created_at">[]>(
+    await supabase
+      .from("messages")
+      .select("id, job_id, body, created_at")
+      .eq("direction", "in")
+      .is("read_at", null)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** Marks every unread customer reply on a shipment as read — called when
+ *  staff opens its Comms panel. */
+export async function markJobMessagesRead(jobId: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("job_id", jobId)
+      .eq("direction", "in")
+      .is("read_at", null),
+  );
+}
+
 /** Bulk fetch for the CRM activity timeline (a client's documents across all their jobs). */
 export async function listShipmentDocumentsForJobs(
   jobIds: string[],
@@ -727,6 +757,35 @@ export async function getInvite(token: string): Promise<ClientInvite> {
 
 export async function claimClientInvite(token: string): Promise<void> {
   unwrap(await supabase.rpc("claim_client_invite", { p_token: token }));
+}
+
+/** Self-serve portal signups awaiting staff approval (portal_status='pending'). */
+export async function listPendingPortalSignups(): Promise<Profile[]> {
+  return unwrap<Profile[]>(
+    await supabase
+      .from("profiles")
+      .select("*")
+      .eq("portal_status", "pending")
+      .order("created_at", { ascending: true }),
+  );
+}
+
+export async function approvePortalSignup(
+  profileId: string,
+  clientId: string,
+): Promise<void> {
+  unwrap(
+    await supabase.rpc("approve_portal_signup", {
+      p_profile_id: profileId,
+      p_client_id: clientId,
+    }),
+  );
+}
+
+export async function rejectPortalSignup(profileId: string): Promise<void> {
+  unwrap(
+    await supabase.rpc("reject_portal_signup", { p_profile_id: profileId }),
+  );
 }
 
 export async function listMyQuotes(): Promise<ClientQuote[]> {
@@ -807,6 +866,35 @@ export async function getMyDocumentUrl(storagePath: string): Promise<string> {
     .createSignedUrl(storagePath, 300);
   if (error || !data) throw error ?? new Error("Could not create download link");
   return data.signedUrl;
+}
+
+/** Every document across all of this client's shipments — the portal's
+ *  Invoices page filters this to doc_type = 'Invoice' client-side. */
+export async function listMyDocumentsAll(): Promise<ClientDocument[]> {
+  return unwrap<ClientDocument[]>(
+    await supabase
+      .from("client_documents")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** Shippers used across this client's own shipments ("Customer Party"). */
+export async function listMySuppliers(): Promise<ClientSupplier[]> {
+  return unwrap<ClientSupplier[]>(
+    await supabase.from("client_suppliers").select("*").order("company"),
+  );
+}
+
+/** The internal rate sheet, sell-only (see client_rate_sheet in 0071). */
+export async function listMyRateSheet(): Promise<ClientRateSheetItem[]> {
+  return unwrap<ClientRateSheetItem[]>(
+    await supabase
+      .from("client_rate_sheet")
+      .select("*")
+      .order("mode")
+      .order("description"),
+  );
 }
 
 /* ---------- Settings ---------- */
@@ -1447,6 +1535,8 @@ export async function listShipmentDocuments(
 export async function uploadShipmentDocument(
   jobId: string,
   file: File,
+  docType?: string | null,
+  visibleToClient?: boolean,
 ): Promise<ShipmentDocument> {
   const path = `${jobId}/${Date.now()}-${file.name}`;
   const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
@@ -1460,7 +1550,23 @@ export async function uploadShipmentDocument(
         storage_path: path,
         kind: "upload",
         size_bytes: file.size,
+        doc_type: docType || null,
+        visible_to_client: !!visibleToClient,
       })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function updateShipmentDocument(
+  id: string,
+  patch: Partial<Pick<ShipmentDocument, "doc_type" | "visible_to_client">>,
+): Promise<ShipmentDocument> {
+  return unwrap<ShipmentDocument>(
+    await supabase
+      .from("shipment_documents")
+      .update(patch)
+      .eq("id", id)
       .select("*")
       .single(),
   );

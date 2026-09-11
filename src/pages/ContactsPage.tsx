@@ -188,6 +188,12 @@ export default function ContactsPage({
     if (kind === "clearing_agent") {
       values.also_agent = fd.get("also_agent") === "on";
     }
+    if (kind === "client") {
+      values.also_shipper = fd.get("also_shipper") === "on";
+    }
+    if (kind === "supplier") {
+      values.also_customer = fd.get("also_customer") === "on";
+    }
     if (!values.company) {
       error("Company name is required");
       return;
@@ -240,6 +246,8 @@ export default function ContactsPage({
     }
     if (kind === "agent") values.also_clearing_agent = Boolean(row.also_clearing_agent);
     if (kind === "clearing_agent") values.also_agent = Boolean(row.also_agent);
+    if (kind === "client") values.also_shipper = Boolean(row.also_shipper);
+    if (kind === "supplier") values.also_customer = Boolean(row.also_customer);
     try {
       const created = await save.mutateAsync({ values });
       toast(`${Label} duplicated`);
@@ -318,6 +326,8 @@ export default function ContactsPage({
               <span className="tag">also clearing agent</span>
             )}
             {r.also_agent && <span className="tag">also agent</span>}
+            {r.also_shipper && <span className="tag">also shipper</span>}
+            {r.also_customer && <span className="tag">also customer</span>}
           </>
         ),
       },
@@ -750,6 +760,26 @@ export default function ContactsPage({
                 Is also Agent
               </label>
             )}
+            {kind === "client" && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="also_shipper"
+                  defaultChecked={Boolean(current?.also_shipper)}
+                />
+                Is also Shipper/Exporter
+              </label>
+            )}
+            {kind === "supplier" && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="also_customer"
+                  defaultChecked={Boolean(current?.also_customer)}
+                />
+                Is also Customer/Importer
+              </label>
+            )}
             <div
               style={{
                 display: "flex",
@@ -801,6 +831,18 @@ export default function ContactsPage({
               f.push({
                 key: "also_agent",
                 label: "Is also Agent",
+                type: "toggle",
+              });
+            if (kind === "client")
+              f.push({
+                key: "also_shipper",
+                label: "Is also Shipper/Exporter",
+                type: "toggle",
+              });
+            if (kind === "supplier")
+              f.push({
+                key: "also_customer",
+                label: "Is also Customer/Importer",
                 type: "toggle",
               });
             return f;

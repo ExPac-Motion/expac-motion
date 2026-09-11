@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
 import MergeCodeMenu from "../components/MergeCodeMenu";
@@ -15,11 +15,13 @@ import {
 import { SHIPMENT_MERGE_CODES } from "../lib/mailMerge";
 import {
   DEFAULT_SHIPMENT_COMMS,
+  DEFAULT_SHIPMENT_REPLIES,
   renderShipmentEmail,
   SHIPMENT_MODE_KEYS,
   SHIPMENT_MODE_LABEL,
   shipmentCommsTemplate,
   shipmentModeKey,
+  shipmentReplyTemplate,
 } from "../lib/mailTemplates";
 import type {
   CompanySettingsPatch,
@@ -32,7 +34,7 @@ import type {
 } from "../lib/types";
 import { formatDate } from "../lib/format";
 
-type Tab = "company" | "defaults" | "team" | "email" | "comms";
+type Tab = "company" | "defaults" | "team" | "email" | "comms" | "replies";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company Details" },
@@ -40,6 +42,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "team", label: "Team" },
   { key: "email", label: "Email" },
   { key: "comms", label: "Shipment Comms" },
+  { key: "replies", label: "Shipment Replies" },
 ];
 
 export default function SettingsPage() {
@@ -66,6 +69,7 @@ export default function SettingsPage() {
         {tab === "team" && <TeamTab />}
         {tab === "email" && <EmailTab />}
         {tab === "comms" && <ShipmentCommsTab />}
+        {tab === "replies" && <ShipmentRepliesTab />}
       </div>
     </>
   );
@@ -418,6 +422,44 @@ function ShipmentCommsTab() {
     <ShipmentCommsEditor
       config={data.shipment_comms ?? {}}
       jobs={jobsQ.data ?? []}
+      settingsField="shipment_comms"
+      defaults={DEFAULT_SHIPMENT_COMMS}
+      resolve={shipmentCommsTemplate}
+      description={
+        <>
+          The customer update email sent from a shipment's Comms panel. Each
+          freight group has its own template — edit the wording and drop in{" "}
+          <code>{"{{ shipment.number }}"}</code>-style codes. The preview
+          renders a real shipment; missing values show blank.
+        </>
+      }
+      saveLabel="Save Shipment Comms"
+    />
+  );
+}
+
+function ShipmentRepliesTab() {
+  const { data, isLoading, isError, error } = useCompanySettings();
+  const jobsQ = useJobs();
+
+  if (isLoading) return <Loading />;
+  if (isError || !data) return <ErrorNote error={error} />;
+
+  return (
+    <ShipmentCommsEditor
+      config={data.shipment_replies ?? {}}
+      jobs={jobsQ.data ?? []}
+      settingsField="shipment_replies"
+      defaults={DEFAULT_SHIPMENT_REPLIES}
+      resolve={shipmentReplyTemplate}
+      description={
+        <>
+          A quick chat-style reply within an existing thread — no
+          shipment-data block, just your message and the signature. Use
+          Shipment Comms instead for a full status-update notification.
+        </>
+      }
+      saveLabel="Save Shipment Replies"
     />
   );
 }
@@ -425,9 +467,22 @@ function ShipmentCommsTab() {
 function ShipmentCommsEditor({
   config,
   jobs,
+  settingsField,
+  defaults,
+  resolve,
+  description,
+  saveLabel,
 }: {
   config: ShipmentCommsConfig;
   jobs: Job[];
+  settingsField: "shipment_comms" | "shipment_replies";
+  defaults: Record<ShipmentModeKey, ShipmentCommsTemplate>;
+  resolve: (
+    key: ShipmentModeKey,
+    config?: ShipmentCommsConfig | null,
+  ) => ShipmentCommsTemplate;
+  description: ReactNode;
+  saveLabel: string;
 }) {
   const update = useUpdateCompanySettings();
   const { toast, error: toastError } = useToast();
@@ -437,7 +492,7 @@ function ShipmentCommsEditor({
   >(
     () =>
       Object.fromEntries(
-        SHIPMENT_MODE_KEYS.map((k) => [k, shipmentCommsTemplate(k, config)]),
+        SHIPMENT_MODE_KEYS.map((k) => [k, resolve(k, config)]),
       ) as Record<ShipmentModeKey, ShipmentCommsTemplate>,
   );
   const [activeKey, setActiveKey] = useState<ShipmentModeKey>("sea");
@@ -462,21 +517,21 @@ function ShipmentCommsEditor({
     ? renderShipmentEmail(previewJob, draft, "")
     : null;
 
-  const dft = DEFAULT_SHIPMENT_COMMS[activeKey];
+  const dft = defaults[activeKey];
   const isDefault = draft.subject === dft.subject && draft.body === dft.body;
 
   async function onSave() {
     const next: ShipmentCommsConfig = {};
     for (const k of SHIPMENT_MODE_KEYS) {
-      const base = DEFAULT_SHIPMENT_COMMS[k];
+      const base = defaults[k];
       const cur = drafts[k];
       if (cur.subject !== base.subject || cur.body !== base.body) {
         next[k] = { subject: cur.subject, body: cur.body };
       }
     }
     try {
-      await update.mutateAsync({ shipment_comms: next });
-      toast("Shipment comms templates saved");
+      await update.mutateAsync({ [settingsField]: next });
+      toast("Templates saved");
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not save");
     }
@@ -485,10 +540,7 @@ function ShipmentCommsEditor({
   return (
     <>
       <p className="muted" style={{ marginTop: 0 }}>
-        The customer update email sent from a shipment's Comms panel. Each
-        freight group has its own template — edit the wording and drop in{" "}
-        <code>{"{{ shipment.number }}"}</code>-style codes. The preview renders a
-        real shipment; missing values show blank.
+        {description}
       </p>
 
       <div
@@ -613,7 +665,7 @@ function ShipmentCommsEditor({
           onClick={onSave}
           disabled={update.isPending}
         >
-          {update.isPending ? "Saving…" : "Save Shipment Comms"}
+          {update.isPending ? "Saving…" : saveLabel}
         </button>
       </div>
     </>

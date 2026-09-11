@@ -27,9 +27,15 @@ import DeliveryInstructionPrintPage from "./pages/DeliveryInstructionPrintPage";
 import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
 import PortalLayout from "./pages/portal/PortalLayout";
+import PortalPendingPage from "./pages/portal/PortalPendingPage";
 import PortalSignupPage from "./pages/portal/PortalSignupPage";
 import PortalDashboardPage from "./pages/portal/PortalDashboardPage";
 import PortalShipmentPage from "./pages/portal/PortalShipmentPage";
+import PortalShipmentsPage from "./pages/portal/PortalShipmentsPage";
+import PortalQuotesPage from "./pages/portal/PortalQuotesPage";
+import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
+import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
+import PortalRatesPage from "./pages/portal/PortalRatesPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import FormPublicPage from "./pages/FormPublicPage";
 import PublicTrackPage from "./pages/PublicTrackPage";
@@ -64,6 +70,11 @@ function PortalProtected() {
   }
   if (!session) return <Navigate to="/login" replace />;
   if (profileQ.data?.role !== "client") return <Navigate to="/" replace />;
+  // null (pre-0068 accounts) and 'approved' both mean "go ahead".
+  const status = profileQ.data?.portal_status;
+  if (status === "pending" || status === "rejected") {
+    return <PortalPendingPage status={status} />;
+  }
   return <PortalLayout />;
 }
 
@@ -110,7 +121,12 @@ export default function App() {
           <Route path="/portal/signup" element={<PortalSignupPage />} />
           <Route element={<PortalProtected />}>
             <Route path="portal" element={<PortalDashboardPage />} />
+            <Route path="portal/shipments" element={<PortalShipmentsPage />} />
             <Route path="portal/shipments/:id" element={<PortalShipmentPage />} />
+            <Route path="portal/quotes" element={<PortalQuotesPage />} />
+            <Route path="portal/invoices" element={<PortalInvoicesPage />} />
+            <Route path="portal/suppliers" element={<PortalSuppliersPage />} />
+            <Route path="portal/rates" element={<PortalRatesPage />} />
           </Route>
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />

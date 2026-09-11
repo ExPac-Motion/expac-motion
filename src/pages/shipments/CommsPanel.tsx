@@ -9,7 +9,7 @@ import {
   useMessages,
   useSendMessage,
 } from "../../lib/hooks";
-import { buildShipmentEmail } from "../../lib/mailTemplates";
+import { buildShipmentEmail, buildShipmentReply } from "../../lib/mailTemplates";
 import { formatDateTime } from "../../lib/format";
 import type { Job, Message, MessageStatus } from "../../lib/types";
 
@@ -35,6 +35,10 @@ export default function CommsPanel({ job }: { job: Job }) {
   const { data: settings } = useCompanySettings();
 
   const [tab, setTab] = useState<"email" | "note">("email");
+  // 'reply' (default) = quick chat-style message, no shipment-data block —
+  // the common case once a thread is already going. 'update' is the full
+  // per-mode status-update template (Settings -> Shipment Comms).
+  const [template, setTemplate] = useState<"update" | "reply">("reply");
   const [remarks, setRemarks] = useState("");
   const remarksRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState("");
@@ -84,8 +88,11 @@ export default function CommsPanel({ job }: { job: Job }) {
 
   const preview = useMemo(
     () =>
-      buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms).text,
-    [job, remarks, settings],
+      template === "reply"
+        ? buildShipmentReply(job, remarks, settings?.shipment_replies).text
+        : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms)
+            .text,
+    [job, remarks, settings, template],
   );
 
   const messages = msgsQ.data ?? [];
@@ -101,7 +108,7 @@ export default function CommsPanel({ job }: { job: Job }) {
       .map((s) => s.trim())
       .filter(Boolean);
     try {
-      await send.mutateAsync({ job, remarks, to, cc });
+      await send.mutateAsync({ job, remarks, to, cc, template });
       toast("Message sent");
       setRemarks("");
     } catch (e) {
@@ -209,6 +216,24 @@ export default function CommsPanel({ job }: { job: Job }) {
               placeholder="extra@address.com, …"
             />
           </div>
+          <div className="comms-actions" style={{ marginBottom: 6 }}>
+            <button
+              type="button"
+              className={`chip${template === "reply" ? " on" : ""}`}
+              onClick={() => setTemplate("reply")}
+              title="A quick chat-style message — no shipment-data block"
+            >
+              Reply
+            </button>
+            <button
+              type="button"
+              className={`chip${template === "update" ? " on" : ""}`}
+              onClick={() => setTemplate("update")}
+              title="The full status-update template (Settings → Shipment Comms)"
+            >
+              Full Update
+            </button>
+          </div>
           <div className="field">
             <div className="merge-code-row">
               <label>Remarks (your message)</label>
@@ -233,7 +258,11 @@ export default function CommsPanel({ job }: { job: Job }) {
               {showPreview ? "Hide" : "Preview"} email
             </button>
             <button className="btn" onClick={onSend} disabled={send.isPending}>
-              {send.isPending ? "Sending…" : "Send Message"}
+              {send.isPending
+                ? "Sending…"
+                : template === "reply"
+                  ? "Send Reply"
+                  : "Send Update"}
             </button>
           </div>
         </div>

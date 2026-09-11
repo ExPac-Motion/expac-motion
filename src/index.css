@@ -2054,6 +2054,7 @@ table.dt th.dt-sortable {
   font-weight: 700;
 }
 .row-icon-btn {
+  position: relative;
   width: 26px;
   height: 26px;
   border: 0;
@@ -2077,6 +2078,19 @@ table.dt th.dt-sortable {
 }
 .row-icon-btn.danger:hover {
   background: #fdecea;
+}
+.row-icon-btn.has-unread {
+  color: var(--green-dark);
+}
+.row-icon-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e0522f;
+  border: 1.5px solid var(--white);
 }
 .email-cell {
   display: inline-flex;
@@ -4525,4 +4539,113 @@ table.dt th.dt-sortable {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---------- Portal floating chat widget ---------- */
+.portal-chat {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.portal-chat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+.portal-chat-toggle:hover {
+  background: #1c1e1c;
+}
+.portal-chat-panel {
+  width: 320px;
+  max-height: 440px;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.portal-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--ink);
+  color: #fff;
+}
+.portal-chat-head .link-btn {
+  color: #dfe4df;
+}
+.portal-chat-jobpick {
+  margin: 10px 14px 0;
+  width: auto;
+}
+.portal-chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.portal-chat-msg {
+  align-self: flex-start;
+  max-width: 85%;
+  background: #f0efe8;
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.portal-chat-msg.me {
+  align-self: flex-end;
+  background: #e5f3d9;
+}
+.portal-chat-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.portal-chat-form input {
+  flex: 1;
+}
+
+/* ---------- Portal dashboard stat cards ---------- */
+.portal-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.portal-stat {
+  margin-bottom: 0;
+  text-align: center;
+}
+.portal-stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: var(--display);
+}
+.portal-stat-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+@media (max-width: 900px) {
+  .portal-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

@@ -17,11 +17,17 @@ export interface Profile {
   role: UserRole;
   /** Set only for role='client' — which customer this portal login belongs to. */
   client_id: string | null;
+  /** Self-serve portal signups only. null = not applicable (staff, or an
+   *  older invite-claimed client) — the app treats null the same as
+   *  'approved'. */
+  portal_status: "pending" | "approved" | "rejected" | null;
+  /** Free-text company name typed on the self-serve signup form, to help
+   *  staff match a pending request to an existing client. */
+  requested_company: string | null;
   /** Monthly Sales CRM targets, tracked against quotes.sales_person_id. */
   sales_revenue_target: number;
   sales_gp_target: number;
   created_at: string;
-  /** Not on the profiles table — filled in from the current session for "me". */
   email?: string | null;
 }
 export type ProfilePatch = Partial<
@@ -68,6 +74,9 @@ export interface CompanySettings {
   mail_signature_html: string;
   /** Per-mode shipment-notification template overrides. */
   shipment_comms: ShipmentCommsConfig;
+  /** Per-mode quick-reply template overrides — a chat-style message within
+   *  an existing thread, no shipment-data block. */
+  shipment_replies: ShipmentCommsConfig;
   updated_at: string;
 }
 export type CompanySettingsPatch = Partial<
@@ -194,6 +203,31 @@ export interface ClientDocument {
   created_at: string;
 }
 
+/** "Customer Party" — a shipper used on one of this client's own shipments. */
+export interface ClientSupplier {
+  id: string;
+  company: string;
+  contact: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+/** Tariff Sheet — the internal rate_sheet with buy/margin collapsed into a
+ *  single sell rate (see client_rate_sheet in 0071). */
+export interface ClientRateSheetItem {
+  id: string;
+  mode: QuoteMode;
+  origin: string | null;
+  destination: string | null;
+  carrier: string | null;
+  category: ChargeCategory;
+  code: string | null;
+  description: string;
+  unit: string | null;
+  cur: LineCurrency;
+  sell: number;
+}
+
 /* ---------- Document Vault ---------- */
 
 export type DocumentKind = "upload" | "generated";
@@ -205,10 +239,21 @@ export interface ShipmentDocument {
   storage_path: string;
   kind: DocumentKind;
   doc_type: string | null;
+  /** Shown in the customer's portal Documents/Invoices panel once true. */
+  visible_to_client: boolean;
   size_bytes: number | null;
   created_by: string | null;
   created_at: string;
 }
+
+/** Options for the "Type" picker on a shipment document upload. */
+export const DOCUMENT_TYPES = [
+  "Invoice",
+  "Packing List",
+  "Bill of Lading / AWB",
+  "Customs",
+  "Other",
+] as const;
 
 /* ---------- Sales CRM: Leads ---------- */
 
@@ -711,6 +756,13 @@ export interface Contact {
   /** Non-null on a row that mirrors a record in the other table (read-only here). */
   source_agent_id?: string | null;
   source_clearing_agent_id?: string | null;
+  /** Customer <-> Shipper cross-listing (clients / suppliers only) — the
+   *  shipper/exporter is sometimes also the customer, and vice versa. */
+  also_shipper?: boolean | null;
+  also_customer?: boolean | null;
+  /** Non-null on a row that mirrors a record in the other table (read-only here). */
+  source_supplier_id?: string | null;
+  source_client_id?: string | null;
   created_at: string;
   /** Joined for display (clients only). */
   sales_person?: Pick<Profile, "id" | "full_name"> | null;
@@ -976,6 +1028,8 @@ export interface Message {
   created_by: string | null;
   created_at: string;
   sent_at: string | null;
+  /** Only meaningful for direction='in' (a customer reply) — null = unread. */
+  read_at: string | null;
 }
 
 export type MessagePatch = Partial<

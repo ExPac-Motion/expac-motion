@@ -14,7 +14,12 @@ interface AuthApi {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    extraMeta?: Record<string, string>,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -48,11 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (error) throw error;
       },
-      async signUp(email, password, fullName) {
+      async signUp(email, password, fullName, extraMeta) {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { full_name: fullName.trim() } },
+          options: { data: { full_name: fullName.trim(), ...extraMeta } },
         });
         if (error) throw error;
       },

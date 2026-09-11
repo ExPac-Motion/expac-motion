@@ -33,7 +33,7 @@ import type {
   UiTableLayout,
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
-import { buildShipmentEmail } from "./mailTemplates";
+import { buildShipmentEmail, buildShipmentReply } from "./mailTemplates";
 import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail, SUPPORT_BCC } from "./mail";
 
@@ -420,6 +420,24 @@ export function useMessages(jobId: string | undefined) {
   });
 }
 
+/** Unread customer replies — polled so one sent from the portal lights up
+ *  the mail icon (and the notif bell) here without a manual refresh. */
+export function useUnreadMessages() {
+  return useQuery({
+    queryKey: ["unread_messages"],
+    queryFn: db.listUnreadMessages,
+    refetchInterval: 45_000,
+  });
+}
+
+export function useMarkJobMessagesRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) => db.markJobMessagesRead(jobId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["unread_messages"] }),
+  });
+}
+
 export function useSendMessage() {
   const qc = useQueryClient();
   return useMutation({
@@ -428,15 +446,16 @@ export function useSendMessage() {
       remarks: string;
       to: string[];
       cc: string[];
+      /** 'reply' = quick chat-style message (Settings -> Shipment Replies),
+       *  no shipment-data block. Defaults to the full status-update template. */
+      template?: "update" | "reply";
     }) => {
-      const { job, remarks, to, cc } = input;
+      const { job, remarks, to, cc, template = "update" } = input;
       const settings = await db.getCompanySettings().catch(() => null);
-      const mail = buildShipmentEmail(
-        job,
-        undefined,
-        remarks,
-        settings?.shipment_comms,
-      );
+      const mail =
+        template === "reply"
+          ? buildShipmentReply(job, remarks, settings?.shipment_replies)
+          : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms);
       try {
         const { id } = await sendMail({
           jobId: job.id,
@@ -517,6 +536,27 @@ export function useInvite(token: string | undefined) {
     retry: false,
   });
 }
+export function usePendingPortalSignups() {
+  return useQuery({
+    queryKey: ["pending_portal_signups"],
+    queryFn: db.listPendingPortalSignups,
+  });
+}
+export function useApprovePortalSignup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ profileId, clientId }: { profileId: string; clientId: string }) =>
+      db.approvePortalSignup(profileId, clientId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pending_portal_signups"] }),
+  });
+}
+export function useRejectPortalSignup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => db.rejectPortalSignup(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pending_portal_signups"] }),
+  });
+}
 export function useMyQuotes() {
   return useQuery({ queryKey: ["my_quotes"], queryFn: db.listMyQuotes });
 }
@@ -569,6 +609,21 @@ export function useMyDocuments(jobId: string | undefined) {
     queryFn: () => db.listMyDocuments(jobId as string),
     enabled: Boolean(jobId),
   });
+}
+/** Every document across all of this client's shipments — Invoices tab. */
+export function useMyDocumentsAll() {
+  return useQuery({
+    queryKey: ["my_documents_all"],
+    queryFn: db.listMyDocumentsAll,
+  });
+}
+/** "Customer Party" — shippers used on this client's own shipments. */
+export function useMySuppliers() {
+  return useQuery({ queryKey: ["my_suppliers"], queryFn: db.listMySuppliers });
+}
+/** "Tariff Sheet" — the internal rate sheet, sell-only. */
+export function useMyRateSheet() {
+  return useQuery({ queryKey: ["my_rate_sheet"], queryFn: db.listMyRateSheet });
 }
 
 /* ---------- Rates & Tariff Sheet ---------- */
@@ -1018,8 +1073,30 @@ export function useShipmentDocuments(jobId: string | undefined) {
 export function useUploadShipmentDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { jobId: string; file: File }) =>
-      db.uploadShipmentDocument(input.jobId, input.file),
+    mutationFn: (input: {
+      jobId: string;
+      file: File;
+      docType?: string | null;
+      visibleToClient?: boolean;
+    }) =>
+      db.uploadShipmentDocument(
+        input.jobId,
+        input.file,
+        input.docType,
+        input.visibleToClient,
+      ),
+    onSuccess: (_d, input) =>
+      qc.invalidateQueries({ queryKey: ["shipment_documents", input.jobId] }),
+  });
+}
+export function useUpdateShipmentDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id: string;
+      jobId: string;
+      patch: Parameters<typeof db.updateShipmentDocument>[1];
+    }) => db.updateShipmentDocument(input.id, input.patch),
     onSuccess: (_d, input) =>
       qc.invalidateQueries({ queryKey: ["shipment_documents", input.jobId] }),
   });

@@ -220,7 +220,10 @@ export default function PortalShipmentPage() {
           <EmptyState>No messages yet.</EmptyState>
         ) : (
           <div className="stack-sm">
-            {(messagesQ.data ?? []).map((m) => (
+            {(messagesQ.data ?? [])
+              .slice()
+              .reverse()
+              .map((m) => (
               <div
                 key={m.id}
                 style={{
