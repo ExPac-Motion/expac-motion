@@ -1713,15 +1713,21 @@ table.dt th.dt-sortable {
   display: flex;
   align-items: center;
   gap: 6px;
+  justify-content: space-between;
 }
 .value-currency-row input {
   flex: 1;
   min-width: 0;
+  font-size: 1rem;
 }
 .value-currency-select {
-  width: auto;
-  min-width: 66px;
+  width: 64px;
+  min-width: 64px;
   flex: 0 0 auto;
+  margin-left: auto;
+  padding: 6px 22px 6px 8px;
+  font-size: 0.72rem;
+  background-position: right 6px center;
 }
 .value-currency-badge {
   flex: 0 0 auto;
