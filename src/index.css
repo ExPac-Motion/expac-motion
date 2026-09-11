@@ -1848,10 +1848,6 @@ table.dt th.dt-sortable {
   width: 100%;
   max-width: 380px;
 }
-/* Wider variant for the public shipment-tracking page (room for the map) */
-.auth-card.track-card {
-  max-width: 640px;
-}
 .auth-card .brand {
   border: 0;
   padding: 0;
@@ -1887,6 +1883,75 @@ table.dt th.dt-sortable {
   color: var(--muted);
   padding: 24px;
   text-align: center;
+}
+
+/* ---------- Public shipment-tracking page (/track) ---------- */
+.track-page {
+  min-height: 100vh;
+  background: var(--paper);
+}
+.track-hero {
+  background: var(--ink);
+  padding: 48px 24px 40px;
+}
+.track-hero-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.track-hero .brand {
+  border: 0;
+  padding: 0;
+  margin-bottom: 24px;
+}
+.track-hero h1 {
+  color: #fff;
+  font-size: 1.8rem;
+  margin: 0 0 6px;
+}
+.track-hero .sub {
+  color: #c7ccc4;
+  font-size: 0.9rem;
+  margin-bottom: 22px;
+}
+.track-search {
+  display: flex;
+  gap: 8px;
+}
+.track-search input {
+  flex: 1;
+}
+.track-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px 56px;
+}
+.track-fields {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 20px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) {
+  .track-fields {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .track-hero {
+    padding: 32px 16px 28px;
+  }
+  .track-hero h1 {
+    font-size: 1.4rem;
+  }
+  .track-content {
+    padding: 20px 16px 40px;
+  }
+  .track-fields {
+    grid-template-columns: 1fr;
+  }
+  .track-search {
+    flex-direction: column;
+  }
 }
 
 /* ---------- Row action icons (list tables) ---------- */

@@ -1197,6 +1197,12 @@ export interface TrackedShipment {
   etd: string | null;
   eta: string | null;
   last_event: string | null;
+  shipper: string | null;
+  customer_ref: string | null;
+  pdd: string | null;
+  qty: number | null;
+  cw_kg: number | null;
+  ttl_vol: number | null;
   events: TrackedShipmentEvent[];
 }
 

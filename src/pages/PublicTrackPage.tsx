@@ -37,50 +37,56 @@ export default function PublicTrackPage() {
   }
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-card track-card">
-        <div className="brand">
-          <div className="brand-mark">E</div>
-          <div>
-            <div className="brand-name">ExPac</div>
-            <div className="brand-sub" style={{ color: "#9aa39a" }}>
-              FORWARDING
+    <div className="track-page">
+      <header className="track-hero">
+        <div className="track-hero-inner">
+          <div className="brand">
+            <div className="brand-mark">E</div>
+            <div>
+              <div className="brand-name">ExPac</div>
+              <div className="brand-sub" style={{ color: "#9aa39a" }}>
+                FORWARDING
+              </div>
             </div>
           </div>
+          <h1>Track Your Shipment</h1>
+          <p className="sub">Enter your shipment number to see its current status.</p>
+
+          <form onSubmit={onSubmit} className="track-search">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="e.g. SEA170869"
+              autoFocus
+            />
+            <button className="btn" type="submit" disabled={state === "loading"}>
+              {state === "loading" ? "Searching…" : "Track"}
+            </button>
+          </form>
         </div>
-        <h1>Track Your Shipment</h1>
-        <p className="sub">Enter your shipment number to see its current status.</p>
+      </header>
 
-        <form
-          onSubmit={onSubmit}
-          style={{ display: "flex", gap: 8, marginBottom: 20 }}
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. SEA170869"
-            style={{ flex: 1 }}
-            autoFocus
-          />
-          <button className="btn" type="submit" disabled={state === "loading"}>
-            {state === "loading" ? "Searching…" : "Track"}
-          </button>
-        </form>
-
+      <div className="track-content">
         {state === "notfound" && (
-          <p className="hint">
-            We couldn't find a shipment with that number. Double-check it and
-            try again, or contact ExPac Forwarding for help.
-          </p>
+          <div className="panel">
+            <p className="hint">
+              We couldn't find a shipment with that number. Double-check it
+              and try again, or contact ExPac Forwarding for help.
+            </p>
+          </div>
         )}
         {state === "error" && (
-          <p className="hint">Something went wrong — please try again shortly.</p>
+          <div className="panel">
+            <p className="hint">Something went wrong — please try again shortly.</p>
+          </div>
         )}
 
         {state === "found" && result && (
-          <div>
-            <div className="grid2" style={{ marginBottom: 14 }}>
-              <Field label="Shipment" value={result.reference} />
+          <div className="panel">
+            <div className="track-fields">
+              <Field label="Shipment Number" value={result.reference} />
+              <Field label="Reference" value={result.customer_ref || "—"} />
+              <Field label="Shipper Name" value={result.shipper || "—"} />
               <Field label="Mode" value={result.mode} />
               <Field label="Status" value={result.status || "—"} />
               <Field label="Carrier" value={result.carrier || "—"} />
@@ -92,10 +98,20 @@ export default function PublicTrackPage() {
               <Field label="Destination" value={portCode(result.pod)} />
               <Field label="ETD" value={formatDate(result.etd)} />
               <Field label="ETA" value={formatDate(result.eta)} />
+              <Field label="PDD" value={formatDate(result.pdd)} />
+              <Field label="Qty" value={result.qty != null ? String(result.qty) : "—"} />
+              <Field
+                label="C.W (Kgs)"
+                value={result.cw_kg != null ? `${result.cw_kg.toFixed(2)} kg` : "—"}
+              />
+              <Field
+                label="Ttl Vol"
+                value={result.ttl_vol != null ? `${result.ttl_vol.toFixed(3)} m³` : "—"}
+              />
             </div>
 
             <TrackingMap
-              height={300}
+              height={420}
               pol={
                 result.pol_lat != null
                   ? { lat: result.pol_lat, lon: result.pol_lon, label: result.pol }
@@ -126,7 +142,7 @@ export default function PublicTrackPage() {
             />
 
             {result.events.length > 0 && (
-              <ol className="trk-timeline" style={{ marginTop: 12 }}>
+              <ol className="trk-timeline" style={{ marginTop: 16 }}>
                 {result.events
                   .slice()
                   .reverse()
