@@ -1913,6 +1913,13 @@ table.dt th.dt-sortable {
   font-size: 0.9rem;
   margin-bottom: 22px;
 }
+.track-hero .track-portal-note {
+  margin-top: -14px;
+}
+.track-hero .track-portal-note a {
+  color: var(--green);
+  font-weight: 700;
+}
 .track-search {
   display: flex;
   gap: 8px;

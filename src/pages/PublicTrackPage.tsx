@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import TrackingMap from "../components/TrackingMap";
 import { trackShipment } from "../lib/db";
 import { formatDate, formatDateTime, portCode } from "../lib/format";
@@ -51,6 +52,10 @@ export default function PublicTrackPage() {
           </div>
           <h1>Track Your Shipment</h1>
           <p className="sub">Enter your shipment number to see its current status.</p>
+          <p className="sub track-portal-note">
+            Should you require more information on your shipment, kindly log
+            in to your <Link to="/portal">ExPac Motion Portal</Link>.
+          </p>
 
           <form onSubmit={onSubmit} className="track-search">
             <input
