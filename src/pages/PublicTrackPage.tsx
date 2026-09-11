@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import trackHeroBg from "../assets/track-hero-plane.png";
 import TrackingMap from "../components/TrackingMap";
 import { trackShipment } from "../lib/db";
 import { formatDate, formatDateTime, portCode } from "../lib/format";
@@ -37,6 +38,10 @@ export default function PublicTrackPage() {
     }
   }
 
+  const contentStyle = {
+    "--track-content-bg": `url(${trackHeroBg})`,
+  } as CSSProperties;
+
   return (
     <div className="track-page">
       <header className="track-hero">
@@ -71,102 +76,104 @@ export default function PublicTrackPage() {
         </div>
       </header>
 
-      <div className="track-content">
-        {state === "notfound" && (
-          <div className="panel">
-            <p className="hint">
-              We couldn't find a shipment with that number. Double-check it
-              and try again, or contact ExPac Forwarding for help.
-            </p>
-          </div>
-        )}
-        {state === "error" && (
-          <div className="panel">
-            <p className="hint">Something went wrong — please try again shortly.</p>
-          </div>
-        )}
-
-        {state === "found" && result && (
-          <div className="panel">
-            <div className="track-fields">
-              <Field label="Shipment Number" value={result.reference} />
-              <Field label="Reference" value={result.customer_ref || "—"} />
-              <Field label="Shipper Name" value={result.shipper || "—"} />
-              <Field label="Mode" value={result.mode} />
-              <Field label="Status" value={result.status || "—"} />
-              <Field label="Carrier" value={result.carrier || "—"} />
-              {result.vessel_name && (
-                <Field label="Vessel" value={result.vessel_name} />
-              )}
-              {result.voyage && <Field label="Voyage" value={result.voyage} />}
-              <Field label="Origin" value={portCode(result.pol)} />
-              <Field label="Destination" value={portCode(result.pod)} />
-              <Field label="ETD" value={formatDate(result.etd)} />
-              <Field label="ETA" value={formatDate(result.eta)} />
-              <Field label="PDD" value={formatDate(result.pdd)} />
-              <Field label="Qty" value={result.qty != null ? String(result.qty) : "—"} />
-              <Field
-                label="C.W (Kgs)"
-                value={result.cw_kg != null ? `${result.cw_kg.toFixed(2)} kg` : "—"}
-              />
-              <Field
-                label="Ttl Vol"
-                value={result.ttl_vol != null ? `${result.ttl_vol.toFixed(3)} m³` : "—"}
-              />
+      <div className="track-content" style={contentStyle}>
+        <div className="track-content-inner">
+          {state === "notfound" && (
+            <div className="panel">
+              <p className="hint">
+                We couldn't find a shipment with that number. Double-check it
+                and try again, or contact ExPac Forwarding for help.
+              </p>
             </div>
+          )}
+          {state === "error" && (
+            <div className="panel">
+              <p className="hint">Something went wrong — please try again shortly.</p>
+            </div>
+          )}
 
-            <TrackingMap
-              height={420}
-              pol={
-                result.pol_lat != null
-                  ? { lat: result.pol_lat, lon: result.pol_lon, label: result.pol }
-                  : null
-              }
-              pod={
-                result.pod_lat != null
-                  ? { lat: result.pod_lat, lon: result.pod_lon, label: result.pod }
-                  : null
-              }
-              vessel={
-                result.vessel_lat != null
-                  ? {
-                      lat: result.vessel_lat,
-                      lon: result.vessel_lon,
-                      label: result.vessel_name,
-                      at: result.position_at,
-                    }
-                  : null
-              }
-              events={result.events.map((e) => ({
-                lat: e.lat,
-                lon: e.lon,
-                description: e.description,
-                occurred_at: e.occurred_at,
-                is_actual: e.is_actual,
-              }))}
-            />
+          {state === "found" && result && (
+            <div className="panel">
+              <div className="track-fields">
+                <Field label="Shipment Number" value={result.reference} />
+                <Field label="Reference" value={result.customer_ref || "—"} />
+                <Field label="Shipper Name" value={result.shipper || "—"} />
+                <Field label="Mode" value={result.mode} />
+                <Field label="Status" value={result.status || "—"} />
+                <Field label="Carrier" value={result.carrier || "—"} />
+                {result.vessel_name && (
+                  <Field label="Vessel" value={result.vessel_name} />
+                )}
+                {result.voyage && <Field label="Voyage" value={result.voyage} />}
+                <Field label="Origin" value={portCode(result.pol)} />
+                <Field label="Destination" value={portCode(result.pod)} />
+                <Field label="ETD" value={formatDate(result.etd)} />
+                <Field label="ETA" value={formatDate(result.eta)} />
+                <Field label="PDD" value={formatDate(result.pdd)} />
+                <Field label="Qty" value={result.qty != null ? String(result.qty) : "—"} />
+                <Field
+                  label="C.W (Kgs)"
+                  value={result.cw_kg != null ? `${result.cw_kg.toFixed(2)} kg` : "—"}
+                />
+                <Field
+                  label="Ttl Vol"
+                  value={result.ttl_vol != null ? `${result.ttl_vol.toFixed(3)} m³` : "—"}
+                />
+              </div>
 
-            {result.events.length > 0 && (
-              <ol className="trk-timeline" style={{ marginTop: 16 }}>
-                {result.events
-                  .slice()
-                  .reverse()
-                  .map((e, i) => (
-                    <li key={i} className={e.is_actual ? "done" : ""}>
-                      <span className="trk-when">{formatDateTime(e.occurred_at)}</span>
-                      <span className="trk-where">
-                        {e.description || e.location || "—"}
-                        {e.vessel_name && (
-                          <span className="muted small"> · {e.vessel_name}</span>
-                        )}
-                      </span>
-                      <span className="trk-tick">{e.is_actual ? "✓" : "•"}</span>
-                    </li>
-                  ))}
-              </ol>
-            )}
-          </div>
-        )}
+              <TrackingMap
+                height={420}
+                pol={
+                  result.pol_lat != null
+                    ? { lat: result.pol_lat, lon: result.pol_lon, label: result.pol }
+                    : null
+                }
+                pod={
+                  result.pod_lat != null
+                    ? { lat: result.pod_lat, lon: result.pod_lon, label: result.pod }
+                    : null
+                }
+                vessel={
+                  result.vessel_lat != null
+                    ? {
+                        lat: result.vessel_lat,
+                        lon: result.vessel_lon,
+                        label: result.vessel_name,
+                        at: result.position_at,
+                      }
+                    : null
+                }
+                events={result.events.map((e) => ({
+                  lat: e.lat,
+                  lon: e.lon,
+                  description: e.description,
+                  occurred_at: e.occurred_at,
+                  is_actual: e.is_actual,
+                }))}
+              />
+
+              {result.events.length > 0 && (
+                <ol className="trk-timeline" style={{ marginTop: 16 }}>
+                  {result.events
+                    .slice()
+                    .reverse()
+                    .map((e, i) => (
+                      <li key={i} className={e.is_actual ? "done" : ""}>
+                        <span className="trk-when">{formatDateTime(e.occurred_at)}</span>
+                        <span className="trk-where">
+                          {e.description || e.location || "—"}
+                          {e.vessel_name && (
+                            <span className="muted small"> · {e.vessel_name}</span>
+                          )}
+                        </span>
+                        <span className="trk-tick">{e.is_actual ? "✓" : "•"}</span>
+                      </li>
+                    ))}
+                </ol>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

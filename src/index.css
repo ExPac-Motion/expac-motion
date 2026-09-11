@@ -1928,6 +1928,24 @@ table.dt th.dt-sortable {
   flex: 1;
 }
 .track-content {
+  position: relative;
+}
+.track-content::before,
+.track-content::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.track-content::before {
+  background: var(--track-content-bg) center / cover no-repeat;
+}
+.track-content::after {
+  background: rgba(20, 22, 20, 0.55);
+}
+.track-content-inner {
+  position: relative;
+  z-index: 1;
   max-width: 1100px;
   margin: 0 auto;
   padding: 28px 24px 56px;
