@@ -1848,6 +1848,10 @@ table.dt th.dt-sortable {
   width: 100%;
   max-width: 380px;
 }
+/* Wider variant for the public shipment-tracking page (room for the map) */
+.auth-card.track-card {
+  max-width: 640px;
+}
 .auth-card .brand {
   border: 0;
   padding: 0;

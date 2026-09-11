@@ -1164,6 +1164,42 @@ export interface ClientTrackingEvent {
   is_actual: boolean;
 }
 
+/** Public, unauthenticated shipment lookup (track_shipment RPC) —
+ *  expac.co.za/live-tracking, search by our shipment number, no login. */
+export interface TrackedShipmentEvent {
+  event_code: string | null;
+  description: string | null;
+  location: string | null;
+  lat: number | null;
+  lon: number | null;
+  vessel_name: string | null;
+  voyage: string | null;
+  occurred_at: string | null;
+  is_actual: boolean;
+}
+export interface TrackedShipment {
+  reference: string;
+  mode: string;
+  customer: string | null;
+  status: string | null;
+  carrier: string | null;
+  vessel_name: string | null;
+  voyage: string | null;
+  pol: string | null;
+  pod: string | null;
+  pol_lat: number | null;
+  pol_lon: number | null;
+  pod_lat: number | null;
+  pod_lon: number | null;
+  vessel_lat: number | null;
+  vessel_lon: number | null;
+  position_at: string | null;
+  etd: string | null;
+  eta: string | null;
+  last_event: string | null;
+  events: TrackedShipmentEvent[];
+}
+
 /** Draft shape used by the quote builder before a row exists in the DB. */
 export interface QuoteDraft {
   id: string | null;

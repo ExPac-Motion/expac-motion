@@ -19,6 +19,7 @@ import type {
   TrackingEvent,
   ClientJobTracking,
   ClientTrackingEvent,
+  TrackedShipment,
   Message,
   MessagePatch,
   Milestone,
@@ -1305,6 +1306,16 @@ export async function updateMailCampaignRecipient(
 export async function unsubscribeLead(recipientId: string): Promise<boolean> {
   return unwrap<boolean>(
     await supabase.rpc("unsubscribe_lead", { p_recipient_id: recipientId }),
+  );
+}
+
+/** Public "track by shipment number" page -- callable with no session
+ *  (anon role). Exact match on the reference; null when not found. */
+export async function trackShipment(
+  reference: string,
+): Promise<TrackedShipment | null> {
+  return unwrap<TrackedShipment | null>(
+    await supabase.rpc("track_shipment", { p_reference: reference }),
   );
 }
 
