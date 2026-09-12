@@ -191,14 +191,6 @@ export default function SalesPersonPage() {
         render: (p) => money(st(p.id).gp),
       },
       {
-        key: "gp_target",
-        header: "GP Target",
-        width: 130,
-        sortValue: (p) => p.sales_gp_target,
-        render: (p) =>
-          p.sales_gp_target > 0 ? money(p.sales_gp_target) : "—",
-      },
-      {
         key: "new_leads",
         header: "New Leads",
         width: 130,
@@ -294,12 +286,6 @@ export default function SalesPersonPage() {
             </strong>
           </div>
           <div className="field">
-            <label>Gross Profit Target</label>
-            <strong>
-              {viewing.sales_gp_target > 0 ? money(viewing.sales_gp_target) : "Not set"}
-            </strong>
-          </div>
-          <div className="field">
             <label>Leads Target</label>
             <strong>
               {viewing.leads_target > 0 ? viewing.leads_target : "Not set"}
@@ -324,12 +310,6 @@ export default function SalesPersonPage() {
             {
               key: "sales_target",
               label: "Sales Target (R)",
-              type: "number",
-              allowClear: false,
-            },
-            {
-              key: "sales_gp_target",
-              label: "GP Target (R)",
               type: "number",
               allowClear: false,
             },
@@ -376,7 +356,6 @@ function TargetsModal({
     const fd = new FormData(e.currentTarget);
     const patch: ProfilePatch = {
       sales_target: Number(fd.get("sales_target")) || 0,
-      sales_gp_target: Number(fd.get("sales_gp_target")) || 0,
       leads_target: Number(fd.get("leads_target")) || 0,
     };
     try {
@@ -398,15 +377,6 @@ function TargetsModal({
             type="number"
             step="0.01"
             defaultValue={profile.sales_target}
-          />
-        </div>
-        <div className="field">
-          <label>Gross Profit Target (R)</label>
-          <input
-            name="sales_gp_target"
-            type="number"
-            step="0.01"
-            defaultValue={profile.sales_gp_target}
           />
         </div>
         <div className="field">

@@ -24,11 +24,14 @@ export interface Profile {
   /** Free-text company name typed on the self-serve signup form, to help
    *  staff match a pending request to an existing client. */
   requested_company: string | null;
-  /** Monthly Sales CRM targets, tracked against quotes.sales_person_id. */
+  /** @deprecated flat currency targets superseded by sales_target (incl.
+   *  VAT) + the company-wide Cost of Sales Ratio target — kept for existing
+   *  data; no longer surfaced in the Sales Person UI. */
   sales_revenue_target: number;
+  /** @deprecated see sales_revenue_target above. */
   sales_gp_target: number;
-  /** Target for Total Sales (Grand Total incl. VAT), separate from the
-   *  excl.-VAT sales_revenue_target above. */
+  /** Monthly Sales CRM target, tracked against quotes.sales_person_id:
+   *  Total Sales (Grand Total incl. VAT). */
   sales_target: number;
   /** Monthly new-leads target for this rep. */
   leads_target: number;
@@ -85,6 +88,7 @@ export interface CompanySettings {
   /** @deprecated superseded by cost_of_sales_target — kept for existing
    *  data; no longer surfaced in the Edit Targets UI. */
   sales_revenue_target: number;
+  /** @deprecated see sales_revenue_target above. */
   sales_gp_target: number;
   sales_new_leads_target: number;
   /** Cost of Sales Ratio target (%) — at or below this, margin is healthy. */

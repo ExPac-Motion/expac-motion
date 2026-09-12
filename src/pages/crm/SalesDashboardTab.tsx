@@ -100,14 +100,6 @@ const Icon = {
   ),
 };
 
-function MiniBar({ pct }: { pct: number }) {
-  return (
-    <span className="mini-bar">
-      <span style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
-    </span>
-  );
-}
-
 export default function SalesDashboardTab() {
   const navigate = useNavigate();
   const quotesQ = useQuotes();
@@ -255,9 +247,7 @@ export default function SalesDashboardTab() {
           id: p.id,
           name: p.full_name || "—",
           revenue,
-          revTarget: p.sales_revenue_target,
           gp,
-          gpTarget: p.sales_gp_target,
           openOpps: openOpps.length,
           pipelineValue,
         };
@@ -445,14 +435,16 @@ export default function SalesDashboardTab() {
             <span>Excl. VAT — see Cost of Sales Ratio for the margin target</span>
           </div>
         </div>
-        <SalesKpi
-          icon={Icon.profit}
-          label="Total Gross Profit"
-          value={money(kpis.grossProfit)}
-          actual={kpis.grossProfit}
-          target={settings.sales_gp_target}
-          targetLabel={money(settings.sales_gp_target)}
-        />
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.profit}</span>
+            <span className="kpi-label">Total Gross Profit</span>
+          </div>
+          <div className="kpi-value">{money(kpis.grossProfit)}</div>
+          <div className="kpi-foot">
+            <span>Revenue minus cost of sales, this month</span>
+          </div>
+        </div>
         <div className="kpi static">
           <div className="kpi-top">
             <span className="kpi-icon">{Icon.ratio}</span>
@@ -601,7 +593,7 @@ export default function SalesDashboardTab() {
         <div className="panel-head">
           <div>
             <h2>Sales Person Leaderboard</h2>
-            <p>This month's won revenue &amp; gross profit vs target, plus open pipeline</p>
+            <p>This month's won revenue &amp; gross profit, plus open pipeline</p>
           </div>
         </div>
         {leaderboard.length === 0 ? (
@@ -612,49 +604,24 @@ export default function SalesDashboardTab() {
               <thead>
                 <tr>
                   <th>Rep</th>
-                  <th>Revenue vs target</th>
-                  <th>Gross profit vs target</th>
+                  <th>Revenue</th>
+                  <th>Gross Profit</th>
                   <th>Open opps</th>
                   <th>Pipeline value</th>
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.map((r) => {
-                  const revPct =
-                    r.revTarget > 0 ? (r.revenue / r.revTarget) * 100 : 0;
-                  const gpPct = r.gpTarget > 0 ? (r.gp / r.gpTarget) * 100 : 0;
-                  return (
-                    <tr key={r.id}>
-                      <td>
-                        <strong>{r.name}</strong>
-                      </td>
-                      <td>
-                        <div className="lb-cell">
-                          <span>
-                            {money(r.revenue)}
-                            {r.revTarget > 0 && (
-                              <span className="muted"> / {money(r.revTarget)}</span>
-                            )}
-                          </span>
-                          {r.revTarget > 0 && <MiniBar pct={revPct} />}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="lb-cell">
-                          <span>
-                            {money(r.gp)}
-                            {r.gpTarget > 0 && (
-                              <span className="muted"> / {money(r.gpTarget)}</span>
-                            )}
-                          </span>
-                          {r.gpTarget > 0 && <MiniBar pct={gpPct} />}
-                        </div>
-                      </td>
-                      <td>{r.openOpps}</td>
-                      <td>{money(r.pipelineValue)}</td>
-                    </tr>
-                  );
-                })}
+                {leaderboard.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <strong>{r.name}</strong>
+                    </td>
+                    <td>{money(r.revenue)}</td>
+                    <td>{money(r.gp)}</td>
+                    <td>{r.openOpps}</td>
+                    <td>{money(r.pipelineValue)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -819,7 +786,6 @@ function TargetsModal({
 }: {
   settings: {
     sales_target: number;
-    sales_gp_target: number;
     sales_new_leads_target: number;
     cost_of_sales_target: number;
   };
@@ -834,7 +800,6 @@ function TargetsModal({
     const patch: CompanySettingsPatch = {
       sales_target: Number(fd.get("sales_target")) || 0,
       cost_of_sales_target: Number(fd.get("cost_of_sales_target")) || 0,
-      sales_gp_target: Number(fd.get("sales_gp_target")) || 0,
       sales_new_leads_target: Number(fd.get("sales_new_leads_target")) || 0,
     };
     try {
@@ -865,15 +830,6 @@ function TargetsModal({
             type="number"
             step="0.1"
             defaultValue={settings.cost_of_sales_target}
-          />
-        </div>
-        <div className="field">
-          <label>Gross Profit Target (R)</label>
-          <input
-            name="sales_gp_target"
-            type="number"
-            step="0.01"
-            defaultValue={settings.sales_gp_target}
           />
         </div>
         <div className="field">
