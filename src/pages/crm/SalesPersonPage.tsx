@@ -12,6 +12,7 @@ import {
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
+  useLeads,
   useProfiles,
   useQuotes,
   useUpdateProfile,
@@ -32,6 +33,7 @@ function isThisMonth(iso: string | null): boolean {
 export default function SalesPersonPage() {
   const profilesQ = useProfiles();
   const quotesQ = useQuotes();
+  const leadsQ = useLeads();
   const bulkUpdate = useUpdateProfilesBulk();
   const { toast, error: toastError } = useToast();
   const [editing, setEditing] = useState<Profile | null>(null);
@@ -46,7 +48,7 @@ export default function SalesPersonPage() {
 
   const stats = useMemo(() => {
     const quotes = quotesQ.data ?? [];
-    const map = new Map<string, { revenue: number; gp: number }>();
+    const map = new Map<string, { sales: number; revenue: number; gp: number }>();
     for (const q of quotes) {
       if (
         !WON_QUOTE_STATUSES.includes(q.status) ||
@@ -56,7 +58,10 @@ export default function SalesPersonPage() {
         continue;
       }
       const t = chargeTotals(q.quote_lines, fxOf(q));
-      const cur = map.get(q.sales_person_id) ?? { revenue: 0, gp: 0 };
+      const cur = map.get(q.sales_person_id) ?? { sales: 0, revenue: 0, gp: 0 };
+      // Total Sales = the same Grand Total (incl. VAT) formula the printable
+      // quotation uses; Revenue stays the excl.-VAT figure alongside it.
+      cur.sales += t.sellIncl;
       cur.revenue += t.sell;
       cur.gp += t.gp;
       map.set(q.sales_person_id, cur);
@@ -64,10 +69,27 @@ export default function SalesPersonPage() {
     return map;
   }, [quotesQ.data]);
 
-  const isLoading = profilesQ.isLoading || quotesQ.isLoading;
-  const isError = profilesQ.isError || quotesQ.isError;
+  const leadStats = useMemo(() => {
+    const leads = leadsQ.data ?? [];
+    const map = new Map<string, { total: number; converted: number }>();
+    for (const l of leads) {
+      if (!l.sales_person_id) continue;
+      const cur = map.get(l.sales_person_id) ?? { total: 0, converted: 0 };
+      cur.total += 1;
+      if (l.promoted_at) cur.converted += 1;
+      map.set(l.sales_person_id, cur);
+    }
+    return map;
+  }, [leadsQ.data]);
 
-  const st = (id: string) => stats.get(id) ?? { revenue: 0, gp: 0 };
+  const isLoading = profilesQ.isLoading || quotesQ.isLoading || leadsQ.isLoading;
+  const isError = profilesQ.isError || quotesQ.isError || leadsQ.isError;
+
+  const st = (id: string) => stats.get(id) ?? { sales: 0, revenue: 0, gp: 0 };
+  const leadConvRate = (id: string) => {
+    const l = leadStats.get(id);
+    return l && l.total > 0 ? (l.converted / l.total) * 100 : null;
+  };
   const columns = useMemo<DataColumn<Profile>[]>(
     () => [
       {
@@ -100,9 +122,23 @@ export default function SalesPersonPage() {
         ),
       },
       {
+        key: "sales",
+        header: "Total Sales",
+        width: 150,
+        sortValue: (p) => st(p.id).sales,
+        render: (p) => money(st(p.id).sales),
+      },
+      {
+        key: "sales_target",
+        header: "Sales Target",
+        width: 140,
+        sortValue: (p) => p.sales_target,
+        render: (p) => (p.sales_target > 0 ? money(p.sales_target) : "—"),
+      },
+      {
         key: "revenue",
-        header: "Revenue (This Month)",
-        width: 170,
+        header: "Total Revenue",
+        width: 150,
         sortValue: (p) => st(p.id).revenue,
         render: (p) => money(st(p.id).revenue),
       },
@@ -116,8 +152,8 @@ export default function SalesPersonPage() {
       },
       {
         key: "gp",
-        header: "Gross Profit (This Month)",
-        width: 190,
+        header: "Gross Profit",
+        width: 150,
         sortValue: (p) => st(p.id).gp,
         render: (p) => money(st(p.id).gp),
       },
@@ -129,9 +165,26 @@ export default function SalesPersonPage() {
         render: (p) =>
           p.sales_gp_target > 0 ? money(p.sales_gp_target) : "—",
       },
+      {
+        key: "leads_target",
+        header: "Leads Target",
+        width: 130,
+        sortValue: (p) => p.leads_target,
+        render: (p) => (p.leads_target > 0 ? p.leads_target : "—"),
+      },
+      {
+        key: "leads_to_customer",
+        header: "Leads to Customer",
+        width: 150,
+        sortValue: (p) => leadConvRate(p.id) ?? -1,
+        render: (p) => {
+          const pct = leadConvRate(p.id);
+          return pct === null ? "—" : `${pct.toFixed(0)}%`;
+        },
+      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, stats],
+    [sel, stats, leadStats],
   );
 
   return (
@@ -149,7 +202,7 @@ export default function SalesPersonPage() {
       {isLoading ? (
         <Loading />
       ) : isError ? (
-        <ErrorNote error={profilesQ.error ?? quotesQ.error} />
+        <ErrorNote error={profilesQ.error ?? quotesQ.error ?? leadsQ.error} />
       ) : people.length === 0 ? (
         <EmptyState>No team members yet — add one in Settings.</EmptyState>
       ) : (
@@ -193,6 +246,12 @@ export default function SalesPersonPage() {
           }
         >
           <div className="field">
+            <label>Sales Target</label>
+            <strong>
+              {viewing.sales_target > 0 ? money(viewing.sales_target) : "Not set"}
+            </strong>
+          </div>
+          <div className="field">
             <label>Revenue Target</label>
             <strong>
               {viewing.sales_revenue_target > 0
@@ -204,6 +263,12 @@ export default function SalesPersonPage() {
             <label>Gross Profit Target</label>
             <strong>
               {viewing.sales_gp_target > 0 ? money(viewing.sales_gp_target) : "Not set"}
+            </strong>
+          </div>
+          <div className="field">
+            <label>Leads Target</label>
+            <strong>
+              {viewing.leads_target > 0 ? viewing.leads_target : "Not set"}
             </strong>
           </div>
         </Modal>
@@ -223,6 +288,12 @@ export default function SalesPersonPage() {
           busy={bulkUpdate.isPending}
           fields={[
             {
+              key: "sales_target",
+              label: "Sales Target (R)",
+              type: "number",
+              allowClear: false,
+            },
+            {
               key: "sales_revenue_target",
               label: "Revenue Target (R)",
               type: "number",
@@ -231,6 +302,12 @@ export default function SalesPersonPage() {
             {
               key: "sales_gp_target",
               label: "GP Target (R)",
+              type: "number",
+              allowClear: false,
+            },
+            {
+              key: "leads_target",
+              label: "Leads Target",
               type: "number",
               allowClear: false,
             },
@@ -270,8 +347,10 @@ function TargetsModal({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const patch: ProfilePatch = {
+      sales_target: Number(fd.get("sales_target")) || 0,
       sales_revenue_target: Number(fd.get("sales_revenue_target")) || 0,
       sales_gp_target: Number(fd.get("sales_gp_target")) || 0,
+      leads_target: Number(fd.get("leads_target")) || 0,
     };
     try {
       await update.mutateAsync({ id: profile.id, patch });
@@ -285,6 +364,15 @@ function TargetsModal({
   return (
     <Modal title={`${profile.full_name || "Team member"} — Targets`} onClose={onClose}>
       <form onSubmit={onSubmit}>
+        <div className="field">
+          <label>Sales Target (R)</label>
+          <input
+            name="sales_target"
+            type="number"
+            step="0.01"
+            defaultValue={profile.sales_target}
+          />
+        </div>
         <div className="field">
           <label>Revenue Target (R)</label>
           <input
@@ -301,6 +389,14 @@ function TargetsModal({
             type="number"
             step="0.01"
             defaultValue={profile.sales_gp_target}
+          />
+        </div>
+        <div className="field">
+          <label>Leads Target</label>
+          <input
+            name="leads_target"
+            type="number"
+            defaultValue={profile.leads_target}
           />
         </div>
         <div

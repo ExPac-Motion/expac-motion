@@ -27,11 +27,24 @@ export interface Profile {
   /** Monthly Sales CRM targets, tracked against quotes.sales_person_id. */
   sales_revenue_target: number;
   sales_gp_target: number;
+  /** Target for Total Sales (Grand Total incl. VAT), separate from the
+   *  excl.-VAT sales_revenue_target above. */
+  sales_target: number;
+  /** Monthly new-leads target for this rep. */
+  leads_target: number;
   created_at: string;
   email?: string | null;
 }
 export type ProfilePatch = Partial<
-  Pick<Profile, "full_name" | "role" | "sales_revenue_target" | "sales_gp_target">
+  Pick<
+    Profile,
+    | "full_name"
+    | "role"
+    | "sales_revenue_target"
+    | "sales_gp_target"
+    | "sales_target"
+    | "leads_target"
+  >
 >;
 
 /** The four freight groups that get their own shipment-notification email. */
