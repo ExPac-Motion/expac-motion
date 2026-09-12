@@ -30,6 +30,7 @@ import {
   WON_QUOTE_STATUSES,
   type CompanySettingsPatch,
   type OpportunityStatus,
+  type QuoteStatus,
 } from "../../lib/types";
 
 function isThisMonth(iso: string | null): boolean {
@@ -44,6 +45,9 @@ const OPEN_OPP_STATUSES: OpportunityStatus[] = [
   "quote_sent",
   "quote_accepted",
 ];
+
+// New Lead + Quote Sent — quotes not yet won or lost.
+const OPEN_QUOTE_STATUSES: QuoteStatus[] = ["open", "sent"];
 
 const Icon = {
   revenue: (
@@ -68,6 +72,12 @@ const Icon = {
   won: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M20 6L9 17l-5-5" />
+    </svg>
+  ),
+  sales: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 3h13l3 4v13a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
     </svg>
   ),
   pipeline: (
@@ -123,18 +133,28 @@ export default function SalesDashboardTab() {
     );
     const totals = acceptedThisMonth.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
     const revenue = totals.reduce((s, t) => s + t.sell, 0);
+    // Same figure as the printable quotation's Grand Total (sell + VAT),
+    // summed across every accepted/completed quote — VAT-inclusive, unlike
+    // Revenue below which stays excl. VAT.
+    const sales = totals.reduce((s, t) => s + t.sellIncl, 0);
     const grossProfit = totals.reduce((s, t) => s + t.gp, 0);
     const newLeads = leads.filter((l) => isThisMonth(l.created_at)).length;
-    const openPipeline = opps
-      .filter((o) => OPEN_OPP_STATUSES.includes(o.status))
-      .reduce((s, o) => s + (o.value || 0), 0);
-    const openOppCount = opps.filter((o) =>
-      OPEN_OPP_STATUSES.includes(o.status),
-    ).length;
+    // Open Pipeline: VAT-inclusive total of this month's not-yet-won quotes
+    // (New Lead + Quote Sent) — same Grand Total formula as Revenue/Sales
+    // above, just for quotes that haven't been accepted yet.
+    const openQuotesThisMonth = quotes.filter(
+      (q) => OPEN_QUOTE_STATUSES.includes(q.status) && isThisMonth(q.created_at),
+    );
+    const openPipeline = openQuotesThisMonth.reduce(
+      (s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sellIncl,
+      0,
+    );
+    const openOppCount = openQuotesThisMonth.length;
     const converted = leads.filter((l) => l.promoted_at).length;
     const convRate = leads.length > 0 ? (converted / leads.length) * 100 : 0;
     return {
       revenue,
+      sales,
       grossProfit,
       newLeads,
       wonCount: acceptedThisMonth.length,
@@ -145,7 +165,7 @@ export default function SalesDashboardTab() {
       totalLeads: leads.length,
       convRate,
     };
-  }, [quotes, leads, opps]);
+  }, [quotes, leads]);
 
   const oppPipeline = useMemo(() => {
     const rows = OPPORTUNITY_STAGES.map((stage) => {
@@ -365,38 +385,14 @@ export default function SalesDashboardTab() {
       </div>
 
       <div className="dash-kpis sales-kpis">
-        <SalesKpi
-          icon={Icon.revenue}
-          label="Revenue"
-          value={money(kpis.revenue)}
-          actual={kpis.revenue}
-          target={settings.sales_revenue_target}
-          targetLabel={money(settings.sales_revenue_target)}
-        />
-        <SalesKpi
-          icon={Icon.profit}
-          label="Gross Profit"
-          value={money(kpis.grossProfit)}
-          actual={kpis.grossProfit}
-          target={settings.sales_gp_target}
-          targetLabel={money(settings.sales_gp_target)}
-        />
-        <SalesKpi
-          icon={Icon.leads}
-          label="New Leads"
-          value={String(kpis.newLeads)}
-          actual={kpis.newLeads}
-          target={settings.sales_new_leads_target}
-          targetLabel={String(settings.sales_new_leads_target)}
-        />
         <div className="kpi static">
           <div className="kpi-top">
-            <span className="kpi-icon">{Icon.won}</span>
-            <span className="kpi-label">Quotes Won</span>
+            <span className="kpi-icon">{Icon.sales}</span>
+            <span className="kpi-label">Total Sales</span>
           </div>
-          <div className="kpi-value">{kpis.wonCount}</div>
+          <div className="kpi-value">{money(kpis.sales)}</div>
           <div className="kpi-foot">
-            <span>{money(kpis.wonValue)} won this month</span>
+            <span>Grand Total (incl. VAT) across this month's accepted quotes</span>
           </div>
         </div>
         <div className="kpi static">
@@ -407,21 +403,55 @@ export default function SalesDashboardTab() {
           <div className="kpi-value">{money(kpis.openPipeline)}</div>
           <div className="kpi-foot">
             <span>
-              {kpis.openOppCount} open opportunit
-              {kpis.openOppCount === 1 ? "y" : "ies"}
+              {kpis.openOppCount} open quote
+              {kpis.openOppCount === 1 ? "" : "s"} this month
             </span>
           </div>
         </div>
+        <SalesKpi
+          icon={Icon.revenue}
+          label="Total Revenue"
+          value={money(kpis.revenue)}
+          actual={kpis.revenue}
+          target={settings.sales_revenue_target}
+          targetLabel={money(settings.sales_revenue_target)}
+        />
+        <SalesKpi
+          icon={Icon.profit}
+          label="Total Gross Profit"
+          value={money(kpis.grossProfit)}
+          actual={kpis.grossProfit}
+          target={settings.sales_gp_target}
+          targetLabel={money(settings.sales_gp_target)}
+        />
+        <SalesKpi
+          icon={Icon.leads}
+          label="Total Leads"
+          value={String(kpis.newLeads)}
+          actual={kpis.newLeads}
+          target={settings.sales_new_leads_target}
+          targetLabel={String(settings.sales_new_leads_target)}
+        />
         <div className="kpi static">
           <div className="kpi-top">
             <span className="kpi-icon">{Icon.convert}</span>
-            <span className="kpi-label">Lead → Customer</span>
+            <span className="kpi-label">Lead to Customer</span>
           </div>
           <div className="kpi-value">{kpis.convRate.toFixed(0)}%</div>
           <div className="kpi-foot">
             <span>
               {kpis.converted} of {kpis.totalLeads} leads converted
             </span>
+          </div>
+        </div>
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.won}</span>
+            <span className="kpi-label">Quote Accepted</span>
+          </div>
+          <div className="kpi-value">{kpis.wonCount}</div>
+          <div className="kpi-foot">
+            <span>{money(kpis.wonValue)} won this month</span>
           </div>
         </div>
       </div>
