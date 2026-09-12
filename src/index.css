@@ -475,7 +475,10 @@ table {
 th {
   text-align: left;
   color: var(--muted);
-  font-size: 0.72rem;
+  /* App-wide default header size — every table (DataTable, .table--compact,
+     .jobs-table, etc.) should read at this same 12px unless it has a
+     specific reason not to. */
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 700;
@@ -519,17 +522,14 @@ tr.clickable:hover {
   font-size: 0.76rem;
 }
 .table--compact th {
-  font-size: 0.6rem;
-  letter-spacing: 0.03em;
+  /* Same readable size as DataTable (table.dt) and every other list in the
+     app — was 0.6rem, noticeably smaller than the table's own body text. */
+  font-size: 12px;
+  letter-spacing: 0.04em;
   padding: 6px 7px;
 }
 .table--compact td {
   padding: 7px 7px;
-}
-/* Quotations list header row: same readable size as the Shipments board */
-.quotes-table th {
-  font-size: 12px;
-  letter-spacing: 0.04em;
 }
 .quotes-table td {
   font-size: 12px;
@@ -1590,7 +1590,7 @@ table.dt th.dt-sortable {
 }
 .packing-table th {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   font-weight: 700;
@@ -3093,7 +3093,7 @@ table.dt th.dt-sortable {
 }
 .job-mini th {
   text-align: left;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -3707,7 +3707,7 @@ table.dt th.dt-sortable {
 }
 .trk-table th {
   text-align: left;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
