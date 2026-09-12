@@ -28,6 +28,7 @@ const NAV: NavModule[] = [
     label: "Control Tower",
     children: [
       { to: "/ops?tab=tasks", label: "Tasks & Notes" },
+      { to: "/ops?tab=notifications", label: "Notifications" },
       { to: "/ops?tab=calendar", label: "Calendar" },
       { to: "/ops?tab=tracking", label: "Live Tracking" },
     ],

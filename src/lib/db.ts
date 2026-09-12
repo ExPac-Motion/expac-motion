@@ -23,6 +23,7 @@ import type {
   Message,
   MessagePatch,
   Milestone,
+  NotificationState,
   OpsTask,
   OpsTaskPatch,
   ClientContact,
@@ -586,7 +587,7 @@ export async function setJobMilestone(
 
 /* ---------- Operations Control Tower: Tasks & Notes ---------- */
 const OPS_TASK_SELECT =
-  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company)";
+  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company), assignee:profiles(id,full_name)";
 
 export async function listOpsTasks(): Promise<OpsTask[]> {
   return unwrap<OpsTask[]>(
@@ -621,6 +622,30 @@ export async function updateOpsTask(
 
 export async function deleteOpsTask(id: string): Promise<void> {
   unwrap(await supabase.from("ops_tasks").delete().eq("id", id));
+}
+
+/* ---------- Operations Control Tower: Notifications ---------- */
+/** Shared/team-wide read+archive state for the computed notification feed. */
+export async function listNotificationState(): Promise<NotificationState[]> {
+  return unwrap<NotificationState[]>(
+    await supabase.from("notification_state").select("*"),
+  );
+}
+
+export async function setNotificationState(
+  notificationKey: string,
+  patch: Partial<Pick<NotificationState, "read_at" | "archived_at">>,
+): Promise<NotificationState> {
+  return unwrap<NotificationState>(
+    await supabase
+      .from("notification_state")
+      .upsert(
+        { notification_key: notificationKey, ...patch, updated_at: new Date().toISOString() },
+        { onConflict: "notification_key" },
+      )
+      .select("*")
+      .single(),
+  );
 }
 
 /* ---------- Operations Control Tower: Live Tracking ---------- */

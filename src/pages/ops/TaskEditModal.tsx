@@ -5,6 +5,7 @@ import {
   useClients,
   useDeleteOpsTask,
   useJobs,
+  useProfiles,
   useQuotes,
   useSaveOpsTask,
 } from "../../lib/hooks";
@@ -33,12 +34,13 @@ type Form = {
   job_id: string;
   quote_id: string;
   client_id: string;
+  assigned_to: string;
 };
 
 function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
   return {
     kind: task?.kind ?? (defaults?.kind as Form["kind"]) ?? "task",
-    title: task?.title ?? "",
+    title: task?.title ?? defaults?.title ?? "",
     body: task?.body ?? "",
     status: task?.status ?? "open",
     priority: task?.priority ?? (defaults?.priority as Form["priority"]) ?? "normal",
@@ -46,6 +48,7 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
     job_id: task?.job_id ?? (defaults?.job_id as string) ?? "",
     quote_id: task?.quote_id ?? (defaults?.quote_id as string) ?? "",
     client_id: task?.client_id ?? (defaults?.client_id as string) ?? "",
+    assigned_to: task?.assigned_to ?? (defaults?.assigned_to as string) ?? "",
   };
 }
 
@@ -56,6 +59,7 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
   const jobs = useJobs().data ?? [];
   const quotes = useQuotes().data ?? [];
   const clients = useClients().data ?? [];
+  const teamMembers = (useProfiles().data ?? []).filter((p) => p.role !== "client");
 
   const [f, setF] = useState<Form>(() => seed(task, defaults));
   function set<K extends keyof Form>(k: K, v: Form[K]) {
@@ -77,7 +81,11 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
       job_id: f.job_id || null,
       quote_id: f.quote_id || null,
       client_id: f.client_id || null,
+      assigned_to: f.assigned_to || null,
     };
+    if (!task && defaults?.source_notification_key) {
+      values.source_notification_key = defaults.source_notification_key as string;
+    }
     if (task && f.status === "done" && task.status !== "done") {
       values.done_at = new Date().toISOString();
     }
@@ -217,20 +225,42 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
         </div>
       </div>
 
-      <div className="field">
-        <label>Link to customer</label>
-        <select
-          value={f.client_id}
-          onChange={(e) => set("client_id", e.target.value)}
-        >
-          <option value="">—</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.company}
-            </option>
-          ))}
-        </select>
+      <div className="grid2">
+        <div className="field">
+          <label>Link to customer</label>
+          <select
+            value={f.client_id}
+            onChange={(e) => set("client_id", e.target.value)}
+          >
+            <option value="">—</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.company}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Assignee</label>
+          <select
+            value={f.assigned_to}
+            onChange={(e) => set("assigned_to", e.target.value)}
+          >
+            <option value="">Unassigned</option>
+            {teamMembers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name || "—"}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {(task?.source_notification_key || defaults?.source_notification_key) && (
+        <p className="hint" style={{ marginTop: -4 }}>
+          Created from a notification.
+        </p>
+      )}
 
       <div className="field">
         <label>Notes</label>

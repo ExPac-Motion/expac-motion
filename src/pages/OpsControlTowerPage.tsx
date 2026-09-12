@@ -13,11 +13,12 @@ import { isShipmentComplete } from "../lib/types";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
 import TasksNotes from "./ops/TasksNotes";
+import NotificationsTab from "./ops/NotificationsTab";
 import CalendarBoard from "./ops/CalendarBoard";
 import LiveTracking from "./ops/LiveTracking";
 import PersonalVaultPage from "./ops/PersonalVaultPage";
 
-type Tab = "tasks" | "calendar" | "tracking" | "vault";
+type Tab = "tasks" | "notifications" | "calendar" | "tracking" | "vault";
 
 interface Chip {
   label: string;
@@ -123,6 +124,7 @@ export default function OpsControlTowerPage() {
       )}
 
       {tab === "tasks" && <TasksNotes focus={focus} />}
+      {tab === "notifications" && <NotificationsTab />}
       {tab === "calendar" && <CalendarBoard />}
       {tab === "tracking" && <LiveTracking />}
       {tab === "vault" && canVault && <PersonalVaultPage />}

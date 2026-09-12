@@ -15,6 +15,7 @@ import type {
   JobInsert,
   JobPatch,
   Milestone,
+  NotificationState,
   OpsTaskPatch,
   ProfilePatch,
   QuoteDraft,
@@ -346,6 +347,24 @@ export function useDeleteOpsTask() {
   return useMutation({
     mutationFn: db.deleteOpsTask,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops_tasks"] }),
+  });
+}
+
+/* ---------- Ops Control Tower: Notifications ---------- */
+export function useNotificationState() {
+  return useQuery({
+    queryKey: ["notification_state"],
+    queryFn: db.listNotificationState,
+  });
+}
+export function useSetNotificationState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      key: string;
+      patch: Partial<Pick<NotificationState, "read_at" | "archived_at">>;
+    }) => db.setNotificationState(input.key, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification_state"] }),
   });
 }
 

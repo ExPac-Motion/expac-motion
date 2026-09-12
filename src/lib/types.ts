@@ -1107,10 +1107,15 @@ export interface OpsTask {
   created_at: string;
   updated_at: string;
   done_at: string | null;
+  assigned_to: string | null;
+  /** Set when this task was created from the Notifications tab — traces it
+   *  back to the notification that prompted it. */
+  source_notification_key: string | null;
   /** Joined for display. */
   job?: Pick<Job, "id" | "reference"> | null;
   quote?: Pick<Quote, "id" | "reference"> | null;
   client?: Pick<Client, "id" | "company"> | null;
+  assignee?: Pick<Profile, "id" | "full_name"> | null;
 }
 
 export type OpsTaskPatch = Partial<
@@ -1126,8 +1131,20 @@ export type OpsTaskPatch = Partial<
     | "quote_id"
     | "client_id"
     | "done_at"
+    | "assigned_to"
+    | "source_notification_key"
   >
 >;
+
+/** Shared/team-wide read+archive state for one computed Notifications feed
+ *  item, keyed by that item's stable synthetic id (e.g. "lead-<uuid>"). The
+ *  notification itself isn't a stored row -- only this interaction state is. */
+export interface NotificationState {
+  notification_key: string;
+  read_at: string | null;
+  archived_at: string | null;
+  updated_at: string;
+}
 
 /** One normalised movement/event on a shipment's timeline. */
 export interface TrackingMovement {
