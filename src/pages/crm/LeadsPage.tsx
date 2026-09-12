@@ -6,7 +6,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
@@ -112,6 +112,7 @@ function saveJson(key: string, value: unknown) {
 
 export default function LeadsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data, isLoading, isError, error } = useLeads();
   const statusesQ = useLeadStatuses();
   const remove = useDeleteLead();
@@ -136,6 +137,24 @@ export default function LeadsPage() {
   const rows = useMemo(() => data ?? [], [data]);
   const statuses = statusesQ.data ?? [];
   const salesPeople = profilesQ.data ?? [];
+
+  // Deep-link from Trends: navigate here with { state: { openLeadId } } to
+  // pop the existing view modal open on a specific lead, same as clicking
+  // its row — reused rather than building a separate lead-detail view.
+  useEffect(() => {
+    const openId = (location.state as { openLeadId?: string } | null)
+      ?.openLeadId;
+    if (!openId || rows.length === 0) return;
+    const lead = rows.find((l) => l.id === openId);
+    if (lead) {
+      setViewing(lead);
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: {},
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, rows]);
 
   function patchFilters(next: LeadFilters) {
     setFilters(next);

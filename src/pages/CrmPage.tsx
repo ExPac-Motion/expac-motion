@@ -10,9 +10,11 @@ import OpportunitiesTab from "./crm/OpportunitiesTab";
 import SalesDashboardTab from "./crm/SalesDashboardTab";
 import SalesPersonPage from "./crm/SalesPersonPage";
 import TemplatesPage from "./crm/TemplatesPage";
+import TrendsTab from "./crm/TrendsTab";
 
 type Tab =
   | "dashboard"
+  | "trends"
   | "leads"
   | "opportunities"
   | "statuses"
@@ -25,6 +27,7 @@ type Tab =
 
 const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   dashboard: { eyebrow: "Sales performance", title: "Sales CRM" },
+  trends: { eyebrow: "Sales performance", title: "Trends" },
   leads: { eyebrow: "Prospects", title: "Leads" },
   opportunities: { eyebrow: "Client relationships", title: "Opportunities" },
   statuses: { eyebrow: "Configuration", title: "Lead Statuses" },
@@ -50,6 +53,7 @@ export default function CrmPage() {
     <>
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
       {tab === "dashboard" && <SalesDashboardTab />}
+      {tab === "trends" && <TrendsTab />}
       {tab === "leads" && <LeadsPage />}
       {tab === "opportunities" && <OpportunitiesTab />}
       {tab === "statuses" && <LeadStatusesPage />}
