@@ -8,6 +8,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
 import Modal from "./Modal";
 
@@ -496,9 +497,25 @@ export function PageHeader({
   title: string;
   actions?: ReactNode;
 }) {
+  const navigate = useNavigate();
+  // BrowserRouter stamps history.state.idx with this tab's position in its
+  // own in-app navigation stack (0 on first load) -- lets every page offer a
+  // "Back" that returns to wherever the user actually came from (e.g. a
+  // notification's deep link) without showing one when there's nowhere to
+  // go back to.
+  const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
   return (
     <div className="topbar">
       <div>
+        {canGoBack && (
+          <button
+            type="button"
+            className="link-btn page-back-btn"
+            onClick={() => navigate(-1)}
+          >
+            ← Back
+          </button>
+        )}
         <div className="eyebrow">{eyebrow}</div>
         <h1>{title}</h1>
       </div>
