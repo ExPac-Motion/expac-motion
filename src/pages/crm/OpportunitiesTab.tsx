@@ -18,7 +18,7 @@ import {
   useUpdateOpportunity,
   useUpdateQuotesBulk,
 } from "../../lib/hooks";
-import { chargeTotals, fxOf } from "../../lib/calc";
+import { synthesizeQuoteOpportunities } from "../../lib/calc";
 import { formatDate, money } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
@@ -28,15 +28,6 @@ import {
   type OpportunityStatus,
   type QuoteStatus,
 } from "../../lib/types";
-
-/** Quote status → pipeline stage for the auto-listed quotation cards. */
-const QUOTE_STAGE: Record<QuoteStatus, OpportunityStatus> = {
-  open: "new_lead",
-  sent: "quote_sent",
-  accepted: "quote_accepted",
-  completed: "job_completed",
-  lost: "not_proceeding",
-};
 
 /**
  * Pipeline stage → quote status, for moving an auto-listed quotation card.
@@ -211,72 +202,13 @@ export default function OpportunitiesTab() {
   // unless a real opportunity already links that quote.
   const quoteOpps = useMemo<Opportunity[]>(() => {
     if (!opts.showQuotes) return [];
-    const linked = new Set(
-      (oppsQ.data ?? [])
-        .map((o) => o.quote_id)
-        .filter((id): id is string => !!id),
+    return synthesizeQuoteOpportunities(
+      quotesQ.data ?? [],
+      oppsQ.data ?? [],
+      profileById,
+      leadStatusIdByLead,
     );
-    return (quotesQ.data ?? [])
-      .filter((q) => !linked.has(q.id))
-      .map((q) => {
-        // Full quotation value the customer sees: freight + handling + customs,
-        // incl. VAT (matches "Total quotation (incl. VAT)" on the quote).
-        // TEMP (0052): a manual opportunity_value on the quote wins while the
-        // old CRM is being migrated (bare quotes with no charge lines).
-        const t = chargeTotals(q.quote_lines, fxOf(q));
-        const manualValue =
-          q.opportunity_value != null ? Number(q.opportunity_value) : null;
-        const prof = q.sales_person_id
-          ? profileById.get(q.sales_person_id)
-          : null;
-        return {
-          id: `quote:${q.id}`,
-          title: null,
-          lead_id: q.lead_id,
-          client_id: q.client_id,
-          quote_id: q.id,
-          job_id: null,
-          status: QUOTE_STAGE[q.status],
-          value: manualValue ?? t.sellIncl,
-          opportunity_value: manualValue,
-          close_date: q.valid_until,
-          notes: null,
-          sales_person_id: q.sales_person_id,
-          created_at: q.created_at,
-          updated_at: q.updated_at,
-          lead: q.lead
-            ? {
-                id: q.lead.id,
-                company: q.lead.company,
-                contact: q.lead.contact,
-                email: q.lead.email,
-                phone: q.lead.phone,
-                lead_status_id: leadStatusIdByLead.get(q.lead.id) ?? null,
-              }
-            : null,
-          client: q.client
-            ? {
-                id: q.client.id,
-                company: q.client.company,
-                contact: null,
-                email: null,
-                phone: null,
-              }
-            : null,
-          quote: { id: q.id, reference: q.reference, status: q.status },
-          job: null,
-          sales_person: prof
-            ? { id: prof.id, full_name: prof.full_name }
-            : null,
-        } satisfies Opportunity;
-      });
-  }, [
-    opts.showQuotes,
-    oppsQ.data,
-    quotesQ.data,
-    profileById,
-    leadStatusIdByLead,
-  ]);
+  }, [opts.showQuotes, oppsQ.data, quotesQ.data, profileById, leadStatusIdByLead]);
 
   const opps = useMemo(
     () => [...realOpps, ...quoteOpps],

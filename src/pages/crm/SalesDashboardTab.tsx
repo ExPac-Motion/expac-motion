@@ -21,7 +21,7 @@ import {
   useQuotes,
   useUpdateCompanySettings,
 } from "../../lib/hooks";
-import { chargeTotals, fxOf } from "../../lib/calc";
+import { chargeTotals, fxOf, synthesizeQuoteOpportunities } from "../../lib/calc";
 import { money, timeAgo } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
@@ -123,6 +123,18 @@ export default function SalesDashboardTab() {
   const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
   const leads = useMemo(() => leadsQ.data ?? [], [leadsQ.data]);
   const opps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
+  const profileById = useMemo(() => {
+    const m = new Map<string, { id: string; full_name: string | null }>();
+    for (const p of profilesQ.data ?? []) m.set(p.id, p);
+    return m;
+  }, [profilesQ.data]);
+  // Same rule the Opportunities board uses: every quote without a linked
+  // opportunity is its own pipeline card. Keeps the Opportunities Pipeline
+  // panel below in sync with what the board shows.
+  const oppsWithQuotes = useMemo(
+    () => [...opps, ...synthesizeQuoteOpportunities(quotes, opps, profileById)],
+    [opps, quotes, profileById],
+  );
   const campaigns = useMemo(() => campaignsQ.data ?? [], [campaignsQ.data]);
   const recipients = useMemo(() => recipientsQ.data ?? [], [recipientsQ.data]);
   const followLog = useMemo(() => followLogQ.data ?? [], [followLogQ.data]);
@@ -173,7 +185,7 @@ export default function SalesDashboardTab() {
 
   const oppPipeline = useMemo(() => {
     const rows = OPPORTUNITY_STAGES.map((stage) => {
-      const inStage = opps.filter((o) => o.status === stage.key);
+      const inStage = oppsWithQuotes.filter((o) => o.status === stage.key);
       const value = inStage.reduce((s, o) => s + (o.value || 0), 0);
       // Short label (before the " - ") so the pipeline row never wraps.
       return {
@@ -188,8 +200,8 @@ export default function SalesDashboardTab() {
     const openValue = rows
       .filter((r) => OPEN_OPP_STATUSES.includes(r.key))
       .reduce((s, r) => s + r.value, 0);
-    return { rows, max, totalValue, openValue, total: opps.length };
-  }, [opps]);
+    return { rows, max, totalValue, openValue, total: oppsWithQuotes.length };
+  }, [oppsWithQuotes]);
 
   const quotePipeline = useMemo(() => {
     const rows = STATUS_ORDER.map((st) => {
