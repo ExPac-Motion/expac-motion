@@ -30,6 +30,9 @@ function isThisMonth(iso: string | null): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
+// Cost of Sales Ratio target — at or below this, margin is healthy.
+const COST_OF_SALES_TARGET = 85;
+
 export default function SalesPersonPage() {
   const profilesQ = useProfiles();
   const quotesQ = useQuotes();
@@ -48,7 +51,10 @@ export default function SalesPersonPage() {
 
   const stats = useMemo(() => {
     const quotes = quotesQ.data ?? [];
-    const map = new Map<string, { sales: number; revenue: number; gp: number }>();
+    const map = new Map<
+      string,
+      { sales: number; revenue: number; cost: number; gp: number }
+    >();
     for (const q of quotes) {
       if (
         !WON_QUOTE_STATUSES.includes(q.status) ||
@@ -58,11 +64,13 @@ export default function SalesPersonPage() {
         continue;
       }
       const t = chargeTotals(q.quote_lines, fxOf(q));
-      const cur = map.get(q.sales_person_id) ?? { sales: 0, revenue: 0, gp: 0 };
+      const cur =
+        map.get(q.sales_person_id) ?? { sales: 0, revenue: 0, cost: 0, gp: 0 };
       // Total Sales = the same Grand Total (incl. VAT) formula the printable
       // quotation uses; Revenue stays the excl.-VAT figure alongside it.
       cur.sales += t.sellIncl;
       cur.revenue += t.sell;
+      cur.cost += t.cost;
       cur.gp += t.gp;
       map.set(q.sales_person_id, cur);
     }
@@ -71,12 +79,17 @@ export default function SalesPersonPage() {
 
   const leadStats = useMemo(() => {
     const leads = leadsQ.data ?? [];
-    const map = new Map<string, { total: number; converted: number }>();
+    const map = new Map<
+      string,
+      { total: number; converted: number; thisMonth: number }
+    >();
     for (const l of leads) {
       if (!l.sales_person_id) continue;
-      const cur = map.get(l.sales_person_id) ?? { total: 0, converted: 0 };
+      const cur =
+        map.get(l.sales_person_id) ?? { total: 0, converted: 0, thisMonth: 0 };
       cur.total += 1;
       if (l.promoted_at) cur.converted += 1;
+      if (isThisMonth(l.created_at)) cur.thisMonth += 1;
       map.set(l.sales_person_id, cur);
     }
     return map;
@@ -85,11 +98,17 @@ export default function SalesPersonPage() {
   const isLoading = profilesQ.isLoading || quotesQ.isLoading || leadsQ.isLoading;
   const isError = profilesQ.isError || quotesQ.isError || leadsQ.isError;
 
-  const st = (id: string) => stats.get(id) ?? { sales: 0, revenue: 0, gp: 0 };
+  const st = (id: string) =>
+    stats.get(id) ?? { sales: 0, revenue: 0, cost: 0, gp: 0 };
+  const costRatio = (id: string) => {
+    const s = st(id);
+    return s.revenue > 0 ? (s.cost / s.revenue) * 100 : null;
+  };
   const leadConvRate = (id: string) => {
     const l = leadStats.get(id);
     return l && l.total > 0 ? (l.converted / l.total) * 100 : null;
   };
+  const newLeadsThisMonth = (id: string) => leadStats.get(id)?.thisMonth ?? 0;
   const columns = useMemo<DataColumn<Profile>[]>(
     () => [
       {
@@ -143,12 +162,24 @@ export default function SalesPersonPage() {
         render: (p) => money(st(p.id).revenue),
       },
       {
-        key: "revenue_target",
-        header: "Revenue Target",
-        width: 150,
-        sortValue: (p) => p.sales_revenue_target,
-        render: (p) =>
-          p.sales_revenue_target > 0 ? money(p.sales_revenue_target) : "—",
+        key: "cost_ratio",
+        header: "Cost of Sales Ratio",
+        width: 160,
+        sortValue: (p) => costRatio(p.id) ?? -1,
+        render: (p) => {
+          const r = costRatio(p.id);
+          if (r === null) return "—";
+          return (
+            <span
+              style={{
+                color: r <= COST_OF_SALES_TARGET ? "var(--green-dark)" : "#d9534f",
+                fontWeight: 700,
+              }}
+            >
+              {r.toFixed(1)}%
+            </span>
+          );
+        },
       },
       {
         key: "gp",
@@ -164,6 +195,13 @@ export default function SalesPersonPage() {
         sortValue: (p) => p.sales_gp_target,
         render: (p) =>
           p.sales_gp_target > 0 ? money(p.sales_gp_target) : "—",
+      },
+      {
+        key: "new_leads",
+        header: "New Leads",
+        width: 130,
+        sortValue: (p) => newLeadsThisMonth(p.id),
+        render: (p) => newLeadsThisMonth(p.id),
       },
       {
         key: "leads_target",
@@ -252,14 +290,6 @@ export default function SalesPersonPage() {
             </strong>
           </div>
           <div className="field">
-            <label>Revenue Target</label>
-            <strong>
-              {viewing.sales_revenue_target > 0
-                ? money(viewing.sales_revenue_target)
-                : "Not set"}
-            </strong>
-          </div>
-          <div className="field">
             <label>Gross Profit Target</label>
             <strong>
               {viewing.sales_gp_target > 0 ? money(viewing.sales_gp_target) : "Not set"}
@@ -290,12 +320,6 @@ export default function SalesPersonPage() {
             {
               key: "sales_target",
               label: "Sales Target (R)",
-              type: "number",
-              allowClear: false,
-            },
-            {
-              key: "sales_revenue_target",
-              label: "Revenue Target (R)",
               type: "number",
               allowClear: false,
             },
@@ -348,7 +372,6 @@ function TargetsModal({
     const fd = new FormData(e.currentTarget);
     const patch: ProfilePatch = {
       sales_target: Number(fd.get("sales_target")) || 0,
-      sales_revenue_target: Number(fd.get("sales_revenue_target")) || 0,
       sales_gp_target: Number(fd.get("sales_gp_target")) || 0,
       leads_target: Number(fd.get("leads_target")) || 0,
     };
@@ -371,15 +394,6 @@ function TargetsModal({
             type="number"
             step="0.01"
             defaultValue={profile.sales_target}
-          />
-        </div>
-        <div className="field">
-          <label>Revenue Target (R)</label>
-          <input
-            name="sales_revenue_target"
-            type="number"
-            step="0.01"
-            defaultValue={profile.sales_revenue_target}
           />
         </div>
         <div className="field">

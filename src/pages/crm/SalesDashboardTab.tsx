@@ -49,6 +49,9 @@ const OPEN_OPP_STATUSES: OpportunityStatus[] = [
 // New Lead + Quote Sent — quotes not yet won or lost.
 const OPEN_QUOTE_STATUSES: QuoteStatus[] = ["open", "sent"];
 
+// Cost of Sales Ratio target — at or below this, margin is healthy.
+const COST_OF_SALES_TARGET = 85;
+
 const Icon = {
   revenue: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -78,6 +81,13 @@ const Icon = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M4 3h13l3 4v13a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" />
       <path d="M8 8h8M8 12h8M8 16h5" />
+    </svg>
+  ),
+  ratio: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="7" cy="7" r="3" />
+      <circle cx="17" cy="17" r="3" />
+      <path d="M19 5L5 19" />
     </svg>
   ),
   pipeline: (
@@ -150,6 +160,10 @@ export default function SalesDashboardTab() {
     // Revenue below which stays excl. VAT.
     const sales = totals.reduce((s, t) => s + t.sellIncl, 0);
     const grossProfit = totals.reduce((s, t) => s + t.gp, 0);
+    // Cost of Sales Ratio = Total Cost of Sales ÷ Revenue (excl. VAT) × 100.
+    // Target 85% or lower — going over erodes margin.
+    const costOfSales = totals.reduce((s, t) => s + t.cost, 0);
+    const costRatio = revenue > 0 ? (costOfSales / revenue) * 100 : 0;
     const leadsThisMonth = leads.filter((l) => isThisMonth(l.created_at));
     const newLeads = leadsThisMonth.length;
     // Open Pipeline: VAT-inclusive total of this month's not-yet-won quotes
@@ -172,6 +186,8 @@ export default function SalesDashboardTab() {
       revenue,
       sales,
       grossProfit,
+      costOfSales,
+      costRatio,
       newLeads,
       wonCount: acceptedThisMonth.length,
       wonValue: revenue,
@@ -440,6 +456,26 @@ export default function SalesDashboardTab() {
           target={settings.sales_gp_target}
           targetLabel={money(settings.sales_gp_target)}
         />
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.ratio}</span>
+            <span className="kpi-label">Cost of Sales Ratio</span>
+          </div>
+          <div
+            className="kpi-value"
+            style={{
+              color: kpis.costRatio <= COST_OF_SALES_TARGET ? "var(--green-dark)" : "#d9534f",
+            }}
+          >
+            {kpis.costRatio.toFixed(1)}%
+          </div>
+          <div className="kpi-foot">
+            <span>
+              {money(kpis.costOfSales)} cost ÷ {money(kpis.revenue)} revenue · target ≤{" "}
+              {COST_OF_SALES_TARGET}%
+            </span>
+          </div>
+        </div>
         <SalesKpi
           icon={Icon.leads}
           label="Total Leads"
