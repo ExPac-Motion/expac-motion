@@ -17,6 +17,7 @@ import {
   PageHeader,
   RowActions,
   RowActionsHead,
+  useDeepLinkReturn,
   useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
@@ -196,6 +197,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   );
   const markRead = useMarkJobMessagesRead();
 
+  const { arm, closeAndReturn } = useDeepLinkReturn();
+
   function openComms(j: Job) {
     setCommsJob(j);
     setRailOpen(true);
@@ -205,7 +208,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   // Deep-link from a Notification: navigate here with
   // { state: { openJobId, openComms? } } to pop the shipment's view modal
   // (or its Comms rail for a message notification) open directly, instead
-  // of landing on the board and having to search for it.
+  // of landing on the board and having to search for it. Closing whichever
+  // one opened then returns to Notifications instead of stranding the user
+  // on the board.
   useEffect(() => {
     const state = location.state as
       | { openJobId?: string; openComms?: boolean }
@@ -215,6 +220,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     if (job) {
       if (state.openComms) openComms(job);
       else setViewing(job);
+      arm();
       navigate(location.pathname + location.search, { replace: true, state: {} });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -548,13 +554,17 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       <CommsRail
         job={commsJob}
         open={railOpen}
-        onToggle={() => setRailOpen((o) => !o)}
+        onToggle={() =>
+          railOpen
+            ? closeAndReturn(() => setRailOpen(false))
+            : setRailOpen(true)
+        }
       />
 
       {viewing && (
         <JobViewModal
           job={viewing}
-          onClose={() => setViewing(null)}
+          onClose={() => closeAndReturn(() => setViewing(null))}
           onEdit={() => {
             setEditingJob(viewing);
             setViewing(null);
@@ -565,10 +575,10 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       {editingJob && (
         <JobEditModal
           job={editingJob}
-          onClose={() => setEditingJob(null)}
+          onClose={() => closeAndReturn(() => setEditingJob(null))}
           onSave={(patch) => {
             save(editingJob.id, patch);
-            setEditingJob(null);
+            closeAndReturn(() => setEditingJob(null));
           }}
         />
       )}

@@ -17,6 +17,7 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
+  useDeepLinkReturn,
   useRowSelection,
   type BulkField,
 } from "../components/common";
@@ -140,10 +141,12 @@ export default function ContactsPage({
   }
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
+  const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from a Notification: navigate here with
   // { state: { openContactId } } to pop the existing view modal open on a
-  // specific record, same as clicking its row.
+  // specific record, same as clicking its row. Closing it then returns to
+  // Notifications instead of stranding the user here.
   useEffect(() => {
     const openId = (location.state as { openContactId?: string } | null)
       ?.openContactId;
@@ -151,6 +154,7 @@ export default function ContactsPage({
     const row = rows.find((r) => r.id === openId);
     if (row) {
       setViewing(row);
+      arm();
       navigate(location.pathname + location.search, {
         replace: true,
         state: {},
@@ -469,10 +473,12 @@ export default function ContactsPage({
       {viewing && (
         <Modal
           title={viewing.company}
-          onClose={() => {
-            setViewing(null);
-            setInviteLink(null);
-          }}
+          onClose={() =>
+            closeAndReturn(() => {
+              setViewing(null);
+              setInviteLink(null);
+            })
+          }
           wide={kind === "client"}
           stickyHeader={kind === "client"}
           headerActions={

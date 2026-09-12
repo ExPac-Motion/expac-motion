@@ -488,6 +488,31 @@ export function StatusBadge({ status }: { status: QuoteStatus }) {
   return <span className={`badge ${status}`}>{STATUS_LABEL[status]}</span>;
 }
 
+/**
+ * Tracks whether the record currently open (a view/edit modal, a Comms
+ * rail, …) was reached via a Notification's deep link, so closing or
+ * saving it can send the user back to Notifications (or wherever they
+ * came from) instead of stranding them on the underlying list page.
+ * `arm()` when the deep-link effect opens something; wrap that thing's
+ * close/save handler in `closeAndReturn(() => yourNormalCloseLogic())`.
+ */
+export function useDeepLinkReturn() {
+  const navigate = useNavigate();
+  const [armed, setArmed] = useState(false);
+  const arm = useCallback(() => setArmed(true), []);
+  const closeAndReturn = useCallback(
+    (close: () => void) => {
+      close();
+      if (armed) {
+        setArmed(false);
+        navigate(-1);
+      }
+    },
+    [armed, navigate],
+  );
+  return { arm, closeAndReturn };
+}
+
 export function PageHeader({
   eyebrow,
   title,

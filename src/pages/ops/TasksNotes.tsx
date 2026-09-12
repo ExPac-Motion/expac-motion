@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import {
+  EmptyState,
+  ErrorNote,
+  Loading,
+  useDeepLinkReturn,
+} from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useOpsTasks, useSaveOpsTask } from "../../lib/hooks";
 import { daysBetween, todayIso } from "../../lib/opsCalendar";
@@ -45,9 +50,11 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
   const today = todayIso();
   const all = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
+  const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from a Notification: navigate here with { state: { openTaskId } }
-  // to pop the existing edit modal open on a specific task.
+  // to pop the existing edit modal open on a specific task. Closing it then
+  // returns to Notifications instead of stranding the user here.
   useEffect(() => {
     const openId = (location.state as { openTaskId?: string } | null)
       ?.openTaskId;
@@ -55,6 +62,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     const t = all.find((x) => x.id === openId);
     if (t) {
       setEdit(t);
+      arm();
       navigate(location.pathname + location.search, {
         replace: true,
         state: {},
@@ -394,7 +402,12 @@ export default function TasksNotes({ focus }: { focus?: string }) {
       {creating && (
         <TaskEditModal task={null} onClose={() => setCreating(false)} />
       )}
-      {edit && <TaskEditModal task={edit} onClose={() => setEdit(null)} />}
+      {edit && (
+        <TaskEditModal
+          task={edit}
+          onClose={() => closeAndReturn(() => setEdit(null))}
+        />
+      )}
     </>
   );
 }

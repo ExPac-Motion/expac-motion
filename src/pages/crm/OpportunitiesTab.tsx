@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
-import { EmptyState, Loading, MailLink, Popover } from "../../components/common";
+import {
+  EmptyState,
+  Loading,
+  MailLink,
+  Popover,
+  useDeepLinkReturn,
+} from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
   useAcceptQuote,
@@ -187,10 +193,12 @@ export default function OpportunitiesTab() {
   }
 
   const realOpps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
+  const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from a Notification: navigate here with
   // { state: { openOpportunityId } } to pop the existing edit modal open on
-  // a specific opportunity, same as clicking its card.
+  // a specific opportunity, same as clicking its card. Saving/cancelling it
+  // then returns to Notifications instead of stranding the user here.
   useEffect(() => {
     const openId = (location.state as { openOpportunityId?: string } | null)
       ?.openOpportunityId;
@@ -198,6 +206,7 @@ export default function OpportunitiesTab() {
     const opp = realOpps.find((o) => o.id === openId);
     if (opp) {
       setEditing(opp);
+      arm();
       navigate(location.pathname + location.search, {
         replace: true,
         state: {},
@@ -445,7 +454,7 @@ export default function OpportunitiesTab() {
       {editing && (
         <OpportunityModal
           opportunity={editing}
-          onClose={() => setEditing(null)}
+          onClose={() => closeAndReturn(() => setEditing(null))}
         />
       )}
     </>
