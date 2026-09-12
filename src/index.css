@@ -4512,6 +4512,15 @@ table.dt th.dt-sortable {
   color: var(--muted);
   white-space: nowrap;
 }
+.notif-panel-foot {
+  border-top: 1px solid var(--line);
+  padding: 8px 14px;
+  text-align: center;
+}
+.notif-panel-foot .link-btn {
+  color: var(--green-dark);
+  font-size: 0.76rem;
+}
 
 /* ---------- Notifications tab (full page, not the bell dropdown) ---------- */
 .notif-tab-list {

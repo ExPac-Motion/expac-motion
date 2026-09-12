@@ -5,22 +5,20 @@ import {
   useJobs,
   useLeads,
   useMailCampaigns,
+  useNotificationState,
   useOpportunities,
   useOpsTasks,
   useQuotes,
+  useSetNotificationState,
   useUnreadMessages,
 } from "../lib/hooks";
 import { timeAgo } from "../lib/format";
-
-type Domain = "sales" | "shipments" | "operations" | "mail";
-
-interface Note {
-  id: string;
-  domain: Domain;
-  text: string;
-  when: string;
-  to: string;
-}
+import {
+  buildNotifications,
+  type NotificationDomain,
+  type NotificationItem,
+} from "../lib/notifications";
+import type { Message } from "../lib/types";
 
 const BELL = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -29,7 +27,7 @@ const BELL = (
   </svg>
 );
 
-const DOMAIN_ICON: Record<Domain, ReactNode> = {
+const DOMAIN_ICON: Record<NotificationDomain, ReactNode> = {
   sales: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M3 3v18h18" />
@@ -57,33 +55,13 @@ const DOMAIN_ICON: Record<Domain, ReactNode> = {
   ),
 };
 
-const SEEN_KEY = "notif.lastSeen";
-const DAY = 86_400_000;
-
-function readSeen(): number {
-  try {
-    const v = localStorage.getItem(SEEN_KEY);
-    if (v) return Number(v) || 0;
-  } catch {
-    /* private mode */
-  }
-  // First run: treat everything already there as seen.
-  const now = Date.now();
-  try {
-    localStorage.setItem(SEEN_KEY, String(now));
-  } catch {
-    /* ignore */
-  }
-  return now;
-}
-
-/** Bell in the top nav. Builds a live feed from data the app already loads
- *  (new leads, won quotes, new shipments, due tasks, sent campaigns and
- *  follow-ups) and badges anything newer than the last time it was opened. */
+/** Bell in the top nav. Shares its feed logic (src/lib/notifications.ts) with
+ *  the full Notifications tab, and the same per-item read state
+ *  (notification_state) -- this dropdown is just a lightweight recent-unread
+ *  view onto the same data, not a second implementation. */
 export default function NotificationsBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [seen, setSeen] = useState<number>(readSeen);
   // Snapshot "now" once per mount — keeps the feed calc pure across re-renders.
   const [now] = useState(() => Date.now());
   const ref = useRef<HTMLDivElement>(null);
@@ -96,128 +74,38 @@ export default function NotificationsBell() {
   const campaigns = useMailCampaigns().data;
   const followUps = useFollowUpLog().data;
   const unreadMessages = useUnreadMessages().data;
+  const stateQ = useNotificationState();
+  const setState = useSetNotificationState();
 
-  const notes = useMemo<Note[]>(() => {
-    const cutoff = now - 30 * DAY;
-    const recent = (iso: string | null | undefined) =>
-      !!iso && new Date(iso).getTime() >= cutoff;
-    const out: Note[] = [];
+  const stateByKey = useMemo(() => {
+    const m = new Map<string, { read_at: string | null; archived_at: string | null }>();
+    for (const s of stateQ.data ?? []) m.set(s.notification_key, s);
+    return m;
+  }, [stateQ.data]);
 
-    for (const l of leads ?? [])
-      if (recent(l.created_at))
-        out.push({
-          id: `lead-${l.id}`,
-          domain: "sales",
-          text: `New lead — ${l.company}`,
-          when: l.created_at,
-          to: "/crm?tab=leads",
-        });
-
-    for (const q of quotes ?? []) {
-      if (recent(q.accepted_at))
-        out.push({
-          id: `qwon-${q.id}`,
-          domain: "sales",
-          text: `Quote won — ${q.reference}`,
-          when: q.accepted_at as string,
-          to: `/quotes/${q.id}`,
-        });
-    }
-
-    for (const o of opps ?? [])
-      if (o.status === "job_completed" && recent(o.updated_at))
-        out.push({
-          id: `oppwon-${o.id}`,
-          domain: "sales",
-          text: `Opportunity delivered — ${
-            o.lead?.company ?? o.client?.company ?? "opportunity"
-          }`,
-          when: o.updated_at,
-          to: "/crm?tab=opportunities",
-        });
-
-    for (const j of jobs ?? [])
-      if (recent(j.created_at))
-        out.push({
-          id: `job-${j.id}`,
-          domain: "shipments",
-          text: `New shipment — ${j.reference}`,
-          when: j.created_at,
-          to: "/jobs",
-        });
-
-    const todayEnd = new Date(now).setHours(23, 59, 59, 999);
-    for (const t of tasks ?? [])
-      if (
-        t.status !== "done" &&
-        t.due_date &&
-        new Date(t.due_date).getTime() <= todayEnd
-      )
-        out.push({
-          id: `task-${t.id}`,
-          domain: "operations",
-          text: `${
-            new Date(t.due_date).getTime() < now - DAY
-              ? "Overdue task"
-              : "Task due"
-          } — ${t.title}`,
-          when: t.due_date,
-          to: "/ops?tab=tasks",
-        });
-
-    for (const c of campaigns ?? [])
-      if (recent(c.sent_at))
-        out.push({
-          id: `camp-${c.id}`,
-          domain: "mail",
-          text: `Campaign sent — ${c.name}`,
-          when: c.sent_at as string,
-          to: "/crm?tab=campaigns",
-        });
-
-    const jobById = new Map((jobs ?? []).map((j) => [j.id, j]));
-    for (const m of unreadMessages ?? []) {
-      const j = jobById.get(m.job_id);
-      out.push({
-        id: `msg-${m.id}`,
-        domain: "mail",
-        text: `New reply — ${j?.reference ?? "shipment"}`,
-        when: m.created_at,
-        to: "/jobs",
-      });
-    }
-
-    for (const f of followUps ?? [])
-      if (recent(f.created_at))
-        out.push({
-          id: `fu-${f.id}`,
-          domain: "mail",
-          text:
-            f.status === "failed"
-              ? `Follow-up failed — ${f.email}`
-              : `Follow-up sent — ${f.email}`,
-          when: f.created_at,
-          to: "/crm?tab=followups",
-        });
-
-    out.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
-    // Cap each domain so one bulk action (e.g. a lead CSV import) can't bury
-    // everything else, then cap the whole list.
-    const perDomain: Record<Domain, number> = {
-      sales: 0,
-      shipments: 0,
-      operations: 0,
-      mail: 0,
-    };
-    const capped = out.filter((n) => {
-      if (perDomain[n.domain] >= 12) return false;
-      perDomain[n.domain] += 1;
-      return true;
+  const items = useMemo<NotificationItem[]>(() => {
+    // Unread inbound replies only, in the shape buildNotifications expects —
+    // keeps the bell's own query lightweight (no full messages/documents
+    // fetch here; the full Notifications tab covers those).
+    const messages: Message[] = (unreadMessages ?? []).map((m) => ({
+      ...m,
+      direction: "in",
+      subject: null,
+    })) as Message[];
+    return buildNotifications(now, {
+      leads,
+      quotes,
+      jobs,
+      opportunities: opps,
+      tasks,
+      campaigns,
+      followUps,
+      messages,
     });
-    return capped.slice(0, 40);
   }, [now, leads, quotes, jobs, opps, tasks, campaigns, followUps, unreadMessages]);
 
-  const unread = notes.filter((n) => new Date(n.when).getTime() > seen).length;
+  const visible = items.filter((n) => !stateByKey.get(n.key)?.archived_at);
+  const unread = visible.filter((n) => !stateByKey.get(n.key)?.read_at);
 
   useEffect(() => {
     if (!open) return;
@@ -228,24 +116,22 @@ export default function NotificationsBell() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  function markAllRead() {
-    const now = Date.now();
-    setSeen(now);
-    try {
-      localStorage.setItem(SEEN_KEY, String(now));
-    } catch {
-      /* ignore */
-    }
+  function markRead(keys: string[]) {
+    const now2 = new Date().toISOString();
+    for (const key of keys) setState.mutate({ key, patch: { read_at: now2 } });
   }
 
   function openPanel() {
     const next = !open;
     setOpen(next);
     // let the unread highlight show for a beat, then clear the badge
-    if (next && unread > 0) window.setTimeout(markAllRead, 1200);
+    if (next && unread.length > 0) {
+      window.setTimeout(() => markRead(unread.map((n) => n.key)), 1200);
+    }
   }
 
-  function go(n: Note) {
+  function go(n: NotificationItem) {
+    markRead([n.key]);
     navigate(n.to);
     setOpen(false);
   }
@@ -259,27 +145,32 @@ export default function NotificationsBell() {
         onClick={openPanel}
       >
         {BELL}
-        {unread > 0 && <span className="notif-badge">{unread > 9 ? "9+" : unread}</span>}
+        {unread.length > 0 && (
+          <span className="notif-badge">{unread.length > 9 ? "9+" : unread.length}</span>
+        )}
       </button>
       {open && (
         <div className="notif-panel" role="dialog" aria-label="Notifications">
           <div className="notif-head">
             <strong>Notifications</strong>
-            {notes.length > 0 && (
-              <button className="link-btn" onClick={markAllRead}>
+            {visible.length > 0 && (
+              <button
+                className="link-btn"
+                onClick={() => markRead(visible.map((n) => n.key))}
+              >
                 Mark all read
               </button>
             )}
           </div>
           <div className="notif-list">
-            {notes.length === 0 ? (
+            {visible.length === 0 ? (
               <p className="notif-empty">You’re all caught up.</p>
             ) : (
-              notes.map((n) => (
+              visible.slice(0, 40).map((n) => (
                 <button
-                  key={n.id}
+                  key={n.key}
                   className={`notif-item${
-                    new Date(n.when).getTime() > seen ? " unread" : ""
+                    !stateByKey.get(n.key)?.read_at ? " unread" : ""
                   }`}
                   onClick={() => go(n)}
                 >
@@ -291,6 +182,17 @@ export default function NotificationsBell() {
                 </button>
               ))
             )}
+          </div>
+          <div className="notif-panel-foot">
+            <button
+              className="link-btn"
+              onClick={() => {
+                setOpen(false);
+                navigate("/ops?tab=notifications");
+              }}
+            >
+              View all notifications →
+            </button>
           </div>
         </div>
       )}
