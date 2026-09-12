@@ -737,6 +737,9 @@ export const CHARGE_UNITS: string[] = [
   "MAWB",
   "B/L",
   "P/CTNR",
+  "20GP",
+  "40GP",
+  "40HC",
   "THC",
 ];
 
