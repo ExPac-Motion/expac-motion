@@ -80,9 +80,15 @@ export interface CompanySettings {
   default_fx_eur_zar: number;
   default_vat_pct: number;
   default_incoterm: string;
+  /** Company-wide Total Sales target (Grand Total incl. VAT). */
+  sales_target: number;
+  /** @deprecated superseded by cost_of_sales_target — kept for existing
+   *  data; no longer surfaced in the Edit Targets UI. */
   sales_revenue_target: number;
   sales_gp_target: number;
   sales_new_leads_target: number;
+  /** Cost of Sales Ratio target (%) — at or below this, margin is healthy. */
+  cost_of_sales_target: number;
   mail_sender_name: string;
   mail_reply_to: string;
   mail_signature_html: string;

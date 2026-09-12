@@ -49,9 +49,6 @@ const OPEN_OPP_STATUSES: OpportunityStatus[] = [
 // New Lead + Quote Sent — quotes not yet won or lost.
 const OPEN_QUOTE_STATUSES: QuoteStatus[] = ["open", "sent"];
 
-// Cost of Sales Ratio target — at or below this, margin is healthy.
-const COST_OF_SALES_TARGET = 85;
-
 const Icon = {
   revenue: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -417,16 +414,14 @@ export default function SalesDashboardTab() {
       </div>
 
       <div className="dash-kpis sales-kpis">
-        <div className="kpi static">
-          <div className="kpi-top">
-            <span className="kpi-icon">{Icon.sales}</span>
-            <span className="kpi-label">Total Sales</span>
-          </div>
-          <div className="kpi-value">{money(kpis.sales)}</div>
-          <div className="kpi-foot">
-            <span>Grand Total (incl. VAT) across this month's accepted quotes</span>
-          </div>
-        </div>
+        <SalesKpi
+          icon={Icon.sales}
+          label="Total Sales"
+          value={money(kpis.sales)}
+          actual={kpis.sales}
+          target={settings.sales_target}
+          targetLabel={money(settings.sales_target)}
+        />
         <div className="kpi static">
           <div className="kpi-top">
             <span className="kpi-icon">{Icon.pipeline}</span>
@@ -440,14 +435,16 @@ export default function SalesDashboardTab() {
             </span>
           </div>
         </div>
-        <SalesKpi
-          icon={Icon.revenue}
-          label="Total Revenue"
-          value={money(kpis.revenue)}
-          actual={kpis.revenue}
-          target={settings.sales_revenue_target}
-          targetLabel={money(settings.sales_revenue_target)}
-        />
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.revenue}</span>
+            <span className="kpi-label">Total Revenue</span>
+          </div>
+          <div className="kpi-value">{money(kpis.revenue)}</div>
+          <div className="kpi-foot">
+            <span>Excl. VAT — see Cost of Sales Ratio for the margin target</span>
+          </div>
+        </div>
         <SalesKpi
           icon={Icon.profit}
           label="Total Gross Profit"
@@ -464,7 +461,10 @@ export default function SalesDashboardTab() {
           <div
             className="kpi-value"
             style={{
-              color: kpis.costRatio <= COST_OF_SALES_TARGET ? "var(--green-dark)" : "#d9534f",
+              color:
+                kpis.costRatio <= settings.cost_of_sales_target
+                  ? "var(--green-dark)"
+                  : "#d9534f",
             }}
           >
             {kpis.costRatio.toFixed(1)}%
@@ -472,7 +472,7 @@ export default function SalesDashboardTab() {
           <div className="kpi-foot">
             <span>
               {money(kpis.costOfSales)} cost ÷ {money(kpis.revenue)} revenue · target ≤{" "}
-              {COST_OF_SALES_TARGET}%
+              {settings.cost_of_sales_target}%
             </span>
           </div>
         </div>
@@ -817,7 +817,12 @@ function TargetsModal({
   settings,
   onClose,
 }: {
-  settings: { sales_revenue_target: number; sales_gp_target: number; sales_new_leads_target: number };
+  settings: {
+    sales_target: number;
+    sales_gp_target: number;
+    sales_new_leads_target: number;
+    cost_of_sales_target: number;
+  };
   onClose: () => void;
 }) {
   const update = useUpdateCompanySettings();
@@ -827,7 +832,8 @@ function TargetsModal({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const patch: CompanySettingsPatch = {
-      sales_revenue_target: Number(fd.get("sales_revenue_target")) || 0,
+      sales_target: Number(fd.get("sales_target")) || 0,
+      cost_of_sales_target: Number(fd.get("cost_of_sales_target")) || 0,
       sales_gp_target: Number(fd.get("sales_gp_target")) || 0,
       sales_new_leads_target: Number(fd.get("sales_new_leads_target")) || 0,
     };
@@ -844,12 +850,21 @@ function TargetsModal({
     <Modal title="Monthly Sales Targets" onClose={onClose}>
       <form onSubmit={onSubmit}>
         <div className="field">
-          <label>Revenue Target (R)</label>
+          <label>Sales Target (R)</label>
           <input
-            name="sales_revenue_target"
+            name="sales_target"
             type="number"
             step="0.01"
-            defaultValue={settings.sales_revenue_target}
+            defaultValue={settings.sales_target}
+          />
+        </div>
+        <div className="field">
+          <label>Cost of Sales Ratio Target (%)</label>
+          <input
+            name="cost_of_sales_target"
+            type="number"
+            step="0.1"
+            defaultValue={settings.cost_of_sales_target}
           />
         </div>
         <div className="field">

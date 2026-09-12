@@ -12,6 +12,7 @@ import {
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
+  useCompanySettings,
   useLeads,
   useProfiles,
   useQuotes,
@@ -30,13 +31,11 @@ function isThisMonth(iso: string | null): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
-// Cost of Sales Ratio target — at or below this, margin is healthy.
-const COST_OF_SALES_TARGET = 85;
-
 export default function SalesPersonPage() {
   const profilesQ = useProfiles();
   const quotesQ = useQuotes();
   const leadsQ = useLeads();
+  const settingsQ = useCompanySettings();
   const bulkUpdate = useUpdateProfilesBulk();
   const { toast, error: toastError } = useToast();
   const [editing, setEditing] = useState<Profile | null>(null);
@@ -95,8 +94,11 @@ export default function SalesPersonPage() {
     return map;
   }, [leadsQ.data]);
 
-  const isLoading = profilesQ.isLoading || quotesQ.isLoading || leadsQ.isLoading;
-  const isError = profilesQ.isError || quotesQ.isError || leadsQ.isError;
+  const isLoading =
+    profilesQ.isLoading || quotesQ.isLoading || leadsQ.isLoading || settingsQ.isLoading;
+  const isError =
+    profilesQ.isError || quotesQ.isError || leadsQ.isError || settingsQ.isError;
+  const costOfSalesTarget = settingsQ.data?.cost_of_sales_target ?? 85;
 
   const st = (id: string) =>
     stats.get(id) ?? { sales: 0, revenue: 0, cost: 0, gp: 0 };
@@ -172,7 +174,7 @@ export default function SalesPersonPage() {
           return (
             <span
               style={{
-                color: r <= COST_OF_SALES_TARGET ? "var(--green-dark)" : "#d9534f",
+                color: r <= costOfSalesTarget ? "var(--green-dark)" : "#d9534f",
                 fontWeight: 700,
               }}
             >
@@ -222,7 +224,7 @@ export default function SalesPersonPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, stats, leadStats],
+    [sel, stats, leadStats, costOfSalesTarget],
   );
 
   return (
@@ -240,7 +242,9 @@ export default function SalesPersonPage() {
       {isLoading ? (
         <Loading />
       ) : isError ? (
-        <ErrorNote error={profilesQ.error ?? quotesQ.error ?? leadsQ.error} />
+        <ErrorNote
+          error={profilesQ.error ?? quotesQ.error ?? leadsQ.error ?? settingsQ.error}
+        />
       ) : people.length === 0 ? (
         <EmptyState>No team members yet — add one in Settings.</EmptyState>
       ) : (
