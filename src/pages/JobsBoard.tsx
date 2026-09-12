@@ -6,7 +6,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import {
@@ -173,6 +173,8 @@ const COPY: Record<
  * on the next refetch.
  */
 export default function JobsBoard({ mode }: { mode: BoardMode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { data: jobs, isLoading, isError, error } = useJobs();
   const updateJob = useUpdateJob();
   const bulkUpdate = useUpdateJobsBulk();
@@ -199,6 +201,24 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     setRailOpen(true);
     if (unreadJobIds.has(j.id)) markRead.mutate(j.id);
   }
+
+  // Deep-link from a Notification: navigate here with
+  // { state: { openJobId, openComms? } } to pop the shipment's view modal
+  // (or its Comms rail for a message notification) open directly, instead
+  // of landing on the board and having to search for it.
+  useEffect(() => {
+    const state = location.state as
+      | { openJobId?: string; openComms?: boolean }
+      | null;
+    if (!state?.openJobId || !jobs?.length) return;
+    const job = jobs.find((j) => j.id === state.openJobId);
+    if (job) {
+      if (state.openComms) openComms(job);
+      else setViewing(job);
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, jobs]);
 
   async function onDeleteJob(j: Job) {
     if (!window.confirm(`Delete shipment ${j.reference}? This cannot be undone.`))

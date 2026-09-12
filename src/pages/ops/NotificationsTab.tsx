@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loading } from "../../components/common";
+import { useToast } from "../../components/Toast";
 import {
   useFollowUpLog,
   useJobs,
@@ -11,6 +12,7 @@ import {
   useOpportunities,
   useOpsTasks,
   useQuotes,
+  useSaveOpsTask,
   useSetNotificationState,
   useShipmentDocumentsForJobs,
 } from "../../lib/hooks";
@@ -55,6 +57,8 @@ type Filter = "all" | "unread";
 
 export default function NotificationsTab() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const saveTask = useSaveOpsTask();
   const leadsQ = useLeads();
   const quotesQ = useQuotes();
   const jobsQ = useJobs();
@@ -75,6 +79,7 @@ export default function NotificationsTab() {
   const [taskDefaults, setTaskDefaults] = useState<Partial<OpsTaskPatch> | null>(
     null,
   );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   // Snapshot "now" once per mount — keeps the feed calc pure across re-renders.
   const [now] = useState(() => Date.now());
 
@@ -145,9 +150,52 @@ export default function NotificationsTab() {
     });
     markRead(n, true);
   }
+
+  function toggleSelect(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+  function toggleSelectAll() {
+    setSelected((prev) =>
+      prev.size === visible.length && visible.length > 0
+        ? new Set()
+        : new Set(visible.map((n) => n.key)),
+    );
+  }
+  function bulkMarkRead(read: boolean) {
+    const ts = read ? new Date().toISOString() : null;
+    for (const key of selected) setState.mutate({ key, patch: { read_at: ts } });
+    setSelected(new Set());
+  }
+  function bulkArchive() {
+    const ts = new Date().toISOString();
+    for (const key of selected) setState.mutate({ key, patch: { archived_at: ts } });
+    setSelected(new Set());
+  }
+  async function bulkCreateTasks() {
+    const chosen = items.filter((n) => selected.has(n.key));
+    for (const n of chosen) {
+      await saveTask.mutateAsync({
+        values: {
+          title: n.text,
+          job_id: n.jobId ?? null,
+          quote_id: n.quoteId ?? null,
+          client_id: n.clientId ?? null,
+          source_notification_key: n.key,
+        },
+      });
+      setState.mutate({ key: n.key, patch: { read_at: new Date().toISOString() } });
+    }
+    toast(`Created ${chosen.length} task${chosen.length === 1 ? "" : "s"}`);
+    setSelected(new Set());
+  }
   function open(n: NotificationItem) {
     markRead(n, true);
-    navigate(n.to);
+    navigate(n.to, n.navState ? { state: n.navState } : undefined);
   }
 
   if (isLoading) return <Loading />;
@@ -184,13 +232,53 @@ export default function NotificationsTab() {
       {visible.length === 0 ? (
         <p className="muted">Nothing here.</p>
       ) : (
-        <div className="notif-tab-list">
+        <>
+          <div className="notif-tab-bulkbar">
+            <input
+              type="checkbox"
+              checked={selected.size > 0 && selected.size === visible.length}
+              ref={(el) => {
+                if (el) {
+                  el.indeterminate =
+                    selected.size > 0 && selected.size < visible.length;
+                }
+              }}
+              onChange={toggleSelectAll}
+              aria-label="Select all"
+            />
+            {selected.size > 0 ? (
+              <>
+                <span className="muted small">{selected.size} selected</span>
+                <button className="btn ghost btn-sm" onClick={() => bulkMarkRead(true)}>
+                  Mark read
+                </button>
+                <button className="btn ghost btn-sm" onClick={() => bulkMarkRead(false)}>
+                  Mark unread
+                </button>
+                <button className="btn ghost btn-sm" onClick={bulkCreateTasks}>
+                  Create tasks
+                </button>
+                <button className="btn ghost btn-sm" onClick={bulkArchive}>
+                  Archive
+                </button>
+              </>
+            ) : (
+              <span className="muted small">Select all</span>
+            )}
+          </div>
+          <div className="notif-tab-list">
           {visible.map((n) => {
             const s = stateByKey.get(n.key);
             const unread = !s?.read_at;
             const archived = !!s?.archived_at;
             return (
               <div key={n.key} className={`notif-tab-row${unread ? " unread" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={selected.has(n.key)}
+                  onChange={() => toggleSelect(n.key)}
+                  aria-label="Select notification"
+                />
                 <span className={`notif-ico ${n.domain}`}>{DOMAIN_ICON[n.domain]}</span>
                 <button className="notif-tab-text" onClick={() => open(n)}>
                   {n.text}
@@ -219,7 +307,8 @@ export default function NotificationsTab() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {taskDefaults && (

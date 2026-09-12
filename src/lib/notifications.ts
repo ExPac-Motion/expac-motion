@@ -21,6 +21,9 @@ export interface NotificationItem {
   when: string;
   /** Where clicking the notification navigates. */
   to: string;
+  /** Passed as `{ state }` to navigate() -- the target page reads this to
+   *  pop the specific record open, not just land on the list. */
+  navState?: Record<string, unknown>;
   jobId?: string | null;
   quoteId?: string | null;
   clientId?: string | null;
@@ -67,6 +70,7 @@ export function buildNotifications(
         text: `New lead — ${l.company}`,
         when: l.created_at,
         to: "/crm?tab=leads",
+        navState: { openLeadId: l.id },
         leadId: l.id,
       });
     }
@@ -77,6 +81,9 @@ export function buildNotifications(
         text: `Lead converted to customer — ${l.company}`,
         when: l.promoted_at as string,
         to: "/clients",
+        navState: l.promoted_client_id
+          ? { openContactId: l.promoted_client_id }
+          : undefined,
         leadId: l.id,
         clientId: l.promoted_client_id,
       });
@@ -107,6 +114,7 @@ export function buildNotifications(
         }`,
         when: o.updated_at,
         to: "/crm?tab=opportunities",
+        navState: { openOpportunityId: o.id },
         clientId: o.client_id,
         leadId: o.lead_id,
       });
@@ -121,6 +129,7 @@ export function buildNotifications(
         text: `New shipment — ${j.reference}`,
         when: j.created_at,
         to: "/jobs",
+        navState: { openJobId: j.id },
         jobId: j.id,
         clientId: j.client_id,
         quoteId: j.quote_id,
@@ -134,6 +143,7 @@ export function buildNotifications(
           text: `${j.reference} — ${e.note || `moved to ${e.milestone}`}`,
           when: e.created_at,
           to: "/jobs",
+          navState: { openJobId: j.id },
           jobId: j.id,
           clientId: j.client_id,
         });
@@ -154,6 +164,7 @@ export function buildNotifications(
         } — ${t.title}`,
         when: t.due_date,
         to: "/ops?tab=tasks",
+        navState: { openTaskId: t.id },
         jobId: t.job_id,
         quoteId: t.quote_id,
         clientId: t.client_id,
@@ -181,6 +192,7 @@ export function buildNotifications(
           : `Sent — ${m.subject || "email"} (${j?.reference ?? "shipment"})`,
       when: m.created_at,
       to: "/jobs",
+      navState: { openJobId: m.job_id, openComms: true },
       jobId: m.job_id,
       clientId: j?.client_id ?? null,
     });
@@ -195,6 +207,7 @@ export function buildNotifications(
         text: `Document uploaded — ${d.name} (${j?.reference ?? "shipment"})`,
         when: d.created_at,
         to: "/jobs",
+        navState: { openJobId: d.job_id },
         jobId: d.job_id,
         clientId: j?.client_id ?? null,
       });

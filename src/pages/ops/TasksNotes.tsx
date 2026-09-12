@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useOpsTasks, useSaveOpsTask } from "../../lib/hooks";
@@ -29,6 +29,7 @@ function nextStatus(s: OpsTaskStatus): OpsTaskStatus {
 
 export default function TasksNotes({ focus }: { focus?: string }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast, error } = useToast();
   const tasksQ = useOpsTasks();
   const save = useSaveOpsTask();
@@ -44,6 +45,23 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
   const today = todayIso();
   const all = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
+
+  // Deep-link from a Notification: navigate here with { state: { openTaskId } }
+  // to pop the existing edit modal open on a specific task.
+  useEffect(() => {
+    const openId = (location.state as { openTaskId?: string } | null)
+      ?.openTaskId;
+    if (!openId || all.length === 0) return;
+    const t = all.find((x) => x.id === openId);
+    if (t) {
+      setEdit(t);
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: {},
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, all]);
 
   const counts = useMemo(() => {
     const open = all.filter((t) => t.kind === "task" && t.status !== "done");

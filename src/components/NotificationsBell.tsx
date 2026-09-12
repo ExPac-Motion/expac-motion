@@ -132,7 +132,7 @@ export default function NotificationsBell() {
 
   function go(n: NotificationItem) {
     markRead([n.key]);
-    navigate(n.to);
+    navigate(n.to, n.navState ? { state: n.navState } : undefined);
     setOpen(false);
   }
 

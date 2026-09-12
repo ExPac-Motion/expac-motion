@@ -4550,6 +4550,14 @@ table.dt th.dt-sortable {
 }
 
 /* ---------- Notifications tab (full page, not the bell dropdown) ---------- */
+.notif-tab-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
 .notif-tab-list {
   display: flex;
   flex-direction: column;

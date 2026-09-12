@@ -5,6 +5,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
 import {
   BulkEditModal,
@@ -88,6 +89,8 @@ export default function ContactsPage({
   remove,
   bulkUpdate,
 }: Props) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { label, title, eyebrow } = COPY[kind];
   const Label = titleCase(label);
   const isClient = kind === "client";
@@ -137,6 +140,25 @@ export default function ContactsPage({
   }
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
+
+  // Deep-link from a Notification: navigate here with
+  // { state: { openContactId } } to pop the existing view modal open on a
+  // specific record, same as clicking its row.
+  useEffect(() => {
+    const openId = (location.state as { openContactId?: string } | null)
+      ?.openContactId;
+    if (!openId || rows.length === 0) return;
+    const row = rows.find((r) => r.id === openId);
+    if (row) {
+      setViewing(row);
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: {},
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
