@@ -138,7 +138,8 @@ export default function SalesDashboardTab() {
     // Revenue below which stays excl. VAT.
     const sales = totals.reduce((s, t) => s + t.sellIncl, 0);
     const grossProfit = totals.reduce((s, t) => s + t.gp, 0);
-    const newLeads = leads.filter((l) => isThisMonth(l.created_at)).length;
+    const leadsThisMonth = leads.filter((l) => isThisMonth(l.created_at));
+    const newLeads = leadsThisMonth.length;
     // Open Pipeline: VAT-inclusive total of this month's not-yet-won quotes
     // (New Lead + Quote Sent) — same Grand Total formula as Revenue/Sales
     // above, just for quotes that haven't been accepted yet.
@@ -150,8 +151,11 @@ export default function SalesDashboardTab() {
       0,
     );
     const openOppCount = openQuotesThisMonth.length;
-    const converted = leads.filter((l) => l.promoted_at).length;
-    const convRate = leads.length > 0 ? (converted / leads.length) * 100 : 0;
+    // Lead → Customer: scoped to this month's leads too, same cohort as
+    // Total Leads above — how many of them have converted so far.
+    const converted = leadsThisMonth.filter((l) => l.promoted_at).length;
+    const convRate =
+      leadsThisMonth.length > 0 ? (converted / leadsThisMonth.length) * 100 : 0;
     return {
       revenue,
       sales,
@@ -162,7 +166,7 @@ export default function SalesDashboardTab() {
       openPipeline,
       openOppCount,
       converted,
-      totalLeads: leads.length,
+      totalLeads: leadsThisMonth.length,
       convRate,
     };
   }, [quotes, leads]);
