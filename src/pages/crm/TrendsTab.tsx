@@ -421,6 +421,7 @@ export default function TrendsTab() {
         <Modal
           title={`${drillTitle[drill.kind]} — ${drill.bucket.label}`}
           onClose={() => setDrill(null)}
+          wide
         >
           {drill.kind === "leadsCreated" || drill.kind === "leadsConverted" ? (
             drillLeads(drill.kind, drill.bucket).length === 0 ? (
