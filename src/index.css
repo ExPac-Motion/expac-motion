@@ -3541,6 +3541,33 @@ table.dt th.dt-sortable {
   color: #b3261e;
 }
 
+/* --- Tasks & Notes: board view --- */
+.task-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--white);
+}
+.task-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-card .task-title {
+  font-weight: 600;
+}
+.task-card .task-body {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+}
+.task-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 /* --- Calendar --- */
 .cal-toolbar {
   display: flex;

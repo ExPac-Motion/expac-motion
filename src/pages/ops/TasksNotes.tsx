@@ -4,11 +4,18 @@ import { EmptyState, ErrorNote, Loading } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useOpsTasks, useSaveOpsTask } from "../../lib/hooks";
 import { daysBetween, todayIso } from "../../lib/opsCalendar";
-import type { OpsTask, OpsTaskStatus } from "../../lib/types";
+import { OPS_TASK_STATUSES, type OpsTask, type OpsTaskStatus } from "../../lib/types";
 import TaskEditModal from "./TaskEditModal";
 
 type StatusFilter = "all" | OpsTaskStatus;
 type ScopeFilter = "all" | "linked" | "standalone";
+type View = "list" | "board";
+
+const STATUS_LABEL: Record<OpsTaskStatus, string> = {
+  open: "Open",
+  doing: "Doing",
+  done: "Done",
+};
 
 const PRIO_DOT: Record<OpsTask["priority"], string> = {
   low: "low",
@@ -28,6 +35,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
   const [quick, setQuick] = useState("");
   const [quickKind, setQuickKind] = useState<"task" | "note">("task");
+  const [view, setView] = useState<View>("list");
   const [statusF, setStatusF] = useState<StatusFilter>("all");
   const [scopeF, setScopeF] = useState<ScopeFilter>("all");
   const [search, setSearch] = useState("");
@@ -167,15 +175,28 @@ export default function TasksNotes({ focus }: { focus?: string }) {
             </div>
           </div>
           <div className="chips">
-            {(["all", "open", "doing", "done"] as StatusFilter[]).map((s) => (
+            {(["list", "board"] as View[]).map((v) => (
               <button
-                key={s}
-                className={`chip${statusF === s ? " on" : ""}`}
-                onClick={() => setStatusF(s)}
+                key={v}
+                className={`chip${view === v ? " on" : ""}`}
+                onClick={() => {
+                  setView(v);
+                  if (v === "board") setStatusF("all");
+                }}
               >
-                {s === "all" ? "All" : s[0].toUpperCase() + s.slice(1)}
+                {v === "list" ? "List" : "Board"}
               </button>
             ))}
+            {view === "list" &&
+              (["all", "open", "doing", "done"] as StatusFilter[]).map((s) => (
+                <button
+                  key={s}
+                  className={`chip${statusF === s ? " on" : ""}`}
+                  onClick={() => setStatusF(s)}
+                >
+                  {s === "all" ? "All" : s[0].toUpperCase() + s.slice(1)}
+                </button>
+              ))}
             {(["all", "linked", "standalone"] as ScopeFilter[]).map((s) => (
               <button
                 key={s}
@@ -204,14 +225,20 @@ export default function TasksNotes({ focus }: { focus?: string }) {
         )}
       </div>
 
-      <div className="panel">
-        {tasksQ.isLoading ? (
+      {tasksQ.isLoading ? (
+        <div className="panel">
           <Loading />
-        ) : tasksQ.isError ? (
+        </div>
+      ) : tasksQ.isError ? (
+        <div className="panel">
           <ErrorNote error={tasksQ.error} />
-        ) : rows.length === 0 ? (
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="panel">
           <EmptyState>Nothing here. Add a task or note above.</EmptyState>
-        ) : (
+        </div>
+      ) : view === "list" ? (
+        <div className="panel">
           <ul className="task-list">
             {rows.map((t) => {
               const overdue =
@@ -246,6 +273,11 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                           : t.due_date}
                     </span>
                   )}
+                  {t.assignee?.full_name && (
+                    <span className="chip sm" title="Assignee">
+                      {t.assignee.full_name}
+                    </span>
+                  )}
                   {chip && (
                     <button
                       className="chip sm"
@@ -259,8 +291,87 @@ export default function TasksNotes({ focus }: { focus?: string }) {
               );
             })}
           </ul>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${OPS_TASK_STATUSES.length}, minmax(260px, 1fr))`,
+            gap: 14,
+            overflowX: "auto",
+          }}
+        >
+          {OPS_TASK_STATUSES.map((status) => {
+            const colRows = rows.filter((t) => t.status === status);
+            return (
+              <div key={status} className="panel" style={{ margin: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <strong style={{ fontSize: "0.85rem" }}>
+                    {STATUS_LABEL[status]}
+                  </strong>
+                  <span className="muted small">{colRows.length}</span>
+                </div>
+                <div className="stack-sm">
+                  {colRows.map((t) => {
+                    const overdue =
+                      t.status !== "done" && t.due_date && t.due_date < today;
+                    const chip = linkChip(t);
+                    return (
+                      <div key={t.id} className="task-card">
+                        <div className="task-card-top">
+                          <span className={`prio-dot ${PRIO_DOT[t.priority]}`} />
+                          <button
+                            className="task-title"
+                            onClick={() => setEdit(t)}
+                          >
+                            {t.title}
+                          </button>
+                        </div>
+                        {t.body && <p className="task-body">{t.body}</p>}
+                        <div className="task-card-foot">
+                          {t.due_date && (
+                            <span className={`due-badge${overdue ? " over" : ""}`}>
+                              {overdue
+                                ? `${Math.abs(daysBetween(today, t.due_date))}d late`
+                                : t.due_date === today
+                                  ? "today"
+                                  : t.due_date}
+                            </span>
+                          )}
+                          {t.assignee?.full_name && (
+                            <span className="chip sm">{t.assignee.full_name}</span>
+                          )}
+                          {chip && (
+                            <button className="chip sm" onClick={chip.go}>
+                              {chip.label}
+                            </button>
+                          )}
+                          {t.kind === "task" && (
+                            <button
+                              className="btn ghost btn-sm"
+                              onClick={() => cycleStatus(t)}
+                              title="Advance status"
+                            >
+                              Advance →
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {creating && (
         <TaskEditModal task={null} onClose={() => setCreating(false)} />
