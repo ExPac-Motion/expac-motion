@@ -339,6 +339,8 @@ export default function QuoteBuilderPage() {
     [resolvedLines, fx],
   );
   const sellCur = (draft?.sell_currency || null) as LineCurrency | null;
+  const costOfSalesTarget = settingsQ.data?.cost_of_sales_target ?? 85;
+  const costOfSalesRatio = totals.sell > 0 ? (totals.cost / totals.sell) * 100 : 0;
   const groups = useMemo(
     () => groupByCategory(resolvedLines),
     [resolvedLines],
@@ -1660,6 +1662,21 @@ export default function QuoteBuilderPage() {
           <div className="t">
             <div className="label">Margin</div>
             <div className="val">{totals.margin.toFixed(1)}%</div>
+          </div>
+          <div className="t">
+            <div className="label">Cost of Sales Ratio</div>
+            <div
+              className="val"
+              style={{
+                color:
+                  costOfSalesRatio <= costOfSalesTarget
+                    ? "var(--green-dark)"
+                    : "#d9534f",
+              }}
+              title={`Cost ÷ Customer total excl. VAT · target ≤ ${costOfSalesTarget}%`}
+            >
+              {costOfSalesRatio.toFixed(1)}%
+            </div>
           </div>
           <div className="t">
             <div className="label">Customer total (excl. VAT)</div>
