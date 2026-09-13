@@ -424,6 +424,16 @@ export interface MediaAsset {
   created_at: string;
 }
 
+/** A named folder in the Media gallery. Rows only exist so an *empty*
+ *  folder can be created and survive a reload -- once it holds an asset,
+ *  the folder also shows up from that asset's `folder` label alone. */
+export interface MediaFolder {
+  id: string;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 
 export type MailCampaignStatus = "draft" | "sending" | "sent" | "failed";

@@ -855,6 +855,34 @@ export function useMoveMediaAsset() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["media_assets"] }),
   });
 }
+export function useMediaFolders() {
+  return useQuery({ queryKey: ["media_folders"], queryFn: db.listMediaFolders });
+}
+export function useCreateMediaFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.createMediaFolder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_folders"] }),
+  });
+}
+export function useRenameMediaFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { oldName: string; newName: string }) =>
+      db.renameMediaFolder(input.oldName, input.newName),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media_folders"] });
+      qc.invalidateQueries({ queryKey: ["media_assets"] });
+    },
+  });
+}
+export function useDeleteMediaFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteMediaFolder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media_folders"] }),
+  });
+}
 
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 export function useMailCampaigns() {

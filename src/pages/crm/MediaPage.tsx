@@ -3,10 +3,14 @@ import Modal from "../../components/Modal";
 import { EmptyState, ErrorNote, Loading } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
+  useCreateMediaFolder,
   useDeleteMediaAsset,
+  useDeleteMediaFolder,
   useMediaAssets,
+  useMediaFolders,
   useMoveMediaAsset,
   useRenameMediaAsset,
+  useRenameMediaFolder,
   useUploadMediaAsset,
 } from "../../lib/hooks";
 import { formatDate } from "../../lib/format";
@@ -68,16 +72,20 @@ function RenameModal({
 
 export default function MediaPage() {
   const { data, isLoading, isError, error } = useMediaAssets();
+  const foldersQ = useMediaFolders();
   const upload = useUploadMediaAsset();
   const remove = useDeleteMediaAsset();
   const rename = useRenameMediaAsset();
   const move = useMoveMediaAsset();
+  const createFolder = useCreateMediaFolder();
+  const renameFolder = useRenameMediaFolder();
+  const deleteFolder = useDeleteMediaFolder();
   const { toast, error: toastError } = useToast();
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [folder, setFolder] = useState<string>(ALL);
-  const [extraFolders, setExtraFolders] = useState<string[]>([]);
   const [renaming, setRenaming] = useState<MediaAsset | null>(null);
+  const [viewingImage, setViewingImage] = useState<MediaAsset | null>(null);
   const [copied, setCopied] = useState<string>("");
   const [view, setView] = useState<"grid" | "list">(() => {
     try {
@@ -97,12 +105,13 @@ export default function MediaPage() {
   }
 
   const assets = useMemo(() => data ?? [], [data]);
+  const savedFolders = useMemo(() => foldersQ.data ?? [], [foldersQ.data]);
 
   const folders = useMemo(() => {
-    const set = new Set<string>([DEFAULT_FOLDER, ...extraFolders]);
+    const set = new Set<string>([DEFAULT_FOLDER, ...savedFolders.map((f) => f.name)]);
     for (const a of assets) set.add(a.folder || DEFAULT_FOLDER);
     return [...set].sort((a, b) => a.localeCompare(b));
-  }, [assets, extraFolders]);
+  }, [assets, savedFolders]);
 
   const countFor = (name: string) =>
     assets.filter((a) => (a.folder || DEFAULT_FOLDER) === name).length;
@@ -130,11 +139,28 @@ export default function MediaPage() {
     if (ok > 0) toast(`Uploaded ${ok} image${ok === 1 ? "" : "s"} to ${uploadFolder}`);
   }
 
-  function onNewFolder() {
+  async function onNewFolder() {
     const name = window.prompt("New folder name")?.trim();
     if (!name) return;
-    if (!folders.includes(name)) setExtraFolders((f) => [...f, name]);
-    setFolder(name);
+    try {
+      if (!folders.includes(name)) await createFolder.mutateAsync(name);
+      setFolder(name);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not create folder");
+    }
+  }
+
+  async function onRenameFolder(name: string) {
+    if (name === DEFAULT_FOLDER) return;
+    const next = window.prompt("Rename folder to…", name)?.trim();
+    if (!next || next === name) return;
+    try {
+      await renameFolder.mutateAsync({ oldName: name, newName: next });
+      if (folder === name) setFolder(next);
+      toast(`Folder renamed to "${next}"`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not rename folder");
+    }
   }
 
   async function onDeleteFolder(name: string) {
@@ -152,7 +178,7 @@ export default function MediaPage() {
       for (const a of inFolder) {
         await move.mutateAsync({ id: a.id, folder: DEFAULT_FOLDER });
       }
-      setExtraFolders((f) => f.filter((x) => x !== name));
+      await deleteFolder.mutateAsync(name);
       setFolder(ALL);
       toast(
         inFolder.length
@@ -210,8 +236,12 @@ export default function MediaPage() {
   async function onMoveToNewFolder(a: MediaAsset) {
     const name = window.prompt("Move to a new folder named…")?.trim();
     if (!name) return;
-    if (!folders.includes(name)) setExtraFolders((f) => [...f, name]);
-    await onMove(a, name);
+    try {
+      if (!folders.includes(name)) await createFolder.mutateAsync(name);
+      await onMove(a, name);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not create folder");
+    }
   }
 
   return (
@@ -234,18 +264,32 @@ export default function MediaPage() {
             <span>{f}</span>
             <span className="media-folder-count">{countFor(f)}</span>
             {f !== DEFAULT_FOLDER && (
-              <span
-                className="media-folder-del"
-                role="button"
-                tabIndex={-1}
-                title={`Delete folder "${f}"`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteFolder(f);
-                }}
-              >
-                ✕
-              </span>
+              <>
+                <span
+                  className="media-folder-edit"
+                  role="button"
+                  tabIndex={-1}
+                  title={`Rename folder "${f}"`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRenameFolder(f);
+                  }}
+                >
+                  ✎
+                </span>
+                <span
+                  className="media-folder-del"
+                  role="button"
+                  tabIndex={-1}
+                  title={`Delete folder "${f}"`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFolder(f);
+                  }}
+                >
+                  ✕
+                </span>
+              </>
             )}
           </button>
         ))}
@@ -314,9 +358,14 @@ export default function MediaPage() {
           <div className={`media-grid${view === "list" ? " is-list" : ""}`}>
             {shown.map((a) => (
               <figure key={a.id} className="media-card">
-                <div className="media-thumb">
+                <button
+                  type="button"
+                  className="media-thumb"
+                  onClick={() => setViewingImage(a)}
+                  title="View full size"
+                >
                   <img src={a.url} alt={a.name} loading="lazy" />
-                </div>
+                </button>
                 <figcaption>
                   <span className="media-name" title={a.name}>
                     {a.name}
@@ -372,6 +421,26 @@ export default function MediaPage() {
           onSave={onRename}
           saving={rename.isPending}
         />
+      )}
+
+      {viewingImage && (
+        <Modal
+          title={viewingImage.name}
+          onClose={() => setViewingImage(null)}
+          wide
+        >
+          <img
+            src={viewingImage.url}
+            alt={viewingImage.name}
+            style={{
+              display: "block",
+              maxWidth: "100%",
+              maxHeight: "75vh",
+              margin: "0 auto",
+              borderRadius: 8,
+            }}
+          />
+        </Modal>
       )}
     </div>
   );

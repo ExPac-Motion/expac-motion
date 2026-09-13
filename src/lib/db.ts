@@ -54,6 +54,7 @@ import type {
   MailTemplate,
   MailTemplatePatch,
   MediaAsset,
+  MediaFolder,
   MailCampaign,
   MailCampaignPatch,
   MailCampaignRecipient,
@@ -1351,6 +1352,54 @@ export async function moveMediaAsset(
       .select("*")
       .single(),
   );
+}
+
+export async function listMediaFolders(): Promise<MediaFolder[]> {
+  return unwrap<MediaFolder[]>(
+    await supabase.from("media_folders").select("*").order("name"),
+  );
+}
+
+/** Records a folder so it persists (and is visible to the whole team) even
+ *  while it's still empty. A no-op if the name is already taken. */
+export async function createMediaFolder(name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const { error } = await supabase
+    .from("media_folders")
+    .upsert({ name: trimmed }, { onConflict: "name", ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+/** Renames a folder: moves every asset filed under the old name and the
+ *  folder row itself (if one exists — a folder that only ever held assets,
+ *  never explicitly created, has none). Merges into an existing folder of
+ *  the new name rather than erroring. */
+export async function renameMediaFolder(
+  oldName: string,
+  newName: string,
+): Promise<void> {
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === oldName) return;
+  unwrap(
+    await supabase
+      .from("media_assets")
+      .update({ folder: trimmed })
+      .eq("folder", oldName)
+      .select("id"),
+  );
+  unwrap(
+    await supabase
+      .from("media_folders")
+      .delete()
+      .eq("name", oldName)
+      .select("id"),
+  );
+  await createMediaFolder(trimmed);
+}
+
+export async function deleteMediaFolder(name: string): Promise<void> {
+  unwrap(await supabase.from("media_folders").delete().eq("name", name));
 }
 
 /* ---------- Sales CRM: Mail Campaigns ---------- */

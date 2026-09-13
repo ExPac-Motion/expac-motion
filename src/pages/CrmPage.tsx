@@ -34,7 +34,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   team: { eyebrow: "Configuration", title: "Sales Person" },
   templates: { eyebrow: "Outreach", title: "Templates" },
   campaigns: { eyebrow: "Outreach", title: "Campaigns" },
-  followups: { eyebrow: "Outreach", title: "Follow-ups" },
+  followups: { eyebrow: "Outreach", title: "Workflows" },
   forms: { eyebrow: "Outreach", title: "Forms" },
   media: { eyebrow: "Outreach", title: "Media" },
 };
