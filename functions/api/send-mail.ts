@@ -12,7 +12,15 @@
  *
  * Request (POST /api/send-mail):
  *   { jobId, to: string[], cc?: string[], bcc?: string[], subject, html, text,
- *     attachments?: [{ filename, content: base64 }], fromName?, replyTo? }
+ *     attachments?: [{ filename, content: base64 }], fromName?, replyTo?,
+ *     unsubscribeUrl? }
+ *
+ * `unsubscribeUrl` (list mail only — campaigns / follow-ups) sets the
+ * `List-Unsubscribe` / `List-Unsubscribe-Post` headers so Gmail/Outlook/Yahoo
+ * show their native one-click unsubscribe and count it favourably toward
+ * sender reputation. It should point at /api/unsubscribe (this Pages
+ * Function project's own one-click endpoint, not the browser-rendered
+ * /unsubscribe page — mail clients POST to it directly with no JS).
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
@@ -120,6 +128,13 @@ export async function onRequestPost(context) {
     env.MAIL_REPLY_TO ||
     "support@expac.co.za";
 
+  const headers = {};
+  if (body.jobId) headers["X-Shipment-Id"] = String(body.jobId);
+  if (typeof body.unsubscribeUrl === "string" && body.unsubscribeUrl) {
+    headers["List-Unsubscribe"] = `<${body.unsubscribeUrl}>`;
+    headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+  }
+
   const payload = {
     from,
     to,
@@ -127,7 +142,7 @@ export async function onRequestPost(context) {
     html: withDefaultFont(body.html) || undefined,
     text: body.text || undefined,
     reply_to: replyTo,
-    headers: body.jobId ? { "X-Shipment-Id": String(body.jobId) } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
   };
   if (cc.length) payload.cc = cc;
   if (bcc.length) payload.bcc = bcc;

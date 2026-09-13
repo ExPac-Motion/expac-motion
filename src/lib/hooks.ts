@@ -1040,6 +1040,7 @@ export function useSendCampaign() {
               text: htmlToText(html),
               fromName,
               replyTo,
+              unsubscribeUrl: `${window.location.origin}/api/unsubscribe?r=${row.id}`,
             });
             await db.updateMailCampaignRecipient(row.id, {
               status: "sent",
