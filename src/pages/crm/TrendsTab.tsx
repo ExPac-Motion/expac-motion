@@ -14,10 +14,20 @@ import {
 } from "recharts";
 import Modal from "../../components/Modal";
 import { ErrorNote, Loading } from "../../components/common";
-import { useCompanySettings, useLeads, useQuotes } from "../../lib/hooks";
+import {
+  useCompanySettings,
+  useLeads,
+  useOpportunities,
+  useQuotes,
+} from "../../lib/hooks";
 import { chargeTotals, fxOf } from "../../lib/calc";
 import { formatDate, money } from "../../lib/format";
-import { WON_QUOTE_STATUSES, type Lead, type Quote } from "../../lib/types";
+import {
+  WON_QUOTE_STATUSES,
+  type Lead,
+  type Opportunity,
+  type Quote,
+} from "../../lib/types";
 import QuoteDetailModal from "../QuoteDetailModal";
 
 type Preset = "this_year" | "last_6" | "last_12" | "custom";
@@ -29,7 +39,14 @@ interface MonthBucket {
   salesQuotes: Quote[];
   revenueTotal: number;
   revenueQuotes: Quote[];
+  /** Completed opportunities with no linked quote -- real historical sales
+   *  (pre-dating the quoting system) with no cost data behind them. */
+  revenueOpportunities: Opportunity[];
   costTotal: number;
+  /** Only the slice of revenueTotal that has real cost data (quote-based) --
+   *  the denominator for costRatio, so cost-less historical opportunity
+   *  revenue doesn't silently read as a 100% margin. */
+  costTrackedRevenue: number;
   costRatio: number | null;
   leadsCreated: number;
   createdLeads: Lead[];
@@ -83,6 +100,7 @@ export default function TrendsTab() {
   const navigate = useNavigate();
   const quotesQ = useQuotes();
   const leadsQ = useLeads();
+  const oppsQ = useOpportunities();
   const settingsQ = useCompanySettings();
 
   const now = useMemo(() => new Date(), []);
@@ -100,6 +118,7 @@ export default function TrendsTab() {
 
   const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
   const leads = useMemo(() => leadsQ.data ?? [], [leadsQ.data]);
+  const opps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
   const costOfSalesTarget = settingsQ.data?.cost_of_sales_target ?? 85;
 
   const monthlyData = useMemo(() => {
@@ -114,7 +133,9 @@ export default function TrendsTab() {
           salesQuotes: [],
           revenueTotal: 0,
           revenueQuotes: [],
+          revenueOpportunities: [],
           costTotal: 0,
+          costTrackedRevenue: 0,
           costRatio: null,
           leadsCreated: 0,
           createdLeads: [],
@@ -140,8 +161,26 @@ export default function TrendsTab() {
         if (bucket) {
           bucket.revenueTotal += t.sell;
           bucket.costTotal += t.cost;
+          bucket.costTrackedRevenue += t.sell;
           bucket.revenueQuotes.push(q);
         }
+      }
+    }
+
+    // Real historical sales that pre-date the quoting system: completed
+    // opportunities with no linked quote. No cost data exists for these
+    // (never will be back-dated), so they count toward Sales/Revenue but
+    // are deliberately excluded from costTrackedRevenue -- otherwise a
+    // month with only this kind of revenue would misreport as 0% cost.
+    for (const o of opps) {
+      if (o.status !== "job_completed" || o.quote_id) continue;
+      const key = o.updated_at?.slice(0, 7);
+      if (!key) continue;
+      const bucket = map.get(key);
+      if (bucket) {
+        bucket.salesTotal += o.value || 0;
+        bucket.revenueTotal += o.value || 0;
+        bucket.revenueOpportunities.push(o);
       }
     }
 
@@ -168,27 +207,37 @@ export default function TrendsTab() {
       const b = map.get(month)!;
       return {
         ...b,
-        costRatio: b.revenueTotal > 0 ? (b.costTotal / b.revenueTotal) * 100 : null,
+        costRatio:
+          b.costTrackedRevenue > 0
+            ? (b.costTotal / b.costTrackedRevenue) * 100
+            : null,
       };
     });
-  }, [quotes, leads, fromKey, toKey]);
+  }, [quotes, leads, opps, fromKey, toKey]);
 
   const [drill, setDrill] = useState<{ kind: DrillKind; bucket: MonthBucket } | null>(
     null,
   );
   const [openQuoteId, setOpenQuoteId] = useState<string | null>(null);
 
-  const isLoading = quotesQ.isLoading || leadsQ.isLoading || settingsQ.isLoading;
-  const isError = quotesQ.isError || leadsQ.isError || settingsQ.isError;
+  const isLoading =
+    quotesQ.isLoading || leadsQ.isLoading || oppsQ.isLoading || settingsQ.isLoading;
+  const isError = quotesQ.isError || leadsQ.isError || oppsQ.isError || settingsQ.isError;
 
   if (isLoading) return <Loading />;
   if (isError) {
-    return <ErrorNote error={quotesQ.error ?? leadsQ.error ?? settingsQ.error} />;
+    return (
+      <ErrorNote error={quotesQ.error ?? leadsQ.error ?? oppsQ.error ?? settingsQ.error} />
+    );
   }
 
   function drillQuotes(kind: DrillKind, b: MonthBucket): Quote[] {
     if (kind === "sales") return b.salesQuotes;
     if (kind === "revenue" || kind === "ratio") return b.revenueQuotes;
+    return [];
+  }
+  function drillOpportunities(kind: DrillKind, b: MonthBucket): Opportunity[] {
+    if (kind === "sales" || kind === "revenue") return b.revenueOpportunities;
     return [];
   }
   function drillLeads(kind: DrillKind, b: MonthBucket): Lead[] {
@@ -463,49 +512,93 @@ export default function TrendsTab() {
                 </table>
               </div>
             )
-          ) : drillQuotes(drill.kind, drill.bucket).length === 0 ? (
-            <p className="muted">No quotes in this month.</p>
+          ) : drillQuotes(drill.kind, drill.bucket).length === 0 &&
+            drillOpportunities(drill.kind, drill.bucket).length === 0 ? (
+            <p className="muted">No records in this month.</p>
           ) : (
-            <div className="table-wrap">
-              <table className="table--compact">
-                <thead>
-                  <tr>
-                    <th>Reference</th>
-                    <th>Customer</th>
-                    <th>Mode</th>
-                    <th>Status</th>
-                    <th className="num">
-                      {drill.kind === "sales" ? "Sell (incl. VAT)" : "Sell (excl. VAT)"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {drillQuotes(drill.kind, drill.bucket).map((q) => {
-                    const t = chargeTotals(q.quote_lines, fxOf(q));
-                    return (
-                      <tr
-                        key={q.id}
-                        className="clickable"
-                        onClick={() => {
-                          setDrill(null);
-                          setOpenQuoteId(q.id);
-                        }}
-                      >
-                        <td>
-                          <strong>{q.reference}</strong>
-                        </td>
-                        <td>{q.client?.company ?? q.lead?.company ?? "—"}</td>
-                        <td>{q.mode}</td>
-                        <td>{q.status}</td>
-                        <td className="num">
-                          {money(drill.kind === "sales" ? t.sellIncl : t.sell)}
-                        </td>
+            <>
+              {drillQuotes(drill.kind, drill.bucket).length > 0 && (
+                <div className="table-wrap">
+                  <table className="table--compact">
+                    <thead>
+                      <tr>
+                        <th>Reference</th>
+                        <th>Customer</th>
+                        <th>Mode</th>
+                        <th>Status</th>
+                        <th className="num">
+                          {drill.kind === "sales" ? "Sell (incl. VAT)" : "Sell (excl. VAT)"}
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {drillQuotes(drill.kind, drill.bucket).map((q) => {
+                        const t = chargeTotals(q.quote_lines, fxOf(q));
+                        return (
+                          <tr
+                            key={q.id}
+                            className="clickable"
+                            onClick={() => {
+                              setDrill(null);
+                              setOpenQuoteId(q.id);
+                            }}
+                          >
+                            <td>
+                              <strong>{q.reference}</strong>
+                            </td>
+                            <td>{q.client?.company ?? q.lead?.company ?? "—"}</td>
+                            <td>{q.mode}</td>
+                            <td>{q.status}</td>
+                            <td className="num">
+                              {money(drill.kind === "sales" ? t.sellIncl : t.sell)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {drillOpportunities(drill.kind, drill.bucket).length > 0 && (
+                <div className="table-wrap" style={{ marginTop: 12 }}>
+                  <p className="hint" style={{ marginBottom: 6 }}>
+                    Historical shipments (no linked quote — no cost data, excluded
+                    from Cost of Sales Ratio)
+                  </p>
+                  <table className="table--compact">
+                    <thead>
+                      <tr>
+                        <th>Customer / Lead</th>
+                        <th>Title</th>
+                        <th className="num">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {drillOpportunities(drill.kind, drill.bucket).map((o) => (
+                        <tr
+                          key={o.id}
+                          className="clickable"
+                          onClick={() => {
+                            setDrill(null);
+                            navigate("/crm?tab=opportunities", {
+                              state: { openOpportunityId: o.id },
+                            });
+                          }}
+                        >
+                          <td>
+                            <strong>
+                              {o.client?.company ?? o.lead?.company ?? "—"}
+                            </strong>
+                          </td>
+                          <td>{o.title || "—"}</td>
+                          <td className="num">{money(o.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </Modal>
       )}
