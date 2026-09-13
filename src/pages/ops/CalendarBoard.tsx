@@ -192,20 +192,64 @@ export default function CalendarBoard() {
                   <p className="hint">Nothing scheduled.</p>
                 ) : (
                   <ul className="cal-daylist">
-                    {(byDay.get(daySel) ?? []).map((e) => (
-                      <li key={e.id}>
-                        <span className={`cal-tag k-${e.kind}`}>
-                          {CAL_KIND_LABEL[e.kind]}
-                        </span>
-                        <button
-                          className="cal-daylink"
-                          onClick={() => navigate(e.href)}
-                        >
-                          {e.label}
-                          <span className="hint"> · {e.sub}</span>
-                        </button>
-                      </li>
-                    ))}
+                    {(byDay.get(daySel) ?? []).map((e) =>
+                      e.task ? (
+                        <li key={e.id} className="cal-daylist-task">
+                          <div className="cal-daylist-task-top">
+                            <span className={`cal-tag k-${e.kind}`}>
+                              {CAL_KIND_LABEL[e.kind]}
+                            </span>
+                            <span className={`prio-dot ${e.task.priority}`} />
+                            {e.task.kind === "task" && (
+                              <span className="chip sm">{e.task.status}</span>
+                            )}
+                            {e.task.assignee?.full_name && (
+                              <span className="chip sm">
+                                {e.task.assignee.full_name}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            className="cal-daylink"
+                            onClick={() =>
+                              navigate(e.href, { state: e.navState })
+                            }
+                          >
+                            {e.label}
+                          </button>
+                          {e.task.body && (
+                            <p className="hint" style={{ margin: "2px 0 0" }}>
+                              {e.task.body}
+                            </p>
+                          )}
+                          {(e.task.job?.reference ||
+                            e.task.quote?.reference ||
+                            e.task.client?.company) && (
+                            <p className="hint" style={{ margin: "2px 0 0" }}>
+                              Linked:{" "}
+                              {e.task.job?.reference ??
+                                e.task.quote?.reference ??
+                                e.task.client?.company}
+                            </p>
+                          )}
+                        </li>
+                      ) : (
+                        <li key={e.id}>
+                          <span className={`cal-tag k-${e.kind}`}>
+                            {CAL_KIND_LABEL[e.kind]}
+                          </span>
+                          <button
+                            className="cal-daylink"
+                            onClick={() =>
+                              navigate(e.href, { state: e.navState })
+                            }
+                          >
+                            {e.label}
+                            <span className="hint"> · {e.sub}</span>
+                          </button>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 )}
               </div>
@@ -224,7 +268,7 @@ export default function CalendarBoard() {
                   </span>
                   <button
                     className="cal-daylink"
-                    onClick={() => navigate(e.href)}
+                    onClick={() => navigate(e.href, { state: e.navState })}
                   >
                     {e.label}
                     <span className="hint"> · {e.sub}</span>

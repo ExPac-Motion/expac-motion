@@ -3709,6 +3709,19 @@ table.dt th.dt-sortable {
   align-items: baseline;
   gap: 8px;
 }
+.cal-daylist li.cal-daylist-task {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.cal-daylist-task-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .cal-agrow {
   padding: 8px 0;
   border-bottom: 1px solid var(--line);

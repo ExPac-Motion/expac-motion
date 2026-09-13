@@ -54,6 +54,12 @@ export interface CalEvent {
   label: string;
   sub: string;
   href: string;
+  /** Passed as `{ state }` to navigate() -- opens the specific record on the
+   *  target page instead of just landing on its list. */
+  navState?: Record<string, unknown>;
+  /** Full task/note, when kind is 'task' | 'note' -- lets the day panel show
+   *  its details inline instead of just a title. */
+  task?: OpsTask;
 }
 
 export type CalSource = "jobs" | "tasks" | "quotes" | "tracking";
@@ -102,9 +108,25 @@ export function buildCalendarEvents({
       const etd = d10(j.etd);
       const eta = d10(j.eta);
       if (etd)
-        out.push({ id: `${j.id}-etd`, date: etd, kind: "etd", label: `ETD ${j.reference}`, sub: lane, href: "/jobs" });
+        out.push({
+          id: `${j.id}-etd`,
+          date: etd,
+          kind: "etd",
+          label: `ETD ${j.reference}`,
+          sub: lane,
+          href: "/jobs",
+          navState: { openJobId: j.id },
+        });
       if (eta)
-        out.push({ id: `${j.id}-eta`, date: eta, kind: "eta", label: `ETA ${j.reference}`, sub: lane, href: "/jobs" });
+        out.push({
+          id: `${j.id}-eta`,
+          date: eta,
+          kind: "eta",
+          label: `ETA ${j.reference}`,
+          sub: lane,
+          href: "/jobs",
+          navState: { openJobId: j.id },
+        });
     }
   }
 
@@ -119,7 +141,8 @@ export function buildCalendarEvents({
         kind: "track-eta",
         label: `ETA ${j?.reference ?? "shipment"}`,
         sub: `${t.carrier ?? "carrier —"} · ${t.status ?? "in transit"}`,
-        href: "/ops?tab=tracking",
+        href: "/jobs",
+        navState: { openJobId: t.job_id },
       });
     }
   }
@@ -139,6 +162,8 @@ export function buildCalendarEvents({
           tk.client?.company ??
           (tk.priority === "high" ? "High priority" : "Control tower"),
         href: "/ops?tab=tasks",
+        navState: { openTaskId: tk.id },
+        task: tk,
       });
     }
   }
@@ -159,7 +184,7 @@ export function buildCalendarEvents({
         kind: "quote-expiry",
         label: `${q.reference} expires`,
         sub: q.client?.company ?? "—",
-        href: "/quotes",
+        href: `/quotes/${q.id}`,
       });
     }
   }
