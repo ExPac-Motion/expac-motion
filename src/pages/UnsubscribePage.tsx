@@ -23,9 +23,14 @@ export default function UnsubscribePage() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="brand">
-          <div className="brand-mark">E</div>
+          <div className="brand-mark">
+            <img
+              src="https://fdzwnvinqiqrexhzgqkp.supabase.co/storage/v1/object/public/mail-assets/media/d2dbb470-55b1-483c-92ff-0cba3a2756b5.png"
+              alt="EXPAC"
+            />
+          </div>
           <div>
-            <div className="brand-name">ExPac</div>
+            <div className="brand-name">EXPAC</div>
             <div className="brand-sub" style={{ color: "#9aa39a" }}>
               FORWARDING
             </div>
