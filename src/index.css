@@ -1938,7 +1938,11 @@ table.dt th.dt-sortable {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--ink);
+  background:
+    linear-gradient(rgba(46, 46, 46, 0.55), rgba(46, 46, 46, 0.55)),
+    url("https://fdzwnvinqiqrexhzgqkp.supabase.co/storage/v1/object/public/mail-assets/media/25fe317f-1277-44fe-9fca-ed05e81de4a4.jpg")
+      center / cover no-repeat;
+  background-color: var(--ink);
 }
 .auth-card {
   background: var(--white);
