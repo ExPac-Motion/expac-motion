@@ -111,6 +111,13 @@ const ROW_ICON = {
       <path d="M22 6l-10 7L2 6" />
     </svg>
   ),
+  task: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 9h18" />
+      <path d="M8 14l2.5 2.5L16 11" />
+    </svg>
+  ),
 };
 
 /**
@@ -128,6 +135,8 @@ export function RowActions({
   onMail,
   mailTitle = "Send a message",
   mailUnread = false,
+  onTask,
+  taskTitle = "Create a task",
   onView,
   onEdit,
   onDelete,
@@ -141,6 +150,9 @@ export function RowActions({
   mailTitle?: string;
   /** Badges the mail icon — an unread customer reply is waiting. */
   mailUnread?: boolean;
+  /** When set, a task icon is shown — opens a new task pre-linked to this row. */
+  onTask?: () => void;
+  taskTitle?: string;
   /** Each icon is omitted when its handler isn't passed (e.g. config lists
    *  that are view + edit only, or a sent campaign that can't be edited). */
   onView?: () => void;
@@ -173,6 +185,11 @@ export function RowActions({
         >
           {ROW_ICON.mail}
           {mailUnread && <span className="row-icon-dot" />}
+        </button>
+      )}
+      {onTask && (
+        <button className="row-icon-btn" title={taskTitle} onClick={stop(onTask)}>
+          {ROW_ICON.task}
         </button>
       )}
       {onView && (

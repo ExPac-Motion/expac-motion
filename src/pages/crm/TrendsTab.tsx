@@ -174,7 +174,7 @@ export default function TrendsTab() {
     // month with only this kind of revenue would misreport as 0% cost.
     for (const o of opps) {
       if (o.status !== "job_completed" || o.quote_id) continue;
-      const key = o.updated_at?.slice(0, 7);
+      const key = (o.close_date ?? o.updated_at)?.slice(0, 7);
       if (!key) continue;
       const bucket = map.get(key);
       if (bucket) {

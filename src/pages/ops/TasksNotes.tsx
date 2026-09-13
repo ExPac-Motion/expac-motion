@@ -1,15 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   useDeepLinkReturn,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
-import { useOpsTasks, useSaveOpsTask } from "../../lib/hooks";
+import {
+  useDeleteOpsTasksBulk,
+  useOpsTasks,
+  useProfiles,
+  useSaveOpsTask,
+  useUpdateOpsTasksBulk,
+} from "../../lib/hooks";
 import { daysBetween, todayIso } from "../../lib/opsCalendar";
-import { OPS_TASK_STATUSES, type OpsTask, type OpsTaskStatus } from "../../lib/types";
+import {
+  OPS_TASK_PRIORITIES,
+  OPS_TASK_STATUSES,
+  type OpsTask,
+  type OpsTaskPatch,
+  type OpsTaskStatus,
+} from "../../lib/types";
 import TaskEditModal from "./TaskEditModal";
 
 type StatusFilter = "all" | OpsTaskStatus;
@@ -38,6 +52,9 @@ export default function TasksNotes({ focus }: { focus?: string }) {
   const { toast, error } = useToast();
   const tasksQ = useOpsTasks();
   const save = useSaveOpsTask();
+  const bulkUpdate = useUpdateOpsTasksBulk();
+  const bulkDelete = useDeleteOpsTasksBulk();
+  const teamMembers = (useProfiles().data ?? []).filter((p) => p.role !== "client");
 
   const [quick, setQuick] = useState("");
   const [quickKind, setQuickKind] = useState<"task" | "note">("task");
@@ -47,6 +64,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
   const [search, setSearch] = useState("");
   const [edit, setEdit] = useState<OpsTask | null>(null);
   const [creating, setCreating] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const today = todayIso();
   const all = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
@@ -118,6 +136,8 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     });
   }, [all, statusF, scopeF, search, focus, today]);
 
+  const sel = useRowSelection(all, rows);
+
   async function addQuick() {
     const title = quick.trim();
     if (!title) return;
@@ -145,6 +165,20 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     }
   }
 
+  async function bulkDeleteSelected() {
+    const n = sel.count;
+    if (n === 0) return;
+    if (!window.confirm(`Delete ${n} item${n === 1 ? "" : "s"}? This cannot be undone.`))
+      return;
+    try {
+      await bulkDelete.mutateAsync(sel.ids);
+      toast(`Deleted ${n} item${n === 1 ? "" : "s"}`);
+      sel.clear();
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not delete");
+    }
+  }
+
   function linkChip(t: OpsTask) {
     if (t.job?.reference)
       return { label: t.job.reference, go: () => navigate("/jobs") };
@@ -155,6 +189,12 @@ export default function TasksNotes({ focus }: { focus?: string }) {
       };
     if (t.client?.company)
       return { label: t.client.company, go: () => navigate("/clients") };
+    if (t.lead?.company)
+      return {
+        label: t.lead.company,
+        go: () =>
+          navigate("/crm?tab=leads", { state: { openLeadId: t.lead_id } }),
+      };
     return null;
   }
 
@@ -181,6 +221,34 @@ export default function TasksNotes({ focus }: { focus?: string }) {
           <button className="btn outline" onClick={() => setCreating(true)}>
             Detailed…
           </button>
+          {view === "list" && (
+            <>
+              <button
+                className="btn outline"
+                onClick={() => setBulkOpen(true)}
+                disabled={sel.count === 0}
+                title={
+                  sel.count === 0
+                    ? "Tick rows in the list to bulk edit"
+                    : undefined
+                }
+              >
+                Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+              </button>
+              <button
+                className="btn danger"
+                onClick={bulkDeleteSelected}
+                disabled={sel.count === 0 || bulkDelete.isPending}
+                title={
+                  sel.count === 0
+                    ? "Tick rows in the list to delete"
+                    : undefined
+                }
+              >
+                Delete{sel.count ? ` (${sel.count})` : ""}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="ct-taskbar">
@@ -265,6 +333,19 @@ export default function TasksNotes({ focus }: { focus?: string }) {
         </div>
       ) : view === "list" ? (
         <div className="panel">
+          <div className="task-list-head">
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={sel.allChecked}
+                ref={(el) => {
+                  if (el) el.indeterminate = sel.someChecked && !sel.allChecked;
+                }}
+                onChange={sel.toggleAll}
+              />
+              Select all
+            </label>
+          </div>
           <ul className="task-list">
             {rows.map((t) => {
               const overdue =
@@ -275,6 +356,13 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                   key={t.id}
                   className={`task-row${t.status === "done" ? " done" : ""}`}
                 >
+                  <input
+                    type="checkbox"
+                    className="task-select"
+                    checked={sel.isSelected(t.id)}
+                    onChange={() => sel.toggle(t.id)}
+                    title="Select"
+                  />
                   {t.kind === "task" ? (
                     <button
                       className={`task-check is-${t.status}`}
@@ -406,6 +494,67 @@ export default function TasksNotes({ focus }: { focus?: string }) {
         <TaskEditModal
           task={edit}
           onClose={() => closeAndReturn(() => setEdit(null))}
+        />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} item${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="item"
+          busy={bulkUpdate.isPending}
+          fields={[
+            {
+              key: "status",
+              label: "Status",
+              type: "select",
+              allowClear: false,
+              options: OPS_TASK_STATUSES.map((s) => ({
+                value: s,
+                label: STATUS_LABEL[s],
+              })),
+            },
+            {
+              key: "priority",
+              label: "Priority",
+              type: "select",
+              allowClear: false,
+              options: OPS_TASK_PRIORITIES.map((p) => ({
+                value: p,
+                label: p[0].toUpperCase() + p.slice(1),
+              })),
+            },
+            {
+              key: "due_date",
+              label: "Due date",
+              type: "text",
+              placeholder: "YYYY-MM-DD",
+            },
+            {
+              key: "assigned_to",
+              label: "Assignee",
+              type: "select",
+              options: teamMembers.map((p) => ({
+                value: p.id,
+                label: p.full_name || "—",
+              })),
+            },
+          ]}
+          onApply={async (patch) => {
+            const n = sel.count;
+            try {
+              await bulkUpdate.mutateAsync({
+                ids: sel.ids,
+                patch: patch as unknown as OpsTaskPatch,
+              });
+              toast(`Updated ${n} item${n === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e) {
+              error(e instanceof Error ? e.message : "Could not update");
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
         />
       )}
     </>

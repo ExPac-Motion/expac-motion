@@ -11,6 +11,7 @@ import Modal from "../../components/Modal";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
 import DataTable, { type DataColumn } from "../../components/DataTable";
+import TaskEditModal from "../ops/TaskEditModal";
 import {
   BulkEditModal,
   EmptyState,
@@ -126,6 +127,7 @@ export default function LeadsPage() {
   const [editing, setEditing] = useState<Lead | "new" | null>(null);
   const [viewing, setViewing] = useState<Lead | null>(null);
   const [mailing, setMailing] = useState<Lead | null>(null);
+  const [taskingLead, setTaskingLead] = useState<Lead | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const viewContactsQ = useLeadContacts(viewing?.id);
 
@@ -364,7 +366,7 @@ export default function LeadsPage() {
       {
         key: "actions",
         fixed: true,
-        width: 180,
+        width: 200,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
@@ -378,6 +380,8 @@ export default function LeadsPage() {
             onSelectToggle={() => sel.toggle(r.id)}
             onMail={() => setMailing(r)}
             mailTitle="Send email"
+            onTask={() => setTaskingLead(r)}
+            taskTitle="Create a task for this lead"
             onView={() => setViewing(r)}
             onEdit={() => setEditing(r)}
             onDelete={() => onDelete(r)}
@@ -743,6 +747,18 @@ export default function LeadsPage() {
           key={mailing.id}
           lead={mailing}
           onClose={() => setMailing(null)}
+        />
+      )}
+
+      {taskingLead && (
+        <TaskEditModal
+          key={taskingLead.id}
+          task={null}
+          defaults={{
+            lead_id: taskingLead.id,
+            title: `Follow up: ${taskingLead.company}`,
+          }}
+          onClose={() => setTaskingLead(null)}
         />
       )}
 

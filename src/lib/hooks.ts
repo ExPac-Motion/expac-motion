@@ -349,6 +349,21 @@ export function useDeleteOpsTask() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops_tasks"] }),
   });
 }
+export function useUpdateOpsTasksBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: OpsTaskPatch }) =>
+      db.updateOpsTasksBulk(input.ids, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ops_tasks"] }),
+  });
+}
+export function useDeleteOpsTasksBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteOpsTasksBulk,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ops_tasks"] }),
+  });
+}
 
 /* ---------- Ops Control Tower: Notifications ---------- */
 export function useNotificationState() {

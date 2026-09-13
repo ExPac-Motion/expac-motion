@@ -588,7 +588,7 @@ export async function setJobMilestone(
 
 /* ---------- Operations Control Tower: Tasks & Notes ---------- */
 const OPS_TASK_SELECT =
-  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company), assignee:profiles(id,full_name)";
+  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company), lead:leads(id,company), assignee:profiles(id,full_name)";
 
 export async function listOpsTasks(): Promise<OpsTask[]> {
   return unwrap<OpsTask[]>(
@@ -623,6 +623,21 @@ export async function updateOpsTask(
 
 export async function deleteOpsTask(id: string): Promise<void> {
   unwrap(await supabase.from("ops_tasks").delete().eq("id", id));
+}
+
+/** Apply one patch to every listed task/note (Bulk Edit on Tasks & Notes). */
+export async function updateOpsTasksBulk(
+  ids: string[],
+  patch: OpsTaskPatch,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  unwrap(await supabase.from("ops_tasks").update(row).in("id", ids).select("id"));
+}
+
+export async function deleteOpsTasksBulk(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  unwrap(await supabase.from("ops_tasks").delete().in("id", ids));
 }
 
 /* ---------- Operations Control Tower: Notifications ---------- */

@@ -5,6 +5,7 @@ import {
   useClients,
   useDeleteOpsTask,
   useJobs,
+  useLeads,
   useProfiles,
   useQuotes,
   useSaveOpsTask,
@@ -34,6 +35,7 @@ type Form = {
   job_id: string;
   quote_id: string;
   client_id: string;
+  lead_id: string;
   assigned_to: string;
 };
 
@@ -48,6 +50,7 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
     job_id: task?.job_id ?? (defaults?.job_id as string) ?? "",
     quote_id: task?.quote_id ?? (defaults?.quote_id as string) ?? "",
     client_id: task?.client_id ?? (defaults?.client_id as string) ?? "",
+    lead_id: task?.lead_id ?? (defaults?.lead_id as string) ?? "",
     assigned_to: task?.assigned_to ?? (defaults?.assigned_to as string) ?? "",
   };
 }
@@ -59,6 +62,7 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
   const jobs = useJobs().data ?? [];
   const quotes = useQuotes().data ?? [];
   const clients = useClients().data ?? [];
+  const leads = useLeads().data ?? [];
   const teamMembers = (useProfiles().data ?? []).filter((p) => p.role !== "client");
 
   const [f, setF] = useState<Form>(() => seed(task, defaults));
@@ -81,6 +85,7 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
       job_id: f.job_id || null,
       quote_id: f.quote_id || null,
       client_id: f.client_id || null,
+      lead_id: f.lead_id || null,
       assigned_to: f.assigned_to || null,
     };
     if (!task && defaults?.source_notification_key) {
@@ -240,6 +245,23 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
             ))}
           </select>
         </div>
+        <div className="field">
+          <label>Link to lead</label>
+          <select
+            value={f.lead_id}
+            onChange={(e) => set("lead_id", e.target.value)}
+          >
+            <option value="">—</option>
+            {leads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.company}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid2">
         <div className="field">
           <label>Assignee</label>
           <select

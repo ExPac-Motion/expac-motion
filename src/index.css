@@ -3360,7 +3360,7 @@ table.dt th.dt-sortable {
   flex: none;
 }
 .vault-amt {
-  text-align: right;
+  text-align: left;
   min-width: 0;
 }
 .vault-rowactions {
@@ -3465,6 +3465,11 @@ table.dt th.dt-sortable {
   padding: 2px 10px;
   font-size: 0.72rem;
 }
+.task-list-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 4px 8px;
+}
 .task-list {
   list-style: none;
   margin: 0;
@@ -3476,6 +3481,9 @@ table.dt th.dt-sortable {
   gap: 10px;
   padding: 10px 4px;
   border-bottom: 1px solid var(--line);
+}
+.task-select {
+  flex: none;
 }
 .task-row:last-child {
   border-bottom: 0;

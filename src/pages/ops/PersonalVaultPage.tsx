@@ -231,7 +231,7 @@ function PersonalBudget() {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Category</th>
-                <th className="n">Amount</th>
+                <th>Amount</th>
                 <th>Note</th>
                 <th className="actions-col" />
               </tr>
@@ -315,7 +315,7 @@ function BudgetRow({
           onChange={(e) => set("category", e.target.value)}
         />
       </td>
-      <td className="n nowrap">
+      <td className="nowrap">
         <span className="vault-amt-wrap">
           <span className="vault-sign">
             {entry.kind === "expense" ? "−" : "+"}
