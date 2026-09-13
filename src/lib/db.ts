@@ -478,6 +478,7 @@ export async function saveImportVatDuty(
   const lines = draft.lines.map((l, i) => ({
     position: i,
     description: (l.description ?? "").toString(),
+    hs_code: (l.hs_code ?? "").toString(),
     qty_pcs: Number(l.qty_pcs) || 0,
     unit_price: Number(l.unit_price) || 0,
     cur: l.cur || "USD",

@@ -929,6 +929,7 @@ export interface ImportDutyLine {
   ivd_id?: string;
   position: number;
   description: string;
+  hs_code: string;
   qty_pcs: number | string;
   unit_price: number | string;
   cur: string;

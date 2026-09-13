@@ -52,6 +52,7 @@ function draftFromRow(row: ImportVatDuty): ImportDutyDraft {
       id: l.id,
       position: i,
       description: l.description ?? "",
+      hs_code: l.hs_code ?? "",
       qty_pcs: l.qty_pcs ?? 0,
       unit_price: l.unit_price ?? 0,
       cur: l.cur ?? "USD",
@@ -327,6 +328,7 @@ export default function ImportVatDutyPage() {
                 <thead>
                   <tr>
                     <th>Product Description</th>
+                    <th>HS Code</th>
                     <th className="num">Qty pcs</th>
                     <th className="num">Unit price</th>
                     <th className="c-cur">Cur</th>
@@ -358,6 +360,15 @@ export default function ImportVatDutyPage() {
                               setLine(i, "description", e.target.value)
                             }
                             placeholder="Product description"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={String(l.hs_code ?? "")}
+                            onChange={(e) =>
+                              setLine(i, "hs_code", e.target.value)
+                            }
+                            placeholder="HS code"
                           />
                         </td>
                         <td className="num">

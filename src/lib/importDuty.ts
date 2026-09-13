@@ -80,6 +80,7 @@ export function newImportDutyLine(position: number): ImportDutyLine {
   return {
     position,
     description: "",
+    hs_code: "",
     qty_pcs: 0,
     unit_price: 0,
     cur: "USD",
