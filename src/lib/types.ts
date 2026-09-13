@@ -1115,6 +1115,7 @@ export interface OpsTask {
   quote_id: string | null;
   client_id: string | null;
   lead_id: string | null;
+  supplier_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1128,6 +1129,7 @@ export interface OpsTask {
   quote?: Pick<Quote, "id" | "reference"> | null;
   client?: Pick<Client, "id" | "company"> | null;
   lead?: Pick<Lead, "id" | "company"> | null;
+  supplier?: Pick<Supplier, "id" | "company"> | null;
   assignee?: Pick<Profile, "id" | "full_name"> | null;
 }
 
@@ -1144,6 +1146,7 @@ export type OpsTaskPatch = Partial<
     | "quote_id"
     | "client_id"
     | "lead_id"
+    | "supplier_id"
     | "done_at"
     | "assigned_to"
     | "source_notification_key"

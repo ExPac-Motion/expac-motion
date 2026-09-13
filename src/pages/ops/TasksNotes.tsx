@@ -188,12 +188,22 @@ export default function TasksNotes({ focus }: { focus?: string }) {
         go: () => navigate(`/quotes/${t.quote_id}`),
       };
     if (t.client?.company)
-      return { label: t.client.company, go: () => navigate("/clients") };
+      return {
+        label: t.client.company,
+        go: () =>
+          navigate("/clients", { state: { openContactId: t.client_id } }),
+      };
     if (t.lead?.company)
       return {
         label: t.lead.company,
         go: () =>
           navigate("/crm?tab=leads", { state: { openLeadId: t.lead_id } }),
+      };
+    if (t.supplier?.company)
+      return {
+        label: t.supplier.company,
+        go: () =>
+          navigate("/suppliers", { state: { openContactId: t.supplier_id } }),
       };
     return null;
   }

@@ -9,6 +9,7 @@ import {
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import DataTable, { type DataColumn } from "../components/DataTable";
+import TaskEditModal from "./ops/TaskEditModal";
 import {
   BulkEditModal,
   EmptyState,
@@ -189,6 +190,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [railOpen, setRailOpen] = useState(false);
   const [viewing, setViewing] = useState<Job | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [taskingJob, setTaskingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const unreadMessagesQ = useUnreadMessages();
   const unreadJobIds = useMemo(
@@ -308,7 +310,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       {
         key: "actions",
         fixed: true,
-        width: 200,
+        width: 220,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
@@ -323,6 +325,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             onMail={() => openComms(j)}
             mailTitle="Messages / email the customer"
             mailUnread={unreadJobIds.has(j.id)}
+            onTask={() => setTaskingJob(j)}
+            taskTitle="Create a task for this shipment"
             onView={() => setViewing(j)}
             onEdit={() => setEditingJob(j)}
             onDelete={() => onDeleteJob(j)}
@@ -580,6 +584,19 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             save(editingJob.id, patch);
             closeAndReturn(() => setEditingJob(null));
           }}
+        />
+      )}
+
+      {taskingJob && (
+        <TaskEditModal
+          key={taskingJob.id}
+          task={null}
+          defaults={{
+            job_id: taskingJob.id,
+            client_id: taskingJob.client_id,
+            title: `Follow up: ${taskingJob.reference}`,
+          }}
+          onClose={() => setTaskingJob(null)}
         />
       )}
 

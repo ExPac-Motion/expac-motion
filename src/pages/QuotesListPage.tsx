@@ -15,6 +15,7 @@ import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import QuickMailModal from "../components/QuickMailModal";
 import QuoteDetailModal from "./QuoteDetailModal";
+import TaskEditModal from "./ops/TaskEditModal";
 import {
   useDeleteQuote,
   useProfiles,
@@ -101,6 +102,7 @@ export default function QuotesListPage() {
   const { data: quotes, isLoading, isError, error } = useQuotes();
   const [openId, setOpenId] = useState<string | null>(null);
   const [mailing, setMailing] = useState<Quote | null>(null);
+  const [taskingQuote, setTaskingQuote] = useState<Quote | null>(null);
   const del = useDeleteQuote();
   const save = useSaveQuote();
   const bulkUpdate = useUpdateQuotesBulk();
@@ -155,7 +157,7 @@ export default function QuotesListPage() {
       {
         key: "actions",
         fixed: true,
-        width: 200,
+        width: 220,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
@@ -169,6 +171,8 @@ export default function QuotesListPage() {
             onSelectToggle={() => sel.toggle(q.id)}
             onMail={() => setMailing(q)}
             mailTitle="Email the customer"
+            onTask={() => setTaskingQuote(q)}
+            taskTitle="Create a task for this quote"
             onView={() => setOpenId(q.id)}
             onEdit={() => navigate(`/quotes/${q.id}`)}
             onDelete={() => onDelete(q)}
@@ -533,6 +537,19 @@ export default function QuotesListPage() {
 
       {openId && (
         <QuoteDetailModal quoteId={openId} onClose={() => setOpenId(null)} />
+      )}
+
+      {taskingQuote && (
+        <TaskEditModal
+          key={taskingQuote.id}
+          task={null}
+          defaults={{
+            quote_id: taskingQuote.id,
+            client_id: taskingQuote.client_id,
+            title: `Follow up: ${taskingQuote.reference}`,
+          }}
+          onClose={() => setTaskingQuote(null)}
+        />
       )}
 
       {mailing && (

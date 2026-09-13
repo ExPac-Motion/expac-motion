@@ -589,7 +589,7 @@ export async function setJobMilestone(
 
 /* ---------- Operations Control Tower: Tasks & Notes ---------- */
 const OPS_TASK_SELECT =
-  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company), lead:leads(id,company), assignee:profiles(id,full_name)";
+  "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company), lead:leads(id,company), supplier:suppliers(id,company), assignee:profiles(id,full_name)";
 
 export async function listOpsTasks(): Promise<OpsTask[]> {
   return unwrap<OpsTask[]>(
