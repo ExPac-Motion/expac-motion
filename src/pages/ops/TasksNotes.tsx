@@ -58,7 +58,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
   const [quick, setQuick] = useState("");
   const [quickKind, setQuickKind] = useState<"task" | "note">("task");
-  const [view, setView] = useState<View>("list");
+  const [view, setView] = useState<View>("board");
   const [statusF, setStatusF] = useState<StatusFilter>("all");
   const [scopeF, setScopeF] = useState<ScopeFilter>("all");
   const [search, setSearch] = useState("");

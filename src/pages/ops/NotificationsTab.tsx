@@ -25,6 +25,14 @@ import { timeAgo } from "../../lib/format";
 import TaskEditModal from "./TaskEditModal";
 import type { OpsTaskPatch } from "../../lib/types";
 
+const DOMAINS: NotificationDomain[] = ["sales", "shipments", "operations", "mail"];
+const DOMAIN_LABEL: Record<NotificationDomain, string> = {
+  sales: "Sales",
+  shipments: "Shipments",
+  operations: "Operations",
+  mail: "Mail",
+};
+
 const DOMAIN_ICON: Record<NotificationDomain, ReactNode> = {
   sales: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -54,6 +62,7 @@ const DOMAIN_ICON: Record<NotificationDomain, ReactNode> = {
 };
 
 type Filter = "all" | "unread";
+type View = "list" | "board";
 
 export default function NotificationsTab() {
   const navigate = useNavigate();
@@ -75,6 +84,7 @@ export default function NotificationsTab() {
   const documentsQ = useShipmentDocumentsForJobs(jobIds);
 
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<View>("board");
   const [showArchived, setShowArchived] = useState(false);
   const [taskDefaults, setTaskDefaults] = useState<Partial<OpsTaskPatch> | null>(
     null,
@@ -207,7 +217,18 @@ export default function NotificationsTab() {
           <h2>Notifications</h2>
           <p>Everything across quotations, shipments, customers and mail.</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="chips">
+            {(["list", "board"] as View[]).map((v) => (
+              <button
+                key={v}
+                className={`chip${view === v ? " on" : ""}`}
+                onClick={() => setView(v)}
+              >
+                {v === "list" ? "List" : "Board"}
+              </button>
+            ))}
+          </div>
           <button
             className={`btn btn-sm${filter === "all" ? "" : " outline"}`}
             onClick={() => setFilter("all")}
@@ -231,7 +252,7 @@ export default function NotificationsTab() {
 
       {visible.length === 0 ? (
         <p className="muted">Nothing here.</p>
-      ) : (
+      ) : view === "list" ? (
         <>
           <div className="notif-tab-bulkbar">
             <input
@@ -309,6 +330,93 @@ export default function NotificationsTab() {
           })}
           </div>
         </>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${DOMAINS.length}, minmax(240px, 1fr))`,
+            gap: 14,
+            overflowX: "auto",
+          }}
+        >
+          {DOMAINS.map((domain) => {
+            const colItems = visible.filter((n) => n.domain === domain);
+            return (
+              <div key={domain} className="panel" style={{ margin: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <strong style={{ fontSize: "0.85rem" }}>
+                    {DOMAIN_LABEL[domain]}
+                  </strong>
+                  <span className="muted small">{colItems.length}</span>
+                </div>
+                <div className="stack-sm">
+                  {colItems.length === 0 ? (
+                    <p className="muted small">Nothing here.</p>
+                  ) : (
+                    colItems.map((n) => {
+                      const s = stateByKey.get(n.key);
+                      const unread = !s?.read_at;
+                      const archived = !!s?.archived_at;
+                      return (
+                        <div key={n.key} className="task-card">
+                          <div className="task-card-top">
+                            <span className={`notif-ico ${n.domain}`}>
+                              {DOMAIN_ICON[n.domain]}
+                            </span>
+                            <button
+                              className="task-title"
+                              onClick={() => open(n)}
+                            >
+                              {n.text}
+                            </button>
+                          </div>
+                          <div className="task-card-foot">
+                            <span className="due-badge">{timeAgo(n.when)}</span>
+                            {unread && <span className="chip sm on">Unread</span>}
+                            <button
+                              className="btn ghost btn-sm"
+                              onClick={() => markRead(n, unread ? true : false)}
+                            >
+                              {unread ? "Mark read" : "Mark unread"}
+                            </button>
+                            <button
+                              className="btn ghost btn-sm"
+                              onClick={() => createTask(n)}
+                            >
+                              Create task
+                            </button>
+                            {archived ? (
+                              <button
+                                className="btn ghost btn-sm"
+                                onClick={() => unarchive(n)}
+                              >
+                                Unarchive
+                              </button>
+                            ) : (
+                              <button
+                                className="btn ghost btn-sm"
+                                onClick={() => archive(n)}
+                              >
+                                Archive
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {taskDefaults && (
