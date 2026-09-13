@@ -387,6 +387,12 @@ function ExpenseControl() {
   const items = q.data ?? [];
   const openCount = items.filter((t) => !t.transferred_to).length;
   const forecastTotal = items.reduce((s, t) => s + (Number(t.forecasted) || 0), 0);
+  /** Sum of every expense that's actually been moved (has a Transferred To)
+   *  — the running balance sitting in the Expense Control account. */
+  const transferredTotal = items.reduce(
+    (s, t) => s + (t.transferred_to ? Number(t.forecasted) || 0 : 0),
+    0,
+  );
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -464,7 +470,7 @@ function ExpenseControl() {
       ) : items.length === 0 ? (
         <EmptyState>Nothing here yet.</EmptyState>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap vault-noscroll">
           <table className="table--compact">
             <thead>
               <tr>
@@ -505,6 +511,13 @@ function ExpenseControl() {
                 <td>Total</td>
                 <td className="n nowrap">
                   <b>{money(forecastTotal)}</b>
+                </td>
+                <td colSpan={2} />
+              </tr>
+              <tr className="vault-foot">
+                <td>Total Expense Control Account</td>
+                <td className="n nowrap">
+                  <b>{money(transferredTotal)}</b>
                 </td>
                 <td colSpan={2} />
               </tr>
