@@ -875,6 +875,8 @@ export interface Quote {
    *  Customer/Importer (client_id) — e.g. the customer's own customer.
    *  Unset falls back to the Customer everywhere it's shown. */
   consignee_id: string | null;
+  /** Set instead of consignee_id when the delivery point is a not-yet-promoted lead. */
+  consignee_lead_id: string | null;
   /** Agent / transporter / clearing agent — internal only, never shown to the customer. */
   agent_id: string | null;
   transporter_id: string | null;
@@ -927,6 +929,8 @@ export interface Quote {
   > | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
   consignee?: Pick<Client, "id" | "company"> | null;
+  /** Set instead of `consignee` when the delivery point is a not-yet-promoted lead. */
+  consignee_lead?: Pick<Lead, "id" | "company"> | null;
   agent?: Pick<Agent, "id" | "company"> | null;
   transporter?: Pick<Transporter, "id" | "company"> | null;
   clearing_agent?: Pick<ClearingAgent, "id" | "company"> | null;
@@ -1329,6 +1333,8 @@ export interface QuoteDraft {
   sales_person_id: string;
   supplier_id: string;
   consignee_id: string;
+  /** Set instead of consignee_id when the delivery point is a not-yet-promoted lead. */
+  consignee_lead_id: string;
   agent_id: string;
   transporter_id: string;
   clearing_agent_id: string;

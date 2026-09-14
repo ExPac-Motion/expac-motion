@@ -113,6 +113,7 @@ function blankDraft(): QuoteDraft {
     sales_person_id: "",
     supplier_id: "",
     consignee_id: "",
+    consignee_lead_id: "",
     agent_id: "",
     transporter_id: "",
     clearing_agent_id: "",
@@ -158,6 +159,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     sales_person_id: q.sales_person_id ?? "",
     supplier_id: q.supplier_id ?? "",
     consignee_id: q.consignee_id ?? "",
+    consignee_lead_id: q.consignee_lead_id ?? "",
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
     clearing_agent_id: q.clearing_agent_id ?? "",
@@ -758,15 +760,41 @@ export default function QuoteBuilderPage() {
           <div className="field">
             <label>Consignee/Delivery Point</label>
             <select
-              value={draft.consignee_id}
-              onChange={(e) => set("consignee_id", e.target.value)}
+              value={
+                draft.consignee_id
+                  ? `c:${draft.consignee_id}`
+                  : draft.consignee_lead_id
+                    ? `l:${draft.consignee_lead_id}`
+                    : ""
+              }
+              onChange={(e) => {
+                const [kind, id] = e.target.value.split(":");
+                setDraft((d) =>
+                  d
+                    ? {
+                        ...d,
+                        consignee_id: kind === "c" ? id : "",
+                        consignee_lead_id: kind === "l" ? id : "",
+                      }
+                    : d,
+                );
+              }}
             >
               <option value="">Same as Customer/Importer</option>
               {clients.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={`c:${c.id}`}>
                   {c.company}
                 </option>
               ))}
+              {unpromotedLeads.length > 0 && (
+                <optgroup label="Leads (not yet a customer)">
+                  {unpromotedLeads.map((l) => (
+                    <option key={l.id} value={`l:${l.id}`}>
+                      {l.company}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
           <div className="field">

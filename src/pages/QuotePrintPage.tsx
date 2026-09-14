@@ -695,7 +695,11 @@ export default function QuotePrintPage() {
       ["Shipper / Exporter", q.supplier?.company ?? "—"],
       [
         "Consignee / Delivery Point",
-        q.consignee?.company ?? q.client?.company ?? q.lead?.company ?? "—",
+        q.consignee?.company ??
+          q.consignee_lead?.company ??
+          q.client?.company ??
+          q.lead?.company ??
+          "—",
       ],
       ["Reference", q.reference],
       ["Mode", q.mode],

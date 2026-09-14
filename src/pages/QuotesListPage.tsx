@@ -62,6 +62,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     sales_person_id: q.sales_person_id ?? "",
     supplier_id: q.supplier_id ?? "",
     consignee_id: q.consignee_id ?? "",
+    consignee_lead_id: q.consignee_lead_id ?? "",
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
     clearing_agent_id: q.clearing_agent_id ?? "",
