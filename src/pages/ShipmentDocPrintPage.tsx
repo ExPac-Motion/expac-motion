@@ -90,7 +90,7 @@ export default function ShipmentDocPrintPage() {
 
         {def.showNotes && (
           <>
-            <div className="qs-bar">Delivery Instructions</div>
+            <div className="qs-bar">{def.notesLabel ?? def.title}</div>
             <p style={{ fontSize: 11, minHeight: 100, whiteSpace: "pre-line" }}>
               {job.notes || "—"}
             </p>

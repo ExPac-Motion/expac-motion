@@ -4,18 +4,25 @@ import type { Job } from "./types";
 export interface DocumentTypeDef {
   slug: string;
   title: string;
-  /** Delivery Instruction alone also shows a free-text instructions section
-   *  (job.notes) — every other document is shipment info + packing list +
-   *  sign-off only. */
+  /** Letter-style documents also show a free-text body section (job.notes)
+   *  between Shipment Information and the Packing List — every other
+   *  document is shipment info + packing list + sign-off only. */
   showNotes?: boolean;
+  /** Heading for that free-text section. Defaults to `title` when unset. */
+  notesLabel?: string;
 }
 
 export const DOCUMENT_TYPES_LIST: DocumentTypeDef[] = [
   { slug: "delivery-release-order", title: "Delivery Release Order" },
-  { slug: "delivery-instruction", title: "Delivery Instruction", showNotes: true },
+  {
+    slug: "delivery-instruction",
+    title: "Delivery Instruction",
+    showNotes: true,
+    notesLabel: "Delivery Instructions",
+  },
   { slug: "delivery-note", title: "Delivery Note" },
-  { slug: "airline-draw-letter", title: "Airline Draw Letter" },
-  { slug: "authorization-letter", title: "Authorization Letter" },
+  { slug: "airline-draw-letter", title: "Airline Draw Letter", showNotes: true },
+  { slug: "authorization-letter", title: "Authorization Letter", showNotes: true },
   { slug: "arrival-notification", title: "Arrival Notification" },
   { slug: "booking-confirmation", title: "Booking Confirmation" },
 ];
