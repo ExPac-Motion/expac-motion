@@ -243,15 +243,34 @@ export function renderShipmentEmail(
 const RULE_LINE = /^_+$/;
 /** A "Label: value" line — the label (with its colon) is what gets bolded. */
 const LABEL_LINE = /^([^:\n]+:)(.*)$/;
+/** Sign-off lines that mark the end of the shipment-data block — the
+ *  signature after this (incl. its own "T: / E: / Postal Address:" lines)
+ *  is never bolded by the general Label: rule, even though those also
+ *  look like "Label: value" (they get their own styling below instead). */
+const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
+/** The signature's own contact labels — bold + brand green, wherever the
+ *  signature is used (Shipment Comms and Shipment Replies both share it).
+ *  Matched only at the start of a line or right after the "| " separator
+ *  the signature uses, e.g. "T: ... | WA: ... | F: ...", so it never
+ *  catches "Office:" / "Portal:" on the same E: line. */
+const SIG_LABEL = /(^|\| )(T|WA|F|E|Postal Address):/gm;
+const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
 
 /** Wrap the plain-text body in the branded HTML shell. `boldHeadings` (the
  *  shipment status-update body, not the free-text reply) also bolds the
  *  first line — the customer's name, upper-cased — and the label on every
- *  "Label: value" line (Shipment Status, Supplier Name, etc). */
+ *  "Label: value" line up to the sign-off (Shipment Status, Supplier Name,
+ *  etc). The signature's own T:/WA:/F:/E:/Postal Address: labels get bold
+ *  + brand-green styling either way. */
 export function shipmentEmailHtml(text: string, boldHeadings = false): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const body = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
+  const formatted = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
+  const body = formatted.replace(
+    SIG_LABEL,
+    (_m, prefix: string, label: string) =>
+      `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>`,
+  );
   // Plain text in the house font — no logo image (it rendered as a broken
   // attachment in Outlook); branding lives in the signature.
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
@@ -261,6 +280,7 @@ export function shipmentEmailHtml(text: string, boldHeadings = false): string {
 
 function formatShipmentBody(text: string, esc: (s: string) => string): string {
   let sawFirstLine = false;
+  let pastSignoff = false;
   return text
     .split("\n")
     .map((line) => {
@@ -270,6 +290,8 @@ function formatShipmentBody(text: string, esc: (s: string) => string): string {
         sawFirstLine = true;
         return `<b>${esc(line.toUpperCase())}</b>`;
       }
+      if (SIGNOFF_LINE.test(trimmed)) pastSignoff = true;
+      if (pastSignoff) return esc(line);
       if (trimmed === "" || RULE_LINE.test(trimmed)) return esc(line);
       const m = line.match(LABEL_LINE);
       return m ? `<b>${esc(m[1])}</b>${esc(m[2])}` : esc(line);
