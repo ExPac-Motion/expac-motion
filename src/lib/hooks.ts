@@ -32,6 +32,8 @@ import type {
   VaultBudgetDraft,
   VaultBudgetEntry,
   VaultBudgetScope,
+  VaultNote,
+  VaultNoteDraft,
   VaultTodo,
   UiTableLayout,
 } from "./types";
@@ -1285,6 +1287,44 @@ export function useDeleteVaultTodo() {
       qc.invalidateQueries({ queryKey: ["vault_todos"] });
       qc.invalidateQueries({ queryKey: ["vault_budget"] });
     },
+  });
+}
+
+export function useVaultNotes() {
+  return useQuery({ queryKey: ["vault_notes"], queryFn: db.listVaultNotes });
+}
+export function useSaveVaultNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id?: string;
+      values: Partial<VaultNoteDraft> & { title?: string };
+    }) => db.saveVaultNote(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
+  });
+}
+export function useDeleteVaultNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteVaultNote,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
+  });
+}
+export function useUpdateVaultNotesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      ids: string[];
+      patch: Partial<Pick<VaultNote, "status" | "priority" | "due_date">>;
+    }) => db.updateVaultNotesBulk(input.ids, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
+  });
+}
+export function useDeleteVaultNotesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteVaultNotesBulk,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
   });
 }
 

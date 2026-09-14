@@ -67,6 +67,8 @@ import type {
   PublicWebForm,
   VaultBudgetEntry,
   VaultBudgetDraft,
+  VaultNote,
+  VaultNoteDraft,
   VaultTodo,
   UiTableLayout,
 } from "./types";
@@ -1863,6 +1865,55 @@ export async function deleteVaultTodo(id: string): Promise<void> {
     await deleteVaultBudgetEntry(row.linked_budget_entry_id);
   }
   unwrap(await supabase.from("vault_todos").delete().eq("id", id));
+}
+
+/* ---------- Personal Vault: private Notes & Calendar ---------- */
+
+export async function listVaultNotes(): Promise<VaultNote[]> {
+  return unwrap(
+    await supabase
+      .from("vault_notes")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+export async function saveVaultNote(input: {
+  id?: string;
+  values: Partial<VaultNoteDraft> & { title?: string };
+}): Promise<VaultNote> {
+  const v = input.values;
+  const row: Record<string, unknown> = {};
+  if (v.kind !== undefined) row.kind = v.kind;
+  if (v.title !== undefined) row.title = v.title.trim();
+  if (v.body !== undefined) row.body = v.body.trim() || null;
+  if (v.status !== undefined) row.status = v.status;
+  if (v.priority !== undefined) row.priority = v.priority;
+  if (v.due_date !== undefined) row.due_date = v.due_date || null;
+  return unwrap(
+    input.id
+      ? await supabase
+          .from("vault_notes")
+          .update({ ...row, updated_at: new Date().toISOString() })
+          .eq("id", input.id)
+          .select("*")
+          .single()
+      : await supabase.from("vault_notes").insert(row).select("*").single(),
+  );
+}
+export async function deleteVaultNote(id: string): Promise<void> {
+  unwrap(await supabase.from("vault_notes").delete().eq("id", id));
+}
+export async function updateVaultNotesBulk(
+  ids: string[],
+  patch: Partial<Pick<VaultNote, "status" | "priority" | "due_date">>,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  unwrap(await supabase.from("vault_notes").update(row).in("id", ids).select("id"));
+}
+export async function deleteVaultNotesBulk(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  unwrap(await supabase.from("vault_notes").delete().in("id", ids));
 }
 
 /* ---------- Per-user table column layout ---------- */

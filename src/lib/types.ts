@@ -1408,6 +1408,31 @@ export type VaultExpenseDraft = {
   transferred_to: string;
 };
 
+/** A private Notes & Calendar entry — same shape as the shared Control
+ *  Tower ops_tasks, but never linked to a shipment/quote/customer and
+ *  never visible outside Personal Vault. */
+export interface VaultNote {
+  id: string;
+  user_id: string;
+  kind: OpsTaskKind;
+  title: string;
+  body: string | null;
+  status: OpsTaskStatus;
+  priority: OpsTaskPriority;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+  done_at: string | null;
+}
+export type VaultNoteDraft = {
+  kind: OpsTaskKind;
+  title: string;
+  body: string;
+  status: OpsTaskStatus;
+  priority: OpsTaskPriority;
+  due_date: string;
+};
+
 /* ---------- Per-user table column layout ---------- */
 
 export interface UiTableLayout {

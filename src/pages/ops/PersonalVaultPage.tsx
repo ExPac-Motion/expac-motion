@@ -21,6 +21,8 @@ import type {
   VaultBudgetScope,
   VaultExpenseDraft,
 } from "../../lib/types";
+import VaultCalendar from "./VaultCalendar";
+import VaultNotes from "./VaultNotes";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
@@ -68,10 +70,16 @@ export default function PersonalVaultPage() {
   // you're already looking at.
   const [scope, setScope] = useState<VaultBudgetScope>("personal");
   return (
-    <div className="vault-grid">
-      <PersonalBudget scope={scope} setScope={setScope} />
-      <ExpenseControl scope={scope} setScope={setScope} />
-    </div>
+    <>
+      <div className="vault-grid">
+        <VaultNotes />
+        <VaultCalendar />
+      </div>
+      <div className="vault-grid">
+        <PersonalBudget scope={scope} setScope={setScope} />
+        <ExpenseControl scope={scope} setScope={setScope} />
+      </div>
+    </>
   );
 }
 
