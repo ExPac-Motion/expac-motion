@@ -38,7 +38,10 @@ export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undef
  *  resolved from the linked quote's HBL (sea) or HAWB (air) field. */
 export function shipmentInfoRows(
   job: Job,
-  quote?: Pick<Quote, "hbl_no" | "hawb_no" | "incoterms"> | null,
+  quote?: Pick<
+    Quote,
+    "hbl_no" | "hawb_no" | "incoterms" | "delivery_terms"
+  > | null,
 ): [string, string][] {
   const isSea = job.mode.startsWith("Sea Freight");
   const hblHawb = isSea ? quote?.hbl_no : quote?.hawb_no;
@@ -62,10 +65,11 @@ export function shipmentInfoRows(
   );
   if (isSea) rows.push(["Incoterms", quote?.incoterms || "—"]);
   rows.push(
+    ["Delivery Terms", quote?.delivery_terms || "—"],
     ["PO / Customer Ref", job.po_no || "—"],
     ["ETD", formatDate(job.etd)],
-    ["ETA", formatDate(job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
+    ["ETA", formatDate(job.eta)],
     ["Shipment Status", job.shipment_status || "—"],
   );
   return rows;
