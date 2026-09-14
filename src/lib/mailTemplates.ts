@@ -240,15 +240,41 @@ export function renderShipmentEmail(
   };
 }
 
-/** Wrap the plain-text body in the branded HTML shell. */
-export function shipmentEmailHtml(text: string): string {
+const RULE_LINE = /^_+$/;
+/** A "Label: value" line — the label (with its colon) is what gets bolded. */
+const LABEL_LINE = /^([^:\n]+:)(.*)$/;
+
+/** Wrap the plain-text body in the branded HTML shell. `boldHeadings` (the
+ *  shipment status-update body, not the free-text reply) also bolds the
+ *  first line — the customer's name, upper-cased — and the label on every
+ *  "Label: value" line (Shipment Status, Supplier Name, etc). */
+export function shipmentEmailHtml(text: string, boldHeadings = false): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const body = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
   // Plain text in the house font — no logo image (it rendered as a broken
   // attachment in Outlook); branding lives in the signature.
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
-  <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${esc(text)}</pre>
+  <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${body}</pre>
 </div>`;
+}
+
+function formatShipmentBody(text: string, esc: (s: string) => string): string {
+  let sawFirstLine = false;
+  return text
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!sawFirstLine) {
+        if (trimmed === "") return line;
+        sawFirstLine = true;
+        return `<b>${esc(line.toUpperCase())}</b>`;
+      }
+      if (trimmed === "" || RULE_LINE.test(trimmed)) return esc(line);
+      const m = line.match(LABEL_LINE);
+      return m ? `<b>${esc(m[1])}</b>${esc(m[2])}` : esc(line);
+    })
+    .join("\n");
 }
 
 /**
@@ -264,7 +290,7 @@ export function buildShipmentEmail(
 ): BuiltEmail {
   const tpl = shipmentCommsTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text) };
+  return { subject, text, html: shipmentEmailHtml(text, true) };
 }
 
 /**
