@@ -193,7 +193,7 @@ export default function ShipmentDocPrintPage() {
           </div>
           <div className="qs-sig-field wide">
             <label>Remarks</label>
-            <div className="line tall" />
+            <div className="line tall">{job.ops_remarks || ""}</div>
           </div>
         </div>
       </div>

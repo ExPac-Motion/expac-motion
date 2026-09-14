@@ -986,6 +986,9 @@ export interface Job {
   po_no: string | null;
   shipment_status: string | null;
   notes: string | null;
+  /** Ops-only remarks — never shown in the app UI other than pre-filling
+   *  the Remarks line on Document Vault print documents. */
+  ops_remarks: string | null;
   awb_mbl: string | null;
   /** Ocean container number (air jobs track on awb_mbl). */
   container_no: string | null;
@@ -1031,6 +1034,7 @@ export type JobPatch = Partial<
     | "po_no"
     | "shipment_status"
     | "notes"
+    | "ops_remarks"
     | "awb_mbl"
     | "container_no"
     | "shipping_line"

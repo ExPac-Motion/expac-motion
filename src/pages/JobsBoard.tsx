@@ -923,6 +923,7 @@ function JobEditModal({
       po_no: String(fd.get("po_no") || ""),
       shipment_status: String(fd.get("shipment_status") || ""),
       notes: String(fd.get("notes") || ""),
+      ops_remarks: String(fd.get("ops_remarks") || ""),
       awb_mbl: String(fd.get("awb_mbl") || ""),
       container_no: String(fd.get("container_no") || ""),
       shipping_line: String(fd.get("shipping_line") || ""),
@@ -1026,6 +1027,15 @@ function JobEditModal({
         <div className="field">
           <label>Notes</label>
           <textarea name="notes" rows={2} defaultValue={job.notes ?? ""} />
+        </div>
+        <div className="field">
+          <label>Remarks</label>
+          <textarea
+            name="ops_remarks"
+            rows={2}
+            defaultValue={job.ops_remarks ?? ""}
+            placeholder="Only used to pre-fill the Remarks line on Document Vault documents — not shown anywhere else."
+          />
         </div>
         <div
           style={{
