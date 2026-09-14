@@ -1737,24 +1737,64 @@ export async function listVaultTodos(): Promise<VaultTodo[]> {
       .order("created_at", { ascending: true }),
   );
 }
+/** Creates the vault_budget_entries row for an Expense Control item's
+ *  transfer — kind 'expense', the item's own scope, category = the
+ *  expense's name (the "reference" the Budget board shows it by). */
+async function postExpenseControlTransfer(input: {
+  title: string;
+  forecasted: number;
+  transferredTo: string;
+  scope: VaultBudgetEntry["scope"];
+}): Promise<string> {
+  const entry = await saveVaultBudgetEntry({
+    values: {
+      kind: "expense",
+      category: input.title,
+      amount: String(input.forecasted),
+      occurred_on: new Date().toISOString().slice(0, 10),
+      note: `Transferred to ${input.transferredTo}`,
+      scope: input.scope,
+    },
+  });
+  return entry.id;
+}
+
 export async function addVaultTodo(input: {
   title: string;
   forecasted: number;
   transferred_to: string;
+  scope: VaultBudgetEntry["scope"];
 }): Promise<VaultTodo> {
+  const title = input.title.trim();
+  const transferredTo = input.transferred_to.trim() || null;
+  const linkedId = transferredTo
+    ? await postExpenseControlTransfer({
+        title,
+        forecasted: input.forecasted,
+        transferredTo,
+        scope: input.scope,
+      })
+    : null;
   return unwrap(
     await supabase
       .from("vault_todos")
       .insert({
-        title: input.title.trim(),
+        title,
         forecasted: input.forecasted,
-        transferred_to: input.transferred_to.trim() || null,
+        transferred_to: transferredTo,
+        scope: input.scope,
+        linked_budget_entry_id: linkedId,
         sort_order: Date.now() % 1_000_000,
       })
       .select("*")
       .single(),
   );
 }
+/** Plain field edits pass straight through. A `transferred_to` edit also
+ *  keeps the linked Budget entry in sync: created the first time it's
+ *  transferred, updated in place (category/amount/note only — the entry's
+ *  own date and scope are left alone once posted) while it stays
+ *  transferred, deleted if the transfer is cleared. */
 export async function updateVaultTodo(
   id: string,
   patch: Partial<
@@ -1764,9 +1804,64 @@ export async function updateVaultTodo(
     >
   >,
 ): Promise<void> {
-  unwrap(await supabase.from("vault_todos").update(patch).eq("id", id));
+  if (!("transferred_to" in patch)) {
+    unwrap(await supabase.from("vault_todos").update(patch).eq("id", id));
+    return;
+  }
+
+  const current = unwrap<VaultTodo>(
+    await supabase.from("vault_todos").select("*").eq("id", id).single(),
+  );
+  const nextTransferredTo = (patch.transferred_to ?? "")?.trim() || null;
+  const title = patch.title ?? current.title;
+  const forecasted = patch.forecasted ?? current.forecasted;
+  let linkedId = current.linked_budget_entry_id;
+
+  if (nextTransferredTo && linkedId) {
+    unwrap(
+      await supabase
+        .from("vault_budget_entries")
+        .update({
+          category: title,
+          amount: forecasted,
+          note: `Transferred to ${nextTransferredTo}`,
+        })
+        .eq("id", linkedId),
+    );
+  } else if (nextTransferredTo && !linkedId) {
+    linkedId = await postExpenseControlTransfer({
+      title,
+      forecasted,
+      transferredTo: nextTransferredTo,
+      scope: current.scope,
+    });
+  } else if (!nextTransferredTo && linkedId) {
+    await deleteVaultBudgetEntry(linkedId);
+    linkedId = null;
+  }
+
+  unwrap(
+    await supabase
+      .from("vault_todos")
+      .update({
+        ...patch,
+        transferred_to: nextTransferredTo,
+        linked_budget_entry_id: linkedId,
+      })
+      .eq("id", id),
+  );
 }
 export async function deleteVaultTodo(id: string): Promise<void> {
+  const row = unwrap<{ linked_budget_entry_id: string | null }>(
+    await supabase
+      .from("vault_todos")
+      .select("linked_budget_entry_id")
+      .eq("id", id)
+      .single(),
+  );
+  if (row.linked_budget_entry_id) {
+    await deleteVaultBudgetEntry(row.linked_budget_entry_id);
+  }
   unwrap(await supabase.from("vault_todos").delete().eq("id", id));
 }
 

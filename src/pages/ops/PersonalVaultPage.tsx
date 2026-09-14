@@ -63,10 +63,14 @@ function dmyToIso(s: string): string | null {
 }
 
 export default function PersonalVaultPage() {
+  // One Personal/Business toggle drives both boards together, so a
+  // transfer posted from Expense Control always lands in the Budget view
+  // you're already looking at.
+  const [scope, setScope] = useState<VaultBudgetScope>("personal");
   return (
     <div className="vault-grid">
-      <PersonalBudget />
-      <ExpenseControl />
+      <PersonalBudget scope={scope} setScope={setScope} />
+      <ExpenseControl scope={scope} setScope={setScope} />
     </div>
   );
 }
@@ -76,11 +80,41 @@ const SCOPE_TITLE: Record<VaultBudgetScope, string> = {
   business: "Business Budget",
 };
 
+/** The Personal/Business toggle shared by both boards. */
+function ScopeToggle({
+  scope,
+  setScope,
+}: {
+  scope: VaultBudgetScope;
+  setScope: (s: VaultBudgetScope) => void;
+}) {
+  return (
+    <div className="chips" style={{ marginRight: 4 }}>
+      {(["personal", "business"] as VaultBudgetScope[]).map((s) => (
+        <button
+          key={s}
+          type="button"
+          className={`chip${scope === s ? " on" : ""}`}
+          onClick={() => setScope(s)}
+        >
+          {SCOPE_TITLE[s].replace(" Budget", "")}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Personal Budget — one income/expense ledger, toggled between a      */
 /* Personal and a Business view (same table, filtered by `scope`).     */
 /* ------------------------------------------------------------------ */
-function PersonalBudget() {
+function PersonalBudget({
+  scope,
+  setScope,
+}: {
+  scope: VaultBudgetScope;
+  setScope: (s: VaultBudgetScope) => void;
+}) {
   const q = useVaultBudget();
   const save = useSaveVaultBudgetEntry();
   const del = useDeleteVaultBudgetEntry();
@@ -88,7 +122,6 @@ function PersonalBudget() {
 
   const [form, setForm] = useState<VaultBudgetDraft>(emptyEntry());
   const [month, setMonth] = useState<string>(thisMonth());
-  const [scope, setScope] = useState<VaultBudgetScope>("personal");
 
   const set = <K extends keyof VaultBudgetDraft>(
     k: K,
@@ -150,18 +183,7 @@ function PersonalBudget() {
       <div className="vault-head">
         <h3>{SCOPE_TITLE[scope]}</h3>
         <div className="vault-month">
-          <div className="chips" style={{ marginRight: 4 }}>
-            {(["personal", "business"] as VaultBudgetScope[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={`chip${scope === s ? " on" : ""}`}
-                onClick={() => setScope(s)}
-              >
-                {SCOPE_TITLE[s].replace(" Budget", "")}
-              </button>
-            ))}
-          </div>
+          <ScopeToggle scope={scope} setScope={setScope} />
           <input
             type="month"
             value={month}
@@ -392,7 +414,13 @@ const emptyExpense = (): VaultExpenseDraft => ({
   transferred_to: "",
 });
 
-function ExpenseControl() {
+function ExpenseControl({
+  scope,
+  setScope,
+}: {
+  scope: VaultBudgetScope;
+  setScope: (s: VaultBudgetScope) => void;
+}) {
   const q = useVaultTodos();
   const add = useAddVaultTodo();
   const update = useUpdateVaultTodo();
@@ -405,7 +433,10 @@ function ExpenseControl() {
     v: VaultExpenseDraft[K],
   ) => setForm((f) => ({ ...f, [k]: v }));
 
-  const items = q.data ?? [];
+  const items = useMemo(
+    () => (q.data ?? []).filter((t) => (t.scope ?? "personal") === scope),
+    [q.data, scope],
+  );
   const openCount = items.filter((t) => !t.transferred_to).length;
   const forecastTotal = items.reduce((s, t) => s + (Number(t.forecasted) || 0), 0);
   /** Sum of every expense that's actually been moved (has a Transferred To)
@@ -426,6 +457,7 @@ function ExpenseControl() {
         title: form.title,
         forecasted: Number(form.forecasted) || 0,
         transferred_to: form.transferred_to,
+        scope,
       });
       setForm(emptyExpense());
     } catch (e2) {
@@ -457,7 +489,10 @@ function ExpenseControl() {
     <section className="panel">
       <div className="vault-head">
         <h3>Expense Control</h3>
-        <span className="muted small">{openCount} open</span>
+        <div className="vault-month">
+          <ScopeToggle scope={scope} setScope={setScope} />
+          <span className="muted small">{openCount} open</span>
+        </div>
       </div>
 
       <form className="vault-addrow" onSubmit={onAdd}>

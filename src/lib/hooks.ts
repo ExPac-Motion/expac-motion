@@ -31,6 +31,7 @@ import type {
   Supplier,
   VaultBudgetDraft,
   VaultBudgetEntry,
+  VaultBudgetScope,
   VaultTodo,
   UiTableLayout,
 } from "./types";
@@ -1250,8 +1251,12 @@ export function useAddVaultTodo() {
       title: string;
       forecasted: number;
       transferred_to: string;
+      scope: VaultBudgetScope;
     }) => db.addVaultTodo(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vault_todos"] });
+      qc.invalidateQueries({ queryKey: ["vault_budget"] });
+    },
   });
 }
 export function useUpdateVaultTodo() {
@@ -1266,14 +1271,20 @@ export function useUpdateVaultTodo() {
         >
       >;
     }) => db.updateVaultTodo(input.id, input.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vault_todos"] });
+      qc.invalidateQueries({ queryKey: ["vault_budget"] });
+    },
   });
 }
 export function useDeleteVaultTodo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.deleteVaultTodo,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_todos"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vault_todos"] });
+      qc.invalidateQueries({ queryKey: ["vault_budget"] });
+    },
   });
 }
 

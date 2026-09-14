@@ -1393,6 +1393,11 @@ export interface VaultTodo {
   forecasted: number;
   /** Account / place the money was transferred to (filled in later). */
   transferred_to: string | null;
+  /** Which Budget ledger this expense belongs to. */
+  scope: VaultBudgetScope;
+  /** The vault_budget_entries row auto-created (and kept in sync) while
+   *  this is transferred — null while it isn't. */
+  linked_budget_entry_id: string | null;
   done: boolean;
   sort_order: number;
   created_at: string;
