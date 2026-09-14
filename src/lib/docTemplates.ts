@@ -1,5 +1,5 @@
 import { formatDate, portCode } from "./format";
-import type { Job } from "./types";
+import type { Job, Quote } from "./types";
 
 export interface DocumentTypeDef {
   slug: string;
@@ -33,9 +33,17 @@ export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undef
 
 /** Every shipment field worth printing on operational paperwork — deliberately
  *  excludes commercial value / insurance (those only ever live on the quote,
- *  and never belong on ops-facing documents). */
-export function shipmentInfoRows(job: Job): [string, string][] {
-  return [
+ *  and never belong on ops-facing documents). Container Type and Incoterms
+ *  only apply to Sea Freight; HBL/HAWB Number is shown on every document,
+ *  resolved from the linked quote's HBL (sea) or HAWB (air) field. */
+export function shipmentInfoRows(
+  job: Job,
+  quote?: Pick<Quote, "hbl_no" | "hawb_no" | "incoterms"> | null,
+): [string, string][] {
+  const isSea = job.mode.startsWith("Sea Freight");
+  const hblHawb = isSea ? quote?.hbl_no : quote?.hawb_no;
+
+  const rows: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],
     ["Customer / Consignee", job.client?.company ?? "—"],
@@ -46,11 +54,19 @@ export function shipmentInfoRows(job: Job): [string, string][] {
     ["Shipping Line", job.shipping_line || "—"],
     ["Vessel", job.vessel_name || "—"],
     ["Container No", job.container_no || "—"],
+  ];
+  if (isSea) rows.push(["Container Type", job.container_type || "—"]);
+  rows.push(
     ["AWB / MBL No", job.awb_mbl || "—"],
+    ["HBL/HAWB Number", hblHawb || "—"],
+  );
+  if (isSea) rows.push(["Incoterms", quote?.incoterms || "—"]);
+  rows.push(
     ["PO / Customer Ref", job.po_no || "—"],
     ["ETD", formatDate(job.etd)],
     ["ETA", formatDate(job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
     ["Shipment Status", job.shipment_status || "—"],
-  ];
+  );
+  return rows;
 }

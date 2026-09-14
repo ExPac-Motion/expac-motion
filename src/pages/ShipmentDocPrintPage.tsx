@@ -44,7 +44,7 @@ export default function ShipmentDocPrintPage() {
   if (!job) return <div className="center-note">Shipment not found</div>;
   if (!def) return <div className="center-note">Unknown document type</div>;
 
-  const rows = shipmentInfoRows(job);
+  const rows = shipmentInfoRows(job, quoteQ.data);
 
   return (
     <div className="qs-wrap">

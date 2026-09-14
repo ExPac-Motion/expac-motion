@@ -996,6 +996,8 @@ export interface Job {
   awb_mbl: string | null;
   /** Ocean container number (air jobs track on awb_mbl). */
   container_no: string | null;
+  /** e.g. "1x 20GP", "2x 40HC" — Sea Freight only. */
+  container_type: string | null;
   /** Sea Freight details for the customer update email; persist on the board. */
   shipping_line: string | null;
   vessel_name: string | null;
@@ -1041,6 +1043,7 @@ export type JobPatch = Partial<
     | "ops_remarks"
     | "awb_mbl"
     | "container_no"
+    | "container_type"
     | "shipping_line"
     | "vessel_name"
     | "carrier_name"

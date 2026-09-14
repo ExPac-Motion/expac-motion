@@ -926,6 +926,7 @@ function JobEditModal({
       ops_remarks: String(fd.get("ops_remarks") || ""),
       awb_mbl: String(fd.get("awb_mbl") || ""),
       container_no: String(fd.get("container_no") || ""),
+      container_type: String(fd.get("container_type") || ""),
       shipping_line: String(fd.get("shipping_line") || ""),
       carrier_name: String(fd.get("carrier_name") || ""),
       provisional_delivery_date: String(fd.get("provisional_delivery_date") || ""),
@@ -977,6 +978,14 @@ function JobEditModal({
             <label>Container No</label>
             <input name="container_no" defaultValue={job.container_no ?? ""} />
           </div>
+        </div>
+        <div className="field">
+          <label>Container Type</label>
+          <input
+            name="container_type"
+            defaultValue={job.container_type ?? ""}
+            placeholder="e.g. 1x 20GP, 2x 40HC"
+          />
         </div>
         <div className="grid2">
           <div className="field">
