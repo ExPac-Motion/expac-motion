@@ -72,12 +72,12 @@ export default function PersonalVaultPage() {
   return (
     <>
       <div className="vault-grid">
-        <VaultNotes />
-        <VaultCalendar />
-      </div>
-      <div className="vault-grid">
         <PersonalBudget scope={scope} setScope={setScope} />
         <ExpenseControl scope={scope} setScope={setScope} />
+      </div>
+      <div className="vault-grid">
+        <VaultNotes />
+        <VaultCalendar />
       </div>
     </>
   );
