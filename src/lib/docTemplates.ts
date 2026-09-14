@@ -67,10 +67,10 @@ export function shipmentInfoRows(
   rows.push(
     ["Delivery Terms", quote?.delivery_terms || "—"],
     ["PO / Customer Ref", job.po_no || "—"],
-    ["ETD", formatDate(job.etd)],
-    ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
-    ["ETA", formatDate(job.eta)],
     ["Shipment Status", job.shipment_status || "—"],
+    ["ETD", formatDate(job.etd)],
+    ["ETA", formatDate(job.eta)],
+    ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
   );
   return rows;
 }
