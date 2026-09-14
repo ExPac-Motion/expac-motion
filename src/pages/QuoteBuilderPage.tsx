@@ -130,8 +130,10 @@ function blankDraft(): QuoteDraft {
     mbl_no: "",
     hbl_no: "",
     container_no: "",
+    container_type: "",
     etd: "",
     eta: "",
+    provisional_delivery_date: "",
     incoterms: "",
     mawb_no: "",
     hawb_no: "",
@@ -176,8 +178,10 @@ function draftFromQuote(q: Quote): QuoteDraft {
     mbl_no: q.mbl_no ?? "",
     hbl_no: q.hbl_no ?? "",
     container_no: q.container_no ?? "",
+    container_type: q.container_type ?? "",
     etd: q.etd ?? "",
     eta: q.eta ?? "",
+    provisional_delivery_date: q.provisional_delivery_date ?? "",
     incoterms: q.incoterms ?? "",
     mawb_no: q.mawb_no ?? "",
     hawb_no: q.hawb_no ?? "",
@@ -915,6 +919,14 @@ export default function QuoteBuilderPage() {
               onChange={(e) => set("eta", e.target.value)}
             />
           </div>
+          <div className="field">
+            <label>Provisional Delivery Date</label>
+            <input
+              type="date"
+              value={draft.provisional_delivery_date}
+              onChange={(e) => set("provisional_delivery_date", e.target.value)}
+            />
+          </div>
 
           {/* Row 5 */}
           <div className="field">
@@ -929,6 +941,14 @@ export default function QuoteBuilderPage() {
             <input
               value={draft.container_no}
               onChange={(e) => set("container_no", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Container Type</label>
+            <input
+              value={draft.container_type}
+              onChange={(e) => set("container_type", e.target.value)}
+              placeholder="e.g. 1x 20GP, 2x 40HC"
             />
           </div>
           <div className="field">

@@ -898,8 +898,11 @@ export interface Quote {
   mbl_no: string | null;
   hbl_no: string | null;
   container_no: string | null;
+  /** e.g. "1x 20GP", "2x 40HC" — Sea Freight only. */
+  container_type: string | null;
   etd: string | null;
   eta: string | null;
+  provisional_delivery_date: string | null;
   incoterms: string | null;
   mawb_no: string | null;
   hawb_no: string | null;
@@ -1354,8 +1357,10 @@ export interface QuoteDraft {
   mbl_no: string;
   hbl_no: string;
   container_no: string;
+  container_type: string;
   etd: string;
   eta: string;
+  provisional_delivery_date: string;
   incoterms: string;
   mawb_no: string;
   hawb_no: string;
