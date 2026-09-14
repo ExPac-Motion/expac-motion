@@ -173,6 +173,11 @@ export default function ShipmentDocPrintPage() {
           <p className="hint">No packing list on record for this shipment.</p>
         )}
 
+        <div className="qs-bar">Expac Remarks</div>
+        <p style={{ fontSize: 11, minHeight: 40, whiteSpace: "pre-line" }}>
+          {job.ops_remarks || "—"}
+        </p>
+
         <div className="qs-bar">Received By</div>
         <div className="qs-sig">
           <div className="qs-sig-field">
@@ -192,8 +197,8 @@ export default function ShipmentDocPrintPage() {
             <div className="line" />
           </div>
           <div className="qs-sig-field wide">
-            <label>Remarks</label>
-            <div className="line tall">{job.ops_remarks || ""}</div>
+            <label>Customer Remarks</label>
+            <div className="line tall" />
           </div>
         </div>
       </div>
