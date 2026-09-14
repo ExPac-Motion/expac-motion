@@ -574,6 +574,17 @@ tr.clickable:hover {
 .dt-tools--row {
   margin-top: 6px;
 }
+/* Rendered into a page-header slot via toolsPortal — no pull/row margin or
+   stacking context of its own, just sit inline with whatever's around it. */
+.dt-tools--portal {
+  margin: 0;
+  position: static;
+}
+/* The slot itself contributes no box of its own — its portaled content
+   lays out as if it were directly in the header's flex row. */
+.dt-tools-slot {
+  display: contents;
+}
 table.dt {
   table-layout: fixed;
   border-collapse: separate;

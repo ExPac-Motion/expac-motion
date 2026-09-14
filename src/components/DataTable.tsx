@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useSaveTablePrefs, useTablePrefs } from "../lib/hooks";
 
 export interface DataColumn<T> {
@@ -43,8 +44,15 @@ interface Props<T> {
    *    whose header has nothing on the right).
    *  - "row": its own row below the header (for pages with a search box or
    *    "+ New …" button on the right, which "pull" would overlap).
+   * Ignored when `toolsPortal` is set.
    */
   headerTools?: "pull" | "row";
+  /** Renders the Save Grid / Reset / Table-settings controls into this DOM
+   *  node instead of directly above the table — e.g. a slot in the page's
+   *  own header row, next to its "+ New …" button, so a page with a search
+   *  bar doesn't need a whole separate row just for these. The table still
+   *  owns all the underlying state; this only moves where the buttons draw. */
+  toolsPortal?: HTMLElement | null;
   /** Extra classes on the <table> (e.g. "table--compact"). */
   className?: string;
 }
@@ -61,6 +69,7 @@ export default function DataTable<T>({
   className,
   toolbar,
   headerTools = "pull",
+  toolsPortal,
 }: Props<T>) {
   const prefsQ = useTablePrefs(tableKey);
   const savePrefs = useSaveTablePrefs(tableKey);
@@ -258,10 +267,15 @@ export default function DataTable<T>({
     });
   }, [rows, sort, byKey]);
 
-  return (
-    <div className="dt-wrap">
-      <div className={`dt-tools${headerTools === "row" ? " dt-tools--row" : ""}`}>
-        {toolbar}
+  const toolsEl = (
+    <div
+      className={
+        toolsPortal
+          ? "dt-tools dt-tools--portal"
+          : `dt-tools${headerTools === "row" ? " dt-tools--row" : ""}`
+      }
+    >
+      {toolbar}
         <button
           type="button"
           className={`btn btn-sm${dirty ? "" : " outline"}`}
@@ -306,7 +320,12 @@ export default function DataTable<T>({
             </div>
           )}
         </div>
-      </div>
+    </div>
+  );
+
+  return (
+    <div className="dt-wrap">
+      {toolsPortal ? createPortal(toolsEl, toolsPortal) : toolsEl}
       <div className="table-wrap">
         <table
           className={`dt${className ? " " + className : ""}`}

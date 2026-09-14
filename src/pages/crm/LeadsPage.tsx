@@ -122,6 +122,10 @@ export default function LeadsPage() {
   const createOpportunity = useCreateOpportunity();
   const { toast, error: toastError } = useToast();
   const [bulkOpen, setBulkOpen] = useState(false);
+  // Slot in the header row (beside "+ Add Lead") that DataTable portals its
+  // Save Grid / Reset columns / Table settings controls into — keeps the
+  // search-bar row free so the table starts right after it.
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   const profilesQ = useProfiles();
   const [editing, setEditing] = useState<Lead | "new" | null>(null);
@@ -557,6 +561,7 @@ export default function LeadsPage() {
             >
               Bulk Edit{sel.count ? ` (${sel.count})` : ""}
             </button>
+            <div className="dt-tools-slot" ref={setToolsSlot} />
             <button className="btn" onClick={() => setEditing("new")}>
               + Add Lead
             </button>
@@ -658,7 +663,7 @@ export default function LeadsPage() {
           <DataTable
             tableKey="leads"
             className="leads-table"
-            headerTools="row"
+            toolsPortal={toolsSlot}
             columns={leadCols}
             rows={displayed}
             rowKey={(r) => r.id}

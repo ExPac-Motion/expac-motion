@@ -105,6 +105,10 @@ export default function ContactsPage({
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
+  // Slot in the header row (beside "+ Add ...") that DataTable portals its
+  // Save Grid / Reset columns / Table settings controls into — keeps the
+  // search-bar row free so the table starts right after it.
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   // Customer-only: salespeople for the owner dropdown + the editable list of
   // extra contacts at the company (mirrors the Lead edit form).
@@ -438,6 +442,7 @@ export default function ContactsPage({
             >
               Bulk Edit{sel.count ? ` (${sel.count})` : ""}
             </button>
+            <div className="dt-tools-slot" ref={setToolsSlot} />
             <button className="btn" onClick={() => setEditing("new")}>
               + Add {label}
             </button>
@@ -467,7 +472,7 @@ export default function ContactsPage({
           <DataTable
             tableKey={`contacts-${kind}`}
             className="table--compact"
-            headerTools="row"
+            toolsPortal={toolsSlot}
             columns={columns}
             rows={filtered}
             rowKey={(r) => r.id}
