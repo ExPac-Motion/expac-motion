@@ -18,6 +18,7 @@ import { money } from "../../lib/format";
 import type {
   VaultBudgetDraft,
   VaultBudgetEntry,
+  VaultBudgetScope,
   VaultExpenseDraft,
 } from "../../lib/types";
 
@@ -70,8 +71,14 @@ export default function PersonalVaultPage() {
   );
 }
 
+const SCOPE_TITLE: Record<VaultBudgetScope, string> = {
+  personal: "Personal Budget",
+  business: "Business Budget",
+};
+
 /* ------------------------------------------------------------------ */
-/* Personal Budget — income / expense tracker                         */
+/* Personal Budget — one income/expense ledger, toggled between a      */
+/* Personal and a Business view (same table, filtered by `scope`).     */
 /* ------------------------------------------------------------------ */
 function PersonalBudget() {
   const q = useVaultBudget();
@@ -81,6 +88,7 @@ function PersonalBudget() {
 
   const [form, setForm] = useState<VaultBudgetDraft>(emptyEntry());
   const [month, setMonth] = useState<string>(thisMonth());
+  const [scope, setScope] = useState<VaultBudgetScope>("personal");
 
   const set = <K extends keyof VaultBudgetDraft>(
     k: K,
@@ -88,9 +96,10 @@ function PersonalBudget() {
   ) => setForm((f) => ({ ...f, [k]: v }));
 
   const rows = useMemo(() => {
-    const all = q.data ?? [];
-    return month ? all.filter((e) => e.occurred_on.startsWith(month)) : all;
-  }, [q.data, month]);
+    let out = (q.data ?? []).filter((e) => (e.scope ?? "personal") === scope);
+    if (month) out = out.filter((e) => e.occurred_on.startsWith(month));
+    return out;
+  }, [q.data, month, scope]);
 
   const totals = useMemo(() => {
     let income = 0;
@@ -109,7 +118,7 @@ function PersonalBudget() {
       return;
     }
     try {
-      await save.mutateAsync({ values: form });
+      await save.mutateAsync({ values: { ...form, scope } });
       setForm({ ...emptyEntry(), kind: form.kind });
       toast("Added");
     } catch (e2) {
@@ -139,8 +148,20 @@ function PersonalBudget() {
   return (
     <section className="panel">
       <div className="vault-head">
-        <h3>Personal Budget</h3>
+        <h3>{SCOPE_TITLE[scope]}</h3>
         <div className="vault-month">
+          <div className="chips" style={{ marginRight: 4 }}>
+            {(["personal", "business"] as VaultBudgetScope[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`chip${scope === s ? " on" : ""}`}
+                onClick={() => setScope(s)}
+              >
+                {SCOPE_TITLE[s].replace(" Budget", "")}
+              </button>
+            ))}
+          </div>
           <input
             type="month"
             value={month}

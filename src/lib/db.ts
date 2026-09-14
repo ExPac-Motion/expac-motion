@@ -1698,15 +1698,16 @@ export async function listVaultBudget(): Promise<VaultBudgetEntry[]> {
 }
 export async function saveVaultBudgetEntry(input: {
   id?: string;
-  values: VaultBudgetDraft;
+  values: VaultBudgetDraft & { scope?: VaultBudgetEntry["scope"] };
 }): Promise<VaultBudgetEntry> {
-  const row = {
+  const row: Record<string, unknown> = {
     kind: input.values.kind,
     category: input.values.category.trim() || null,
     amount: Number(input.values.amount) || 0,
     occurred_on: input.values.occurred_on || new Date().toISOString().slice(0, 10),
     note: input.values.note.trim() || null,
   };
+  if (input.values.scope) row.scope = input.values.scope;
   return unwrap(
     input.id
       ? await supabase

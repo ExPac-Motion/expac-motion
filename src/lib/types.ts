@@ -1361,10 +1361,15 @@ export interface QuoteDraft {
 
 /* ---------- Personal Vault (Control Tower) ---------- */
 
+export type VaultBudgetScope = "personal" | "business";
+
 export interface VaultBudgetEntry {
   id: string;
   user_id: string;
   kind: "income" | "expense";
+  /** Which ledger this row belongs to — the Budget section's Personal /
+   *  Business toggle filters on this. */
+  scope: VaultBudgetScope;
   category: string | null;
   amount: number;
   occurred_on: string;

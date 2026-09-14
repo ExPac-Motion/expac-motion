@@ -30,6 +30,7 @@ import type {
   ShipmentDocument,
   Supplier,
   VaultBudgetDraft,
+  VaultBudgetEntry,
   VaultTodo,
   UiTableLayout,
 } from "./types";
@@ -1224,8 +1225,10 @@ export function useVaultBudget() {
 export function useSaveVaultBudgetEntry() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id?: string; values: VaultBudgetDraft }) =>
-      db.saveVaultBudgetEntry(input),
+    mutationFn: (input: {
+      id?: string;
+      values: VaultBudgetDraft & { scope?: VaultBudgetEntry["scope"] };
+    }) => db.saveVaultBudgetEntry(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_budget"] }),
   });
 }
