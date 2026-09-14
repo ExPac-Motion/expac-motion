@@ -43,7 +43,7 @@ import {
 import { createLeadContacts, listLeadContacts } from "../../lib/db";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
-import { formatDate, normalizeWebsite } from "../../lib/format";
+import { formatDate, normalizeWebsite, readableText } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
 
 /** Minimal CSV parser — no quoted-comma support needed for a simple lead import. */
@@ -357,8 +357,8 @@ export default function LeadsPage() {
     }
   }
 
-  const statusName = (id: string | null) =>
-    statuses.find((s) => s.id === id)?.name ?? "—";
+  const statusOf = (id: string | null) => statuses.find((s) => s.id === id) ?? null;
+  const statusName = (id: string | null) => statusOf(id)?.name ?? "—";
   const viewContacts = viewContactsQ.data ?? [];
 
   const leadCols = useMemo<DataColumn<Lead>[]>(
@@ -459,7 +459,25 @@ export default function LeadsPage() {
         header: "Status",
         width: 150,
         sortValue: (r) => r.lead_status?.name ?? statusName(r.lead_status_id),
-        render: (r) => r.lead_status?.name ?? statusName(r.lead_status_id),
+        render: (r) => {
+          const s = statusOf(r.lead_status_id);
+          const name = r.lead_status?.name ?? s?.name;
+          if (!name) return "—";
+          return s ? (
+            <span
+              className="opp-status-badge"
+              style={{
+                background: s.color,
+                color: readableText(s.color),
+                margin: 0,
+              }}
+            >
+              {name}
+            </span>
+          ) : (
+            name
+          );
+        },
       },
       {
         key: "sales_person",
@@ -640,6 +658,7 @@ export default function LeadsPage() {
           <DataTable
             tableKey="leads"
             className="leads-table"
+            headerTools="row"
             columns={leadCols}
             rows={displayed}
             rowKey={(r) => r.id}

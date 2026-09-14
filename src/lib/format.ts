@@ -181,3 +181,14 @@ export function docName(
   return ref ? `${description} - ${ref}` : description;
 }
 
+/** Black or white text, whichever reads better on a given hex background
+ *  (e.g. a Lead Status colour badge) — plain luminance check. */
+export function readableText(hex: string): string {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return "#fff";
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1f2937" : "#fff";
+}
+
