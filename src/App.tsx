@@ -23,7 +23,7 @@ import AgentsPage from "./pages/AgentsPage";
 import TransportersPage from "./pages/TransportersPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
-import DeliveryInstructionPrintPage from "./pages/DeliveryInstructionPrintPage";
+import ShipmentDocPrintPage from "./pages/ShipmentDocPrintPage";
 import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
 import PortalLayout from "./pages/portal/PortalLayout";
@@ -131,8 +131,8 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />
             <Route
-              path="jobs/:id/documents/delivery-instruction/print"
-              element={<DeliveryInstructionPrintPage />}
+              path="jobs/:id/documents/:doc/print"
+              element={<ShipmentDocPrintPage />}
             />
           </Route>
           <Route element={<Protected />}>

@@ -37,6 +37,7 @@ import {
   useUploadShipmentDocument,
 } from "../lib/hooks";
 import { getShipmentDocumentUrl } from "../lib/db";
+import { DOCUMENT_TYPES_LIST } from "../lib/docTemplates";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import {
@@ -729,6 +730,7 @@ function DocumentsSection({ job }: { job: Job }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [docType, setDocType] = useState<string>(DOCUMENT_TYPES[0]);
   const [visibleToClient, setVisibleToClient] = useState(false);
+  const [printDoc, setPrintDoc] = useState<string>(DOCUMENT_TYPES_LIST[0].slug);
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -790,11 +792,25 @@ function DocumentsSection({ job }: { job: Job }) {
       >
         <strong>Documents</strong>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <select
+            value={printDoc}
+            onChange={(e) => setPrintDoc(e.target.value)}
+            title="Document to print"
+            style={{ width: "auto" }}
+          >
+            {DOCUMENT_TYPES_LIST.map((d) => (
+              <option key={d.slug} value={d.slug}>
+                {d.title}
+              </option>
+            ))}
+          </select>
           <Link
             className="btn outline small"
-            to={`/jobs/${job.id}/documents/delivery-instruction/print`}
+            to={`/jobs/${job.id}/documents/${printDoc}/print`}
+            target="_blank"
+            rel="noopener"
           >
-            Delivery Instructions
+            Print
           </Link>
           <select
             value={docType}

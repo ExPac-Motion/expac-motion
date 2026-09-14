@@ -31,6 +31,7 @@ const NAV: NavModule[] = [
       { to: "/ops?tab=notifications", label: "Notifications" },
       { to: "/ops?tab=calendar", label: "Calendar" },
       { to: "/ops?tab=tracking", label: "Live Tracking" },
+      { to: "/ops?tab=docvault", label: "Document Vault" },
     ],
   },
   {

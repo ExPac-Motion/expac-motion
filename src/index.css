@@ -2723,6 +2723,37 @@ table.dt th.dt-sortable {
 .qs-foot .bank div {
   font-size: 10.5px;
 }
+/* Sign-off block on Document Vault operational documents (Received By /
+   Name & Last Name / Signature / Date / Remarks) — new, not part of the
+   locked quotation footer above. */
+.qs-sig {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 28px;
+  margin-top: 6px;
+}
+.qs-sig-field.wide {
+  grid-column: 1 / -1;
+}
+.qs-sig-field label {
+  display: block;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 16px;
+}
+.qs-sig-field .line {
+  border-top: 1px solid #ccc;
+  height: 1px;
+}
+.qs-sig-field .line.tall {
+  border-top: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  height: 46px;
+}
 .qs-totals {
   /* fills its own grid column; right edge is flush with the charges table above */
 }
