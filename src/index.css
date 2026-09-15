@@ -1581,6 +1581,10 @@ table.dt th.dt-sortable {
   border-radius: 8px;
   background-color: #fafaf7;
   width: 100%;
+  /* Form controls default to an intrinsic min-width (~20 characters) that
+     silently overrides a smaller column width in table layout — override it
+     so `width: 100%` can actually shrink to fit a narrow cell (e.g. ROE). */
+  min-width: 0;
 }
 .charge-table select {
   padding-right: 26px;
