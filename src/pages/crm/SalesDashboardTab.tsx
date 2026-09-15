@@ -227,7 +227,9 @@ export default function SalesDashboardTab() {
   }, [quotes]);
 
   const leaderboard = useMemo(() => {
-    const people = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+    const people = (profilesQ.data ?? []).filter(
+      (p) => p.role === "admin" || p.role === "user",
+    );
     return people
       .map((p) => {
         const mine = quotes.filter(

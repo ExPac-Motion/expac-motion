@@ -37,6 +37,8 @@ import type {
   ClientSupplier,
   Profile,
   ProfilePatch,
+  PortalUser,
+  PortalAnnouncement,
   Quote,
   QuoteDraft,
   RateSheetItem,
@@ -791,11 +793,17 @@ export async function getMyProfile(): Promise<Profile | null> {
   return row ? { ...row, email: auth.user.email } : null;
 }
 
-export async function createClientInvite(clientId: string): Promise<ClientInvite> {
+/** email is optional so existing callers keep working; pass the intended
+ *  contact's address (primary or a secondary client_contacts row) so the
+ *  invite — and later, Portal Access — can show who it's actually for. */
+export async function createClientInvite(
+  clientId: string,
+  email?: string | null,
+): Promise<ClientInvite> {
   return unwrap<ClientInvite>(
     await supabase
       .from("client_invites")
-      .insert({ client_id: clientId })
+      .insert({ client_id: clientId, email: email?.trim() || null })
       .select("*")
       .single(),
   );
@@ -838,6 +846,98 @@ export async function rejectPortalSignup(profileId: string): Promise<void> {
   unwrap(
     await supabase.rpc("reject_portal_signup", { p_profile_id: profileId }),
   );
+}
+
+/** Admin-only — every profile linked to a customer: approved, revoked
+ *  ('restricted' with a client_id), or a pending self-serve request. */
+export async function listPortalUsers(): Promise<PortalUser[]> {
+  return unwrap<PortalUser[]>(await supabase.rpc("list_portal_users"));
+}
+
+export async function revokePortalAccess(profileId: string): Promise<void> {
+  unwrap(await supabase.rpc("revoke_portal_access", { p_profile_id: profileId }));
+}
+
+export async function restorePortalAccess(profileId: string): Promise<void> {
+  unwrap(await supabase.rpc("restore_portal_access", { p_profile_id: profileId }));
+}
+
+export async function setPortalPermissions(
+  profileId: string,
+  permissions: Profile["portal_permissions"],
+): Promise<void> {
+  unwrap(
+    await supabase.rpc("set_portal_permissions", {
+      p_profile_id: profileId,
+      p_permissions: permissions,
+    }),
+  );
+}
+
+/** Triggers Supabase's own password-recovery email — staff never sees or
+ *  sets the customer's password directly, only asks them to reset it. */
+export async function sendPortalPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/portal`,
+  });
+  if (error) throw error;
+}
+
+/* ---------- Portal announcements ("What's New") ---------- */
+
+export async function listAnnouncements(): Promise<PortalAnnouncement[]> {
+  return unwrap<PortalAnnouncement[]>(
+    await supabase
+      .from("portal_announcements")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function listPublishedAnnouncements(): Promise<PortalAnnouncement[]> {
+  return unwrap<PortalAnnouncement[]>(
+    await supabase
+      .from("portal_announcements")
+      .select("*")
+      .eq("published", true)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function createAnnouncement(input: {
+  title: string;
+  body?: string | null;
+  image_url?: string | null;
+}): Promise<PortalAnnouncement> {
+  return unwrap<PortalAnnouncement>(
+    await supabase
+      .from("portal_announcements")
+      .insert({
+        title: input.title.trim(),
+        body: input.body?.trim() || null,
+        image_url: input.image_url || null,
+      })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function updateAnnouncement(
+  id: string,
+  patch: Partial<Pick<PortalAnnouncement, "title" | "body" | "image_url" | "published">>,
+): Promise<PortalAnnouncement> {
+  return unwrap<PortalAnnouncement>(
+    await supabase
+      .from("portal_announcements")
+      .update(patch)
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  unwrap(await supabase.from("portal_announcements").delete().eq("id", id));
 }
 
 export async function listMyQuotes(): Promise<ClientQuote[]> {

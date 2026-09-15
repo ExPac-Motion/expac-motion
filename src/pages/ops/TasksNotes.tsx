@@ -54,7 +54,9 @@ export default function TasksNotes({ focus }: { focus?: string }) {
   const save = useSaveOpsTask();
   const bulkUpdate = useUpdateOpsTasksBulk();
   const bulkDelete = useDeleteOpsTasksBulk();
-  const teamMembers = (useProfiles().data ?? []).filter((p) => p.role !== "client");
+  const teamMembers = (useProfiles().data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
 
   const [quick, setQuick] = useState("");
   const [quickKind, setQuickKind] = useState<"task" | "note">("task");

@@ -113,7 +113,9 @@ export default function ContactsPage({
   // Customer-only: salespeople for the owner dropdown + the editable list of
   // extra contacts at the company (mirrors the Lead edit form).
   const profilesQ = useProfiles();
-  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+  const salesPeople = (profilesQ.data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
   const replaceClientContacts = useReplaceClientContacts();
   const [extraContacts, setExtraContacts] = useState<LeadContactDraft[]>([]);
 
@@ -291,8 +293,17 @@ export default function ContactsPage({
   }
 
   async function onInvite(row: Contact) {
+    // Defaults to the client's own (primary) email; staff can type a
+    // different address to invite a secondary contact at the same company
+    // instead — each gets their own portal login, both scoped to this
+    // client_id.
+    const email = window.prompt(
+      "Portal invite email (defaults to the primary contact — edit to invite a secondary contact instead):",
+      row.email ?? "",
+    );
+    if (email === null) return; // cancelled
     try {
-      const invite = await createInvite.mutateAsync(row.id);
+      const invite = await createInvite.mutateAsync({ clientId: row.id, email });
       const link = `${window.location.origin}/portal/signup?token=${invite.token}`;
       setInviteLink(link);
       try {

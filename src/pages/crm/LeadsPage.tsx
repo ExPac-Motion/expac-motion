@@ -142,7 +142,9 @@ export default function LeadsPage() {
 
   const rows = useMemo(() => data ?? [], [data]);
   const statuses = statusesQ.data ?? [];
-  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+  const salesPeople = (profilesQ.data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
 
   // Deep-link from Trends: navigate here with { state: { openLeadId } } to
   // pop the existing view modal open on a specific lead, same as clicking
@@ -1010,7 +1012,9 @@ function LeadEditModal({
   const { toast, error: toastError } = useToast();
 
   const statuses = statusesQ.data ?? [];
-  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+  const salesPeople = (profilesQ.data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
 
   const [contacts, setContacts] = useState<LeadContactDraft[]>([]);
 

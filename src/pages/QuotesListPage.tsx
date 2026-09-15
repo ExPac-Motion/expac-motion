@@ -110,7 +110,9 @@ export default function QuotesListPage() {
   const save = useSaveQuote();
   const bulkUpdate = useUpdateQuotesBulk();
   const profilesQ = useProfiles();
-  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+  const salesPeople = (profilesQ.data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
   const [bulkOpen, setBulkOpen] = useState(false);
   const { toast, error: toastError } = useToast();
   const [params] = useSearchParams();

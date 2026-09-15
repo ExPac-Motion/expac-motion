@@ -67,7 +67,9 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
   const clients = useClients().data ?? [];
   const leads = useLeads().data ?? [];
   const suppliers = useSuppliers().data ?? [];
-  const teamMembers = (useProfiles().data ?? []).filter((p) => p.role !== "client");
+  const teamMembers = (useProfiles().data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
 
   const [f, setF] = useState<Form>(() => seed(task, defaults));
   function set<K extends keyof Form>(k: K, v: Form[K]) {

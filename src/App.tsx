@@ -36,6 +36,7 @@ import PortalQuotesPage from "./pages/portal/PortalQuotesPage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
 import PortalRatesPage from "./pages/portal/PortalRatesPage";
+import RestrictedAccountPage from "./pages/RestrictedAccountPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import FormPublicPage from "./pages/FormPublicPage";
 import PublicTrackPage from "./pages/PublicTrackPage";
@@ -57,6 +58,7 @@ function Protected() {
     return <div className="center-note">Loading…</div>;
   }
   if (!session) return <Navigate to="/login" replace />;
+  if (profileQ.data?.role === "restricted") return <RestrictedAccountPage />;
   if (profileQ.data?.role === "client") return <Navigate to="/portal" replace />;
   return <Layout />;
 }
@@ -69,6 +71,7 @@ function PortalProtected() {
     return <div className="center-note">Loading…</div>;
   }
   if (!session) return <Navigate to="/login" replace />;
+  if (profileQ.data?.role === "restricted") return <RestrictedAccountPage />;
   if (profileQ.data?.role !== "client") return <Navigate to="/" replace />;
   // null (pre-0068 accounts) and 'approved' both mean "go ahead".
   const status = profileQ.data?.portal_status;

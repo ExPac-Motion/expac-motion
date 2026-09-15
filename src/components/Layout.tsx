@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
+import { useMyProfile } from "../lib/hooks";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
 
@@ -135,11 +136,13 @@ const Icon = {
 export default function Layout() {
   const { user, signOut } = useAuth();
   const { pathname, search } = useLocation();
+  const profileQ = useMyProfile();
+  const isAdmin = profileQ.data?.role === "admin";
   const name =
     (user?.user_metadata?.full_name as string | undefined) || user?.email || "";
 
   // The Personal Vault tab is only wired into Control Tower for its owner.
-  const nav: NavModule[] = isVaultOwner(user?.email)
+  let nav: NavModule[] = isVaultOwner(user?.email)
     ? NAV.map((m) =>
         m.to === "/ops"
           ? {
@@ -152,6 +155,16 @@ export default function Layout() {
           : m,
       )
     : NAV;
+
+  // Portal Access manages other logins' roles/permissions/passwords —
+  // admin-only, same as the RPCs it calls (0091_role_model_v2.sql).
+  if (!isAdmin) {
+    nav = nav.map((m) =>
+      m.to === "/clients"
+        ? { ...m, children: m.children?.filter((c) => !c.to.includes("portal-access")) }
+        : m,
+    );
+  }
 
   const activeModule = nav.find((m) => isModuleActive(m, pathname));
 

@@ -43,7 +43,7 @@ export default function SalesPersonPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const people = useMemo(
-    () => (profilesQ.data ?? []).filter((p) => p.role !== "client"),
+    () => (profilesQ.data ?? []).filter((p) => p.role === "admin" || p.role === "user"),
     [profilesQ.data],
   );
   const sel = useRowSelection(people);

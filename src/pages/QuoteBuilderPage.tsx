@@ -583,7 +583,9 @@ export default function QuoteBuilderPage() {
 
   const clients = clientsQ.data ?? [];
   const unpromotedLeads = (leadsQ.data ?? []).filter((l) => !l.promoted_client_id);
-  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
+  const salesPeople = (profilesQ.data ?? []).filter(
+    (p) => p.role === "admin" || p.role === "user",
+  );
   const suppliers = suppliersQ.data ?? [];
   const agents = agentsQ.data ?? [];
   const transporters = transportersQ.data ?? [];

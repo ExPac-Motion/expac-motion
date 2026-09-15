@@ -17,7 +17,9 @@ import type {
   Milestone,
   NotificationState,
   OpsTaskPatch,
+  Profile,
   ProfilePatch,
+  PortalAnnouncement,
   QuoteDraft,
   RateSheetPatch,
   LeadPatch,
@@ -564,7 +566,10 @@ export function useMyProfile() {
   return useQuery({ queryKey: ["my_profile"], queryFn: db.getMyProfile });
 }
 export function useCreateClientInvite() {
-  return useMutation({ mutationFn: (clientId: string) => db.createClientInvite(clientId) });
+  return useMutation({
+    mutationFn: ({ clientId, email }: { clientId: string; email?: string | null }) =>
+      db.createClientInvite(clientId, email),
+  });
 }
 export function useInvite(token: string | undefined) {
   return useQuery({
@@ -593,6 +598,76 @@ export function useRejectPortalSignup() {
   return useMutation({
     mutationFn: (profileId: string) => db.rejectPortalSignup(profileId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pending_portal_signups"] }),
+  });
+}
+export function usePortalUsers() {
+  return useQuery({ queryKey: ["portal_users"], queryFn: db.listPortalUsers });
+}
+export function useRevokePortalAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => db.revokePortalAccess(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal_users"] }),
+  });
+}
+export function useRestorePortalAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => db.restorePortalAccess(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal_users"] }),
+  });
+}
+export function useSetPortalPermissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      profileId,
+      permissions,
+    }: {
+      profileId: string;
+      permissions: Profile["portal_permissions"];
+    }) => db.setPortalPermissions(profileId, permissions),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal_users"] }),
+  });
+}
+export function useSendPortalPasswordReset() {
+  return useMutation({ mutationFn: (email: string) => db.sendPortalPasswordReset(email) });
+}
+export function useAnnouncements() {
+  return useQuery({ queryKey: ["announcements"], queryFn: db.listAnnouncements });
+}
+export function usePublishedAnnouncements() {
+  return useQuery({
+    queryKey: ["published_announcements"],
+    queryFn: db.listPublishedAnnouncements,
+  });
+}
+export function useCreateAnnouncement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { title: string; body?: string | null; image_url?: string | null }) =>
+      db.createAnnouncement(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
+  });
+}
+export function useUpdateAnnouncement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Partial<Pick<PortalAnnouncement, "title" | "body" | "image_url" | "published">>;
+    }) => db.updateAnnouncement(id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
+  });
+}
+export function useDeleteAnnouncement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => db.deleteAnnouncement(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),
   });
 }
 export function useMyQuotes() {

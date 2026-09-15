@@ -9,18 +9,29 @@ export type Milestone = "Booked" | "In Transit" | "Customs" | "Delivered";
 
 /* ---------- Settings ---------- */
 
-export type UserRole = "admin" | "user" | "client";
+export type UserRole = "admin" | "user" | "client" | "restricted";
 
 export interface Profile {
   id: string;
   full_name: string | null;
   role: UserRole;
-  /** Set only for role='client' — which customer this portal login belongs to. */
+  /** Set for role='client', and kept when revoked to role='restricted' so
+   *  access can be restored — which customer this portal login belongs to. */
   client_id: string | null;
   /** Self-serve portal signups only. null = not applicable (staff, or an
    *  older invite-claimed client) — the app treats null the same as
    *  'approved'. */
   portal_status: "pending" | "approved" | "rejected" | null;
+  /** Which portal nav sections this login can see. Only meaningful for
+   *  role='client' (or 'restricted' — kept so it's remembered on restore). */
+  portal_permissions: {
+    shipments: boolean;
+    quotes: boolean;
+    invoices: boolean;
+    suppliers: boolean;
+    rates: boolean;
+    messaging: boolean;
+  };
   /** Free-text company name typed on the self-serve signup form, to help
    *  staff match a pending request to an existing client. */
   requested_company: string | null;
@@ -137,6 +148,33 @@ export interface ClientInvite {
   client_id: string;
   email: string | null;
   claimed_at: string | null;
+  created_at: string;
+}
+
+/** Row shape from the list_portal_users() RPC — every profile linked to a
+ *  customer (approved, restricted, or a pending self-serve request),
+ *  admin-only (see 0091_role_model_v2.sql). */
+export interface PortalUser {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: UserRole;
+  client_id: string | null;
+  company: string | null;
+  portal_status: "pending" | "approved" | "rejected" | null;
+  portal_permissions: Profile["portal_permissions"];
+  requested_company: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+
+export interface PortalAnnouncement {
+  id: string;
+  title: string;
+  body: string | null;
+  image_url: string | null;
+  published: boolean;
+  created_by: string | null;
   created_at: string;
 }
 

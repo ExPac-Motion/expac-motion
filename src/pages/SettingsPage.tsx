@@ -7,6 +7,7 @@ import { useToast } from "../components/Toast";
 import {
   useCompanySettings,
   useJobs,
+  useMyProfile,
   useProfiles,
   useUpdateCompanySettings,
   useUpdateProfile,
@@ -245,13 +246,18 @@ function DefaultsTab() {
 
 function TeamTab() {
   const { data, isLoading, isError, error } = useProfiles();
+  const myProfileQ = useMyProfile();
+  const isAdmin = myProfileQ.data?.role === "admin";
   const update = useUpdateProfile();
   const { toast, error: toastError } = useToast();
   const [editingName, setEditingName] = useState<string | null>(null);
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
-  const rows = data ?? [];
+  // Portal customers (role='client', or 'restricted' with a client_id —
+  // i.e. a revoked portal login) live on Customers > Portal Access, not
+  // here — this list is internal staff only.
+  const rows = (data ?? []).filter((p) => p.role !== "client" && !p.client_id);
   if (rows.length === 0) return <EmptyState>No team members yet.</EmptyState>;
 
   async function onRole(p: Profile, role: UserRole) {
@@ -277,8 +283,10 @@ function TeamTab() {
   return (
     <>
       <p className="muted" style={{ marginTop: 0 }}>
-        Team members are created by signing in — roles are informational for now
-        (no feature is gated by role yet).
+        Team members are created by signing in.
+        {isAdmin
+          ? " Only Admin can change roles — Standard User is full Motion access, Restricted blocks it entirely."
+          : " Only Admin can change roles."}
       </p>
       <div className="table-wrap">
         <table>
@@ -313,13 +321,24 @@ function TeamTab() {
                   )}
                 </td>
                 <td>
-                  <select
-                    value={p.role}
-                    onChange={(e) => onRole(p, e.target.value as UserRole)}
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="user">Standard user</option>
-                  </select>
+                  {isAdmin ? (
+                    <select
+                      value={p.role}
+                      onChange={(e) => onRole(p, e.target.value as UserRole)}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="user">Standard user</option>
+                      <option value="restricted">Restricted</option>
+                    </select>
+                  ) : (
+                    <span className="tag">
+                      {p.role === "admin"
+                        ? "Admin"
+                        : p.role === "restricted"
+                          ? "Restricted"
+                          : "Standard user"}
+                    </span>
+                  )}
                 </td>
                 <td className="nowrap">{formatDate(p.created_at)}</td>
               </tr>
