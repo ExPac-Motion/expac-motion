@@ -1,14 +1,20 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
+import { useMyProfile } from "../../lib/hooks";
+import type { Profile } from "../../lib/types";
 import PortalChatWidget from "./PortalChatWidget";
 
-const NAV = [
+const NAV: {
+  to: string;
+  label: string;
+  permission?: keyof Profile["portal_permissions"];
+}[] = [
   { to: "/portal", label: "Dashboard" },
-  { to: "/portal/shipments", label: "Shipments" },
-  { to: "/portal/quotes", label: "Quotations" },
-  { to: "/portal/invoices", label: "Invoices" },
-  { to: "/portal/suppliers", label: "Customer Party" },
-  { to: "/portal/rates", label: "Tariff Sheet" },
+  { to: "/portal/shipments", label: "Shipments", permission: "shipments" },
+  { to: "/portal/quotes", label: "Quotations", permission: "quotes" },
+  { to: "/portal/invoices", label: "Invoices", permission: "invoices" },
+  { to: "/portal/suppliers", label: "Customer Party", permission: "suppliers" },
+  { to: "/portal/rates", label: "Tariff Sheet", permission: "rates" },
 ];
 
 function isActive(to: string, pathname: string): boolean {
@@ -19,6 +25,17 @@ function isActive(to: string, pathname: string): boolean {
 export default function PortalLayout() {
   const { user, signOut } = useAuth();
   const { pathname } = useLocation();
+  const profileQ = useMyProfile();
+  const permissions = profileQ.data?.portal_permissions;
+
+  // Dashboard has no toggle — always shown. Every other tab is hidden
+  // (not just disabled) when an admin has turned it off for this login,
+  // set from Customers > Portal Access.
+  const nav = NAV.filter(
+    (n) => !n.permission || !permissions || permissions[n.permission],
+  );
+  const showChat = permissions?.messaging !== false;
+
   return (
     <div className="app-shell">
       <header className="topbar-nav">
@@ -26,7 +43,7 @@ export default function PortalLayout() {
           <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac Motion" />
         </Link>
         <nav className="topbar-primary">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <Link
               key={n.to}
               to={n.to}
@@ -48,7 +65,7 @@ export default function PortalLayout() {
       <main className="main">
         <Outlet />
       </main>
-      <PortalChatWidget />
+      {showChat && <PortalChatWidget />}
     </div>
   );
 }

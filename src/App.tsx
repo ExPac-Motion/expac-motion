@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -8,6 +9,7 @@ import {
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import LoginPage from "./auth/LoginPage";
 import Layout from "./components/Layout";
+import type { Profile } from "./lib/types";
 import DashboardPage from "./pages/DashboardPage";
 import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
@@ -81,6 +83,26 @@ function PortalProtected() {
   return <PortalLayout />;
 }
 
+/** Gates one portal section on the caller's own portal_permissions — set
+ *  per login from Customers > Portal Access. Renders inside PortalProtected
+ *  (already confirmed role='client' + approved), so profileQ.data is
+ *  populated by the time this runs; still redirects to the dashboard on a
+ *  hidden section instead of guessing, since a disabled permission can be
+ *  toggled off at any time by an admin. */
+function PortalSection({
+  permission,
+  children,
+}: {
+  permission: keyof Profile["portal_permissions"];
+  children: ReactNode;
+}) {
+  const profileQ = useMyProfile();
+  if (profileQ.data && profileQ.data.portal_permissions[permission] === false) {
+    return <Navigate to="/portal" replace />;
+  }
+  return <>{children}</>;
+}
+
 function LoginRoute() {
   const { session, loading } = useAuth();
   if (loading) return <div className="center-note">Loading…</div>;
@@ -124,12 +146,54 @@ export default function App() {
           <Route path="/portal/signup" element={<PortalSignupPage />} />
           <Route element={<PortalProtected />}>
             <Route path="portal" element={<PortalDashboardPage />} />
-            <Route path="portal/shipments" element={<PortalShipmentsPage />} />
-            <Route path="portal/shipments/:id" element={<PortalShipmentPage />} />
-            <Route path="portal/quotes" element={<PortalQuotesPage />} />
-            <Route path="portal/invoices" element={<PortalInvoicesPage />} />
-            <Route path="portal/suppliers" element={<PortalSuppliersPage />} />
-            <Route path="portal/rates" element={<PortalRatesPage />} />
+            <Route
+              path="portal/shipments"
+              element={
+                <PortalSection permission="shipments">
+                  <PortalShipmentsPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/shipments/:id"
+              element={
+                <PortalSection permission="shipments">
+                  <PortalShipmentPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/quotes"
+              element={
+                <PortalSection permission="quotes">
+                  <PortalQuotesPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/invoices"
+              element={
+                <PortalSection permission="invoices">
+                  <PortalInvoicesPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/suppliers"
+              element={
+                <PortalSection permission="suppliers">
+                  <PortalSuppliersPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/rates"
+              element={
+                <PortalSection permission="rates">
+                  <PortalRatesPage />
+                </PortalSection>
+              }
+            />
           </Route>
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />
