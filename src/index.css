@@ -1555,13 +1555,9 @@ table.dt th.dt-sortable {
 }
 
 /* ---------- Charge table ---------- */
-/* Fixed layout so each column renders at exactly the width given below,
-   regardless of viewport size or cell content (auto layout was letting the
-   browser's own sizing of the number/text inputs override our widths and
-   silently steal space from neighbouring columns). Columns with no width
-   set below share whatever is left; the wrapper scrolls if that's tight. */
+/* Let the table grow past its wrapper and scroll horizontally instead of
+   squeezing every column to fit 100% width (the app-wide `table` default). */
 .charge-table {
-  table-layout: fixed;
   width: max-content;
   min-width: 100%;
 }
@@ -1631,25 +1627,12 @@ table.dt th.dt-sortable {
 .charge-table .num.c-roe {
   width: 80px;
 }
-/* <col> widths are authoritative for table-layout:fixed — unlike per-cell
-   widths, browsers don't renegotiate them against content, so pin the
-   Import VAT/Duty invoice-line columns here to stop the number/text cells
-   (which can't shrink below their own content width) from stealing space
-   from narrow columns like ROE. Only pages with a <colgroup> are affected. */
-.charge-table col.c-desc {
-  width: 340px;
-}
-.charge-table col.c-hscode {
-  width: 100px;
-}
-.charge-table col.num {
-  width: 92px;
-}
-.charge-table col.c-cur {
-  width: 74px;
-}
-.charge-table col.num.c-roe {
-  width: 80px;
+/* The tfoot's colSpan cells (needed for the "Totals" label) can cause
+   Chrome to widen this specific column well beyond 80px depending on
+   viewport — pin the input's own rendered width directly so the visible
+   box stays correct regardless of what the column itself settles on. */
+.charge-table .num.c-roe input {
+  width: 62px;
 }
 
 /* ---------- Packing list table ---------- */
