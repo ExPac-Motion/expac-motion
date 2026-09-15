@@ -1603,6 +1603,20 @@ table.dt th.dt-sortable {
 .charge-table .c-unit {
   width: 120px;
 }
+/* Import VAT/Duty invoice lines: HS codes are ~8 digits, ROE is a short
+   decimal rate — keep both narrow and give the reclaimed space to the
+   product description, which needs to hold a longer line of text. */
+.charge-table td.c-hscode {
+  white-space: nowrap;
+  min-width: 0;
+  width: 100px;
+}
+.charge-table td.c-desc {
+  min-width: 260px;
+}
+.charge-table .num.c-roe {
+  width: 76px;
+}
 
 /* ---------- Packing list table ---------- */
 .packing-table {

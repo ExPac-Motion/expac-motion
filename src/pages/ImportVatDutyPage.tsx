@@ -327,12 +327,12 @@ export default function ImportVatDutyPage() {
               <table className="charge-table">
                 <thead>
                   <tr>
-                    <th>Product Description</th>
-                    <th>HS Code</th>
+                    <th className="c-desc">Product Description</th>
+                    <th className="c-hscode">HS Code</th>
                     <th className="num">Qty pcs</th>
                     <th className="num">Unit price</th>
                     <th className="c-cur">Cur</th>
-                    <th className="num">ROE</th>
+                    <th className="num c-roe">ROE</th>
                     <th className="num">Foreign amount</th>
                     <th className="num">Local amount</th>
                     <th className="num">Customs markup</th>
@@ -353,7 +353,7 @@ export default function ImportVatDutyPage() {
                     );
                     return (
                       <tr key={i}>
-                        <td>
+                        <td className="c-desc">
                           <input
                             value={String(l.description ?? "")}
                             onChange={(e) =>
@@ -362,7 +362,7 @@ export default function ImportVatDutyPage() {
                             placeholder="Product description"
                           />
                         </td>
-                        <td>
+                        <td className="c-hscode">
                           <input
                             value={String(l.hs_code ?? "")}
                             onChange={(e) =>
@@ -404,7 +404,7 @@ export default function ImportVatDutyPage() {
                             )}
                           </select>
                         </td>
-                        <td className="num">
+                        <td className="num c-roe">
                           <input
                             type="number"
                             step="any"
