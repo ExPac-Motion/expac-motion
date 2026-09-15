@@ -67,13 +67,22 @@ function FieldPreview({ f }: { f: WebFormField }) {
         {f.required && <span className="wf-req"> *</span>}
       </label>
       {f.type === "textarea" ? (
-        <textarea rows={3} placeholder={f.placeholder ?? ""} disabled />
+        <textarea
+          rows={3}
+          placeholder={f.placeholder ?? ""}
+          disabled
+          style={{ pointerEvents: "none" }}
+        />
       ) : f.type === "dropdown" ? (
-        <select disabled>
+        <select disabled style={{ pointerEvents: "none" }}>
           <option>Choose an option</option>
         </select>
       ) : (
-        <input placeholder={f.placeholder ?? ""} disabled />
+        <input
+          placeholder={f.placeholder ?? ""}
+          disabled
+          style={{ pointerEvents: "none" }}
+        />
       )}
     </div>
   );
