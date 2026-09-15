@@ -1631,6 +1631,26 @@ table.dt th.dt-sortable {
 .charge-table .num.c-roe {
   width: 80px;
 }
+/* <col> widths are authoritative for table-layout:fixed — unlike per-cell
+   widths, browsers don't renegotiate them against content, so pin the
+   Import VAT/Duty invoice-line columns here to stop the number/text cells
+   (which can't shrink below their own content width) from stealing space
+   from narrow columns like ROE. Only pages with a <colgroup> are affected. */
+.charge-table col.c-desc {
+  width: 340px;
+}
+.charge-table col.c-hscode {
+  width: 100px;
+}
+.charge-table col.num {
+  width: 92px;
+}
+.charge-table col.c-cur {
+  width: 74px;
+}
+.charge-table col.num.c-roe {
+  width: 80px;
+}
 
 /* ---------- Packing list table ---------- */
 .packing-table {

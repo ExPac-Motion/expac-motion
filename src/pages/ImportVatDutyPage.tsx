@@ -325,6 +325,23 @@ export default function ImportVatDutyPage() {
 
             <div className="table-wrap">
               <table className="charge-table">
+                <colgroup>
+                  <col className="c-desc" />
+                  <col className="c-hscode" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="c-cur" />
+                  <col className="num c-roe" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col className="num" />
+                  <col />
+                </colgroup>
                 <thead>
                   <tr>
                     <th className="c-desc">Product Description</th>
