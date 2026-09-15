@@ -332,7 +332,7 @@ export default function ImportVatDutyPage() {
                     <th className="num">Qty pcs</th>
                     <th className="num">Unit price</th>
                     <th className="c-cur">Cur</th>
-                    <th className="num c-roe">ROE</th>
+                    <th className="num">ROE</th>
                     <th className="num">Foreign amount</th>
                     <th className="num">Local amount</th>
                     <th className="num">Customs markup</th>
@@ -404,7 +404,7 @@ export default function ImportVatDutyPage() {
                             )}
                           </select>
                         </td>
-                        <td className="num c-roe">
+                        <td className="num">
                           <input
                             type="number"
                             step="any"
