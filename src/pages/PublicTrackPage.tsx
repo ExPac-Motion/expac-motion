@@ -108,7 +108,7 @@ export default function PublicTrackPage() {
               </div>
 
               <TrackingMap
-                height={420}
+                height={520}
                 pol={
                   result.pol_lat != null
                     ? { lat: result.pol_lat, lon: result.pol_lon, label: result.pol }
