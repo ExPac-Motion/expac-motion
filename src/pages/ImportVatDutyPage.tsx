@@ -448,13 +448,13 @@ export default function ImportVatDutyPage() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    {/* colSpan=5 covers Description/HS Code/Qty/Unit price/Cur;
-                        ROE gets its own (empty) cell — it was missing before,
-                        which shifted every total one column to the left. */}
-                    <td colSpan={5} style={{ textAlign: "right", fontWeight: 700 }}>
+                    {/* colSpan=6 covers Description/HS Code/Qty/Unit price/Cur/ROE
+                        (no total makes sense for a rate) — the column count
+                        must still total 15 to keep every total below it
+                        aligned under the right header. */}
+                    <td colSpan={6} style={{ textAlign: "right", fontWeight: 700 }}>
                       Totals
                     </td>
-                    <td className="num c-roe" />
                     <td className="num" style={{ fontWeight: 700 }}>
                       {n2(totals.foreignAmount)}
                     </td>
