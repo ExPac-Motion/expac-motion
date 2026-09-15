@@ -738,7 +738,7 @@ function OpportunityModal({
 
   const clients = clientsQ.data ?? [];
   const leads = leadsQ.data ?? [];
-  const salesPeople = profilesQ.data ?? [];
+  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
 
   const [kind, entityId] = entity.split(":");
   const effectiveClientId =

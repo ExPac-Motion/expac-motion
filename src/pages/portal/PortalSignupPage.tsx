@@ -49,7 +49,16 @@ export default function PortalSignupPage() {
       const invite = await getInvite(token);
       if (invite.claimed_at) throw new Error("This invite link has already been used.");
 
-      await signUp(email, password, email);
+      // signup_kind: "portal" makes handle_new_user() create this profile as
+      // role='client' (portal_status='pending', no client_id yet) from the
+      // very first instant the auth user exists — never role='user' (staff)
+      // even momentarily. Without this, a customer who never completes the
+      // claim below (e.g. email confirmation required, tab closed, claim
+      // fails) is left permanently holding full staff-equivalent access,
+      // since is_staff() treats anything that isn't explicitly role='client'
+      // as staff. See 0068_portal_self_signup.sql for the same pattern on
+      // the self-serve signup path.
+      await signUp(email, password, email, { signup_kind: "portal" });
       try {
         await signIn(email, password);
       } catch {

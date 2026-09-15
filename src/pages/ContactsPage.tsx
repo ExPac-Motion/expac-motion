@@ -113,7 +113,7 @@ export default function ContactsPage({
   // Customer-only: salespeople for the owner dropdown + the editable list of
   // extra contacts at the company (mirrors the Lead edit form).
   const profilesQ = useProfiles();
-  const salesPeople = profilesQ.data ?? [];
+  const salesPeople = (profilesQ.data ?? []).filter((p) => p.role !== "client");
   const replaceClientContacts = useReplaceClientContacts();
   const [extraContacts, setExtraContacts] = useState<LeadContactDraft[]>([]);
 
