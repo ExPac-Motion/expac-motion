@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   EmptyState,
   Loading,
@@ -16,6 +17,7 @@ import {
   useRevokePortalAccess,
   useSendPortalPasswordReset,
   useSetPortalPermissions,
+  useUpdateProfile,
 } from "../../lib/hooks";
 import { formatDateTime } from "../../lib/format";
 import type { Profile } from "../../lib/types";
@@ -167,13 +169,32 @@ function ActivePortalUsers() {
   const restore = useRestorePortalAccess();
   const setPermissions = useSetPortalPermissions();
   const sendReset = useSendPortalPasswordReset();
+  const updateProfile = useUpdateProfile();
+  const navigate = useNavigate();
   const { toast, error: toastError } = useToast();
+  const [editingName, setEditingName] = useState<string | null>(null);
 
   // Approved/restricted only — pending self-serve requests are handled
   // above, in the "Awaiting approval" table.
   const rows = (usersQ.data ?? []).filter(
     (u) => u.role === "client" || u.role === "restricted",
   );
+
+  async function onRename(id: string, full_name: string) {
+    try {
+      await updateProfile.mutateAsync({ id, patch: { full_name } });
+      toast("Name updated");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not update name");
+    } finally {
+      setEditingName(null);
+    }
+  }
+
+  function onOpenCustomer(clientId: string | null) {
+    if (!clientId) return;
+    navigate("/clients", { state: { openContactId: clientId } });
+  }
 
   async function onTogglePermission(
     profileId: string,
@@ -253,9 +274,39 @@ function ActivePortalUsers() {
             <tbody>
               {rows.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.full_name || "—"}</td>
+                  <td>
+                    {editingName === u.id ? (
+                      <input
+                        autoFocus
+                        defaultValue={u.full_name ?? ""}
+                        onBlur={(e) => onRename(u.id, e.target.value.trim())}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") setEditingName(null);
+                        }}
+                      />
+                    ) : (
+                      <button
+                        className="btn ghost small"
+                        onClick={() => setEditingName(u.id)}
+                      >
+                        {u.full_name || "—"}
+                      </button>
+                    )}
+                  </td>
                   <td>{u.email || "—"}</td>
-                  <td>{u.company || "—"}</td>
+                  <td>
+                    {u.company ? (
+                      <button
+                        className="btn ghost small"
+                        onClick={() => onOpenCustomer(u.client_id)}
+                      >
+                        {u.company}
+                      </button>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>
                     {u.role === "restricted" ? (
                       <span className="tag" style={{ background: "#f4dede", color: "#8a2c2c" }}>
