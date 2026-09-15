@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="38%" r="80%">
+      <stop offset="0%" stop-color="#34392f"/>
+      <stop offset="45%" stop-color="#262a22"/>
+      <stop offset="100%" stop-color="#17190f"/>
+    </radialGradient>
+    <radialGradient id="homeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8cbc43" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#8cbc43" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="13" height="13" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.15" fill="#e7f0da" fill-opacity="0.55"/>
+    </pattern>
+    <pattern id="dotsBright" width="13" height="13" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.3" fill="#cfe3ac" fill-opacity="0.85"/>
+    </pattern>
+    <clipPath id="clipNA">
+      <path d="M60,140 C140,90 260,80 340,120 C400,150 430,110 480,140 C520,165 500,220 460,240 C480,290 440,330 460,380 C430,420 380,430 350,400 C300,430 250,410 230,370 C180,380 140,340 150,290 C100,270 70,220 90,180 C70,165 60,150 60,140 Z"/>
+    </clipPath>
+    <clipPath id="clipSA">
+      <path d="M300,430 C340,420 380,440 400,480 C430,520 420,570 440,610 C460,660 440,710 410,740 C390,780 350,790 330,760 C310,730 320,690 300,660 C270,630 280,580 270,540 C250,500 270,460 300,430 Z"/>
+    </clipPath>
+    <clipPath id="clipEU">
+      <path d="M700,120 C740,100 790,95 830,110 C860,120 880,140 870,165 C890,180 880,210 850,215 C820,230 780,225 760,205 C730,210 700,190 700,160 C690,145 695,130 700,120 Z"/>
+    </clipPath>
+    <clipPath id="clipAF">
+      <path d="M720,230 C760,200 820,195 860,215 C900,225 930,210 950,235 C970,260 955,290 970,320 C985,350 970,390 950,410 C960,450 940,490 950,530 C960,570 940,610 910,630 C900,660 880,690 850,700 C830,680 835,650 820,630 C800,610 805,580 790,560 C770,540 775,500 760,470 C740,450 745,410 725,390 C710,360 715,320 700,290 C690,265 700,245 720,230 Z"/>
+    </clipPath>
+    <clipPath id="clipAS">
+      <path d="M950,150 C1000,110 1080,100 1150,120 C1220,110 1290,130 1340,160 C1380,180 1410,210 1400,250 C1430,270 1420,310 1390,320 C1400,360 1370,390 1330,385 C1320,420 1280,440 1250,420 C1220,440 1180,430 1160,400 C1120,410 1080,390 1070,355 C1030,350 1000,320 1000,280 C970,260 950,230 950,200 C940,180 945,160 950,150 Z"/>
+    </clipPath>
+    <clipPath id="clipAU">
+      <path d="M1230,590 C1270,570 1320,575 1350,600 C1390,610 1410,640 1400,670 C1410,700 1380,725 1345,720 C1310,735 1270,720 1255,690 C1220,685 1200,655 1215,625 C1205,610 1215,595 1230,590 Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#bgGrad)"/>
+
+  <g opacity="0.16" stroke="#dfe4df" stroke-width="1">
+    <line x1="0" y1="125" x2="1600" y2="125"/>
+    <line x1="0" y1="250" x2="1600" y2="250"/>
+    <line x1="0" y1="375" x2="1600" y2="375"/>
+    <line x1="0" y1="500" x2="1600" y2="500"/>
+    <line x1="0" y1="625" x2="1600" y2="625"/>
+    <line x1="0" y1="750" x2="1600" y2="750"/>
+    <line x1="0" y1="875" x2="1600" y2="875"/>
+    <line x1="200" y1="0" x2="200" y2="1000"/>
+    <line x1="400" y1="0" x2="400" y2="1000"/>
+    <line x1="600" y1="0" x2="600" y2="1000"/>
+    <line x1="800" y1="0" x2="800" y2="1000"/>
+    <line x1="1000" y1="0" x2="1000" y2="1000"/>
+    <line x1="1200" y1="0" x2="1200" y2="1000"/>
+    <line x1="1400" y1="0" x2="1400" y2="1000"/>
+  </g>
+
+  <ellipse cx="840" cy="610" rx="260" ry="260" fill="url(#homeGlow)"/>
+
+  <g>
+    <rect x="0" y="0" width="1600" height="1000" fill="url(#dots)" clip-path="url(#clipNA)"/>
+    <rect x="0" y="0" width="1600" height="1000" fill="url(#dots)" clip-path="url(#clipSA)"/>
+    <rect x="0" y="0" width="1600" height="1000" fill="url(#dots)" clip-path="url(#clipEU)"/>
+    <rect x="0" y="0" width="1600" height="1000" fill="url(#dotsBright)" clip-path="url(#clipAF)"/>
+    <rect x="0" y="0" width="1600" height="1000" fill="url(#dots)" clip-path="url(#clipAS)"/>
+    <rect x="0" y="0" width="1600" height="1000" fill="url(#dots)" clip-path="url(#clipAU)"/>
+  </g>
+
+  <g fill="none" stroke="#a8cf6a" stroke-linecap="round">
+    <path d="M840,610 Q700,300 760,150" stroke-width="1.6" stroke-opacity="0.55"/>
+    <path d="M840,610 Q1100,150 1320,260" stroke-width="1.6" stroke-opacity="0.5"/>
+    <path d="M840,610 Q1080,280 1260,380" stroke-width="1.6" stroke-opacity="0.45" stroke-dasharray="2 7"/>
+    <path d="M840,610 Q930,180 1000,300" stroke-width="1.6" stroke-opacity="0.55"/>
+    <path d="M840,610 Q500,80 280,240" stroke-width="1.6" stroke-opacity="0.45" stroke-dasharray="2 7"/>
+    <path d="M840,610 Q1150,450 1340,650" stroke-width="1.6" stroke-opacity="0.4"/>
+  </g>
+
+  <g fill="none" stroke="#e7f0da" stroke-linecap="round" stroke-opacity="0.9">
+    <path d="M840,610 Q700,300 760,150" stroke-width="1.4" stroke-dasharray="1 11">
+      <animate attributeName="stroke-dashoffset" from="0" to="-120" dur="9s" repeatCount="indefinite"/>
+    </path>
+    <path d="M840,610 Q930,180 1000,300" stroke-width="1.4" stroke-dasharray="1 11">
+      <animate attributeName="stroke-dashoffset" from="0" to="-120" dur="7s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <g>
+    <circle cx="760" cy="150" r="4" fill="#e7f0da"/>
+    <circle cx="1320" cy="260" r="4" fill="#e7f0da"/>
+    <circle cx="1260" cy="380" r="4" fill="#e7f0da"/>
+    <circle cx="1000" cy="300" r="4" fill="#e7f0da"/>
+    <circle cx="280" cy="240" r="4" fill="#e7f0da"/>
+    <circle cx="1340" cy="650" r="4" fill="#e7f0da"/>
+  </g>
+
+  <g>
+    <circle cx="840" cy="610" r="6" fill="#8cbc43"/>
+    <circle cx="840" cy="610" r="6" fill="none" stroke="#c3e07a" stroke-width="2">
+      <animate attributeName="r" from="6" to="26" dur="2.8s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-opacity" from="0.8" to="0" dur="2.8s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <g transform="translate(880,690)" opacity="0.85">
+    <path d="M0,10 L58,10 L52,22 L6,22 Z" fill="#e7f0da"/>
+    <rect x="8" y="0" width="10" height="10" fill="#e7f0da"/>
+    <rect x="21" y="0" width="10" height="10" fill="#e7f0da"/>
+    <rect x="34" y="0" width="10" height="10" fill="#e7f0da"/>
+    <line x1="-10" y1="22" x2="70" y2="22" stroke="#e7f0da" stroke-width="2" opacity="0.5"/>
+  </g>
+
+  <g transform="translate(1230,210) rotate(28)" opacity="0.55">
+    <path d="M0,0 L46,4 L0,8 L10,4 Z" fill="#e7f0da"/>
+  </g>
+
+  <g opacity="0.22" stroke="#e7f0da" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="90" y="80" width="30" height="38" rx="2"/>
+    <line x1="97" y1="92" x2="113" y2="92"/>
+    <line x1="97" y1="100" x2="113" y2="100"/>
+    <line x1="97" y1="108" x2="107" y2="108"/>
+  </g>
+
+  <g opacity="0.22" stroke="#e7f0da" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1460,780 C1460,762 1475,750 1490,750 C1505,750 1520,762 1520,780 C1520,800 1490,824 1490,824 C1490,824 1460,800 1460,780 Z"/>
+    <circle cx="1490" cy="778" r="7"/>
+  </g>
+
+  <g opacity="0.2" stroke="#e7f0da" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="70" y="860" width="36" height="26" rx="3"/>
+    <path d="M70,868 L88,880 L106,868"/>
+  </g>
+
+  <rect width="1600" height="1000" fill="#141610" fill-opacity="0.22"/>
+</svg>

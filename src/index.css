@@ -1987,10 +1987,7 @@ table.dt th.dt-sortable {
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    linear-gradient(rgba(46, 46, 46, 0.55), rgba(46, 46, 46, 0.55)),
-    url("https://fdzwnvinqiqrexhzgqkp.supabase.co/storage/v1/object/public/mail-assets/media/25fe317f-1277-44fe-9fca-ed05e81de4a4.jpg")
-      center / cover no-repeat;
+  background: var(--auth-bg) center / cover no-repeat;
   background-color: var(--ink);
 }
 .auth-card {
@@ -2047,8 +2044,8 @@ table.dt th.dt-sortable {
   background: var(--paper);
 }
 /* Fixed to the viewport so it never resizes/re-crops as the page grows
-   taller after a search result renders; the opaque hero simply paints
-   over it, so it only ever shows below the hero. */
+   taller after a search result renders; stretched 100% 100% (not cover)
+   so the full image is always visible with no side cropping. */
 .track-page::before,
 .track-page::after {
   content: "";
@@ -2057,17 +2054,18 @@ table.dt th.dt-sortable {
   z-index: 0;
 }
 .track-page::before {
-  background: var(--track-page-bg) center / 100% 100% no-repeat;
+  background:
+    url("https://cdn.expac.co.za/mail-assets/media/ed1dd431-696f-4f97-b7ad-e0eb0d60c712.png")
+      center / 100% 100% no-repeat;
 }
 .track-page::after {
-  background: rgba(20, 22, 20, 0.55);
+  background: rgba(20, 22, 20, 0.28);
 }
 .track-hero {
   position: relative;
   z-index: 1;
   flex: none;
-  background: var(--ink);
-  padding: 48px 24px 40px;
+  padding: 320px 24px 40px;
 }
 .track-hero-inner {
   max-width: 760px;
@@ -2125,7 +2123,7 @@ table.dt th.dt-sortable {
 }
 @media (max-width: 520px) {
   .track-hero {
-    padding: 32px 16px 28px;
+    padding: 220px 16px 28px;
   }
   .track-hero h1 {
     font-size: 1.4rem;

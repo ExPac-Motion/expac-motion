@@ -1,6 +1,5 @@
-import { useState, type FormEvent, type CSSProperties } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import trackHeroBg from "../assets/track-hero-plane.png";
 import TrackingMap from "../components/TrackingMap";
 import { trackShipment } from "../lib/db";
 import { formatDate, formatDateTime, portCode } from "../lib/format";
@@ -38,28 +37,10 @@ export default function PublicTrackPage() {
     }
   }
 
-  const pageStyle = {
-    "--track-page-bg": `url(${trackHeroBg})`,
-  } as CSSProperties;
-
   return (
-    <div className="track-page" style={pageStyle}>
+    <div className="track-page">
       <header className="track-hero">
         <div className="track-hero-inner">
-          <div className="brand">
-            <div className="brand-mark">
-              <img
-                src="https://fdzwnvinqiqrexhzgqkp.supabase.co/storage/v1/object/public/mail-assets/media/d2dbb470-55b1-483c-92ff-0cba3a2756b5.png"
-                alt="EXPAC"
-              />
-            </div>
-            <div>
-              <div className="brand-name">EXPAC</div>
-              <div className="brand-sub" style={{ color: "#9aa39a" }}>
-                FORWARDING
-              </div>
-            </div>
-          </div>
           <h1>Track Your Shipment</h1>
           <p className="sub">Enter your shipment number to see its current status.</p>
           <p className="sub track-portal-note">
