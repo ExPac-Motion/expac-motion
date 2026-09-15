@@ -1987,7 +1987,9 @@ table.dt th.dt-sortable {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--auth-bg) center / cover no-repeat;
+  background:
+    url("https://cdn.expac.co.za/mail-assets/media/749b55ba-97b6-492b-9ccf-9b332b19cd73.png")
+      center / 100% 100% no-repeat;
   background-color: var(--ink);
 }
 .auth-card {

@@ -1,6 +1,5 @@
-import { useState, type FormEvent, type CSSProperties } from "react";
+import { useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
-import authBg from "../assets/portal-login-bg.svg";
 
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
@@ -34,10 +33,8 @@ export default function LoginPage() {
     }
   }
 
-  const wrapStyle = { "--auth-bg": `url(${authBg})` } as CSSProperties;
-
   return (
-    <div className="auth-wrap" style={wrapStyle}>
+    <div className="auth-wrap">
       <form className="auth-card" onSubmit={onSubmit}>
         <div className="brand">
           <div className="brand-mark">
