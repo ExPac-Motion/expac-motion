@@ -2116,6 +2116,21 @@ table.dt th.dt-sortable {
   gap: 16px 20px;
   margin-bottom: 20px;
 }
+@media (max-width: 1024px) {
+  .track-content {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .track-content-inner {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .track-content-inner .panel {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+}
 @media (max-width: 900px) {
   .track-fields {
     grid-template-columns: repeat(2, 1fr);
@@ -2134,7 +2149,8 @@ table.dt th.dt-sortable {
     font-size: 1.4rem;
   }
   .track-content {
-    padding: 20px 16px 40px;
+    padding-top: 20px;
+    padding-bottom: 40px;
   }
   .track-fields {
     grid-template-columns: 1fr;
