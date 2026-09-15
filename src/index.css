@@ -2122,8 +2122,13 @@ table.dt th.dt-sortable {
   }
 }
 @media (max-width: 520px) {
+  .track-page::before {
+    background:
+      url("https://cdn.expac.co.za/mail-assets/media/3c51a781-c8c2-4126-9101-c286df0458ef.png")
+        center / 100% 100% no-repeat;
+  }
   .track-hero {
-    padding: 220px 16px 28px;
+    padding: 270px 16px 28px;
   }
   .track-hero h1 {
     font-size: 1.4rem;
