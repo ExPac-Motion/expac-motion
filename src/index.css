@@ -1555,6 +1555,14 @@ table.dt th.dt-sortable {
 }
 
 /* ---------- Charge table ---------- */
+/* Let the table grow past its wrapper and scroll horizontally instead of
+   squeezing every column to fit 100% width (the app-wide `table` default) —
+   otherwise widening one column (e.g. description) steals space from the
+   fixed-width ones (e.g. Cur, ROE) and clips them. */
+.charge-table {
+  width: auto;
+  min-width: 100%;
+}
 .charge-table th,
 .charge-table td {
   padding: 8px 6px;
@@ -1613,6 +1621,9 @@ table.dt th.dt-sortable {
 }
 .charge-table td.c-desc {
   min-width: 340px;
+}
+.charge-table .num.c-roe {
+  width: 70px;
 }
 
 /* ---------- Packing list table ---------- */
