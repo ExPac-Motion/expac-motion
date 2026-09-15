@@ -5,6 +5,12 @@
     <link rel="icon" type="image/png" href="/Favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ExPac Motion</title>
+    <!-- Always points at the production domain, even when served from
+         expac-motion.pages.dev (kept live deliberately for day-to-day work
+         — see functions/_middleware.ts, which stops *that* domain from
+         being indexed) or any other alias, so search engines consolidate
+         everything onto the one canonical URL. -->
+    <link rel="canonical" href="https://expac-motion.co.za/" />
   </head>
   <body spellcheck="true">
     <div id="root"></div>
