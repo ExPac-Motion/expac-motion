@@ -1560,7 +1560,7 @@ table.dt th.dt-sortable {
    otherwise widening one column (e.g. description) steals space from the
    fixed-width ones (e.g. Cur, ROE) and clips them. */
 .charge-table {
-  width: auto;
+  width: max-content;
   min-width: 100%;
 }
 .charge-table th,
