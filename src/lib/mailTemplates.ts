@@ -77,6 +77,8 @@ Shipment Number: {{ shipment.number }}
 Shipping Line: {{ shipment.shipping_line }}
 Vessel Name: {{ shipment.vessel }}
 Container Number: {{ shipment.container }}
+Port of Load: {{ shipment.origin }}
+Port of Discharge: {{ shipment.destination }}
 Departure from Port of Load: {{ shipment.etd }}
 Arrival at Port of Discharge: {{ shipment.eta }}
 Provisional Delivery Date: {{ shipment.delivery_date }}
@@ -99,6 +101,8 @@ ${RULE}
 
 Shipping Mode: {{ shipment.mode }}
 Shipment Number: {{ shipment.number }}
+Port of Load: {{ shipment.origin }}
+Port of Discharge: {{ shipment.destination }}
 Departure from Port of Load: {{ shipment.etd }}
 Arrival at Port of Discharge: {{ shipment.eta }}
 Provisional Delivery Date: {{ shipment.delivery_date }}
