@@ -24,7 +24,7 @@ import {
   useUpdateOpportunity,
   useUpdateQuotesBulk,
 } from "../../lib/hooks";
-import { synthesizeQuoteOpportunities } from "../../lib/calc";
+import { chargeTotals, fxOf, synthesizeQuoteOpportunities } from "../../lib/calc";
 import { formatDate, money, readableText } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
@@ -32,6 +32,7 @@ import {
   type Opportunity,
   type OpportunityPatch,
   type OpportunityStatus,
+  type Quote,
   type QuoteStatus,
 } from "../../lib/types";
 
@@ -218,6 +219,15 @@ export default function OpportunitiesTab() {
     return m;
   }, [profilesQ.data]);
 
+  // A real (non-synthetic) opportunity's own `value` is a static, manually
+  // entered number that never syncs once a quote is linked to it -- look the
+  // full quote up here so the card can show its live total instead.
+  const quoteById = useMemo(() => {
+    const m = new Map<string, Quote>();
+    for (const q of quotesQ.data ?? []) m.set(q.id, q);
+    return m;
+  }, [quotesQ.data]);
+
   // Every quotation is surfaced as a card in the stage matching its status,
   // unless a real opportunity already links that quote.
   const quoteOpps = useMemo<Opportunity[]>(() => {
@@ -230,10 +240,25 @@ export default function OpportunitiesTab() {
     );
   }, [opts.showQuotes, oppsQ.data, quotesQ.data, profileById, leadStatusIdByLead]);
 
-  const opps = useMemo(
-    () => [...realOpps, ...quoteOpps],
-    [realOpps, quoteOpps],
-  );
+  // A real opportunity's `value` is a static number set once by hand and
+  // never kept in sync with a quote linked to it afterwards (synthetic
+  // quote cards already compute this live -- see synthesizeQuoteOpportunities
+  // above). Re-derive it here so a real opportunity's card and the column
+  // totals reflect the quote's current total (incl. VAT) the moment one is
+  // linked, same as the auto-listed quote cards.
+  const opps = useMemo(() => {
+    const all = [...realOpps, ...quoteOpps];
+    return all.map((o) => {
+      if (!o.quote_id) return o;
+      const q = quoteById.get(o.quote_id);
+      if (!q) return o;
+      const manual = q.opportunity_value != null ? Number(q.opportunity_value) : null;
+      const computed = chargeTotals(q.quote_lines, fxOf(q)).sellIncl;
+      const value = manual ?? computed;
+      if (value === o.value && (o.opportunity_value ?? null) === manual) return o;
+      return { ...o, value, opportunity_value: manual };
+    });
+  }, [realOpps, quoteOpps, quoteById]);
 
   const statusById = useMemo(() => {
     const m = new Map<string, LeadStatus>();
@@ -424,6 +449,7 @@ export default function OpportunitiesTab() {
                       key={o.id}
                       opportunity={o}
                       synthetic={String(o.id).startsWith("quote:")}
+                      linkedQuote={o.quote_id ? quoteById.get(o.quote_id) : undefined}
                       fields={opts.fields}
                       leadStatus={
                         o.lead?.lead_status_id
@@ -455,6 +481,7 @@ export default function OpportunitiesTab() {
 function OpportunityCard({
   opportunity: o,
   synthetic,
+  linkedQuote,
   fields,
   leadStatus,
   onEdit,
@@ -462,6 +489,9 @@ function OpportunityCard({
 }: {
   opportunity: Opportunity;
   synthetic: boolean;
+  /** The full quote behind o.quote_id, when one is linked -- lets the Value
+   *  line show the quote's live total instead of a stale stored number. */
+  linkedQuote?: Quote;
   fields: CardFields;
   leadStatus: LeadStatus | null;
   onEdit: () => void;
@@ -559,11 +589,15 @@ function OpportunityCard({
           style={{ display: "flex", alignItems: "center", gap: 6 }}
         >
           <span className="opp-line-label">Value:</span>
-          {synthetic && o.quote?.id ? (
+          {linkedQuote ? (
             <QuoteValueEditor
-              quoteId={o.quote.id}
-              manual={o.opportunity_value ?? null}
-              computed={o.value}
+              quoteId={linkedQuote.id}
+              manual={
+                linkedQuote.opportunity_value != null
+                  ? Number(linkedQuote.opportunity_value)
+                  : null
+              }
+              computed={chargeTotals(linkedQuote.quote_lines, fxOf(linkedQuote)).sellIncl}
             />
           ) : (
             <strong>{money(o.value)}</strong>
