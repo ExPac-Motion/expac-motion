@@ -2,14 +2,20 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
 
 export default function LoginPage() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const { signIn, signUp, requestPasswordReset } = useAuth();
+  const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
+
+  function switchMode(next: "in" | "up" | "forgot") {
+    setMode(next);
+    setErr("");
+    setNotice("");
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -19,12 +25,17 @@ export default function LoginPage() {
     try {
       if (mode === "in") {
         await signIn(email, password);
-      } else {
+      } else if (mode === "up") {
         await signUp(email, password, fullName);
         setNotice(
           "Account created. If email confirmation is on, check your inbox, then sign in.",
         );
         setMode("in");
+      } else {
+        await requestPasswordReset(email);
+        setNotice(
+          "If that email has a login, a reset link is on its way — check your inbox.",
+        );
       }
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Something went wrong");
@@ -50,11 +61,15 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-        <h1>{mode === "in" ? "Sign in" : "Create account"}</h1>
+        <h1>
+          {mode === "in" ? "Sign in" : mode === "up" ? "Create account" : "Reset your password"}
+        </h1>
         <p className="sub">
           {mode === "in"
             ? "Use your ExPac Motion login."
-            : "Set up a login for a team member."}
+            : mode === "up"
+              ? "Set up a login for a team member."
+              : "Enter your email and we'll send you a link to set a new password."}
         </p>
 
         {err && <div className="auth-error">{err}</div>}
@@ -88,44 +103,57 @@ export default function LoginPage() {
             required
           />
         </div>
-        <div className="field">
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === "in" ? "current-password" : "new-password"}
-            minLength={6}
-            required
-          />
-        </div>
+        {mode !== "forgot" && (
+          <div className="field">
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === "in" ? "current-password" : "new-password"}
+              minLength={6}
+              required
+            />
+          </div>
+        )}
+        {mode === "in" && (
+          <button
+            type="button"
+            className="link-btn"
+            style={{ marginBottom: 14 }}
+            onClick={() => switchMode("forgot")}
+          >
+            Forgot your password?
+          </button>
+        )}
 
         <button className="btn" type="submit" disabled={busy} style={{ width: "100%", justifyContent: "center" }}>
-          {busy ? "Please wait…" : mode === "in" ? "Sign in" : "Create account"}
+          {busy
+            ? "Please wait…"
+            : mode === "in"
+              ? "Sign in"
+              : mode === "up"
+                ? "Create account"
+                : "Send reset link"}
         </button>
 
         <div className="auth-toggle">
-          {mode === "in" ? (
+          {mode === "in" && (
             <button
               type="button"
               className="link-btn"
-              onClick={() => {
-                setMode("up");
-                setErr("");
-              }}
+              onClick={() => switchMode("up")}
             >
               Need a login? Create an account
             </button>
-          ) : (
+          )}
+          {mode !== "in" && (
             <button
               type="button"
               className="link-btn"
-              onClick={() => {
-                setMode("in");
-                setErr("");
-              }}
+              onClick={() => switchMode("in")}
             >
-              Already have a login? Sign in
+              {mode === "up" ? "Already have a login? Sign in" : "Back to sign in"}
             </button>
           )}
         </div>

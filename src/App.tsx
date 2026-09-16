@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import LoginPage from "./auth/LoginPage";
+import SetNewPasswordPage from "./auth/SetNewPasswordPage";
 import Layout from "./components/Layout";
 import type { Profile } from "./lib/types";
 import DashboardPage from "./pages/DashboardPage";
@@ -129,14 +130,21 @@ function SetupNeeded() {
   );
 }
 
-export default function App() {
-  if (!isSupabaseConfigured) return <SetupNeeded />;
+/** Password-recovery links land the user in a valid session before any
+ *  route gets a say in it, so this has to pre-empt routing entirely --
+ *  otherwise LoginRoute or Protected would just bounce them into their
+ *  normal dashboard/portal without ever prompting for a new password. */
+function AppGate() {
+  const { passwordRecovery } = useAuth();
+  if (passwordRecovery) return <SetNewPasswordPage />;
+  return <AppRoutes />;
+}
 
+function AppRoutes() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
           {import.meta.env.DEV && (
             <Route path="/quotes/demo/print" element={<QuotePrintDemoPage />} />
           )}
@@ -220,9 +228,18 @@ export default function App() {
             <Route path="clearing-agents" element={<ClearingAgentsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default function App() {
+  if (!isSupabaseConfigured) return <SetupNeeded />;
+
+  return (
+    <AuthProvider>
+      <AppGate />
     </AuthProvider>
   );
 }

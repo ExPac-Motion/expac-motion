@@ -13,6 +13,10 @@ interface AuthApi {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  /** True once Supabase has parsed a password-recovery link from the URL --
+   *  the app should show the "set a new password" screen instead of any
+   *  normal route until this clears (see updatePassword). */
+  passwordRecovery: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (
     email: string,
@@ -21,6 +25,8 @@ interface AuthApi {
     extraMeta?: Record<string, string>,
   ) => Promise<void>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthApi | null>(null);
@@ -28,6 +34,7 @@ const AuthContext = createContext<AuthApi | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth
@@ -35,8 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => setSession(data.session))
       .catch(() => setSession(null))
       .finally(() => setLoading(false));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -46,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       loading,
+      passwordRecovery,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -64,8 +73,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signOut() {
         await supabase.auth.signOut();
       },
+      async requestPasswordReset(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(
+          email.trim(),
+          { redirectTo: window.location.origin + "/login" },
+        );
+        if (error) throw error;
+      },
+      async updatePassword(newPassword) {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+        if (error) throw error;
+        setPasswordRecovery(false);
+      },
     }),
-    [session, loading],
+    [session, loading, passwordRecovery],
   );
 
   return <AuthContext.Provider value={api}>{children}</AuthContext.Provider>;
