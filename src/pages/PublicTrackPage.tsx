@@ -52,7 +52,7 @@ export default function PublicTrackPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. SEA170869"
+              placeholder="e.g. SEA170869, AIR482910 or CX330218"
               autoFocus
             />
             <button className="btn" type="submit" disabled={state === "loading"}>
