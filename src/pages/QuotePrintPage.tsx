@@ -303,9 +303,9 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
           <th>Qty</th>
           <th>CBM</th>
           <th>Volume</th>
-          <th>Tot CBM</th>
-          <th>Tot Act</th>
-          <th>Tot Vol</th>
+          <th>Ttl CBM</th>
+          <th>Ttl Act</th>
+          <th>Ttl Vol</th>
         </tr>
       ),
       rows: packingRows.map((p, i) => {
