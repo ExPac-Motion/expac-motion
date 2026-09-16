@@ -1272,7 +1272,7 @@ function ViewField({ label, value }: { label: string; value: string }) {
       <div className="hint" style={{ marginBottom: 4 }}>
         {label}
       </div>
-      <strong>{value}</strong>
+      <strong style={{ whiteSpace: "pre-wrap" }}>{value}</strong>
     </div>
   );
 }
