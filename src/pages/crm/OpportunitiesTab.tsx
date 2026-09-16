@@ -24,7 +24,12 @@ import {
   useUpdateOpportunity,
   useUpdateQuotesBulk,
 } from "../../lib/hooks";
-import { chargeTotals, fxOf, synthesizeQuoteOpportunities } from "../../lib/calc";
+import {
+  chargeTotals,
+  fxOf,
+  synthesizeQuoteOpportunities,
+  withLiveOpportunityValues,
+} from "../../lib/calc";
 import { formatDate, money, readableText } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
@@ -240,25 +245,15 @@ export default function OpportunitiesTab() {
     );
   }, [opts.showQuotes, oppsQ.data, quotesQ.data, profileById, leadStatusIdByLead]);
 
-  // A real opportunity's `value` is a static number set once by hand and
-  // never kept in sync with a quote linked to it afterwards (synthetic
-  // quote cards already compute this live -- see synthesizeQuoteOpportunities
-  // above). Re-derive it here so a real opportunity's card and the column
-  // totals reflect the quote's current total (incl. VAT) the moment one is
-  // linked, same as the auto-listed quote cards.
-  const opps = useMemo(() => {
-    const all = [...realOpps, ...quoteOpps];
-    return all.map((o) => {
-      if (!o.quote_id) return o;
-      const q = quoteById.get(o.quote_id);
-      if (!q) return o;
-      const manual = q.opportunity_value != null ? Number(q.opportunity_value) : null;
-      const computed = chargeTotals(q.quote_lines, fxOf(q)).sellIncl;
-      const value = manual ?? computed;
-      if (value === o.value && (o.opportunity_value ?? null) === manual) return o;
-      return { ...o, value, opportunity_value: manual };
-    });
-  }, [realOpps, quoteOpps, quoteById]);
+  const liveRealOpps = useMemo(
+    () => withLiveOpportunityValues(realOpps, quotesQ.data ?? []),
+    [realOpps, quotesQ.data],
+  );
+
+  const opps = useMemo(
+    () => [...liveRealOpps, ...quoteOpps],
+    [liveRealOpps, quoteOpps],
+  );
 
   const statusById = useMemo(() => {
     const m = new Map<string, LeadStatus>();

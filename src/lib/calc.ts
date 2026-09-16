@@ -554,3 +554,29 @@ export function synthesizeQuoteOpportunities(
       } satisfies Opportunity;
     });
 }
+
+/**
+ * A real (non-synthetic) Opportunity record's `value` is a plain number set
+ * once by hand and never kept in sync afterwards — unlike a synthesized
+ * quote card, which always computes its value live from the quote (see
+ * synthesizeQuoteOpportunities above). Once a quote gets linked to a real
+ * opportunity (quote_id set), re-derive its value the same way so every
+ * consumer — the pipeline board, the sales dashboard, trends — agrees with
+ * the quote's actual current total instead of a stale stored number.
+ */
+export function withLiveOpportunityValues(
+  realOpps: Opportunity[],
+  quotes: Quote[],
+): Opportunity[] {
+  const quoteById = new Map(quotes.map((q) => [q.id, q]));
+  return realOpps.map((o) => {
+    if (!o.quote_id) return o;
+    const q = quoteById.get(o.quote_id);
+    if (!q) return o;
+    const manualValue = q.opportunity_value != null ? Number(q.opportunity_value) : null;
+    const computed = chargeTotals(q.quote_lines, fxOf(q)).sellIncl;
+    const value = manualValue ?? computed;
+    if (value === o.value && (o.opportunity_value ?? null) === manualValue) return o;
+    return { ...o, value, opportunity_value: manualValue };
+  });
+}

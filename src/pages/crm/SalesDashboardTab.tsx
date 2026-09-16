@@ -21,7 +21,12 @@ import {
   useQuotes,
   useUpdateCompanySettings,
 } from "../../lib/hooks";
-import { chargeTotals, fxOf, synthesizeQuoteOpportunities } from "../../lib/calc";
+import {
+  chargeTotals,
+  fxOf,
+  synthesizeQuoteOpportunities,
+  withLiveOpportunityValues,
+} from "../../lib/calc";
 import { money, timeAgo } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
@@ -121,7 +126,13 @@ export default function SalesDashboardTab() {
 
   const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
   const leads = useMemo(() => leadsQ.data ?? [], [leadsQ.data]);
-  const opps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
+  // A real opportunity's stored value never syncs once a quote is linked to
+  // it — recompute live from the quote so pipeline totals below match what
+  // the Opportunities board shows (see withLiveOpportunityValues).
+  const opps = useMemo(
+    () => withLiveOpportunityValues(oppsQ.data ?? [], quotesQ.data ?? []),
+    [oppsQ.data, quotesQ.data],
+  );
   const profileById = useMemo(() => {
     const m = new Map<string, { id: string; full_name: string | null }>();
     for (const p of profilesQ.data ?? []) m.set(p.id, p);

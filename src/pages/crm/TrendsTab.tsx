@@ -20,7 +20,7 @@ import {
   useOpportunities,
   useQuotes,
 } from "../../lib/hooks";
-import { chargeTotals, fxOf } from "../../lib/calc";
+import { chargeTotals, fxOf, withLiveOpportunityValues } from "../../lib/calc";
 import { formatDate, money } from "../../lib/format";
 import {
   WON_QUOTE_STATUSES,
@@ -118,7 +118,12 @@ export default function TrendsTab() {
 
   const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
   const leads = useMemo(() => leadsQ.data ?? [], [leadsQ.data]);
-  const opps = useMemo(() => oppsQ.data ?? [], [oppsQ.data]);
+  // A real opportunity's stored value never syncs once a quote is linked to
+  // it -- recompute live so sales/revenue totals below aren't understated.
+  const opps = useMemo(
+    () => withLiveOpportunityValues(oppsQ.data ?? [], quotes),
+    [oppsQ.data, quotes],
+  );
   const costOfSalesTarget = settingsQ.data?.cost_of_sales_target ?? 85;
 
   const monthlyData = useMemo(() => {
