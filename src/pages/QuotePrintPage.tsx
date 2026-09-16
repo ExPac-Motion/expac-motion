@@ -199,7 +199,7 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
             </div>
           </div>
           <div className="qs-meta">
-            <b>Document Number:</b>
+            <b>Shipment Number:</b>
             <span>{reference}</span>
             <b>Shipping Mode:</b>
             <span>{mode}</span>
@@ -701,7 +701,7 @@ export default function QuotePrintPage() {
           q.lead?.company ??
           "—",
       ],
-      ["Reference", q.reference],
+      ["Reference", q.customer_reference || "—"],
       ["Mode", q.mode],
       ["Commodity", q.commodity || "—"],
       ["Incoterms", q.incoterms || "—"],

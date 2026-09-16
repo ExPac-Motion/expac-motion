@@ -82,7 +82,7 @@ export default function QuotePrintDemoPage() {
     shipment: [
       ["Shipper / Exporter", "Overseas Supplier Co."],
       ["Consignee / Delivery Point", "Demo Customer (Pty) Ltd"],
-      ["Reference", "SEA999001"],
+      ["Reference", "TPQ549"],
       ["Mode", "Sea Freight (LCL)"],
       ["Commodity", "General Cargo"],
       ["Incoterms", "FCA"],
