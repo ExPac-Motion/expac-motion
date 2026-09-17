@@ -1474,13 +1474,16 @@ table.dt th.dt-sortable {
    (which is what background-size: 100% auto did) -- `cover` always fully
    fills the page at a consistent scale, centered, with any excess
    cropped off (on a narrow/portrait screen that crop falls on the
-   left/right since this image is landscape). */
+   left/right since this image is landscape).
+   No background-attachment: fixed here -- it ties the image to just the
+   first viewport-height of space, so a page taller than one viewport
+   (e.g. embedded in a WordPress iframe sized generously) shows plain
+   background color past that point instead of more image. */
 .wf-page.wf-bg-contact {
   background-image: url("https://cdn.expac.co.za/mail-assets/media/489f1e4c-7c34-4b51-94dc-132da96d9c0e.png");
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  background-attachment: fixed;
 }
 .wf-card {
   width: 100%;
