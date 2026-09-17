@@ -53,7 +53,7 @@ export function shipmentInfoRows(
     ["Shipper / Exporter", job.supplier?.company ?? "—"],
     ["Port of Load", portCode(job.origin)],
     ["Port of Discharge", portCode(job.destination)],
-    ["Carrier / Airline", job.carrier_name || "—"],
+    ["Agent / Airline", job.carrier_name || "—"],
     ["Shipping Line", job.shipping_line || "—"],
     ["Vessel", job.vessel_name || "—"],
     ["Container No", job.container_no || "—"],
