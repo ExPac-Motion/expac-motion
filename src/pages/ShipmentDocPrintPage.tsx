@@ -91,7 +91,7 @@ export default function ShipmentDocPrintPage() {
         {def.showNotes && (
           <>
             <div className="qs-bar">{def.notesLabel ?? def.title}</div>
-            <p style={{ fontSize: 11, minHeight: 100, whiteSpace: "pre-line" }}>
+            <p style={{ fontSize: 11, margin: 0, whiteSpace: "pre-line" }}>
               {job.notes || "—"}
             </p>
           </>
