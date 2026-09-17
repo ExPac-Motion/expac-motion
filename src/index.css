@@ -1471,23 +1471,15 @@ table.dt th.dt-sortable {
 }
 /* Contact Us hosted form only -- full-width background, no side cropping.
    background-size: 100% auto always shows the whole image edge-to-edge;
-   any cropping that results is top/bottom only. */
+   any cropping that results is top/bottom only. The card keeps the page's
+   normal top padding and overlaps the image (same as the desktop view),
+   so this reads as one background with a form floating on it -- not a
+   banner image stacked above a separate card. */
 .wf-page.wf-bg-contact {
   background-image: url("https://cdn.expac.co.za/mail-assets/media/26339a43-17e7-4a07-829b-79b5634f41a4.png");
   background-repeat: no-repeat;
   background-position: top center;
   background-size: 100% auto;
-}
-/* On narrow screens the card is nearly full width, so the default 40px
-   top padding leaves almost the whole image hidden behind it. Push the
-   card down by the image's own rendered height (its aspect ratio times
-   the viewport width, since background-size is 100% of this element's
-   width) so the full-width image is visible above the card instead of
-   being covered by it -- still no left/right cropping either way. */
-@media (max-width: 700px) {
-  .wf-page.wf-bg-contact {
-    padding-top: calc(100vw * 1024 / 1536 + 16px);
-  }
 }
 .wf-card {
   width: 100%;
