@@ -174,7 +174,7 @@ export default function ShipmentDocPrintPage() {
         )}
 
         <div className="qs-bar">Expac Remarks</div>
-        <p style={{ fontSize: 11, minHeight: 40, whiteSpace: "pre-line" }}>
+        <p style={{ fontSize: 11, margin: 0, whiteSpace: "pre-line" }}>
           {job.ops_remarks || "—"}
         </p>
 
