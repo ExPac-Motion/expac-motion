@@ -79,14 +79,22 @@ export default function FormPublicPage() {
   const wrapClass = [
     "wf-page",
     embed ? "wf-embed" : "",
-    id === CONTACT_US_FORM_ID ? "wf-bg-contact" : "",
   ]
     .filter(Boolean)
     .join(" ");
+  const bgImage = id === CONTACT_US_FORM_ID && (
+    <img
+      className="wf-bg-image"
+      src="https://cdn.expac.co.za/mail-assets/media/489f1e4c-7c34-4b51-94dc-132da96d9c0e.png"
+      alt=""
+      aria-hidden="true"
+    />
+  );
 
   if (form === null) {
     return (
       <div className={wrapClass}>
+        {bgImage}
         <div className="wf-card">Loading…</div>
       </div>
     );
@@ -94,6 +102,7 @@ export default function FormPublicPage() {
   if (form === "missing") {
     return (
       <div className={wrapClass}>
+        {bgImage}
         <div className="wf-card">
           <h1>Form not found</h1>
           <p className="sub">This form is no longer available.</p>
@@ -104,6 +113,7 @@ export default function FormPublicPage() {
   if (done) {
     return (
       <div className={wrapClass}>
+        {bgImage}
         <div className="wf-card wf-thanks">
           <h1>{form.thankyou_title}</h1>
           <p>{form.thankyou_body}</p>
@@ -114,6 +124,7 @@ export default function FormPublicPage() {
 
   return (
     <div className={wrapClass}>
+      {bgImage}
       <form className="wf-card" onSubmit={onSubmit}>
         <h1>{form.heading}</h1>
         {form.subtitle && <p className="sub">{form.subtitle}</p>}

@@ -1457,33 +1457,39 @@ table.dt th.dt-sortable {
 
 /* Web contact forms — public hosted page */
 .wf-page {
+  position: relative;
   min-height: 100vh;
   background: #f4f3ee;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 40px 16px;
+  overflow: hidden;
 }
 .wf-page.wf-embed {
   min-height: auto;
   background: transparent;
   padding: 8px;
 }
-/* Contact Us hosted form only. A real background stays visually stable
-   as the viewport resizes rather than rescaling with the container width
-   (which is what background-size: 100% auto did) -- `cover` always fully
-   fills the page at a consistent scale, centered, with any excess
-   cropped off (on a narrow/portrait screen that crop falls on the
-   left/right since this image is landscape).
-   No background-attachment: fixed here -- it ties the image to just the
-   first viewport-height of space, so a page taller than one viewport
-   (e.g. embedded in a WordPress iframe sized generously) shows plain
-   background color past that point instead of more image. */
-.wf-page.wf-bg-contact {
-  background-image: url("https://cdn.expac.co.za/mail-assets/media/489f1e4c-7c34-4b51-94dc-132da96d9c0e.png");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
+/* Contact Us hosted form only. Rendered as a real <img> (see
+   FormPublicPage.tsx) rather than a CSS background-image -- a scaled
+   CSS background can silently stop painting partway down an unusually
+   tall container (e.g. an oversized WordPress iframe height), leaving
+   plain background color below that point. object-fit: cover doesn't
+   have that failure mode; it always fills the box exactly, at any
+   height, same as a normal image would. */
+.wf-bg-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+}
+.wf-page .wf-card {
+  position: relative;
+  z-index: 1;
 }
 .wf-card {
   width: 100%;
