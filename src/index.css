@@ -1469,17 +1469,18 @@ table.dt th.dt-sortable {
   background: transparent;
   padding: 8px;
 }
-/* Contact Us hosted form only -- full-width background, no side cropping.
-   background-size: 100% auto always shows the whole image edge-to-edge;
-   any cropping that results is top/bottom only. The card keeps the page's
-   normal top padding and overlaps the image (same as the desktop view),
-   so this reads as one background with a form floating on it -- not a
-   banner image stacked above a separate card. */
+/* Contact Us hosted form only. A real background stays visually stable
+   as the viewport resizes rather than rescaling with the container width
+   (which is what background-size: 100% auto did) -- `cover` always fully
+   fills the page at a consistent scale, centered, with any excess
+   cropped off (on a narrow/portrait screen that crop falls on the
+   left/right since this image is landscape). */
 .wf-page.wf-bg-contact {
   background-image: url("https://cdn.expac.co.za/mail-assets/media/26339a43-17e7-4a07-829b-79b5634f41a4.png");
   background-repeat: no-repeat;
-  background-position: top center;
-  background-size: 100% auto;
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
 }
 .wf-card {
   width: 100%;
