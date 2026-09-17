@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getPublicWebForm, submitWebForm, uploadWebFormImage } from "../lib/db";
-import { CONTACT_US_FORM_ID, type PublicWebForm } from "../lib/types";
+import type { PublicWebForm } from "../lib/types";
 
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
@@ -76,25 +76,11 @@ export default function FormPublicPage() {
     }
   }
 
-  const wrapClass = [
-    "wf-page",
-    embed ? "wf-embed" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const bgImage = id === CONTACT_US_FORM_ID && (
-    <img
-      className="wf-bg-image"
-      src="https://cdn.expac.co.za/mail-assets/media/489f1e4c-7c34-4b51-94dc-132da96d9c0e.png"
-      alt=""
-      aria-hidden="true"
-    />
-  );
+  const wrapClass = embed ? "wf-page wf-embed" : "wf-page";
 
   if (form === null) {
     return (
       <div className={wrapClass}>
-        {bgImage}
         <div className="wf-card">Loading…</div>
       </div>
     );
@@ -102,7 +88,6 @@ export default function FormPublicPage() {
   if (form === "missing") {
     return (
       <div className={wrapClass}>
-        {bgImage}
         <div className="wf-card">
           <h1>Form not found</h1>
           <p className="sub">This form is no longer available.</p>
@@ -113,7 +98,6 @@ export default function FormPublicPage() {
   if (done) {
     return (
       <div className={wrapClass}>
-        {bgImage}
         <div className="wf-card wf-thanks">
           <h1>{form.thankyou_title}</h1>
           <p>{form.thankyou_body}</p>
@@ -124,7 +108,6 @@ export default function FormPublicPage() {
 
   return (
     <div className={wrapClass}>
-      {bgImage}
       <form className="wf-card" onSubmit={onSubmit}>
         <h1>{form.heading}</h1>
         {form.subtitle && <p className="sub">{form.subtitle}</p>}

@@ -1457,39 +1457,17 @@ table.dt th.dt-sortable {
 
 /* Web contact forms — public hosted page */
 .wf-page {
-  position: relative;
   min-height: 100vh;
   background: #f4f3ee;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 40px 16px;
-  overflow: hidden;
 }
 .wf-page.wf-embed {
   min-height: auto;
   background: transparent;
   padding: 8px;
-}
-/* Contact Us hosted form only. Rendered as a real <img> (see
-   FormPublicPage.tsx) rather than a CSS background-image -- a scaled
-   CSS background can silently stop painting partway down an unusually
-   tall container (e.g. an oversized WordPress iframe height), leaving
-   plain background color below that point. object-fit: cover doesn't
-   have that failure mode; it always fills the box exactly, at any
-   height, same as a normal image would. */
-.wf-bg-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  z-index: 0;
-}
-.wf-page .wf-card {
-  position: relative;
-  z-index: 1;
 }
 .wf-card {
   width: 100%;
