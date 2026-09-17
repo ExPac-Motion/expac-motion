@@ -588,7 +588,8 @@ export type WebFormFieldType =
   | "email"
   | "phone"
   | "textarea"
-  | "dropdown";
+  | "dropdown"
+  | "image";
 export type WebFormFieldMap =
   | "company"
   | "contact"
@@ -603,6 +604,7 @@ export const WEB_FORM_FIELD_TYPES: { type: WebFormFieldType; label: string }[] =
   { type: "phone", label: "Phone" },
   { type: "textarea", label: "Long text" },
   { type: "dropdown", label: "Dropdown" },
+  { type: "image", label: "Image upload" },
 ];
 
 export const WEB_FORM_FIELD_MAPS: { value: WebFormFieldMap; label: string }[] = [

@@ -1663,6 +1663,20 @@ export async function submitWebForm(
   );
 }
 
+/** Public bucket for images attached to a hosted form's "Image upload"
+ *  field -- anon visitors upload here (see 0096_web_form_image_uploads.sql),
+ *  and staff view the result from the resulting URL in the Lead's notes. */
+const WEB_FORM_UPLOADS_BUCKET = "web-form-uploads";
+
+export async function uploadWebFormImage(file: File): Promise<string> {
+  const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
+  const path = `${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
+  const up = await supabase.storage.from(WEB_FORM_UPLOADS_BUCKET).upload(path, file);
+  if (up.error) throw up.error;
+  const { data } = supabase.storage.from(WEB_FORM_UPLOADS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
 /* ---------- Sales CRM: Follow-up workflows ---------- */
 export async function listFollowUpRules(): Promise<FollowUpRule[]> {
   return unwrap<FollowUpRule[]>(

@@ -40,6 +40,7 @@ function newField(type: WebFormFieldType): WebFormField {
     return { ...base, label: "Email Address", mapTo: "email", required: true };
   if (type === "phone") return { ...base, label: "Phone Number", mapTo: "phone" };
   if (type === "textarea") return { ...base, label: "Message", mapTo: "notes" };
+  if (type === "image") return { ...base, label: "Upload a photo", mapTo: "notes" };
   return { ...base, label: "Choose one", choices: ["Option 1", "Option 2"], mapTo: "notes" };
 }
 
@@ -77,6 +78,10 @@ function FieldPreview({ f }: { f: WebFormField }) {
         <select disabled style={{ pointerEvents: "none" }}>
           <option>Choose an option</option>
         </select>
+      ) : f.type === "image" ? (
+        <div className="wf-image-placeholder" aria-hidden>
+          🖼 Image upload
+        </div>
       ) : (
         <input
           placeholder={f.placeholder ?? ""}
@@ -103,6 +108,8 @@ function FormEditor({
     form.fields[0]?.id ?? null,
   );
   const [copied, setCopied] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(form);
   const set = <K extends keyof WebForm>(k: K, v: WebForm[K]) =>
@@ -129,6 +136,21 @@ function FormEditor({
     if (i < 0 || j < 0 || j >= draft.fields.length) return;
     const next = [...draft.fields];
     [next[i], next[j]] = [next[j], next[i]];
+    set("fields", next);
+  }
+  function dropField(targetId: string) {
+    const dId = dragId;
+    setDragId(null);
+    setOverId(null);
+    if (!dId || dId === targetId) return;
+    const next = draft.fields.filter((f) => f.id !== dId);
+    const moved = draft.fields.find((f) => f.id === dId);
+    if (!moved) return;
+    next.splice(
+      next.findIndex((f) => f.id === targetId),
+      0,
+      moved,
+    );
     set("fields", next);
   }
 
@@ -212,12 +234,43 @@ function FormEditor({
             {draft.fields.map((f) => (
               <button
                 key={f.id}
-                className={`wf-fieldwrap${selected === f.id ? " sel" : ""}`}
+                className={[
+                  "wf-fieldwrap",
+                  selected === f.id ? "sel" : "",
+                  dragId === f.id ? "dragging" : "",
+                  overId === f.id ? "over" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 onClick={() => {
                   setSelected(f.id);
                   setTab("builder");
                 }}
+                draggable
+                onDragStart={(e) => {
+                  // Firefox won't start a drag unless dataTransfer is set.
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", f.id);
+                  setDragId(f.id);
+                }}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setOverId(null);
+                }}
+                onDragEnter={(e) => e.preventDefault()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (overId !== f.id) setOverId(f.id);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  dropField(f.id);
+                }}
               >
+                <span className="wf-drag-handle" aria-hidden>
+                  ⠿
+                </span>
                 <FieldPreview f={f} />
               </button>
             ))}
@@ -271,15 +324,17 @@ function FormEditor({
                   />
                   Required
                 </label>
-                <div className="field">
-                  <label>Placeholder</label>
-                  <input
-                    value={sel.placeholder ?? ""}
-                    onChange={(e) =>
-                      patchField(sel.id, { placeholder: e.target.value })
-                    }
-                  />
-                </div>
+                {sel.type !== "image" && (
+                  <div className="field">
+                    <label>Placeholder</label>
+                    <input
+                      value={sel.placeholder ?? ""}
+                      onChange={(e) =>
+                        patchField(sel.id, { placeholder: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
                 {sel.type === "dropdown" && (
                   <div className="field">
                     <label>Choices (one per line)</label>

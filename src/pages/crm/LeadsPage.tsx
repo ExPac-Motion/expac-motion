@@ -1266,13 +1266,31 @@ function LeadEditModal({
   );
 }
 
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+
+/** Renders plain text with any http(s) URL turned into a clickable link --
+ *  a web-form "Image upload" answer lands here as a bare storage URL.
+ *  Splitting on a capturing group interleaves the URL matches themselves
+ *  into the result at odd indices, so no separate regex test is needed. */
+function linkify(text: string) {
+  return text.split(URL_RE).map((part, i) =>
+    i % 2 === 1 ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 function ViewField({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div className="hint" style={{ marginBottom: 4 }}>
         {label}
       </div>
-      <strong style={{ whiteSpace: "pre-wrap" }}>{value}</strong>
+      <strong style={{ whiteSpace: "pre-wrap" }}>{linkify(value)}</strong>
     </div>
   );
 }

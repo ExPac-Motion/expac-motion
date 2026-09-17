@@ -1346,7 +1346,9 @@ table.dt th.dt-sortable {
   margin: 0 0 4px;
 }
 .wf-fieldwrap {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   width: 100%;
   text-align: left;
   border: 1px dashed transparent;
@@ -1364,7 +1366,36 @@ table.dt th.dt-sortable {
   background: #f6faef;
 }
 .wf-fieldwrap .field {
+  flex: 1;
+  min-width: 0;
   margin-bottom: 0;
+}
+.wf-drag-handle {
+  flex: none;
+  padding: 6px 2px 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: grab;
+}
+.wf-fieldwrap.dragging {
+  opacity: 0.4;
+}
+.wf-fieldwrap.over {
+  border-color: var(--green);
+  box-shadow: inset 0 2px 0 var(--green);
+}
+.wf-image-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #fafaf9;
+  color: var(--muted);
+  font-size: 14px;
 }
 .wf-submit {
   width: 100%;
@@ -1418,6 +1449,11 @@ table.dt th.dt-sortable {
 .wf-req {
   color: #b3261e;
 }
+.wf-upload-status {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
 
 /* Web contact forms — public hosted page */
 .wf-page {
@@ -1432,6 +1468,26 @@ table.dt th.dt-sortable {
   min-height: auto;
   background: transparent;
   padding: 8px;
+}
+/* Contact Us hosted form only -- full-width background, no side cropping.
+   background-size: 100% auto always shows the whole image edge-to-edge;
+   any cropping that results is top/bottom only. */
+.wf-page.wf-bg-contact {
+  background-image: url("https://cdn.expac.co.za/mail-assets/media/26339a43-17e7-4a07-829b-79b5634f41a4.png");
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% auto;
+}
+/* On narrow screens the card is nearly full width, so the default 40px
+   top padding leaves almost the whole image hidden behind it. Push the
+   card down by the image's own rendered height (its aspect ratio times
+   the viewport width, since background-size is 100% of this element's
+   width) so the full-width image is visible above the card instead of
+   being covered by it -- still no left/right cropping either way. */
+@media (max-width: 700px) {
+  .wf-page.wf-bg-contact {
+    padding-top: calc(100vw * 1024 / 1536 + 16px);
+  }
 }
 .wf-card {
   width: 100%;

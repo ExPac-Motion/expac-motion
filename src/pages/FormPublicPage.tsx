@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { getPublicWebForm, submitWebForm } from "../lib/db";
+import { getPublicWebForm, submitWebForm, uploadWebFormImage } from "../lib/db";
 import type { PublicWebForm } from "../lib/types";
+
+/** The general "Contact Us" form gets a custom background image on its
+ *  hosted page. Matched by id since PublicWebForm doesn't carry the
+ *  admin-only `name` field the CRM list uses. */
+const CONTACT_US_FORM_ID = "edc98f76-8efc-499f-a93c-7fc9d4c68b89";
 
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
@@ -13,9 +18,13 @@ export default function FormPublicPage() {
 
   const [form, setForm] = useState<PublicWebForm | null | "missing">(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [fileNames, setFileNames] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [uploadErr, setUploadErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
+  const anyUploading = Object.values(uploading).some(Boolean);
 
   useEffect(() => {
     getPublicWebForm(id)
@@ -31,9 +40,28 @@ export default function FormPublicPage() {
     return out;
   }, [params]);
 
+  async function onImageChange(fieldId: string, file: File | undefined) {
+    if (!file) return;
+    setUploadErr((v) => ({ ...v, [fieldId]: "" }));
+    setUploading((v) => ({ ...v, [fieldId]: true }));
+    try {
+      const url = await uploadWebFormImage(file);
+      setValues((v) => ({ ...v, [fieldId]: url }));
+      setFileNames((v) => ({ ...v, [fieldId]: file.name }));
+    } catch {
+      setUploadErr((v) => ({ ...v, [fieldId]: "Could not upload that image. Please try again." }));
+    } finally {
+      setUploading((v) => ({ ...v, [fieldId]: false }));
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (form === null || form === "missing") return;
+    if (anyUploading) {
+      setErr("Please wait for the image to finish uploading.");
+      return;
+    }
     for (const f of form.fields) {
       if (f.required && !(values[f.id] ?? "").trim()) {
         setErr(`"${f.label}" is required`);
@@ -53,7 +81,13 @@ export default function FormPublicPage() {
     }
   }
 
-  const wrapClass = embed ? "wf-page wf-embed" : "wf-page";
+  const wrapClass = [
+    "wf-page",
+    embed ? "wf-embed" : "",
+    id === CONTACT_US_FORM_ID ? "wf-bg-contact" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (form === null) {
     return (
@@ -118,6 +152,19 @@ export default function FormPublicPage() {
                   </option>
                 ))}
               </select>
+            ) : f.type === "image" ? (
+              <>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onImageChange(f.id, e.target.files?.[0])}
+                />
+                {uploading[f.id] && <p className="wf-upload-status">Uploading…</p>}
+                {!uploading[f.id] && fileNames[f.id] && (
+                  <p className="wf-upload-status">✓ {fileNames[f.id]}</p>
+                )}
+                {uploadErr[f.id] && <p className="wf-err">{uploadErr[f.id]}</p>}
+              </>
             ) : (
               <input
                 type={f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
@@ -132,7 +179,7 @@ export default function FormPublicPage() {
         ))}
 
         {err && <div className="wf-err">{err}</div>}
-        <button className="btn wf-submit" type="submit" disabled={busy}>
+        <button className="btn wf-submit" type="submit" disabled={busy || anyUploading}>
           {busy ? "Submitting…" : form.submit_label}
         </button>
       </form>
