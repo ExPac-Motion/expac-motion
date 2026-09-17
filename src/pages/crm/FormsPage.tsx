@@ -17,6 +17,7 @@ import {
 } from "../../lib/hooks";
 import { formatDateTime } from "../../lib/format";
 import {
+  CONTACT_US_FORM_ID,
   WEB_FORM_FIELD_MAPS,
   WEB_FORM_FIELD_TYPES,
   type WebForm,
@@ -183,7 +184,12 @@ function FormEditor({
 
   const sel = draft.fields.find((f) => f.id === selected) ?? null;
   const hostedUrl = `${SITE_URL}/forms/${draft.id}`;
-  const embedCode = `<iframe src="${hostedUrl}?embed=1" style="width:100%;max-width:640px;height:820px;border:0" title="${draft.name}"></iframe>`;
+  // The Contact Us form carries a background image that pushes its embed
+  // height well past every other form's -- 1260px was measured against the
+  // 640px embed width (the reveal band scales with width, so this covers
+  // any width up to that cap).
+  const embedHeight = draft.id === CONTACT_US_FORM_ID ? 1260 : 820;
+  const embedCode = `<iframe src="${hostedUrl}?embed=1" style="width:100%;max-width:640px;height:${embedHeight}px;border:0" title="${draft.name}"></iframe>`;
 
   async function copy(text: string, key: string) {
     try {

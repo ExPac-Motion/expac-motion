@@ -598,6 +598,11 @@ export type WebFormFieldMap =
   | "notes"
   | "none";
 
+/** The general "Contact Us" hosted form -- carries a background image and
+ *  so needs a taller embed height than other forms (FormPublicPage.tsx,
+ *  FormsPage.tsx's Share-tab embed snippet). */
+export const CONTACT_US_FORM_ID = "edc98f76-8efc-499f-a93c-7fc9d4c68b89";
+
 export const WEB_FORM_FIELD_TYPES: { type: WebFormFieldType; label: string }[] = [
   { type: "text", label: "Short text" },
   { type: "email", label: "Email" },

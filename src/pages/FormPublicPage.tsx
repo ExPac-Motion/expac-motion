@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getPublicWebForm, submitWebForm, uploadWebFormImage } from "../lib/db";
-import type { PublicWebForm } from "../lib/types";
-
-/** The general "Contact Us" form gets a custom background image on its
- *  hosted page. Matched by id since PublicWebForm doesn't carry the
- *  admin-only `name` field the CRM list uses. */
-const CONTACT_US_FORM_ID = "edc98f76-8efc-499f-a93c-7fc9d4c68b89";
+import { CONTACT_US_FORM_ID, type PublicWebForm } from "../lib/types";
 
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
