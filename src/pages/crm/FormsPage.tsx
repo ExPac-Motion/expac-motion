@@ -183,7 +183,7 @@ function FormEditor({
 
   const sel = draft.fields.find((f) => f.id === selected) ?? null;
   const hostedUrl = `${SITE_URL}/forms/${draft.id}`;
-  const embedCode = `<iframe src="${hostedUrl}?embed=1" style="width:100%;max-width:640px;height:820px;border:0" title="${draft.name}"></iframe>`;
+  const embedCode = `<iframe src="${hostedUrl}?embed=1" style="width:100%;max-width:700px;height:820px;border:0" title="${draft.name}"></iframe>`;
 
   async function copy(text: string, key: string) {
     try {

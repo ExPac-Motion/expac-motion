@@ -1471,7 +1471,7 @@ table.dt th.dt-sortable {
 }
 .wf-card {
   width: 100%;
-  max-width: 560px;
+  max-width: 700px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 14px;
