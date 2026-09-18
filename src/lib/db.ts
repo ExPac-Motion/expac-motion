@@ -1823,6 +1823,7 @@ export async function saveVaultBudgetEntry(input: {
     kind: input.values.kind,
     category: input.values.category.trim() || null,
     amount: Number(input.values.amount) || 0,
+    amount_paid: Number(input.values.amount_paid) || 0,
     occurred_on: input.values.occurred_on || new Date().toISOString().slice(0, 10),
     note: input.values.note.trim() || null,
   };
@@ -1870,6 +1871,7 @@ async function postExpenseControlTransfer(input: {
       kind: "expense",
       category: input.title,
       amount: String(input.forecasted),
+      amount_paid: "0",
       occurred_on: new Date().toISOString().slice(0, 10),
       note: `Transferred to ${input.transferredTo}`,
       scope: input.scope,

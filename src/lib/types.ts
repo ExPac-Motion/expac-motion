@@ -1430,6 +1430,9 @@ export interface VaultBudgetEntry {
   scope: VaultBudgetScope;
   category: string | null;
   amount: number;
+  /** Paid so far against `amount`, entered incrementally as instalments
+   *  land through the month. `amount - amount_paid` is the balance due. */
+  amount_paid: number;
   occurred_on: string;
   note: string | null;
   created_at: string;
@@ -1438,6 +1441,7 @@ export type VaultBudgetDraft = {
   kind: "income" | "expense";
   category: string;
   amount: string;
+  amount_paid: string;
   occurred_on: string;
   note: string;
 };

@@ -31,6 +31,7 @@ const emptyEntry = (): VaultBudgetDraft => ({
   kind: "expense",
   category: "",
   amount: "",
+  amount_paid: "",
   occurred_on: todayIso(),
   note: "",
 });
@@ -39,6 +40,7 @@ const asDraft = (e: VaultBudgetEntry): VaultBudgetDraft => ({
   kind: e.kind,
   category: e.category ?? "",
   amount: String(e.amount),
+  amount_paid: String(e.amount_paid || ""),
   occurred_on: e.occurred_on,
   note: e.note ?? "",
 });
@@ -283,6 +285,7 @@ function PersonalBudget({
                 <th>Type</th>
                 <th>Category</th>
                 <th>Amount</th>
+                <th>Amount Paid</th>
                 <th>Note</th>
                 <th className="actions-col" />
               </tr>
@@ -338,7 +341,15 @@ function BudgetRow({
     (iso ?? entry.occurred_on) !== entry.occurred_on ||
     draft.category !== (entry.category ?? "") ||
     (Number(draft.amount) || 0) !== Number(entry.amount) ||
+    (Number(draft.amount_paid) || 0) !== Number(entry.amount_paid || 0) ||
     draft.note !== (entry.note ?? "");
+
+  // Balance still owing on this entry, updated live as Amount Paid is
+  // typed — never shown as negative; an overpayment just reads as paid.
+  const due = Math.max(
+    0,
+    (Number(draft.amount) || 0) - (Number(draft.amount_paid) || 0),
+  );
 
   function submit() {
     if (!iso) return;
@@ -380,6 +391,22 @@ function BudgetRow({
             onChange={(e) => set("amount", e.target.value)}
           />
         </span>
+      </td>
+      <td className="nowrap">
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          className="vault-inline vault-amt"
+          placeholder="0.00"
+          value={draft.amount_paid}
+          onChange={(e) => set("amount_paid", e.target.value)}
+        />
+        {Number(draft.amount_paid) > 0 && (
+          <div className={`vault-due${due <= 0 ? " paid" : ""}`}>
+            {due <= 0 ? "Paid in full" : `${money(due)} due`}
+          </div>
+        )}
       </td>
       <td>
         <input

@@ -3516,6 +3516,16 @@ table.dt th.dt-sortable {
   text-align: left;
   min-width: 0;
 }
+.vault-due {
+  margin-top: 2px;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  color: #b3261e;
+  white-space: nowrap;
+}
+.vault-due.paid {
+  color: var(--green-dark);
+}
 .vault-rowactions {
   display: flex;
   gap: 6px;
