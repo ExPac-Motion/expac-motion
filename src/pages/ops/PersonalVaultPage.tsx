@@ -141,7 +141,12 @@ function PersonalBudget({
   const rows = useMemo(() => {
     let out = (q.data ?? []).filter((e) => (e.scope ?? "personal") === scope);
     if (month) out = out.filter((e) => e.occurred_on.startsWith(month));
-    return out;
+    // Income always leads, then expenses oldest-added first — so a newly
+    // added expense lands at the bottom instead of jumping to the top.
+    return [...out].sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "income" ? -1 : 1;
+      return a.created_at.localeCompare(b.created_at);
+    });
   }, [q.data, month, scope]);
 
   const totals = useMemo(() => {
