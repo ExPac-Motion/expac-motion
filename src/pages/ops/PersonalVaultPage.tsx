@@ -147,11 +147,20 @@ function PersonalBudget({
   const totals = useMemo(() => {
     let income = 0;
     let expense = 0;
+    let paid = 0;
+    let due = 0;
     for (const e of rows) {
-      if (e.kind === "income") income += Number(e.amount) || 0;
-      else expense += Number(e.amount) || 0;
+      if (e.kind === "income") {
+        income += Number(e.amount) || 0;
+      } else {
+        const amt = Number(e.amount) || 0;
+        const amtPaid = Number(e.amount_paid) || 0;
+        expense += amt;
+        paid += amtPaid;
+        due += Math.max(0, amt - amtPaid);
+      }
     }
-    return { income, expense, balance: income - expense };
+    return { income, expense, paid, due, balance: income - expense };
   }, [rows]);
 
   async function onAdd(e: FormEvent) {
@@ -219,6 +228,14 @@ function PersonalBudget({
         <div>
           <span className="k">Expenses</span>
           <b>{money(totals.expense)}</b>
+        </div>
+        <div>
+          <span className="k">Expenses Paid</span>
+          <b className="pos">{money(totals.paid)}</b>
+        </div>
+        <div>
+          <span className="k">Expenses Due</span>
+          <b className={totals.due > 0 ? "neg" : "pos"}>{money(totals.due)}</b>
         </div>
         <div>
           <span className="k">Balance</span>
