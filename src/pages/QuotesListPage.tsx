@@ -8,7 +8,6 @@ import {
   PageHeader,
   RowActions,
   RowActionsHead,
-  StatusBadge,
   useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
@@ -17,6 +16,7 @@ import QuickMailModal from "../components/QuickMailModal";
 import QuoteDetailModal from "./QuoteDetailModal";
 import TaskEditModal from "./ops/TaskEditModal";
 import {
+  useAcceptQuote,
   useDeleteQuote,
   useProfiles,
   useQuotes,
@@ -98,6 +98,50 @@ function draftFromQuote(q: Quote): QuoteDraft {
     packing: q.packing_list_items ?? [],
     lines: q.quote_lines ?? [],
   };
+}
+
+/** Inline status dropdown for the Quotations list — lets a status change
+ * happen right from the row instead of opening the quote to edit it.
+ * Moving to "accepted" runs the real accept_quote flow (creates the
+ * shipment, promotes a linked lead) rather than just stamping the field,
+ * unless the quote is already won (completed), matching the Opportunities
+ * board's card dropdown. */
+function QuoteStatusSelect({ quote }: { quote: Quote }) {
+  const bulkUpdate = useUpdateQuotesBulk();
+  const acceptQuote = useAcceptQuote();
+  const { toast, error: toastError } = useToast();
+  const busy = bulkUpdate.isPending || acceptQuote.isPending;
+
+  async function onChange(next: QuoteStatus) {
+    if (next === quote.status) return;
+    try {
+      if (next === "accepted" && quote.status !== "completed") {
+        await acceptQuote.mutateAsync(quote.id);
+        toast("Shipment created — check Active Shipments");
+        return;
+      }
+      await bulkUpdate.mutateAsync({ ids: [quote.id], patch: { status: next } });
+      toast(`Status changed to ${STATUS_LABEL[next]}`);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not update status");
+    }
+  }
+
+  return (
+    <select
+      className={`badge badge-select ${quote.status}`}
+      value={quote.status}
+      disabled={busy}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value as QuoteStatus)}
+    >
+      {STATUS_ORDER.map((s) => (
+        <option key={s} value={s}>
+          {STATUS_LABEL[s]}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export default function QuotesListPage() {
@@ -275,9 +319,9 @@ export default function QuotesListPage() {
       {
         key: "status",
         header: "Status",
-        width: 140,
+        width: 160,
         sortValue: (q) => STATUS_ORDER.indexOf(q.status),
-        render: (q) => <StatusBadge status={q.status} />,
+        render: (q) => <QuoteStatusSelect quote={q} />,
       },
       // --- available via "Table settings" (hidden by default) ---
       {

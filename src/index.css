@@ -886,6 +886,40 @@ table.dt th.dt-sortable {
   background: #fdecea;
   color: #b3261e;
 }
+/* Status badge that's also a real <select> — inherits the global select's
+   chevron/appearance rules (index.css:58) but keeps the pill look. */
+select.badge-select {
+  border: none;
+  border-radius: 100px;
+  padding: 4px 24px 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+select.badge-select:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+select.badge-select.open {
+  background-color: #eee;
+  color: #555;
+}
+select.badge-select.sent {
+  background-color: #e6f0fb;
+  color: #1d5ba8;
+}
+select.badge-select.accepted {
+  background-color: #e5f3d9;
+  color: var(--green-dark);
+}
+select.badge-select.completed {
+  background-color: #d9efe4;
+  color: #0f6b4f;
+}
+select.badge-select.lost {
+  background-color: #fdecea;
+  color: #b3261e;
+}
 
 /* ---------- Forms ---------- */
 .field {
