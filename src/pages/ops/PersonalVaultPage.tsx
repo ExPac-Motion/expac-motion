@@ -361,13 +361,6 @@ function BudgetRow({
     (Number(draft.amount_paid) || 0) !== Number(entry.amount_paid || 0) ||
     draft.note !== (entry.note ?? "");
 
-  // Balance still owing on this entry, updated live as Amount Paid is
-  // typed — never shown as negative; an overpayment just reads as paid.
-  const due = Math.max(
-    0,
-    (Number(draft.amount) || 0) - (Number(draft.amount_paid) || 0),
-  );
-
   function submit() {
     if (!iso) return;
     onSave(entry.id, { ...draft, occurred_on: iso });
@@ -419,11 +412,6 @@ function BudgetRow({
           value={draft.amount_paid}
           onChange={(e) => set("amount_paid", e.target.value)}
         />
-        {Number(draft.amount_paid) > 0 && (
-          <div className={`vault-due${due <= 0 ? " paid" : ""}`}>
-            {due <= 0 ? "Paid in full" : `${money(due)} due`}
-          </div>
-        )}
       </td>
       <td>
         <input
