@@ -1870,8 +1870,11 @@ async function postExpenseControlTransfer(input: {
     values: {
       kind: "expense",
       category: input.title,
-      amount: String(input.forecasted),
-      amount_paid: "0",
+      // The forecasted amount is money already moved aside/paid out via the
+      // transfer, so it lands on Amount Paid -- Amount (Due) stays 0 since
+      // nothing is still owed against this line.
+      amount: "0",
+      amount_paid: String(input.forecasted),
       occurred_on: new Date().toISOString().slice(0, 10),
       note: `Transferred to ${input.transferredTo}`,
       scope: input.scope,
@@ -1913,9 +1916,10 @@ export async function addVaultTodo(input: {
 }
 /** Plain field edits pass straight through. A `transferred_to` edit also
  *  keeps the linked Budget entry in sync: created the first time it's
- *  transferred, updated in place (category/amount/note only — the entry's
- *  own date and scope are left alone once posted) while it stays
- *  transferred, deleted if the transfer is cleared. */
+ *  transferred, updated in place (category/amount_paid/note only — the
+ *  entry's own date and scope are left alone once posted, and Amount stays
+ *  0 since a transfer is money already paid out, not still due) while it
+ *  stays transferred, deleted if the transfer is cleared. */
 export async function updateVaultTodo(
   id: string,
   patch: Partial<
@@ -1944,7 +1948,8 @@ export async function updateVaultTodo(
         .from("vault_budget_entries")
         .update({
           category: title,
-          amount: forecasted,
+          amount: 0,
+          amount_paid: forecasted,
           note: `Transferred to ${nextTransferredTo}`,
         })
         .eq("id", linkedId),

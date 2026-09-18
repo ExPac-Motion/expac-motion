@@ -307,7 +307,7 @@ function PersonalBudget({
                 <th>Date</th>
                 <th>Type</th>
                 <th>Category</th>
-                <th>Amount</th>
+                <th>Amount Due</th>
                 <th>Amount Paid</th>
                 <th>Note</th>
                 <th className="actions-col" />
