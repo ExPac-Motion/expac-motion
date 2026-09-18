@@ -2,12 +2,12 @@ import { useMemo, useState } from "react";
 import { Loading } from "../../components/common";
 import { useVaultNotes } from "../../lib/hooks";
 import { MONTHS, WEEKDAYS, monthMatrix, todayIso } from "../../lib/opsCalendar";
-import type { VaultNote } from "../../lib/types";
+import type { VaultBudgetScope, VaultNote } from "../../lib/types";
 import VaultNoteEditModal from "./VaultNoteEditModal";
 
 const d10 = (s: string | null | undefined): string | null => (s ? s.slice(0, 10) : null);
 
-export default function VaultCalendar() {
+export default function VaultCalendar({ scope }: { scope: VaultBudgetScope }) {
   const notesQ = useVaultNotes();
 
   const today = todayIso();
@@ -19,8 +19,11 @@ export default function VaultCalendar() {
   const [edit, setEdit] = useState<VaultNote | null>(null);
 
   const notes = useMemo(
-    () => (notesQ.data ?? []).filter((n) => d10(n.due_date)),
-    [notesQ.data],
+    () =>
+      (notesQ.data ?? []).filter(
+        (n) => d10(n.due_date) && (n.scope ?? "personal") === scope,
+      ),
+    [notesQ.data, scope],
   );
 
   const byDay = useMemo(() => {
@@ -51,7 +54,9 @@ export default function VaultCalendar() {
 
   return (
     <div className="panel">
-      <h3 style={{ marginTop: 0 }}>Calendar</h3>
+      <h3 style={{ marginTop: 0 }}>
+        Calendar <span className="chip sm on">{scope === "personal" ? "Personal" : "Business"}</span>
+      </h3>
       <p className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
         Due dates from your private Notes above — nothing else feeds this.
       </p>
@@ -194,11 +199,14 @@ export default function VaultCalendar() {
       {addDate && (
         <VaultNoteEditModal
           note={null}
+          scope={scope}
           defaults={{ due_date: addDate }}
           onClose={() => setAddDate(null)}
         />
       )}
-      {edit && <VaultNoteEditModal note={edit} onClose={() => setEdit(null)} />}
+      {edit && (
+        <VaultNoteEditModal note={edit} scope={scope} onClose={() => setEdit(null)} />
+      )}
     </div>
   );
 }

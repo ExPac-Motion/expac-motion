@@ -5,6 +5,7 @@ import { useDeleteVaultNote, useSaveVaultNote } from "../../lib/hooks";
 import {
   OPS_TASK_PRIORITIES,
   OPS_TASK_STATUSES,
+  type VaultBudgetScope,
   type VaultNote,
   type VaultNoteDraft,
 } from "../../lib/types";
@@ -12,6 +13,9 @@ import {
 interface Props {
   /** null = create a new note. */
   note: VaultNote | null;
+  /** Which Personal/Business side a new note is created into — ignored
+   *  when editing an existing note (its scope doesn't change). */
+  scope: VaultBudgetScope;
   /** Prefill for a new note (e.g. due_date from the calendar). */
   defaults?: Partial<VaultNoteDraft>;
   onClose: () => void;
@@ -28,7 +32,7 @@ function seed(note: VaultNote | null, defaults?: Partial<VaultNoteDraft>): Vault
   };
 }
 
-export default function VaultNoteEditModal({ note, defaults, onClose }: Props) {
+export default function VaultNoteEditModal({ note, scope, defaults, onClose }: Props) {
   const { toast, error } = useToast();
   const save = useSaveVaultNote();
   const del = useDeleteVaultNote();
@@ -43,7 +47,10 @@ export default function VaultNoteEditModal({ note, defaults, onClose }: Props) {
       error("A title is required");
       return;
     }
-    const values: Partial<VaultNoteDraft> & { title: string } = {
+    const values: Partial<VaultNoteDraft> & {
+      title: string;
+      scope?: VaultBudgetScope;
+    } = {
       kind: f.kind,
       title: f.title.trim(),
       body: f.body.trim() || "",
@@ -51,6 +58,7 @@ export default function VaultNoteEditModal({ note, defaults, onClose }: Props) {
       priority: f.priority,
       due_date: f.due_date || "",
     };
+    if (!note) values.scope = scope;
     try {
       await save.mutateAsync(note ? { id: note.id, values } : { values });
       toast(note ? "Updated" : "Added");

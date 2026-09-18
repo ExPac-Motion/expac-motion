@@ -18,6 +18,7 @@ import {
   OPS_TASK_PRIORITIES,
   OPS_TASK_STATUSES,
   type OpsTaskStatus,
+  type VaultBudgetScope,
   type VaultNote,
 } from "../../lib/types";
 import VaultNoteEditModal from "./VaultNoteEditModal";
@@ -41,7 +42,7 @@ function nextStatus(s: OpsTaskStatus): OpsTaskStatus {
   return s === "open" ? "doing" : s === "doing" ? "done" : "open";
 }
 
-export default function VaultNotes() {
+export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
   const { toast, error } = useToast();
   const notesQ = useVaultNotes();
   const save = useSaveVaultNote();
@@ -58,7 +59,10 @@ export default function VaultNotes() {
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const today = todayIso();
-  const all = useMemo(() => notesQ.data ?? [], [notesQ.data]);
+  const all = useMemo(
+    () => (notesQ.data ?? []).filter((n) => (n.scope ?? "personal") === scope),
+    [notesQ.data, scope],
+  );
 
   const counts = useMemo(() => {
     const open = all.filter((t) => t.kind === "task" && t.status !== "done");
@@ -103,7 +107,7 @@ export default function VaultNotes() {
     const title = quick.trim();
     if (!title) return;
     try {
-      await save.mutateAsync({ values: { title, kind: quickKind } });
+      await save.mutateAsync({ values: { title, kind: quickKind, scope } });
       setQuick("");
       toast("Added");
     } catch (e) {
@@ -136,7 +140,9 @@ export default function VaultNotes() {
 
   return (
     <div className="panel">
-      <h3 style={{ marginTop: 0 }}>Notes</h3>
+      <h3 style={{ marginTop: 0 }}>
+        Notes <span className="chip sm on">{scope === "personal" ? "Personal" : "Business"}</span>
+      </h3>
       <p className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
         Private to you — never shared or linked elsewhere in the system.
       </p>
@@ -375,9 +381,11 @@ export default function VaultNotes() {
       )}
 
       {creating && (
-        <VaultNoteEditModal note={null} onClose={() => setCreating(false)} />
+        <VaultNoteEditModal note={null} scope={scope} onClose={() => setCreating(false)} />
       )}
-      {edit && <VaultNoteEditModal note={edit} onClose={() => setEdit(null)} />}
+      {edit && (
+        <VaultNoteEditModal note={edit} scope={scope} onClose={() => setEdit(null)} />
+      )}
 
       {bulkOpen && (
         <BulkEditModal

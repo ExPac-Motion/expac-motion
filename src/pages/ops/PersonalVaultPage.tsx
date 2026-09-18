@@ -67,9 +67,10 @@ function dmyToIso(s: string): string | null {
 }
 
 export default function PersonalVaultPage() {
-  // One Personal/Business toggle drives both boards together, so a
+  // One Personal/Business toggle drives every board together, so a
   // transfer posted from Expense Control always lands in the Budget view
-  // you're already looking at.
+  // you're already looking at, and Notes/Calendar/Expense Control all show
+  // only that side's own entries.
   const [scope, setScope] = useState<VaultBudgetScope>("personal");
   return (
     <>
@@ -78,8 +79,8 @@ export default function PersonalVaultPage() {
         <ExpenseControl scope={scope} setScope={setScope} />
       </div>
       <div className="vault-grid">
-        <VaultNotes />
-        <VaultCalendar />
+        <VaultNotes scope={scope} />
+        <VaultCalendar scope={scope} />
       </div>
     </>
   );

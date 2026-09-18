@@ -1998,7 +1998,7 @@ export async function listVaultNotes(): Promise<VaultNote[]> {
 }
 export async function saveVaultNote(input: {
   id?: string;
-  values: Partial<VaultNoteDraft> & { title?: string };
+  values: Partial<VaultNoteDraft> & { title?: string; scope?: VaultNote["scope"] };
 }): Promise<VaultNote> {
   const v = input.values;
   const row: Record<string, unknown> = {};
@@ -2008,6 +2008,7 @@ export async function saveVaultNote(input: {
   if (v.status !== undefined) row.status = v.status;
   if (v.priority !== undefined) row.priority = v.priority;
   if (v.due_date !== undefined) row.due_date = v.due_date || null;
+  if (v.scope !== undefined) row.scope = v.scope;
   return unwrap(
     input.id
       ? await supabase

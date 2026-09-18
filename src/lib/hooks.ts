@@ -1373,7 +1373,7 @@ export function useSaveVaultNote() {
   return useMutation({
     mutationFn: (input: {
       id?: string;
-      values: Partial<VaultNoteDraft> & { title?: string };
+      values: Partial<VaultNoteDraft> & { title?: string; scope?: VaultBudgetScope };
     }) => db.saveVaultNote(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
   });

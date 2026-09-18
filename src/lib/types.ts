@@ -1476,6 +1476,9 @@ export type VaultExpenseDraft = {
 export interface VaultNote {
   id: string;
   user_id: string;
+  /** Which Personal/Business side this belongs to — same toggle as Budget
+   *  and Expense Control. */
+  scope: VaultBudgetScope;
   kind: OpsTaskKind;
   title: string;
   body: string | null;
