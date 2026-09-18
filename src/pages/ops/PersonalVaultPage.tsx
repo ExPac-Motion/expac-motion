@@ -26,6 +26,22 @@ import VaultNotes from "./VaultNotes";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => new Date().toISOString().slice(0, 7);
+/** "2026-09" -> "2026-10" (rolls the year over at December). */
+function nextMonthOf(m: string): string {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(Date.UTC(y, mo, 1)); // mo is 0-based next month already
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+/** "2026-09" -> "September 2026". */
+function monthLabel(m: string): string {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-ZA", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+const CARRY_FORWARD_CATEGORY = "Balance Brought Forward";
 
 const emptyEntry = (): VaultBudgetDraft => ({
   kind: "expense",
@@ -70,13 +86,25 @@ export default function PersonalVaultPage() {
   // One Personal/Business toggle drives every board together, so a
   // transfer posted from Expense Control always lands in the Budget view
   // you're already looking at, and Notes/Calendar/Expense Control all show
-  // only that side's own entries.
+  // only that side's own entries. Budget and Expense Control also share one
+  // month filter, so both show the same month's activity at a glance.
   const [scope, setScope] = useState<VaultBudgetScope>("personal");
+  const [month, setMonth] = useState<string>(thisMonth());
   return (
     <>
       <div className="vault-grid">
-        <PersonalBudget scope={scope} setScope={setScope} />
-        <ExpenseControl scope={scope} setScope={setScope} />
+        <PersonalBudget
+          scope={scope}
+          setScope={setScope}
+          month={month}
+          setMonth={setMonth}
+        />
+        <ExpenseControl
+          scope={scope}
+          setScope={setScope}
+          month={month}
+          setMonth={setMonth}
+        />
       </div>
       <div className="vault-grid">
         <VaultNotes scope={scope} />
@@ -122,9 +150,13 @@ function ScopeToggle({
 function PersonalBudget({
   scope,
   setScope,
+  month,
+  setMonth,
 }: {
   scope: VaultBudgetScope;
   setScope: (s: VaultBudgetScope) => void;
+  month: string;
+  setMonth: (m: string) => void;
 }) {
   const q = useVaultBudget();
   const save = useSaveVaultBudgetEntry();
@@ -132,7 +164,7 @@ function PersonalBudget({
   const { toast, error } = useToast();
 
   const [form, setForm] = useState<VaultBudgetDraft>(emptyEntry());
-  const [month, setMonth] = useState<string>(thisMonth());
+  const [carrying, setCarrying] = useState(false);
 
   const set = <K extends keyof VaultBudgetDraft>(
     k: K,
@@ -206,6 +238,51 @@ function PersonalBudget({
     }
   }
 
+  async function carryForward() {
+    if (!month) return; // "All time" has no single "next month"
+    const next = nextMonthOf(month);
+    const already = (q.data ?? []).some(
+      (e) =>
+        (e.scope ?? "personal") === scope &&
+        e.occurred_on.startsWith(next) &&
+        e.category === CARRY_FORWARD_CATEGORY,
+    );
+    if (
+      already &&
+      !window.confirm(
+        `${monthLabel(next)} already has a Balance Brought Forward entry. Add another one anyway?`,
+      )
+    ) {
+      return;
+    }
+    if (
+      !window.confirm(
+        `Carry ${money(totals.balance)} from ${monthLabel(month)} into ${monthLabel(next)} as an income entry?`,
+      )
+    )
+      return;
+    setCarrying(true);
+    try {
+      await save.mutateAsync({
+        values: {
+          kind: "income",
+          category: CARRY_FORWARD_CATEGORY,
+          amount: String(totals.balance),
+          amount_paid: "",
+          occurred_on: `${next}-01`,
+          note: `Carried forward from ${monthLabel(month)}`,
+          scope,
+        },
+      });
+      toast("Carried forward");
+      setMonth(next);
+    } catch (e2) {
+      error(e2 instanceof Error ? e2.message : "Could not carry forward");
+    } finally {
+      setCarrying(false);
+    }
+  }
+
   return (
     <section className="panel">
       <div className="vault-head">
@@ -224,6 +301,17 @@ function PersonalBudget({
               onClick={() => setMonth("")}
             >
               All time
+            </button>
+          )}
+          {month && (
+            <button
+              type="button"
+              className="btn outline btn-sm"
+              onClick={carryForward}
+              disabled={carrying}
+              title={`Add ${monthLabel(nextMonthOf(month))}'s opening balance from this month's total`}
+            >
+              Carry Balance Forward →
             </button>
           )}
         </div>
@@ -466,9 +554,13 @@ const emptyExpense = (): VaultExpenseDraft => ({
 function ExpenseControl({
   scope,
   setScope,
+  month,
+  setMonth,
 }: {
   scope: VaultBudgetScope;
   setScope: (s: VaultBudgetScope) => void;
+  month: string;
+  setMonth: (m: string) => void;
 }) {
   const q = useVaultTodos();
   const add = useAddVaultTodo();
@@ -482,10 +574,13 @@ function ExpenseControl({
     v: VaultExpenseDraft[K],
   ) => setForm((f) => ({ ...f, [k]: v }));
 
-  const items = useMemo(
-    () => (q.data ?? []).filter((t) => (t.scope ?? "personal") === scope),
-    [q.data, scope],
-  );
+  const items = useMemo(() => {
+    let out = (q.data ?? []).filter((t) => (t.scope ?? "personal") === scope);
+    // Dated by when each item was added — there's no separate date field
+    // to edit, so this always reflects the month it was actually created in.
+    if (month) out = out.filter((t) => t.created_at.startsWith(month));
+    return out;
+  }, [q.data, scope, month]);
   const openCount = items.filter((t) => !t.transferred_to).length;
   const forecastTotal = items.reduce((s, t) => s + (Number(t.forecasted) || 0), 0);
   /** Sum of every expense that's actually been moved (has a Transferred To)
@@ -540,6 +635,20 @@ function ExpenseControl({
         <h3>Expense Control</h3>
         <div className="vault-month">
           <ScopeToggle scope={scope} setScope={setScope} />
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+          />
+          {month && (
+            <button
+              type="button"
+              className="btn ghost btn-sm"
+              onClick={() => setMonth("")}
+            >
+              All time
+            </button>
+          )}
           <span className="muted small">{openCount} open</span>
         </div>
       </div>
