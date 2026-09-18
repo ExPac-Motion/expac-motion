@@ -166,7 +166,10 @@ function PersonalBudget({
         due += Math.max(0, amt - amtPaid);
       }
     }
-    return { income, expense, paid, due, balance: income - expense };
+    // Balance tracks payment surplus/shortfall against committed
+    // expenses -- how much more (or less) has actually been paid out
+    // (including Expense Control transfers) than was originally due.
+    return { income, expense, paid, due, balance: paid - expense };
   }, [rows]);
 
   async function onAdd(e: FormEvent) {
