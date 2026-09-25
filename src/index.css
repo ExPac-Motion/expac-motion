@@ -2317,6 +2317,10 @@ select.badge-select.lost {
 .row-icon-btn.has-unread {
   color: var(--green-dark);
 }
+/* Open task pending on this row — same blue as the heading labels. */
+.row-icon-btn.has-open-task {
+  color: rgb(36, 91, 198);
+}
 .row-icon-dot {
   position: absolute;
   top: 2px;

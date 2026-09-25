@@ -192,7 +192,7 @@ export function RowActions({
       )}
       {onTask && (
         <button
-          className={`row-icon-btn${taskOpen ? " has-unread" : ""}`}
+          className={`row-icon-btn${taskOpen ? " has-open-task" : ""}`}
           title={taskOpen ? `${taskTitle} — open task pending` : taskTitle}
           onClick={stop(onTask)}
         >
