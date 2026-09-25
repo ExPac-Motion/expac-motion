@@ -22,6 +22,7 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
+  useDeepLinkReturn,
   useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
@@ -146,9 +147,12 @@ export default function LeadsPage() {
     (p) => p.role === "admin" || p.role === "user",
   );
 
-  // Deep-link from Trends: navigate here with { state: { openLeadId } } to
-  // pop the existing view modal open on a specific lead, same as clicking
-  // its row — reused rather than building a separate lead-detail view.
+  const { arm, closeAndReturn } = useDeepLinkReturn();
+
+  // Deep-link from Notifications/Trends/Tasks: navigate here with
+  // { state: { openLeadId } } to pop the existing view modal open on a
+  // specific lead, same as clicking its row. Closing it then returns to
+  // wherever the link came from instead of stranding the user here.
   useEffect(() => {
     const openId = (location.state as { openLeadId?: string } | null)
       ?.openLeadId;
@@ -156,6 +160,7 @@ export default function LeadsPage() {
     const lead = rows.find((l) => l.id === openId);
     if (lead) {
       setViewing(lead);
+      arm();
       navigate(location.pathname + location.search, {
         replace: true,
         state: {},
@@ -676,7 +681,7 @@ export default function LeadsPage() {
       {viewing && (
         <Modal
           title={viewing.company}
-          onClose={() => setViewing(null)}
+          onClose={() => closeAndReturn(() => setViewing(null))}
           headerActions={
             <>
               <button

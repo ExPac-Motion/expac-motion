@@ -34,7 +34,7 @@ function triggerLabel(t: FollowUpTrigger): string {
 function logTone(s: FollowUpLogEntry["status"]): string {
   if (s === "failed") return "alert";
   if (s === "skipped") return "start";
-  return "mid";
+  return "done";
 }
 
 function RuleModal({

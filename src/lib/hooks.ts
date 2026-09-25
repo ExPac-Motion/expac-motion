@@ -1159,7 +1159,10 @@ export function useSendCampaign() {
       });
       return campaign;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_campaigns"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mail_campaigns"] });
+      qc.invalidateQueries({ queryKey: ["mail_campaign_recipients"] });
+    },
   });
 }
 
