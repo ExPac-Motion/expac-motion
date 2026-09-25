@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   BulkEditModal,
@@ -21,6 +21,7 @@ import {
   useProfiles,
   useQuotes,
   useSaveQuote,
+  useSetQuoteNotes,
   useUpdateQuotesBulk,
 } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
@@ -141,6 +142,33 @@ function QuoteStatusSelect({ quote }: { quote: Quote }) {
         </option>
       ))}
     </select>
+  );
+}
+
+/* Owns its own draft so a background refetch never clobbers what's being
+   typed; commits on blur. Same pattern as the Active Shipments Notes cell. */
+function QuoteNotesCell({ quote }: { quote: Quote }) {
+  const setNotes = useSetQuoteNotes();
+  const { error: toastError } = useToast();
+  const [v, setV] = useState(quote.notes ?? "");
+  useEffect(() => setV(quote.notes ?? ""), [quote.notes]);
+  return (
+    <input
+      value={v}
+      placeholder="Add an update…"
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => {
+        if (v === (quote.notes ?? "")) return;
+        setNotes.mutate(
+          { id: quote.id, notes: v },
+          {
+            onError: (e) =>
+              toastError(e instanceof Error ? e.message : "Could not save notes"),
+          },
+        );
+      }}
+    />
   );
 }
 
@@ -322,6 +350,14 @@ export default function QuotesListPage() {
         width: 160,
         sortValue: (q) => STATUS_ORDER.indexOf(q.status),
         render: (q) => <QuoteStatusSelect quote={q} />,
+      },
+      {
+        key: "notes",
+        header: "Notes",
+        width: 220,
+        cellClass: "quote-notes",
+        sortValue: (q) => q.notes ?? "",
+        render: (q) => <QuoteNotesCell quote={q} />,
       },
       // --- available via "Table settings" (hidden by default) ---
       {

@@ -778,6 +778,30 @@ table.dt th.dt-sortable {
 .jobs-table .job-notes {
   min-width: 170px;
 }
+/* Quotations list — inline-editable Notes cell, same look as the
+   Active Shipments board's Notes cell. */
+.quotes-table td input:not([type="checkbox"]) {
+  width: 100%;
+  min-width: 170px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+.quotes-table td input:not([type="checkbox"]):hover {
+  border-color: #e0e1dc;
+  background: #fafaf7;
+}
+.quotes-table td input:not([type="checkbox"]):focus {
+  outline: none;
+  border-color: var(--green);
+  background: #fff;
+}
+.quotes-table td input::placeholder {
+  color: #b9bbb4;
+}
 /* AWB/MBL No: keep it snug against Additional Notes */
 .jobs-table td:nth-child(9) input {
   min-width: 96px;
