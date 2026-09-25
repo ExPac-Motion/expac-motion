@@ -1,8 +1,14 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
 import { Loading, StatusBadge } from "../components/common";
 import { useToast } from "../components/Toast";
-import { useAcceptQuote, useDeleteQuote, useQuote } from "../lib/hooks";
+import {
+  useAcceptQuote,
+  useDeleteQuote,
+  useQuote,
+  useSetQuoteNotes,
+} from "../lib/hooks";
 import {
   chargeTotals,
   fxOf,
@@ -31,6 +37,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
   const { data: q, isLoading } = useQuote(quoteId);
   const del = useDeleteQuote();
   const accept = useAcceptQuote();
+  const setNotes = useSetQuoteNotes();
 
   if (isLoading || !q) {
     return (
@@ -184,6 +191,21 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         <Field
           label="Transporter (internal)"
           value={q.transporter?.company ?? "—"}
+        />
+      </div>
+
+      <div className="charge-group">
+        <div className="charge-group-head">
+          <h3>NOTES</h3>
+        </div>
+        <NotesField
+          value={q.notes}
+          onCommit={(v) =>
+            setNotes.mutate(
+              { id: q.id, notes: v },
+              { onError: (e) => error(e instanceof Error ? e.message : "Could not save notes") },
+            )
+          }
         />
       </div>
 
@@ -384,5 +406,30 @@ function Field({ label, value }: { label: string; value: string }) {
       </div>
       <div>{value}</div>
     </div>
+  );
+}
+
+/* Own draft state so a background refetch never clobbers what's being
+   typed; saves on blur, same pattern as the Active Shipments notes cell. */
+function NotesField({
+  value,
+  onCommit,
+}: {
+  value: string | null;
+  onCommit: (v: string) => void;
+}) {
+  const [v, setV] = useState(value ?? "");
+  useEffect(() => setV(value ?? ""), [value]);
+  return (
+    <textarea
+      className="qd-notes"
+      rows={3}
+      value={v}
+      placeholder="Add a follow-up note — who you spoke to, what's next…"
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => {
+        if (v !== (value ?? "")) onCommit(v);
+      }}
+    />
   );
 }

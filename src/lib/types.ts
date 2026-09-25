@@ -960,6 +960,8 @@ export interface Quote {
   /** Currency Commercial Value / Insurance Amount were captured in — they're
    *  customer-supplied and not always ZAR. Defaults to 'ZAR'. */
   value_currency: LineCurrency;
+  /** Internal follow-up notes on this quote (not shown to the customer). */
+  notes: string | null;
   created_at: string;
   updated_at: string;
   quote_lines: QuoteLine[];

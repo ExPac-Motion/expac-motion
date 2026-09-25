@@ -955,6 +955,17 @@ select.badge-select.lost {
   padding: 8px 11px;
   resize: vertical;
 }
+/* Quote view popup — internal follow-up notes textarea */
+.qd-notes {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 11px;
+  background-color: var(--white);
+  color: var(--ink);
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
 .field .hint {
   font-size: 0.72rem;
   color: var(--muted);

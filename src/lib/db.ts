@@ -451,6 +451,20 @@ export async function setQuoteOpportunityValue(
   );
 }
 
+/** Internal follow-up notes on a quote (Quote view popup, blur-commit). */
+export async function setQuoteNotes(
+  id: string,
+  notes: string | null,
+): Promise<void> {
+  unwrap(
+    await supabase
+      .from("quotes")
+      .update({ notes })
+      .eq("id", id)
+      .select("id"),
+  );
+}
+
 /** Apply one patch to every listed quote (Bulk Edit on the Quotations table). */
 export async function updateQuotesBulk(
   ids: string[],

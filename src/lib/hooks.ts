@@ -269,6 +269,15 @@ export function useSetQuoteOpportunityValue() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
   });
 }
+/** Internal follow-up notes on a quote (Quote view popup, blur-commit). */
+export function useSetQuoteNotes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; notes: string | null }) =>
+      db.setQuoteNotes(input.id, input.notes),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
+  });
+}
 export function useUpdateQuotesBulk() {
   const qc = useQueryClient();
   return useMutation({
