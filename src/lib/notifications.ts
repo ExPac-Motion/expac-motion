@@ -221,7 +221,9 @@ export function buildNotifications(
         text:
           f.status === "failed"
             ? `Follow-up failed — ${f.email}`
-            : `Follow-up sent — ${f.email}`,
+            : f.status === "skipped"
+              ? `Follow-up skipped — ${f.email}`
+              : `Follow-up sent — ${f.email}`,
         when: f.created_at,
         to: "/crm?tab=followups",
         leadId: f.lead_id,

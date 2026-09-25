@@ -479,7 +479,7 @@ export default function DashboardPage() {
                           <td>
                             <span className="ref-link">{q.reference}</span>
                           </td>
-                          <td>{q.client?.company ?? "—"}</td>
+                          <td>{q.client?.company ?? q.lead?.company ?? "—"}</td>
                           <td>{q.supplier?.company ?? "—"}</td>
                           <td className="nowrap">
                             {portCode(q.origin)} → {portCode(q.destination)}
