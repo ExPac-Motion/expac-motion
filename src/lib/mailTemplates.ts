@@ -260,21 +260,27 @@ const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
 const SIG_LABEL = /(^|\| )(T|WA|F|E|Postal Address):/gm;
 const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
 
-/** ExPac Motion Live Tracking + Portal CTA buttons appended to a shipment
- *  email — the tracking link deep-links straight to this shipment's number
- *  (see PublicTrackPage's ?ref= handling), no login required; the portal
- *  link goes to the login-gated dashboard. */
-function shipmentCtaButtonsHtml(job: Job): string {
+/** The line the Live Tracking button is anchored under — matches whether
+ *  the label has since been HTML-bolded or not. */
+const TRACKING_ANCHOR_LABEL = "Provisional Delivery Date:";
+
+function trackingUrl(job: Job): string {
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : "https://expac-motion.pages.dev";
-  const trackingUrl = `${origin}/track?ref=${encodeURIComponent(job.reference)}`;
-  const portalUrl = `${origin}/portal`;
-  return `<div style="margin-top:22px">
-  ${emailButtonHtml(trackingUrl, "ExPac Motion Live Tracking", "#719d2f")}
-  ${emailButtonHtml(portalUrl, "ExPac Motion Portal", "rgb(36, 91, 198)")}
-</div>`;
+  return `${origin}/track?ref=${encodeURIComponent(job.reference)}`;
+}
+
+/** Insert `line` right after the line containing `label`, or append it at
+ *  the end if that label isn't present (e.g. a Settings-customized
+ *  template that dropped the Provisional Delivery Date field). */
+function insertAfterLabelLine(text: string, label: string, line: string): string {
+  const lines = text.split("\n");
+  const i = lines.findIndex((l) => l.includes(label));
+  if (i === -1) return `${text}\n\n${line}`;
+  lines.splice(i + 1, 0, line);
+  return lines.join("\n");
 }
 
 /** Wrap the plain-text body in the branded HTML shell. `boldHeadings` (the
@@ -282,8 +288,9 @@ function shipmentCtaButtonsHtml(job: Job): string {
  *  first line — the customer's name, upper-cased — and the label on every
  *  "Label: value" line up to the sign-off (Shipment Status, Supplier Name,
  *  etc). The signature's own T:/WA:/F:/E:/Postal Address: labels get bold
- *  + brand-green styling either way. Pass `job` to append the Live
- *  Tracking / Portal CTA buttons below the body. */
+ *  + brand-green styling either way. Pass `job` to insert the ExPac Motion
+ *  Live Tracking button under Provisional Delivery Date (or, if that line
+ *  isn't present — e.g. the Reply template — at the end). */
 export function shipmentEmailHtml(
   text: string,
   boldHeadings = false,
@@ -292,16 +299,22 @@ export function shipmentEmailHtml(
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const formatted = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
-  const body = formatted.replace(
+  let body = formatted.replace(
     SIG_LABEL,
     (_m, prefix: string, label: string) =>
       `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>`,
   );
+  if (job) {
+    body = insertAfterLabelLine(
+      body,
+      TRACKING_ANCHOR_LABEL,
+      emailButtonHtml(trackingUrl(job), "ExPac Motion Live Tracking"),
+    );
+  }
   // Plain text in the house font — no logo image (it rendered as a broken
   // attachment in Outlook); branding lives in the signature.
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${body}</pre>
-  ${job ? shipmentCtaButtonsHtml(job) : ""}
 </div>`;
 }
 
@@ -339,7 +352,14 @@ export function buildShipmentEmail(
 ): BuiltEmail {
   const tpl = shipmentCommsTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text, true, job) };
+  // Plain-text counterpart of the button shipmentEmailHtml inlines into the
+  // html version — same spot, under Provisional Delivery Date.
+  const textWithLink = insertAfterLabelLine(
+    text,
+    TRACKING_ANCHOR_LABEL,
+    `Live Tracking: ${trackingUrl(job)}`,
+  );
+  return { subject, text: textWithLink, html: shipmentEmailHtml(text, true, job) };
 }
 
 /**
@@ -355,5 +375,12 @@ export function buildShipmentReply(
 ): BuiltEmail {
   const tpl = shipmentReplyTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text, false, job) };
+  // No Provisional Delivery Date line in the Reply body, so this falls back
+  // to appending at the end — same fallback shipmentEmailHtml uses below.
+  const textWithLink = insertAfterLabelLine(
+    text,
+    TRACKING_ANCHOR_LABEL,
+    `Live Tracking: ${trackingUrl(job)}`,
+  );
+  return { subject, text: textWithLink, html: shipmentEmailHtml(text, false, job) };
 }
