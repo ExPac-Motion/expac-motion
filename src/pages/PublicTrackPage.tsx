@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import TrackingMap from "../components/TrackingMap";
 import { trackShipment } from "../lib/db";
 import { formatDate, formatDateTime, portCode } from "../lib/format";
@@ -16,15 +16,15 @@ import type { TrackedShipment } from "../lib/types";
  * migration 0064).
  */
 export default function PublicTrackPage() {
-  const [input, setInput] = useState("");
+  const [searchParams] = useSearchParams();
+  const initialRef = searchParams.get("ref") ?? "";
+  const [input, setInput] = useState(initialRef);
   const [state, setState] = useState<"idle" | "loading" | "found" | "notfound" | "error">(
     "idle",
   );
   const [result, setResult] = useState<TrackedShipment | null>(null);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    const ref = input.trim();
+  async function runTrack(ref: string) {
     if (!ref) return;
     setState("loading");
     try {
@@ -35,6 +35,17 @@ export default function PublicTrackPage() {
       setResult(null);
       setState("error");
     }
+  }
+
+  // Deep link from a shipment email's "Live Tracking" button, e.g. /track?ref=SEA170869.
+  useEffect(() => {
+    if (initialRef) runTrack(initialRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    await runTrack(input.trim());
   }
 
   return (

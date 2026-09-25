@@ -1,7 +1,7 @@
 import { formatDate } from "./format";
 import { LOCODES } from "./locodes";
 import { resolveMergeFields, type MergeContext } from "./mailMerge";
-import { EMAIL_FONT_SIZE, EMAIL_FONT_STACK } from "./mailStyle";
+import { EMAIL_FONT_SIZE, EMAIL_FONT_STACK, emailButtonHtml } from "./mailStyle";
 import type {
   Job,
   JobTracking,
@@ -260,13 +260,35 @@ const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
 const SIG_LABEL = /(^|\| )(T|WA|F|E|Postal Address):/gm;
 const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
 
+/** ExPac Motion Live Tracking + Portal CTA buttons appended to a shipment
+ *  email — the tracking link deep-links straight to this shipment's number
+ *  (see PublicTrackPage's ?ref= handling), no login required; the portal
+ *  link goes to the login-gated dashboard. */
+function shipmentCtaButtonsHtml(job: Job): string {
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://expac-motion.pages.dev";
+  const trackingUrl = `${origin}/track?ref=${encodeURIComponent(job.reference)}`;
+  const portalUrl = `${origin}/portal`;
+  return `<div style="margin-top:22px">
+  ${emailButtonHtml(trackingUrl, "ExPac Motion Live Tracking", "#719d2f")}
+  ${emailButtonHtml(portalUrl, "ExPac Motion Portal", "rgb(36, 91, 198)")}
+</div>`;
+}
+
 /** Wrap the plain-text body in the branded HTML shell. `boldHeadings` (the
  *  shipment status-update body, not the free-text reply) also bolds the
  *  first line — the customer's name, upper-cased — and the label on every
  *  "Label: value" line up to the sign-off (Shipment Status, Supplier Name,
  *  etc). The signature's own T:/WA:/F:/E:/Postal Address: labels get bold
- *  + brand-green styling either way. */
-export function shipmentEmailHtml(text: string, boldHeadings = false): string {
+ *  + brand-green styling either way. Pass `job` to append the Live
+ *  Tracking / Portal CTA buttons below the body. */
+export function shipmentEmailHtml(
+  text: string,
+  boldHeadings = false,
+  job?: Job,
+): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const formatted = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
@@ -279,6 +301,7 @@ export function shipmentEmailHtml(text: string, boldHeadings = false): string {
   // attachment in Outlook); branding lives in the signature.
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${body}</pre>
+  ${job ? shipmentCtaButtonsHtml(job) : ""}
 </div>`;
 }
 
@@ -316,7 +339,7 @@ export function buildShipmentEmail(
 ): BuiltEmail {
   const tpl = shipmentCommsTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text, true) };
+  return { subject, text, html: shipmentEmailHtml(text, true, job) };
 }
 
 /**
@@ -332,5 +355,5 @@ export function buildShipmentReply(
 ): BuiltEmail {
   const tpl = shipmentReplyTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text) };
+  return { subject, text, html: shipmentEmailHtml(text, false, job) };
 }

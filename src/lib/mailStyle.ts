@@ -23,3 +23,18 @@ export const EMAIL_FONT_SIZE = "11pt";
 export const EMAIL_BODY_STYLE =
   `font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};` +
   `line-height:1.55;color:#2e2e2e`;
+
+/** A branded CTA button for outgoing mail — inline-styled since most mail
+ *  clients strip external stylesheets. `color` defaults to the brand green. */
+export function emailButtonHtml(
+  href: string,
+  label: string,
+  color = "#719d2f",
+): string {
+  return (
+    `<a href="${href}" style="display:inline-block;background:${color};` +
+    `color:#fff;font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};` +
+    `font-weight:700;text-decoration:none;padding:10px 20px;border-radius:6px;` +
+    `margin:4px 12px 4px 0">${label}</a>`
+  );
+}
