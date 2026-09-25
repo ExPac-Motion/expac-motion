@@ -18,6 +18,7 @@ import TaskEditModal from "./ops/TaskEditModal";
 import {
   useAcceptQuote,
   useDeleteQuote,
+  useOpsTasks,
   useProfiles,
   useQuotes,
   useSaveQuote,
@@ -182,6 +183,16 @@ export default function QuotesListPage() {
   const save = useSaveQuote();
   const bulkUpdate = useUpdateQuotesBulk();
   const profilesQ = useProfiles();
+  const tasksQ = useOpsTasks();
+  const openTaskQuoteIds = useMemo(
+    () =>
+      new Set(
+        (tasksQ.data ?? [])
+          .filter((t) => t.kind === "task" && t.status !== "done" && t.quote_id)
+          .map((t) => t.quote_id as string),
+      ),
+    [tasksQ.data],
+  );
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
   );
@@ -250,6 +261,7 @@ export default function QuotesListPage() {
             mailTitle="Email the customer"
             onTask={() => setTaskingQuote(q)}
             taskTitle="Create a task for this quote"
+            taskOpen={openTaskQuoteIds.has(q.id)}
             onView={() => setOpenId(q.id)}
             onEdit={() => navigate(`/quotes/${q.id}`)}
             onDelete={() => onDelete(q)}
@@ -562,7 +574,7 @@ export default function QuotesListPage() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sel, totalsByQuote, navigate, salesPeople]);
+  }, [sel, totalsByQuote, navigate, salesPeople, openTaskQuoteIds]);
 
   return (
     <>

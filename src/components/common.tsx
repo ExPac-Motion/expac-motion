@@ -137,6 +137,7 @@ export function RowActions({
   mailUnread = false,
   onTask,
   taskTitle = "Create a task",
+  taskOpen = false,
   onView,
   onEdit,
   onDelete,
@@ -153,6 +154,8 @@ export function RowActions({
   /** When set, a task icon is shown — opens a new task pre-linked to this row. */
   onTask?: () => void;
   taskTitle?: string;
+  /** Highlights the task icon — an open/pending task is already linked to this row. */
+  taskOpen?: boolean;
   /** Each icon is omitted when its handler isn't passed (e.g. config lists
    *  that are view + edit only, or a sent campaign that can't be edited). */
   onView?: () => void;
@@ -188,7 +191,11 @@ export function RowActions({
         </button>
       )}
       {onTask && (
-        <button className="row-icon-btn" title={taskTitle} onClick={stop(onTask)}>
+        <button
+          className={`row-icon-btn${taskOpen ? " has-unread" : ""}`}
+          title={taskOpen ? `${taskTitle} — open task pending` : taskTitle}
+          onClick={stop(onTask)}
+        >
           {ROW_ICON.task}
         </button>
       )}

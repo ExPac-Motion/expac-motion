@@ -28,6 +28,7 @@ import {
   useDeleteShipmentDocument,
   useJobs,
   useMarkJobMessagesRead,
+  useOpsTasks,
   useSetJobMilestone,
   useShipmentDocuments,
   useUnreadMessages,
@@ -199,6 +200,16 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     [unreadMessagesQ.data],
   );
   const markRead = useMarkJobMessagesRead();
+  const tasksQ = useOpsTasks();
+  const openTaskJobIds = useMemo(
+    () =>
+      new Set(
+        (tasksQ.data ?? [])
+          .filter((t) => t.kind === "task" && t.status !== "done" && t.job_id)
+          .map((t) => t.job_id as string),
+      ),
+    [tasksQ.data],
+  );
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
 
@@ -328,6 +339,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             mailUnread={unreadJobIds.has(j.id)}
             onTask={() => setTaskingJob(j)}
             taskTitle="Create a task for this shipment"
+            taskOpen={openTaskJobIds.has(j.id)}
             onView={() => setViewing(j)}
             onEdit={() => setEditingJob(j)}
             onDelete={() => onDeleteJob(j)}
@@ -501,7 +513,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, mode, unreadJobIds],
+    [sel, mode, unreadJobIds, openTaskJobIds],
   );
 
   return (
