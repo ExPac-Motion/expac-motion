@@ -272,14 +272,16 @@ function trackingUrl(job: Job): string {
   return `${origin}/track?ref=${encodeURIComponent(job.reference)}`;
 }
 
-/** Insert `line` right after the line containing `label`, or append it at
- *  the end if that label isn't present (e.g. a Settings-customized
- *  template that dropped the Provisional Delivery Date field). */
+/** Insert `line` right after the line containing `label`, with a blank line
+ *  on each side so it doesn't sit flush against the surrounding text, or
+ *  append it at the end (same spacing) if that label isn't present — e.g. a
+ *  Settings-customized template that dropped the Provisional Delivery Date
+ *  field. */
 function insertAfterLabelLine(text: string, label: string, line: string): string {
   const lines = text.split("\n");
   const i = lines.findIndex((l) => l.includes(label));
   if (i === -1) return `${text}\n\n${line}`;
-  lines.splice(i + 1, 0, line);
+  lines.splice(i + 1, 0, "", line, "");
   return lines.join("\n");
 }
 
