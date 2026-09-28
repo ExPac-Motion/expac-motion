@@ -9,14 +9,20 @@ import {
   useJobs,
   useMyProfile,
   useProfiles,
+  useQuotes,
   useUpdateCompanySettings,
   useUpdateProfile,
   useUploadMailAsset,
 } from "../lib/hooks";
 import { SHIPMENT_MERGE_CODES } from "../lib/mailMerge";
 import {
+  DEFAULT_QUOTATION_COMMS,
+  DEFAULT_QUOTATION_REPLIES,
   DEFAULT_SHIPMENT_COMMS,
   DEFAULT_SHIPMENT_REPLIES,
+  quotationCommsTemplate,
+  quotationReplyTemplate,
+  renderQuoteEmail,
   renderShipmentEmail,
   SHIPMENT_MODE_KEYS,
   SHIPMENT_MODE_LABEL,
@@ -26,8 +32,8 @@ import {
 } from "../lib/mailTemplates";
 import type {
   CompanySettingsPatch,
-  Job,
   Profile,
+  QuoteMode,
   ShipmentCommsConfig,
   ShipmentCommsTemplate,
   ShipmentModeKey,
@@ -35,7 +41,15 @@ import type {
 } from "../lib/types";
 import { formatDate } from "../lib/format";
 
-type Tab = "company" | "defaults" | "team" | "email" | "comms" | "replies";
+type Tab =
+  | "company"
+  | "defaults"
+  | "team"
+  | "email"
+  | "comms"
+  | "replies"
+  | "qcomms"
+  | "qreplies";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company Details" },
@@ -44,6 +58,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "email", label: "Email" },
   { key: "comms", label: "Shipment Comms" },
   { key: "replies", label: "Shipment Replies" },
+  { key: "qcomms", label: "Quotation Comms" },
+  { key: "qreplies", label: "Quotation Replies" },
 ];
 
 export default function SettingsPage() {
@@ -71,6 +87,8 @@ export default function SettingsPage() {
         {tab === "email" && <EmailTab />}
         {tab === "comms" && <ShipmentCommsTab />}
         {tab === "replies" && <ShipmentRepliesTab />}
+        {tab === "qcomms" && <QuotationCommsTab />}
+        {tab === "qreplies" && <QuotationRepliesTab />}
       </div>
     </>
   );
@@ -448,12 +466,14 @@ function ShipmentCommsTab() {
   if (isError || !data) return <ErrorNote error={error} />;
 
   return (
-    <ShipmentCommsEditor
+    <CommsTemplateEditor
       config={data.shipment_comms ?? {}}
-      jobs={jobsQ.data ?? []}
+      entities={jobsQ.data ?? []}
+      entityNoun="shipment"
       settingsField="shipment_comms"
       defaults={DEFAULT_SHIPMENT_COMMS}
       resolve={shipmentCommsTemplate}
+      render={renderShipmentEmail}
       description={
         <>
           The customer update email sent from a shipment's Comms panel. Each
@@ -475,12 +495,14 @@ function ShipmentRepliesTab() {
   if (isError || !data) return <ErrorNote error={error} />;
 
   return (
-    <ShipmentCommsEditor
+    <CommsTemplateEditor
       config={data.shipment_replies ?? {}}
-      jobs={jobsQ.data ?? []}
+      entities={jobsQ.data ?? []}
+      entityNoun="shipment"
       settingsField="shipment_replies"
       defaults={DEFAULT_SHIPMENT_REPLIES}
       resolve={shipmentReplyTemplate}
+      render={renderShipmentEmail}
       description={
         <>
           A quick chat-style reply within an existing thread — no
@@ -493,23 +515,110 @@ function ShipmentRepliesTab() {
   );
 }
 
-function ShipmentCommsEditor({
+function QuotationCommsTab() {
+  const { data, isLoading, isError, error } = useCompanySettings();
+  const quotesQ = useQuotes();
+
+  if (isLoading) return <Loading />;
+  if (isError || !data) return <ErrorNote error={error} />;
+
+  return (
+    <CommsTemplateEditor
+      config={data.quotation_comms ?? {}}
+      entities={quotesQ.data ?? []}
+      entityNoun="quotation"
+      settingsField="quotation_comms"
+      defaults={DEFAULT_QUOTATION_COMMS}
+      resolve={quotationCommsTemplate}
+      render={renderQuoteEmail}
+      description={
+        <>
+          The customer update email sent from a quotation's Comms panel —
+          same method as Shipment Comms, just with the quote's own status
+          (New Lead/Quote Sent/Quote Accepted/Completed/Not Proceeding)
+          instead of a shipment milestone. Each freight group has its own
+          template — edit the wording and drop in{" "}
+          <code>{"{{ shipment.number }}"}</code>-style codes. The preview
+          renders a real quotation; missing values show blank.
+        </>
+      }
+      saveLabel="Save Quotation Comms"
+    />
+  );
+}
+
+function QuotationRepliesTab() {
+  const { data, isLoading, isError, error } = useCompanySettings();
+  const quotesQ = useQuotes();
+
+  if (isLoading) return <Loading />;
+  if (isError || !data) return <ErrorNote error={error} />;
+
+  return (
+    <CommsTemplateEditor
+      config={data.quotation_replies ?? {}}
+      entities={quotesQ.data ?? []}
+      entityNoun="quotation"
+      settingsField="quotation_replies"
+      defaults={DEFAULT_QUOTATION_REPLIES}
+      resolve={quotationReplyTemplate}
+      render={renderQuoteEmail}
+      description={
+        <>
+          A quick chat-style reply within an existing thread — no
+          quotation-data block, just your message and the signature. Use
+          Quotation Comms instead for a full status-update notification.
+        </>
+      }
+      saveLabel="Save Quotation Replies"
+    />
+  );
+}
+
+/** Shared by Shipment Comms/Replies and Quotation Comms/Replies — generic
+ *  over the entity a template renders against (a Job or a Quote), since
+ *  both share the same {id, mode, reference, client?.company} shape that
+ *  the mode tabs and preview picker need. `lead?.company` is optional —
+ *  a Quote can be against a not-yet-promoted lead instead of a client;
+ *  Job has no such field, so it's simply absent there. */
+function CommsTemplateEditor<
+  T extends {
+    id: string;
+    mode: QuoteMode;
+    reference: string;
+    client?: { company?: string | null } | null;
+    lead?: { company?: string | null } | null;
+  },
+>({
   config,
-  jobs,
+  entities,
+  entityNoun,
   settingsField,
   defaults,
   resolve,
+  render,
   description,
   saveLabel,
 }: {
   config: ShipmentCommsConfig;
-  jobs: Job[];
-  settingsField: "shipment_comms" | "shipment_replies";
+  entities: T[];
+  /** e.g. "shipment" / "quotation" — used in the preview-picker copy. */
+  entityNoun: string;
+  settingsField:
+    | "shipment_comms"
+    | "shipment_replies"
+    | "quotation_comms"
+    | "quotation_replies";
   defaults: Record<ShipmentModeKey, ShipmentCommsTemplate>;
   resolve: (
     key: ShipmentModeKey,
     config?: ShipmentCommsConfig | null,
   ) => ShipmentCommsTemplate;
+  render: (
+    entity: T,
+    tpl: ShipmentCommsTemplate,
+    remarks: string,
+  ) => { subject: string; text: string };
   description: ReactNode;
   saveLabel: string;
 }) {
@@ -533,18 +642,16 @@ function ShipmentCommsEditor({
   const setDraft = (patch: Partial<ShipmentCommsTemplate>) =>
     setDrafts((d) => ({ ...d, [activeKey]: { ...d[activeKey], ...patch } }));
 
-  const modeJobs = useMemo(
-    () => jobs.filter((j) => shipmentModeKey(j.mode) === activeKey),
-    [jobs, activeKey],
+  const modeEntities = useMemo(
+    () => entities.filter((e) => shipmentModeKey(e.mode) === activeKey),
+    [entities, activeKey],
   );
-  const previewJob =
-    modeJobs.find((j) => j.id === previewId) ??
-    modeJobs[0] ??
-    jobs[0] ??
+  const previewEntity =
+    modeEntities.find((e) => e.id === previewId) ??
+    modeEntities[0] ??
+    entities[0] ??
     null;
-  const preview = previewJob
-    ? renderShipmentEmail(previewJob, draft, "")
-    : null;
+  const preview = previewEntity ? render(previewEntity, draft, "") : null;
 
   const dft = defaults[activeKey];
   const isDefault = draft.subject === dft.subject && draft.body === dft.body;
@@ -637,19 +744,20 @@ function ShipmentCommsEditor({
       </div>
 
       <div className="field">
-        <label>Preview against shipment</label>
+        <label>Preview against {entityNoun}</label>
         <select
-          value={previewJob?.id ?? ""}
+          value={previewEntity?.id ?? ""}
           onChange={(e) => setPreviewId(e.target.value)}
         >
-          {modeJobs.length === 0 && jobs.length > 0 && (
+          {modeEntities.length === 0 && entities.length > 0 && (
             <option value="">
-              (no {SHIPMENT_MODE_LABEL[activeKey]} shipments yet — showing any)
+              (no {SHIPMENT_MODE_LABEL[activeKey]} {entityNoun}s yet — showing
+              any)
             </option>
           )}
-          {(modeJobs.length ? modeJobs : jobs).map((j) => (
-            <option key={j.id} value={j.id}>
-              {j.reference} — {j.client?.company ?? "—"}
+          {(modeEntities.length ? modeEntities : entities).map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.reference} — {e.client?.company ?? e.lead?.company ?? "—"}
             </option>
           ))}
         </select>
@@ -684,7 +792,7 @@ function ShipmentCommsEditor({
           </div>
         </div>
       ) : (
-        <EmptyState>Add a shipment to see a preview.</EmptyState>
+        <EmptyState>Add a {entityNoun} to see a preview.</EmptyState>
       )}
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>

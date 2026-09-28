@@ -12,17 +12,19 @@ import {
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
-import QuickMailModal from "../components/QuickMailModal";
 import QuoteDetailModal from "./QuoteDetailModal";
+import QuoteCommsRail from "./quotes/QuoteCommsRail";
 import TaskEditModal from "./ops/TaskEditModal";
 import {
   useAcceptQuote,
   useDeleteQuote,
+  useMarkQuoteMessagesRead,
   useOpsTasks,
   useProfiles,
   useQuotes,
   useSaveQuote,
   useSetQuoteNotes,
+  useUnreadQuoteMessages,
   useUpdateQuotesBulk,
 } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
@@ -177,13 +179,26 @@ export default function QuotesListPage() {
   const navigate = useNavigate();
   const { data: quotes, isLoading, isError, error } = useQuotes();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [mailing, setMailing] = useState<Quote | null>(null);
+  const [commsQuote, setCommsQuote] = useState<Quote | null>(null);
+  const [railOpen, setRailOpen] = useState(false);
   const [taskingQuote, setTaskingQuote] = useState<Quote | null>(null);
   const del = useDeleteQuote();
   const save = useSaveQuote();
   const bulkUpdate = useUpdateQuotesBulk();
   const profilesQ = useProfiles();
   const tasksQ = useOpsTasks();
+  const unreadMessagesQ = useUnreadQuoteMessages();
+  const unreadQuoteIds = useMemo(
+    () => new Set((unreadMessagesQ.data ?? []).map((m) => m.quote_id)),
+    [unreadMessagesQ.data],
+  );
+  const markRead = useMarkQuoteMessagesRead();
+
+  function openQuoteComms(q: Quote) {
+    setCommsQuote(q);
+    setRailOpen(true);
+    if (unreadQuoteIds.has(q.id)) markRead.mutate(q.id);
+  }
   const openTaskQuoteIds = useMemo(
     () =>
       new Set(
@@ -257,8 +272,9 @@ export default function QuotesListPage() {
           <RowActions
             selected={sel.isSelected(q.id)}
             onSelectToggle={() => sel.toggle(q.id)}
-            onMail={() => setMailing(q)}
-            mailTitle="Email the customer"
+            onMail={() => openQuoteComms(q)}
+            mailTitle="Messages / email the customer"
+            mailUnread={unreadQuoteIds.has(q.id)}
             onTask={() => setTaskingQuote(q)}
             taskTitle="Create a task for this quote"
             taskOpen={openTaskQuoteIds.has(q.id)}
@@ -574,10 +590,11 @@ export default function QuotesListPage() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sel, totalsByQuote, navigate, salesPeople, openTaskQuoteIds]);
+  }, [sel, totalsByQuote, navigate, salesPeople, openTaskQuoteIds, unreadQuoteIds]);
 
   return (
     <>
+      <div className={railOpen ? "board-shift" : ""}>
       <PageHeader
         eyebrow="Pricing & costing"
         title="Quotations"
@@ -631,6 +648,13 @@ export default function QuotesListPage() {
           />
         )}
       </div>
+      </div>
+
+      <QuoteCommsRail
+        quote={commsQuote}
+        open={railOpen}
+        onToggle={() => setRailOpen((v) => !v)}
+      />
 
       {openId && (
         <QuoteDetailModal quoteId={openId} onClose={() => setOpenId(null)} />
@@ -646,25 +670,6 @@ export default function QuotesListPage() {
             title: `Follow up: ${taskingQuote.reference}`,
           }}
           onClose={() => setTaskingQuote(null)}
-        />
-      )}
-
-      {mailing && (
-        <QuickMailModal
-          to={mailing.client?.email ?? mailing.lead?.email ?? null}
-          company={mailing.client?.company ?? mailing.lead?.company ?? "customer"}
-          name={mailing.lead?.contact ?? null}
-          quote={{ id: mailing.id, reference: mailing.reference }}
-          merge={{
-            shipmentNumber: mailing.reference,
-            quoteReference: mailing.reference,
-            customerReference: mailing.customer_reference ?? "",
-            origin: portCode(mailing.origin),
-            destination: portCode(mailing.destination),
-            mode: mailing.mode,
-            validUntil: mailing.valid_until ?? "",
-          }}
-          onClose={() => setMailing(null)}
         />
       )}
 

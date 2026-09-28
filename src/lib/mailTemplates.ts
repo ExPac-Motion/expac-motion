@@ -5,11 +5,13 @@ import { EMAIL_FONT_SIZE, EMAIL_FONT_STACK, emailButtonHtml } from "./mailStyle"
 import type {
   Job,
   JobTracking,
+  Quote,
   QuoteMode,
   ShipmentCommsConfig,
   ShipmentCommsTemplate,
   ShipmentModeKey,
 } from "./types";
+import { STATUS_LABEL } from "./types";
 
 const RULE = "________________________________________";
 
@@ -389,4 +391,199 @@ export function buildShipmentReply(
     `Live Tracking: ${trackingUrl(job)}`,
   );
   return { subject, text: textWithLink, html: shipmentEmailHtml(text, false, job) };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Per-mode quotation-notification templates (Quotation Comms)       */
+/* ------------------------------------------------------------------ */
+
+const QUOTE_SEA_BODY = `{{ customer.name }}
+
+Update for Quotation: {{ shipment.number }}
+Supplier Name: {{ supplier.name }}
+Customer Reference: {{ shipment.po }}
+Shipped From: {{ shipment.shipped_from }}
+${RULE}
+
+Shipping Mode: {{ shipment.mode }}
+Quotation Number: {{ shipment.number }}
+Shipping Line: {{ shipment.shipping_line }}
+Vessel Name: {{ shipment.vessel }}
+Container Number: {{ shipment.container }}
+Port of Load: {{ shipment.origin }}
+Port of Discharge: {{ shipment.destination }}
+Departure from Port of Load: {{ shipment.etd }}
+Arrival at Port of Discharge: {{ shipment.eta }}
+Provisional Delivery Date: {{ shipment.delivery_date }}
+Quotation Status: {{ shipment.status }}
+${RULE}
+
+Remarks: {{ remarks }}
+
+Thank you,
+Support at EXPAC (ZAJNB)
+${RULE}`;
+
+const QUOTE_SHORT_BODY = `{{ customer.name }}
+
+Notification for Quotation: {{ shipment.number }}
+Supplier Name: {{ supplier.name }}
+Customer Reference: {{ shipment.po }}
+Shipped From: {{ shipment.shipped_from }}
+${RULE}
+
+Shipping Mode: {{ shipment.mode }}
+Quotation Number: {{ shipment.number }}
+Port of Load: {{ shipment.origin }}
+Port of Discharge: {{ shipment.destination }}
+Departure from Port of Load: {{ shipment.etd }}
+Arrival at Port of Discharge: {{ shipment.eta }}
+Provisional Delivery Date: {{ shipment.delivery_date }}
+Quotation Status: {{ shipment.status }}
+${RULE}
+
+Remarks: {{ remarks }}
+
+Thank you,
+Support at EXPAC (ZAJNB)
+${RULE}`;
+
+/** Same shape as Shipment Comms, one status field swapped for the quote's
+ *  own pipeline status (New Lead/Quote Sent/Quote Accepted/Completed/Not
+ *  Proceeding) instead of a shipment milestone. */
+export const DEFAULT_QUOTATION_COMMS: Record<
+  ShipmentModeKey,
+  ShipmentCommsTemplate
+> = {
+  sea: {
+    subject: "Update for Quotation: {{ shipment.number }}",
+    body: QUOTE_SEA_BODY,
+  },
+  air: {
+    subject: "Notification for Quotation: {{ shipment.number }}",
+    body: QUOTE_SHORT_BODY,
+  },
+  courier: {
+    subject: "Notification for Quotation: {{ shipment.number }}",
+    body: QUOTE_SHORT_BODY,
+  },
+  road: {
+    subject: "Notification for Quotation: {{ shipment.number }}",
+    body: QUOTE_SHORT_BODY,
+  },
+};
+
+export function quotationCommsTemplate(
+  key: ShipmentModeKey,
+  config?: ShipmentCommsConfig | null,
+): ShipmentCommsTemplate {
+  return resolveTemplate(key, config, DEFAULT_QUOTATION_COMMS);
+}
+
+export function quotationReplyTemplate(
+  key: ShipmentModeKey,
+  config?: ShipmentCommsConfig | null,
+): ShipmentCommsTemplate {
+  return resolveTemplate(key, config, DEFAULT_QUOTATION_REPLIES);
+}
+
+const QUOTE_REPLY_TEMPLATE: ShipmentCommsTemplate = {
+  subject: "Re: Quotation {{ shipment.number }}",
+  body: REPLY_BODY,
+};
+
+export const DEFAULT_QUOTATION_REPLIES: Record<
+  ShipmentModeKey,
+  ShipmentCommsTemplate
+> = {
+  sea: QUOTE_REPLY_TEMPLATE,
+  air: QUOTE_REPLY_TEMPLATE,
+  courier: QUOTE_REPLY_TEMPLATE,
+  road: QUOTE_REPLY_TEMPLATE,
+};
+
+/** Merge-code values for a quotation-notification email. Mirrors
+ *  shipmentMergeContext, adapted for the fields that differ on a Quote:
+ *  no po_no (uses customer_reference), MBL/AWB split across
+ *  mawb_no/hawb_no/mbl_no/hbl_no instead of one awb_mbl column (same
+ *  mode-aware fallback accept_quote() uses), a customer that may be a
+ *  not-yet-promoted lead, and the quote's own pipeline status in place of
+ *  a shipment milestone. */
+export function quoteMergeContext(quote: Quote): MergeContext {
+  const isAirOrCourier =
+    quote.mode.startsWith("Air") || quote.mode.startsWith("Courier");
+  const awb = isAirOrCourier
+    ? quote.mawb_no || quote.hawb_no || ""
+    : quote.mbl_no || quote.hbl_no || "";
+  return {
+    name:
+      quote.lead?.contact ||
+      quote.client?.company ||
+      quote.lead?.company ||
+      "Customer",
+    customerName: quote.client?.company || quote.lead?.company || "Customer",
+    company: quote.client?.company || quote.lead?.company || "",
+    supplierName: quote.supplier?.company ?? "",
+    poNumber: quote.customer_reference ?? "",
+    customerReference: quote.customer_reference ?? "",
+    shipmentNumber: quote.reference,
+    quoteReference: quote.reference,
+    shippedFrom: locodeCountry(quote.origin),
+    mode: modeLabel(quote.mode),
+    origin: quote.origin ?? "",
+    destination: quote.destination ?? "",
+    shippingLine: quote.shipping_line ?? "",
+    vesselName: quote.vessel_name ?? "",
+    containerNo: quote.container_no ?? "",
+    carrierName: quote.carrier_name ?? "",
+    awb,
+    etd: d(quote.etd),
+    eta: d(quote.eta),
+    deliveryDate: d(quote.provisional_delivery_date),
+    shipmentStatus: STATUS_LABEL[quote.status],
+  };
+}
+
+/** Resolve a template against a quote + the operator's remarks. */
+export function renderQuoteEmail(
+  quote: Quote,
+  tpl: ShipmentCommsTemplate,
+  remarks: string,
+): { subject: string; text: string } {
+  const ctx = quoteMergeContext(quote);
+  const resolvedRemarks = resolveMergeFields((remarks ?? "").trim(), ctx);
+  return {
+    subject: resolveMergeFields(tpl.subject, ctx).trim(),
+    text: resolveMergeFields(tpl.body, { ...ctx, remarks: resolvedRemarks }),
+  };
+}
+
+/**
+ * Assemble the customer update email for a quotation, using the team's
+ * per-mode template (Settings → Quotation Comms) or the built-in default.
+ * No Live Tracking button here — a quote isn't a live shipment yet.
+ */
+export function buildQuoteCommsEmail(
+  quote: Quote,
+  remarks: string,
+  config?: ShipmentCommsConfig | null,
+): BuiltEmail {
+  const tpl = quotationCommsTemplate(shipmentModeKey(quote.mode), config);
+  const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
+  return { subject, text, html: shipmentEmailHtml(text, true) };
+}
+
+/**
+ * A quick chat-style reply within an existing thread (Settings →
+ * Quotation Replies, or the built-in default) — just the operator's
+ * message and signature, no quotation-data block.
+ */
+export function buildQuoteCommsReply(
+  quote: Quote,
+  remarks: string,
+  config?: ShipmentCommsConfig | null,
+): BuiltEmail {
+  const tpl = quotationReplyTemplate(shipmentModeKey(quote.mode), config);
+  const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
+  return { subject, text, html: shipmentEmailHtml(text) };
 }

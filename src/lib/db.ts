@@ -22,6 +22,8 @@ import type {
   TrackedShipment,
   Message,
   MessagePatch,
+  QuoteMessage,
+  QuoteMessagePatch,
   Milestone,
   NotificationState,
   OpsTask,
@@ -299,7 +301,7 @@ export async function deleteClearingAgent(id: string): Promise<void> {
 
 /* ---------- Quotes ---------- */
 const QUOTE_SELECT =
-  "*, quote_lines(*), packing_list_items(*), client:clients!quotes_client_id_fkey(id,company,email), lead:leads!quotes_lead_id_fkey(id,company,contact,email,phone,address,vat_no), supplier:suppliers(id,company), consignee:clients!quotes_consignee_id_fkey(id,company), consignee_lead:leads!quotes_consignee_lead_id_fkey(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
+  "*, quote_lines(*), packing_list_items(*), client:clients!quotes_client_id_fkey(id,company,email), lead:leads!quotes_lead_id_fkey(id,company,contact,email,phone,address,vat_no), supplier:suppliers(id,company,email), consignee:clients!quotes_consignee_id_fkey(id,company), consignee_lead:leads!quotes_consignee_lead_id_fkey(id,company), agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
 
 function sortLines(q: Quote): Quote {
   q.quote_lines = [...(q.quote_lines || [])].sort(
@@ -778,6 +780,69 @@ export async function markJobMessagesRead(jobId: string): Promise<void> {
       .from("messages")
       .update({ read_at: new Date().toISOString() })
       .eq("job_id", jobId)
+      .eq("direction", "in")
+      .is("read_at", null),
+  );
+}
+
+/* ---------- Quotation Comms (quote_messages) ---------- */
+export async function listQuoteMessages(
+  quoteId: string,
+): Promise<QuoteMessage[]> {
+  return unwrap<QuoteMessage[]>(
+    await supabase
+      .from("quote_messages")
+      .select("*")
+      .eq("quote_id", quoteId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function createQuoteMessage(
+  row: Partial<QuoteMessage> & { quote_id: string; kind: QuoteMessage["kind"] },
+): Promise<QuoteMessage> {
+  return unwrap<QuoteMessage>(
+    await supabase.from("quote_messages").insert(row).select("*").single(),
+  );
+}
+
+export async function updateQuoteMessage(
+  id: string,
+  patch: QuoteMessagePatch,
+): Promise<QuoteMessage> {
+  return unwrap<QuoteMessage>(
+    await supabase
+      .from("quote_messages")
+      .update(patch)
+      .eq("id", id)
+      .select("*")
+      .single(),
+  );
+}
+
+/** Unread customer replies (direction='in', read_at null) — lights up the
+ *  mail icon on Quotations and feeds the notif bell. */
+export async function listUnreadQuoteMessages(): Promise<
+  Pick<QuoteMessage, "id" | "quote_id" | "body" | "created_at">[]
+> {
+  return unwrap<Pick<QuoteMessage, "id" | "quote_id" | "body" | "created_at">[]>(
+    await supabase
+      .from("quote_messages")
+      .select("id, quote_id, body, created_at")
+      .eq("direction", "in")
+      .is("read_at", null)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** Marks every unread customer reply on a quote as read — called when
+ *  staff opens its Comms panel. */
+export async function markQuoteMessagesRead(quoteId: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from("quote_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("quote_id", quoteId)
       .eq("direction", "in")
       .is("read_at", null),
   );

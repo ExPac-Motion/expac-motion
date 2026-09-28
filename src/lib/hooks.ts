@@ -20,6 +20,7 @@ import type {
   Profile,
   ProfilePatch,
   PortalAnnouncement,
+  Quote,
   QuoteDraft,
   RateSheetPatch,
   LeadPatch,
@@ -40,7 +41,12 @@ import type {
   UiTableLayout,
 } from "./types";
 import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
-import { buildShipmentEmail, buildShipmentReply } from "./mailTemplates";
+import {
+  buildShipmentEmail,
+  buildShipmentReply,
+  buildQuoteCommsEmail,
+  buildQuoteCommsReply,
+} from "./mailTemplates";
 import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail, SUPPORT_BCC } from "./mail";
 
@@ -567,6 +573,116 @@ export function useAddNote() {
       }),
     onSuccess: (_m, input) =>
       qc.invalidateQueries({ queryKey: ["messages", input.jobId] }),
+  });
+}
+
+/* ---------- Quotation Comms ---------- */
+export function useQuoteMessages(quoteId: string | undefined) {
+  return useQuery({
+    queryKey: ["quote_messages", quoteId],
+    queryFn: () => db.listQuoteMessages(quoteId as string),
+    enabled: Boolean(quoteId),
+  });
+}
+
+/** Unread customer replies — polled so one sent from the portal lights up
+ *  the mail icon (and the notif bell) here without a manual refresh. */
+export function useUnreadQuoteMessages() {
+  return useQuery({
+    queryKey: ["unread_quote_messages"],
+    queryFn: db.listUnreadQuoteMessages,
+    refetchInterval: 45_000,
+  });
+}
+
+export function useMarkQuoteMessagesRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (quoteId: string) => db.markQuoteMessagesRead(quoteId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["unread_quote_messages"] }),
+  });
+}
+
+export function useSendQuoteMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      quote: Quote;
+      remarks: string;
+      to: string[];
+      cc: string[];
+      /** 'reply' = quick chat-style message (Settings -> Quotation Replies),
+       *  no quotation-data block. Defaults to the full status-update template. */
+      template?: "update" | "reply";
+    }) => {
+      const { quote, remarks, to, cc, template = "update" } = input;
+      const settings = await db.getCompanySettings().catch(() => null);
+      const mail =
+        template === "reply"
+          ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies)
+          : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms);
+      try {
+        const { id } = await sendMail({
+          to,
+          cc,
+          bcc: SUPPORT_BCC,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          fromName: settings?.mail_sender_name || undefined,
+          replyTo: settings?.mail_reply_to || undefined,
+        });
+        return db.createQuoteMessage({
+          quote_id: quote.id,
+          kind: "email",
+          direction: "out",
+          to_emails: to,
+          cc_emails: cc,
+          subject: mail.subject,
+          body: mail.text,
+          remarks,
+          status: "sent",
+          provider_id: id,
+          sent_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        // Still record the attempt so the thread shows it failed.
+        await db.createQuoteMessage({
+          quote_id: quote.id,
+          kind: "email",
+          direction: "out",
+          to_emails: to,
+          cc_emails: cc,
+          subject: mail.subject,
+          body: mail.text,
+          remarks,
+          status: "failed",
+          error: e instanceof Error ? e.message : String(e),
+        });
+        throw e;
+      }
+    },
+    onSuccess: (_m, input) =>
+      qc.invalidateQueries({ queryKey: ["quote_messages", input.quote.id] }),
+    onError: (_e, input) =>
+      qc.invalidateQueries({ queryKey: ["quote_messages", input.quote.id] }),
+  });
+}
+
+export function useAddQuoteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { quoteId: string; body: string }) =>
+      db.createQuoteMessage({
+        quote_id: input.quoteId,
+        kind: "note",
+        direction: "out",
+        body: input.body,
+        status: "sent",
+      }),
+    onSuccess: (_m, input) =>
+      qc.invalidateQueries({ queryKey: ["quote_messages", input.quoteId] }),
   });
 }
 

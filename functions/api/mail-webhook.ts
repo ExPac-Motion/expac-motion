@@ -120,8 +120,9 @@ export async function onRequestPost(context) {
     return json({ error: "Bad JSON." }, 400);
   }
 
-  // ---- delivery status (a shipment message or a campaign recipient --
-  //      whichever table has this provider_id; the other is a no-op) ----
+  // ---- delivery status (a shipment message, a quote message, or a
+  //      campaign recipient -- whichever table has this provider_id; the
+  //      others are a no-op) ----
   const status = STATUS_FROM_TYPE[evt.type];
   if (status && evt.data && evt.data.email_id) {
     const id = evt.data.email_id;
@@ -130,6 +131,11 @@ export async function onRequestPost(context) {
     if (status === "clicked") recipientPatch.clicked_at = new Date().toISOString();
     await Promise.all([
       sbPatch(env, `messages?provider_id=eq.${encodeURIComponent(id)}`, { status }),
+      sbPatch(
+        env,
+        `quote_messages?provider_id=eq.${encodeURIComponent(id)}`,
+        { status },
+      ),
       sbPatch(
         env,
         `mail_campaign_recipients?provider_id=eq.${encodeURIComponent(id)}`,
@@ -148,20 +154,31 @@ export async function onRequestPost(context) {
     );
     const ids = refs.match(/[0-9a-f-]{20,}/gi) || [];
     let jobId = null;
+    let quoteId = null;
     for (const pid of ids) {
-      const rows = await sbGet(
+      const jobRows = await sbGet(
         env,
         `messages?provider_id=eq.${encodeURIComponent(pid)}&select=job_id&limit=1`,
       );
-      if (rows[0]) {
-        jobId = rows[0].job_id;
+      if (jobRows[0]) {
+        jobId = jobRows[0].job_id;
+        break;
+      }
+      const quoteRows = await sbGet(
+        env,
+        `quote_messages?provider_id=eq.${encodeURIComponent(pid)}&select=quote_id&limit=1`,
+      );
+      if (quoteRows[0]) {
+        quoteId = quoteRows[0].quote_id;
         break;
       }
     }
-    if (!jobId) return json({ ok: true, note: "reply not matched to a shipment" });
+    if (!jobId && !quoteId) {
+      return json({ ok: true, note: "reply not matched to a shipment or quote" });
+    }
 
-    await sbInsert(env, "messages", {
-      job_id: jobId,
+    await sbInsert(env, jobId ? "messages" : "quote_messages", {
+      ...(jobId ? { job_id: jobId } : { quote_id: quoteId }),
       kind: "email",
       direction: "in",
       from_email: d.from || null,

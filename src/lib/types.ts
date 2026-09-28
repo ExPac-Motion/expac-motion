@@ -112,6 +112,11 @@ export interface CompanySettings {
   /** Per-mode quick-reply template overrides — a chat-style message within
    *  an existing thread, no shipment-data block. */
   shipment_replies: ShipmentCommsConfig;
+  /** Per-mode quotation-notification template overrides — same idea as
+   *  shipment_comms, for a quote's Comms panel. */
+  quotation_comms: ShipmentCommsConfig;
+  /** Per-mode quick-reply template overrides for a quote's Comms panel. */
+  quotation_replies: ShipmentCommsConfig;
   updated_at: string;
 }
 export type CompanySettingsPatch = Partial<
@@ -972,7 +977,7 @@ export interface Quote {
     Lead,
     "id" | "company" | "contact" | "email" | "phone" | "address" | "vat_no"
   > | null;
-  supplier?: Pick<Supplier, "id" | "company"> | null;
+  supplier?: (Pick<Supplier, "id" | "company"> & { email?: string | null }) | null;
   consignee?: Pick<Client, "id" | "company"> | null;
   /** Set instead of `consignee` when the delivery point is a not-yet-promoted lead. */
   consignee_lead?: Pick<Lead, "id" | "company"> | null;
@@ -1140,6 +1145,35 @@ export interface Message {
 
 export type MessagePatch = Partial<
   Pick<Message, "status" | "provider_id" | "error" | "sent_at">
+>;
+
+/** Quotation Comms — mirrors Message, but linked to a quote instead of a
+ *  job (its own quote_messages table, kept parallel rather than a nullable
+ *  dual-purpose FK on the job-only messages table). */
+export interface QuoteMessage {
+  id: string;
+  quote_id: string;
+  kind: MessageKind;
+  direction: "out" | "in";
+  to_emails: string[];
+  cc_emails: string[];
+  from_email: string | null;
+  subject: string | null;
+  body: string;
+  remarks: string | null;
+  status: MessageStatus;
+  provider_id: string | null;
+  error: string | null;
+  meta: unknown;
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+  /** Only meaningful for direction='in' (a customer reply) — null = unread. */
+  read_at: string | null;
+}
+
+export type QuoteMessagePatch = Partial<
+  Pick<QuoteMessage, "status" | "provider_id" | "error" | "sent_at">
 >;
 
 export interface JobEvent {
