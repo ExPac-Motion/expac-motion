@@ -98,17 +98,23 @@ export async function buildQuotePdf(
 
     for (let i = 0; i < pages.length; i++) {
       const canvas = await html2canvas(pages[i], {
-        scale: 2,
+        // 3x is close to print quality (~300dpi) at A4 width — 2x (~200dpi)
+        // read soft once zoomed past 100%, which is what this is fixing.
+        scale: 3,
         backgroundColor: "#ffffff",
         useCORS: true,
         logging: false,
         windowWidth: doc.documentElement.scrollWidth,
       });
-      const img = canvas.toDataURL("image/jpeg", 0.92);
+      // PNG, not JPEG — this page is text/tables/lines, not a photo. JPEG's
+      // lossy chroma-subsampled compression blurs/rings right around sharp
+      // edges like letterforms and table borders; PNG is lossless and
+      // actually compresses this kind of flat-color content well.
+      const img = canvas.toDataURL("image/png");
       // Fit the page image to the A4 width; keep aspect ratio.
       const h = Math.min(ph, (canvas.height * pw) / canvas.width);
       if (i > 0) pdf.addPage();
-      pdf.addImage(img, "JPEG", 0, 0, pw, h);
+      pdf.addImage(img, "PNG", 0, 0, pw, h);
     }
 
     const uri = pdf.output("datauristring");
