@@ -268,9 +268,10 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
 
   const pkColgroup = (
     <colgroup>
-      {Array.from({ length: 10 }).map((_, i) => (
-        <col key={i} style={{ width: "10%" }} />
+      {Array.from({ length: 9 }).map((_, i) => (
+        <col key={i} style={{ width: "10.33%" }} />
       ))}
+      <col style={{ width: "7%" }} />
     </colgroup>
   );
   const chColgroup = (
