@@ -49,6 +49,7 @@ import {
 } from "./mailTemplates";
 import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail, SUPPORT_BCC } from "./mail";
+import { buildQuotePdf } from "./quotePdf";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -615,14 +616,19 @@ export function useSendQuoteMessage() {
       /** 'reply' = quick chat-style message (Settings -> Quotation Replies),
        *  no quotation-data block. Defaults to the full status-update template. */
       template?: "update" | "reply";
+      /** Attach the customer quotation PDF (same render as Quotation document). */
+      attachQuote?: boolean;
     }) => {
-      const { quote, remarks, to, cc, template = "update" } = input;
+      const { quote, remarks, to, cc, template = "update", attachQuote } = input;
       const settings = await db.getCompanySettings().catch(() => null);
       const mail =
         template === "reply"
           ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies)
           : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms);
       try {
+        const attachments = attachQuote
+          ? [await buildQuotePdf(quote.id, quote.reference)]
+          : undefined;
         const { id } = await sendMail({
           to,
           cc,
@@ -630,6 +636,7 @@ export function useSendQuoteMessage() {
           subject: mail.subject,
           html: mail.html,
           text: mail.text,
+          attachments,
           fromName: settings?.mail_sender_name || undefined,
           replyTo: settings?.mail_reply_to || undefined,
         });

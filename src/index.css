@@ -1015,7 +1015,7 @@ select.badge-select.lost {
   color: var(--ink);
 }
 /* "Attach quotation" checkbox next to the Message heading */
-.field .merge-code-row label.attach-quote {
+.field label.attach-quote {
   display: inline-flex;
   align-items: center;
   gap: 6px;

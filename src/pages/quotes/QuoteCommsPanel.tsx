@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loading } from "../../components/common";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import { useToast } from "../../components/Toast";
@@ -37,15 +37,19 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
   const { data: settings } = useCompanySettings();
 
   const [tab, setTab] = useState<"email" | "note">("email");
-  // 'reply' (default) = quick chat-style message, no quotation-data block —
-  // the common case once a thread is already going. 'update' is the full
-  // per-mode status-update template (Settings -> Quotation Comms).
-  const [template, setTemplate] = useState<"update" | "reply">("reply");
+  // 'update' (default) = the full status-update template (Settings ->
+  // Quotation Comms) — the common case on first contact. 'reply' is the
+  // quick chat-style message, no quotation-data block. Auto-switches to
+  // 'reply' once the thread already has a message, below, but stays
+  // whatever the operator picks after that.
+  const [template, setTemplate] = useState<"update" | "reply">("update");
+  const [templateAutoSet, setTemplateAutoSet] = useState(false);
   const [remarks, setRemarks] = useState("");
   const remarksRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState("");
   const [ccText, setCcText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [attachQuote, setAttachQuote] = useState(false);
 
   const contactsQ = useClientContacts(quote.client_id ?? undefined);
 
@@ -99,6 +103,16 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
 
   const messages = msgsQ.data ?? [];
 
+  // Full Update is the default on a fresh thread; once there's already a
+  // conversation going, switch to Reply once (not on every refetch, and
+  // never overriding a manual pick the operator already made).
+  useEffect(() => {
+    if (templateAutoSet || msgsQ.isLoading) return;
+    setTemplateAutoSet(true);
+    if (messages.length > 0) setTemplate("reply");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgsQ.isLoading]);
+
   async function onSend() {
     const to = recipients.map((r) => r.email).filter((e) => checked.has(e));
     if (to.length === 0) {
@@ -110,9 +124,10 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
       .map((s) => s.trim())
       .filter(Boolean);
     try {
-      await send.mutateAsync({ quote, remarks, to, cc, template });
+      await send.mutateAsync({ quote, remarks, to, cc, template, attachQuote });
       toast("Message sent");
       setRemarks("");
+      setAttachQuote(false);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not send");
     }
@@ -248,6 +263,14 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
               spellCheck
               lang="en"
             />
+            <label className="attach-quote" style={{ marginTop: 6 }}>
+              <input
+                type="checkbox"
+                checked={attachQuote}
+                onChange={(e) => setAttachQuote(e.target.checked)}
+              />
+              Attach "Quotation - {quote.reference}.pdf"
+            </label>
           </div>
           {showPreview && <pre className="msg-preview">{preview}</pre>}
           <div className="comms-send-row">
