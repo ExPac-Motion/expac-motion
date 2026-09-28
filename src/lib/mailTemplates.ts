@@ -266,12 +266,14 @@ const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
  *  the label has since been HTML-bolded or not. */
 const TRACKING_ANCHOR_LABEL = "Provisional Delivery Date:";
 
-function trackingUrl(job: Job): string {
+/** Job and Quote share the same reference/shipment number — a quote not
+ *  yet accepted just won't have tracking data yet on the other end. */
+function trackingUrl(entity: { reference: string }): string {
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : "https://expac-motion.pages.dev";
-  return `${origin}/track?ref=${encodeURIComponent(job.reference)}`;
+  return `${origin}/track?ref=${encodeURIComponent(entity.reference)}`;
 }
 
 /** Insert `line` right after the line containing `label`, with exactly one
@@ -296,13 +298,14 @@ function insertAfterLabelLine(text: string, label: string, line: string): string
  *  first line — the customer's name, upper-cased — and the label on every
  *  "Label: value" line up to the sign-off (Shipment Status, Supplier Name,
  *  etc). The signature's own T:/WA:/F:/E:/Postal Address: labels get bold
- *  + brand-green styling either way. Pass `job` to insert the ExPac Motion
- *  Live Tracking button under Provisional Delivery Date (or, if that line
- *  isn't present — e.g. the Reply template — at the end). */
+ *  + brand-green styling either way. Pass `entity` (a Job or a Quote — both
+ *  have `reference`) to insert the ExPac Motion Live Tracking button under
+ *  Provisional Delivery Date (or, if that line isn't present — e.g. the
+ *  Reply template — at the end). */
 export function shipmentEmailHtml(
   text: string,
   boldHeadings = false,
-  job?: Job,
+  entity?: { reference: string },
 ): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -312,11 +315,11 @@ export function shipmentEmailHtml(
     (_m, prefix: string, label: string) =>
       `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>`,
   );
-  if (job) {
+  if (entity) {
     body = insertAfterLabelLine(
       body,
       TRACKING_ANCHOR_LABEL,
-      emailButtonHtml(trackingUrl(job), "ExPac Motion Live Tracking"),
+      emailButtonHtml(trackingUrl(entity), "ExPac Motion Live Tracking"),
     );
   }
   // Plain text in the house font — no logo image (it rendered as a broken
@@ -561,7 +564,9 @@ export function renderQuoteEmail(
 /**
  * Assemble the customer update email for a quotation, using the team's
  * per-mode template (Settings → Quotation Comms) or the built-in default.
- * No Live Tracking button here — a quote isn't a live shipment yet.
+ * Includes the ExPac Motion Live Tracking button under Provisional
+ * Delivery Date, same as Shipment Comms — it deep-links by reference, so
+ * it works once the quote is accepted and tracking data exists.
  */
 export function buildQuoteCommsEmail(
   quote: Quote,
@@ -570,7 +575,16 @@ export function buildQuoteCommsEmail(
 ): BuiltEmail {
   const tpl = quotationCommsTemplate(shipmentModeKey(quote.mode), config);
   const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text, true) };
+  const textWithLink = insertAfterLabelLine(
+    text,
+    TRACKING_ANCHOR_LABEL,
+    `Live Tracking: ${trackingUrl(quote)}`,
+  );
+  return {
+    subject,
+    text: textWithLink,
+    html: shipmentEmailHtml(text, true, quote),
+  };
 }
 
 /**
@@ -585,5 +599,16 @@ export function buildQuoteCommsReply(
 ): BuiltEmail {
   const tpl = quotationReplyTemplate(shipmentModeKey(quote.mode), config);
   const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
-  return { subject, text, html: shipmentEmailHtml(text) };
+  // No Provisional Delivery Date line in the Reply body, so this falls back
+  // to appending at the end — same fallback shipmentEmailHtml uses below.
+  const textWithLink = insertAfterLabelLine(
+    text,
+    TRACKING_ANCHOR_LABEL,
+    `Live Tracking: ${trackingUrl(quote)}`,
+  );
+  return {
+    subject,
+    text: textWithLink,
+    html: shipmentEmailHtml(text, false, quote),
+  };
 }
