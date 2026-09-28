@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import { ErrorNote, Loading, PageHeader } from "../components/common";
@@ -13,6 +13,7 @@ import {
   useQuote,
   useRateSheet,
   useSaveQuote,
+  useSaveSupplier,
   useSuppliers,
   useTransporters,
 } from "../lib/hooks";
@@ -280,6 +281,7 @@ export default function QuoteBuilderPage() {
   const clearingAgentsQ = useClearingAgents();
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
+  const saveSupplier = useSaveSupplier();
   const settingsQ = useCompanySettings();
   const ratesQ = useRateSheet();
 
@@ -288,6 +290,7 @@ export default function QuoteBuilderPage() {
   const [fxLoading, setFxLoading] = useState(false);
   const [fxAsOf, setFxAsOf] = useState("");
   const [ratePickerFor, setRatePickerFor] = useState<ChargeCategory | null>(null);
+  const [addingShipper, setAddingShipper] = useState(false);
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
   if (isEdit && existingQ.data && loadedFor !== existingQ.data.id) {
@@ -753,8 +756,15 @@ export default function QuoteBuilderPage() {
             <label>Shipper/Exporter</label>
             <select
               value={draft.supplier_id}
-              onChange={(e) => set("supplier_id", e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === "__add__") {
+                  setAddingShipper(true);
+                  return;
+                }
+                set("supplier_id", e.target.value);
+              }}
             >
+              <option value="__add__">+ Add Shipper</option>
               <option value="">Select shipper</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -1767,6 +1777,25 @@ export default function QuoteBuilderPage() {
           onClose={() => setRatePickerFor(null)}
         />
       )}
+
+      {addingShipper && (
+        <AddShipperModal
+          busy={saveSupplier.isPending}
+          onSave={async (company, contact, email, phone) => {
+            try {
+              const created = await saveSupplier.mutateAsync({
+                values: { company, contact, email, phone },
+              });
+              set("supplier_id", created.id);
+              setAddingShipper(false);
+              toast("Shipper added");
+            } catch (e) {
+              error(e instanceof Error ? e.message : "Could not add shipper");
+            }
+          }}
+          onClose={() => setAddingShipper(false)}
+        />
+      )}
     </>
   );
 }
@@ -1823,6 +1852,84 @@ function RatePickerModal({
           ))}
         </div>
       )}
+    </Modal>
+  );
+}
+
+/** Quick-create a shipper without leaving the builder — just enough to pick
+ *  it on this quote; the full record (VAT no, address, etc.) can be filled
+ *  in later from Suppliers. Saves to the same suppliers table that page
+ *  reads, so the new shipper shows up there too. */
+function AddShipperModal({
+  busy,
+  onSave,
+  onClose,
+}: {
+  busy: boolean;
+  onSave: (
+    company: string,
+    contact: string | null,
+    email: string | null,
+    phone: string | null,
+  ) => void;
+  onClose: () => void;
+}) {
+  const [company, setCompany] = useState("");
+  const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!company.trim()) return;
+    onSave(
+      company.trim(),
+      contact.trim() || null,
+      email.trim() || null,
+      phone.trim() || null,
+    );
+  }
+
+  return (
+    <Modal title="Add Shipper" onClose={onClose}>
+      <form onSubmit={onSubmit}>
+        <div className="field">
+          <label>Company</label>
+          <input
+            autoFocus
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            required
+          />
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>Contact Person</label>
+            <input value={contact} onChange={(e) => setContact(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Phone</label>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <span className="hint">
+          Just enough to pick it on this quote — add VAT no, address etc.
+          later from Suppliers.
+        </span>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <button type="submit" className="btn" disabled={busy || !company.trim()}>
+            {busy ? "Saving…" : "Add Shipper"}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }
