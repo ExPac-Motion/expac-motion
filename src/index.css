@@ -2780,6 +2780,15 @@ select.badge-select.lost {
   font-size: 11px;
   flex-wrap: wrap;
 }
+/* Keep each "Label Value" pair on one line — a flex item's default
+   min-width:auto otherwise lets it shrink below that under space
+   pressure (wide totals like "24 000,00"), and the browser wraps at the
+   plain space between the label and value instead of only wrapping
+   whole items via the row's own flex-wrap. */
+.qs-pksum > div {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .qs-pksum .k {
   color: var(--muted);
 }
