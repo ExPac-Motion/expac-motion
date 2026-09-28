@@ -2737,7 +2737,9 @@ select.badge-select.lost {
 .qs-pk th,
 .qs-pk td {
   padding: 2px 3px;
-  text-align: left;
+  /* every column here is a number (L/W/H, weights, volumes) — right-align
+     to match the Charges table's numeric columns below */
+  text-align: right;
   border-bottom: 1px solid #ececec;
 }
 .qs-pk td {
@@ -2771,6 +2773,7 @@ select.badge-select.lost {
 }
 .qs-pk tfoot td:first-child {
   font-weight: 700;
+  text-align: left;
 }
 .qs-pksum {
   display: flex;
