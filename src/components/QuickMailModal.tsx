@@ -14,6 +14,7 @@ import {
   resolveMergeFields,
   type MergeContext,
 } from "../lib/mailMerge";
+import { linkifyHtml } from "../lib/mailStyle";
 import { buildQuotePdf } from "../lib/quotePdf";
 
 /**
@@ -97,7 +98,7 @@ export default function QuickMailModal({
       setPhase("sending");
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
-      const html = resolveMergeFields(body, mergeCtx);
+      const html = linkifyHtml(resolveMergeFields(body, mergeCtx));
       await sendMail({
         to: [to],
         cc: ccList.length ? ccList : undefined,

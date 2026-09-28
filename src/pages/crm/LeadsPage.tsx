@@ -44,6 +44,7 @@ import {
 import { createLeadContacts, listLeadContacts } from "../../lib/db";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
+import { linkifyHtml } from "../../lib/mailStyle";
 import { formatDate, normalizeWebsite, readableText } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
 
@@ -903,7 +904,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
     try {
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
-      const html = resolveMergeFields(body, mergeCtx);
+      const html = linkifyHtml(resolveMergeFields(body, mergeCtx));
       await sendMail({
         to: [lead.email],
         cc: ccList.length ? ccList : undefined,

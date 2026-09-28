@@ -50,6 +50,7 @@ import {
 import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail, SUPPORT_BCC } from "./mail";
 import { buildQuotePdf } from "./quotePdf";
+import { linkifyHtml } from "./mailStyle";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -1241,7 +1242,7 @@ export function useSendCampaign() {
             company: recipient?.company || "",
             unsubscribeUrl,
           };
-          const html = resolveMergeFields(bodyWithSig, mergeCtx);
+          const html = linkifyHtml(resolveMergeFields(bodyWithSig, mergeCtx));
           const finalSubject = resolveMergeFields(subject, mergeCtx);
           try {
             const { id } = await sendMail({
