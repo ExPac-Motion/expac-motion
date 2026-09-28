@@ -256,11 +256,79 @@ const LABEL_LINE = /^([^:\n]+:)(.*)$/;
 const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
 /** The signature's own contact labels — bold + brand green, wherever the
  *  signature is used (Shipment Comms and Shipment Replies both share it).
- *  Matched only at the start of a line or right after the "| " separator
- *  the signature uses, e.g. "T: ... | WA: ... | F: ...", so it never
- *  catches "Office:" / "Portal:" on the same E: line. */
-const SIG_LABEL = /(^|\| )(T|WA|F|E|Postal Address):/gm;
+ *  Captures the value after the label too, so it can be turned into a real
+ *  link (see linkifySignature below). Matched only at the start of a line
+ *  or right after the "| " separator the signature uses, e.g.
+ *  "T: ... | WA: ... | F: ...", so it never catches "Office:" / "Portal:"
+ *  on the same E: line — those get the same link treatment separately.
+ *  The value is captured non-greedily with its trailing whitespace split
+ *  off, so a trailing space before the next "| " doesn't end up inside
+ *  the link. */
+const SIG_LINE =
+  /(^|\| )(T|WA|F|E|Postal Address):(\s*)([^|\n]+?)(\s*)(?=\||\n|$)/gm;
 const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
+/** Mobile mail clients — Gmail's app especially — aggressively auto-link
+ *  bare phone numbers, addresses and emails in plain text with their own
+ *  loud blue-underline styling. Clients don't re-process text that's
+ *  already inside an <a>, so giving the signature's own contact details
+ *  real (but blended-in) links heads that off. `!important` because some
+ *  clients (Outlook, older Gmail) force their own link color otherwise. */
+const SIG_LINK_STYLE = "color:inherit!important;text-decoration:none!important";
+
+/** "+27 (0) 11 568 8281" -> "+27115688281" — the (0) is a "drop this for
+ *  international dialing" trunk-prefix marker, not itself a digit to dial. */
+function phoneDigits(value: string): string {
+  return value.replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
+}
+
+function sigLabelHref(label: string, value: string): string | null {
+  switch (label) {
+    case "T":
+    case "F":
+      return `tel:${phoneDigits(value)}`;
+    case "WA":
+      return `https://wa.me/${phoneDigits(value).replace(/^\+/, "")}`;
+    case "E":
+      return `mailto:${value}`;
+    case "Postal Address":
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(value)}`;
+    default:
+      return null;
+  }
+}
+
+/** Bolds the T:/WA:/F:/E:/Postal Address: labels (brand green) and wraps
+ *  their values, plus the unbolded Office:/Portal: values on the same
+ *  line, in blended-in links — see SIG_LINK_STYLE above. */
+function linkifySignature(html: string): string {
+  const withLabels = html.replace(
+    SIG_LINE,
+    (
+      _m,
+      prefix: string,
+      label: string,
+      ws: string,
+      value: string,
+      trailingWs: string,
+    ) => {
+      const href = sigLabelHref(label, value);
+      const valueHtml = href
+        ? `<a href="${href}" style="${SIG_LINK_STYLE}">${value}</a>`
+        : value;
+      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}${valueHtml}${trailingWs}`;
+    },
+  );
+  return withLabels.replace(
+    /(Office|Portal):(\s*)([^|\n]+?)(\s*)(?=\||\n|$)/g,
+    (_m, label: string, ws: string, value: string, trailingWs: string) => {
+      const href =
+        label === "Office"
+          ? `mailto:${value}`
+          : `https://${value.replace(/^https?:\/\//, "")}`;
+      return `${label}:${ws}<a href="${href}" style="${SIG_LINK_STYLE}">${value}</a>${trailingWs}`;
+    },
+  );
+}
 
 /** The line the Live Tracking button is anchored under — matches whether
  *  the label has since been HTML-bolded or not. */
@@ -310,11 +378,7 @@ export function shipmentEmailHtml(
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const formatted = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
-  let body = formatted.replace(
-    SIG_LABEL,
-    (_m, prefix: string, label: string) =>
-      `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>`,
-  );
+  let body = linkifySignature(formatted);
   if (entity) {
     body = insertAfterLabelLine(
       body,
