@@ -27,6 +27,22 @@ export default function FormPublicPage() {
       .catch(() => setForm("missing"));
   }, [id]);
 
+  // A smaller-looking tab icon on hosted forms only — same mark, more
+  // transparent padding around it, so it reads as a smaller icon than the
+  // rest of the app's favicon. This is a single-page-app, so there's no
+  // separate index.html per route to set this statically; swap the shared
+  // <link rel="icon"> on mount and put the app's own favicon back on
+  // unmount, so leaving the form page (client-side, no reload) restores it.
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) return;
+    const original = link.href;
+    link.href = "/Favicon-small.png";
+    return () => {
+      link.href = original;
+    };
+  }, []);
+
   const utm = useMemo(() => {
     const out: Record<string, string> = {};
     params.forEach((v, k) => {
