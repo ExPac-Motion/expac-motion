@@ -111,10 +111,15 @@ export async function buildQuotePdf(
       // edges like letterforms and table borders; PNG is lossless and
       // actually compresses this kind of flat-color content well.
       const img = canvas.toDataURL("image/png");
-      // Fit the page image to the A4 width; keep aspect ratio.
-      const h = Math.min(ph, (canvas.height * pw) / canvas.width);
+      // `.qs-page` is a screen-mode box (CSS min-height: 278mm) that's
+      // deliberately shorter than a full A4 sheet (297mm) — on the real
+      // print/download path the browser's own @page margin makes up that
+      // difference. There's no such margin here, so fit the image to the
+      // full page in both dimensions rather than just the width: capping
+      // the height to the captured aspect ratio left a ~19mm gap under the
+      // footer on every page of the mailed attachment.
       if (i > 0) pdf.addPage();
-      pdf.addImage(img, "PNG", 0, 0, pw, h);
+      pdf.addImage(img, "PNG", 0, 0, pw, ph);
     }
 
     const uri = pdf.output("datauristring");
