@@ -104,6 +104,13 @@ export interface CompanySettings {
   sales_new_leads_target: number;
   /** Cost of Sales Ratio target (%) — at or below this, margin is healthy. */
   cost_of_sales_target: number;
+  /** Overall target for the Opportunities Pipeline chart's total value —
+   *  each stage's bar is scaled against this instead of the pipeline's own
+   *  current total. 0 = no target set, falls back to the current total. */
+  opportunities_pipeline_target: number;
+  /** Same idea as opportunities_pipeline_target, for the Quotes by Status
+   *  chart. */
+  quotes_pipeline_target: number;
   mail_sender_name: string;
   mail_reply_to: string;
   mail_signature_html: string;

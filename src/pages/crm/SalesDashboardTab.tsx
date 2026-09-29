@@ -212,15 +212,24 @@ export default function SalesDashboardTab() {
       };
     });
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
-    // Scaled against total pipeline value across every stage, not just
-    // whichever single stage happens to hold the most — otherwise that
+    // Scaled against an overall pipeline target when one's set (Edit
+    // Targets), otherwise against total pipeline value across every stage —
+    // never against just whichever single stage holds the most, or that
     // stage always renders as a full bar regardless of how it's doing.
-    const max = Math.max(1, totalValue);
+    const target = settingsQ.data?.opportunities_pipeline_target || 0;
+    const max = Math.max(1, target > 0 ? target : totalValue);
     const openValue = rows
       .filter((r) => OPEN_OPP_STATUSES.includes(r.key))
       .reduce((s, r) => s + r.value, 0);
-    return { rows, max, totalValue, openValue, total: oppsWithQuotes.length };
-  }, [oppsWithQuotes]);
+    return {
+      rows,
+      max,
+      totalValue,
+      openValue,
+      total: oppsWithQuotes.length,
+      target,
+    };
+  }, [oppsWithQuotes, settingsQ.data]);
 
   const quotePipeline = useMemo(() => {
     const rows = STATUS_ORDER.map((st) => {
@@ -231,17 +240,19 @@ export default function SalesDashboardTab() {
       return { st, count: inStatus.length, value };
     });
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
-    // Scaled against total pipeline value across every status, not just
-    // whichever single status happens to hold the most — otherwise that
+    // Scaled against an overall pipeline target when one's set (Edit
+    // Targets), otherwise against total pipeline value across every status —
+    // never against just whichever single status holds the most, or that
     // status always renders as a full bar regardless of how it's doing.
-    const max = Math.max(1, totalValue);
+    const target = settingsQ.data?.quotes_pipeline_target || 0;
+    const max = Math.max(1, target > 0 ? target : totalValue);
     const won = rows
       .filter((r) => WON_QUOTE_STATUSES.includes(r.st))
       .reduce((s, r) => s + r.count, 0);
     const lost = rows.find((r) => r.st === "lost")?.count ?? 0;
     const winRate = won + lost > 0 ? (won / (won + lost)) * 100 : 0;
-    return { rows, max, totalValue, winRate, total: quotes.length };
-  }, [quotes]);
+    return { rows, max, totalValue, winRate, total: quotes.length, target };
+  }, [quotes, settingsQ.data]);
 
   const leaderboard = useMemo(() => {
     const people = (profilesQ.data ?? []).filter(
@@ -539,6 +550,12 @@ export default function SalesDashboardTab() {
                 <div className="k">Opportunities</div>
                 <div className="v">{oppPipeline.total}</div>
               </div>
+              {oppPipeline.target > 0 && (
+                <div>
+                  <div className="k">Target</div>
+                  <div className="v">{money(oppPipeline.target)}</div>
+                </div>
+              )}
             </div>
           </div>
           <div className="pipe">
@@ -580,6 +597,12 @@ export default function SalesDashboardTab() {
                 <div className="k">Quotes</div>
                 <div className="v">{quotePipeline.total}</div>
               </div>
+              {quotePipeline.target > 0 && (
+                <div>
+                  <div className="k">Target</div>
+                  <div className="v">{money(quotePipeline.target)}</div>
+                </div>
+              )}
             </div>
           </div>
           <div className="pipe">
@@ -805,6 +828,8 @@ function TargetsModal({
     sales_target: number;
     sales_new_leads_target: number;
     cost_of_sales_target: number;
+    opportunities_pipeline_target: number;
+    quotes_pipeline_target: number;
   };
   onClose: () => void;
 }) {
@@ -818,6 +843,9 @@ function TargetsModal({
       sales_target: Number(fd.get("sales_target")) || 0,
       cost_of_sales_target: Number(fd.get("cost_of_sales_target")) || 0,
       sales_new_leads_target: Number(fd.get("sales_new_leads_target")) || 0,
+      opportunities_pipeline_target:
+        Number(fd.get("opportunities_pipeline_target")) || 0,
+      quotes_pipeline_target: Number(fd.get("quotes_pipeline_target")) || 0,
     };
     try {
       await update.mutateAsync(patch);
@@ -855,6 +883,26 @@ function TargetsModal({
             name="sales_new_leads_target"
             type="number"
             defaultValue={settings.sales_new_leads_target}
+          />
+        </div>
+        <div className="field">
+          <label>Opportunities Pipeline Target (R)</label>
+          <input
+            name="opportunities_pipeline_target"
+            type="number"
+            step="0.01"
+            placeholder="0 = scale against the pipeline's own total"
+            defaultValue={settings.opportunities_pipeline_target}
+          />
+        </div>
+        <div className="field">
+          <label>Quotes by Status Target (R)</label>
+          <input
+            name="quotes_pipeline_target"
+            type="number"
+            step="0.01"
+            placeholder="0 = scale against the pipeline's own total"
+            defaultValue={settings.quotes_pipeline_target}
           />
         </div>
         <div
