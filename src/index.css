@@ -2964,9 +2964,6 @@ select.badge-select.lost {
   .dash-kpis {
     grid-template-columns: 1fr 1fr;
   }
-  .kpi-value {
-    font-size: 1.5rem;
-  }
 }
 .kpi {
   /* Grid items default to min-width:auto, which sizes to the card's
@@ -3042,6 +3039,11 @@ select.badge-select.lost {
   font-weight: 700;
   font-size: 2rem;
   line-height: 1;
+}
+@media (max-width: 700px) {
+  .kpi-value {
+    font-size: 1.5rem;
+  }
 }
 .kpi-foot {
   color: var(--muted);
