@@ -612,18 +612,6 @@ function ModeBar3D({
                   height={Math.max(0, baseY - yTop)}
                   fill={m.color}
                 />
-                {v > 0 && (
-                  <text
-                    x={x0 + barW / 2}
-                    y={yTop - 8}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fontWeight="800"
-                    fill="#202426"
-                  >
-                    {v}
-                  </text>
-                )}
               </g>
             );
           })}
