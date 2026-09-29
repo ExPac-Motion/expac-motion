@@ -586,9 +586,7 @@ export default function SalesDashboardTab() {
             {quotePipeline.rows.map((r) => (
               <button
                 key={r.st}
-                className={`pipe-row${
-                  WON_QUOTE_STATUSES.includes(r.st) ? " accent" : ""
-                }`}
+                className="pipe-row"
                 onClick={() => navigate(`/quotes?status=${r.st}`)}
               >
                 <span className="nm">{STATUS_LABEL[r.st]}</span>

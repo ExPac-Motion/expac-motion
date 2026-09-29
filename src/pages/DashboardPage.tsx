@@ -321,11 +321,10 @@ export default function DashboardPage() {
             </div>
             <div className="pipe">
               {pipeline.rows.map((p) => {
-                const accent = p.st === "sent";
                 return (
                   <button
                     key={p.st}
-                    className={`pipe-row${accent ? " accent" : ""}`}
+                    className="pipe-row"
                     onClick={() => navigate(`/quotes?status=${p.st}`)}
                   >
                     <span className="nm">{STATUS_LABEL[p.st]}</span>
