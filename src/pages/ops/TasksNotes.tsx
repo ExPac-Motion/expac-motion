@@ -183,7 +183,10 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
   function linkChip(t: OpsTask) {
     if (t.job?.reference)
-      return { label: t.job.reference, go: () => navigate("/jobs") };
+      return {
+        label: t.job.reference,
+        go: () => navigate("/jobs", { state: { openJobId: t.job_id } }),
+      };
     if (t.quote?.reference)
       return {
         label: t.quote.reference,
