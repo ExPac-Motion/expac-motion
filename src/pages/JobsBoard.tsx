@@ -41,6 +41,7 @@ import { getShipmentDocumentUrl } from "../lib/db";
 import { DOCUMENT_TYPES_LIST } from "../lib/docTemplates";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
+import { trackableRef } from "../lib/tracking";
 import {
   DELIVERED_STATUS,
   DOCUMENT_TYPES,
@@ -212,6 +213,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   );
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
+  const [recordFilter, setRecordFilter] = useState<
+    "nostatus" | "notracking" | null
+  >(null);
 
   function openComms(j: Job) {
     setCommsJob(j);
@@ -239,6 +243,19 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, jobs]);
+
+  // Deep-link from a Control Tower chip: navigate here with
+  // { state: { filter: "nostatus" | "notracking" } } to land pre-filtered to
+  // just the shipments that chip counted, instead of the full board.
+  useEffect(() => {
+    const state = location.state as
+      | { filter?: "nostatus" | "notracking" }
+      | null;
+    if (!state?.filter) return;
+    setRecordFilter(state.filter);
+    navigate(location.pathname + location.search, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   async function onDeleteJob(j: Job) {
     if (!window.confirm(`Delete shipment ${j.reference}? This cannot be undone.`))
@@ -275,7 +292,13 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       ? j.shipment_status === DELIVERED_STATUS
       : j.shipment_status !== DELIVERED_STATUS,
   );
-  const rows = stageRows.filter((j) => matchesModeTab(j.mode, modeTab));
+  const modeRows = stageRows.filter((j) => matchesModeTab(j.mode, modeTab));
+  const rows =
+    recordFilter === "nostatus"
+      ? modeRows.filter((j) => !j.shipment_status || j.shipment_status === "Booked")
+      : recordFilter === "notracking"
+        ? modeRows.filter((j) => !trackableRef(j))
+        : modeRows;
   const modeLabel = MODE_TABS.find((t) => t.key === modeTab)?.label ?? "";
   const sel = useRowSelection(jobs ?? [], rows);
 
@@ -529,6 +552,23 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               {copy.sub(rows.length)}
               {modeTab !== "All" ? ` · ${modeLabel} only` : ""}
             </p>
+            {recordFilter && (
+              <p className="hint" style={{ marginTop: 4 }}>
+                Filtered to{" "}
+                <strong>
+                  {recordFilter === "nostatus"
+                    ? "shipments without status"
+                    : "shipments without a tracking no."}
+                </strong>{" "}
+                ·{" "}
+                <button
+                  className="link-btn"
+                  onClick={() => setRecordFilter(null)}
+                >
+                  clear
+                </button>
+              </p>
+            )}
           </div>
         </div>
 
@@ -538,9 +578,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           <ErrorNote error={error} />
         ) : rows.length === 0 ? (
           <EmptyState>
-            {modeTab !== "All" && stageRows.length > 0
-              ? `No ${modeLabel} shipments in this view.`
-              : copy.empty}
+            {recordFilter
+              ? "Nothing matches that filter — every shipment in this view has one."
+              : modeTab !== "All" && stageRows.length > 0
+                ? `No ${modeLabel} shipments in this view.`
+                : copy.empty}
           </EmptyState>
         ) : (
           <DataTable
