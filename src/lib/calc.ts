@@ -120,21 +120,34 @@ export function impliedMargin(
   return (s / (b * rate) - 1) * 100;
 }
 
+/** Effective multiplier for a line's rate-total maths — normally just qty,
+ *  except OF-06 (Ocean Freight LCL-DDP) whose buy/sell rate is priced per
+ *  0.50 CBM chargeable block (e.g. CNY850 per 0.50 CBM), not per whole CBM.
+ *  Qty itself stays in real CBM (0.50 min) for display; only the total
+ *  divides by the 0.50 block size, so a 0.50 CBM shipment bills exactly one
+ *  block's rate instead of half of it. */
+function qtyMultiplier(l: Pick<QuoteLine, "qty" | "code">): number {
+  const qty = Number(l.qty) || 0;
+  return l.code === OCEAN_LCL_DDP_CODE ? qty / 0.5 : qty;
+}
+
 /** ZAR line total the client sees, VAT-exclusive: qty x sell. */
 export function lineTotal(l: QuoteLine): number {
-  return (Number(l.qty) || 0) * (Number(l.sell) || 0);
+  return qtyMultiplier(l) * (Number(l.sell) || 0);
 }
 
 /** Foreign purchase total in the line's own currency: qty x buy (pre-FX). */
-export function lineBuyTotal(l: Pick<QuoteLine, "qty" | "buy">): number {
-  return (Number(l.qty) || 0) * (Number(l.buy) || 0);
+export function lineBuyTotal(
+  l: Pick<QuoteLine, "qty" | "buy" | "code">,
+): number {
+  return qtyMultiplier(l) * (Number(l.buy) || 0);
 }
 
 /** Foreign sell total in the line's own currency: qty x sellInCur (pre-FX). */
 export function lineSellTotal(
-  l: Pick<QuoteLine, "qty" | "buy" | "margin">,
+  l: Pick<QuoteLine, "qty" | "buy" | "margin" | "code">,
 ): number {
-  return (Number(l.qty) || 0) * sellInCur(l.buy, l.margin);
+  return qtyMultiplier(l) * sellInCur(l.buy, l.margin);
 }
 
 /** VAT % applied to a line (0 when unset / zero-rated). */
@@ -357,7 +370,7 @@ export function resolveLines(lines: QuoteLine[], ctx: LineContext): QuoteLine[] 
 
 /** ZAR buy cost for a line: qty x buy x fx rate for the line's currency. */
 export function lineCostZar(l: QuoteLine, fx: FxRates): number {
-  return (Number(l.qty) || 0) * (Number(l.buy) || 0) * buyRate(l.cur, fx);
+  return qtyMultiplier(l) * (Number(l.buy) || 0) * buyRate(l.cur, fx);
 }
 
 export function chargeTotals(
