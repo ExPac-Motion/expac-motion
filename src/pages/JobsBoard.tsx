@@ -591,6 +591,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             columns={jobCols}
             rows={rows}
             rowKey={(j) => j.id}
+            headerTools={recordFilter ? "row" : "pull"}
             toolbar={
               <button
                 className="btn outline btn-sm"
