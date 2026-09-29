@@ -124,7 +124,11 @@ export default function DashboardPage() {
     const counts = MILESTONES.map(
       (m) => jobs.filter((j) => j.milestone === m).length,
     );
-    return { counts, max: Math.max(1, ...counts) };
+    // Scaled against every shipment, not the largest bucket here — otherwise
+    // whichever milestone happens to have the most shipments always renders
+    // as a full bar, which says nothing about how that milestone is actually
+    // doing (same "of N" idea as the Active Shipments by Mode bars above).
+    return { counts, max: Math.max(1, jobs.length) };
   }, [jobs]);
 
   const pipeline = useMemo(() => {
@@ -136,7 +140,11 @@ export default function DashboardPage() {
       );
       return { st, count: qs.length, val };
     });
-    return { rows, max: Math.max(1, ...rows.map((r) => r.val)) };
+    // Scaled against total pipeline value across every stage, not just
+    // whichever single stage happens to hold the most value — same reasoning
+    // as the funnel above.
+    const total = rows.reduce((s, r) => s + r.val, 0);
+    return { rows, max: Math.max(1, total) };
   }, [quotes]);
 
   const portfolio = useMemo(() => {

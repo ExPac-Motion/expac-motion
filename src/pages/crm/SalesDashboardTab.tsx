@@ -211,8 +211,11 @@ export default function SalesDashboardTab() {
         value,
       };
     });
-    const max = Math.max(1, ...rows.map((r) => r.value));
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
+    // Scaled against total pipeline value across every stage, not just
+    // whichever single stage happens to hold the most — otherwise that
+    // stage always renders as a full bar regardless of how it's doing.
+    const max = Math.max(1, totalValue);
     const openValue = rows
       .filter((r) => OPEN_OPP_STATUSES.includes(r.key))
       .reduce((s, r) => s + r.value, 0);
@@ -227,8 +230,11 @@ export default function SalesDashboardTab() {
         .reduce((s, v) => s + v, 0);
       return { st, count: inStatus.length, value };
     });
-    const max = Math.max(1, ...rows.map((r) => r.value));
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
+    // Scaled against total pipeline value across every status, not just
+    // whichever single status happens to hold the most — otherwise that
+    // status always renders as a full bar regardless of how it's doing.
+    const max = Math.max(1, totalValue);
     const won = rows
       .filter((r) => WON_QUOTE_STATUSES.includes(r.st))
       .reduce((s, r) => s + r.count, 0);
