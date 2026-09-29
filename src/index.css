@@ -2964,8 +2964,16 @@ select.badge-select.lost {
   .dash-kpis {
     grid-template-columns: 1fr 1fr;
   }
+  .kpi-value {
+    font-size: 1.5rem;
+  }
 }
 .kpi {
+  /* Grid items default to min-width:auto, which sizes to the card's
+     content (the big kpi-value figure) rather than its 1fr track — on a
+     narrow 2-column mobile grid that forced the whole row, and the page
+     around it, wider than the viewport. */
+  min-width: 0;
   text-align: left;
   background: var(--white);
   border: 1px solid var(--line);
