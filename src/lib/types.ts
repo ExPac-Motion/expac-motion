@@ -5,7 +5,14 @@ export type QuoteMode =
   | "Sea Freight (FCL)"
   | "Sea Freight (LCL)"
   | "Road Freight (RDX)";
-export type Milestone = "Booked" | "In Transit" | "Customs" | "Delivered";
+export type Milestone =
+  | "Created"
+  | "Booked"
+  | "In Transit"
+  | "Arrived"
+  | "Customs"
+  | "On Delivery"
+  | "Delivered";
 
 /* ---------- Settings ---------- */
 
@@ -695,7 +702,15 @@ export const QUOTE_MODES: QuoteMode[] = [
   "Sea Freight (LCL)",
   "Road Freight (RDX)",
 ];
-export const MILESTONES: Milestone[] = ["Booked", "In Transit", "Customs", "Delivered"];
+export const MILESTONES: Milestone[] = [
+  "Created",
+  "Booked",
+  "In Transit",
+  "Arrived",
+  "Customs",
+  "On Delivery",
+  "Delivered",
+];
 
 /**
  * Shipment status shown on the Active Jobs board. Free text in the DB
@@ -726,24 +741,24 @@ export function shipmentStatusSlug(s: string | null | undefined): string {
 }
 
 /**
- * Maps the free-text Shipment Status (board dropdown) to the 4-stage
+ * Maps the free-text Shipment Status (board dropdown) to the 7-stage
  * Milestone funnel (Dashboard's Operational Funnel + future CRM timeline).
  * Statuses not listed here leave the milestone unchanged.
  */
 export const MILESTONE_BY_STATUS: Record<string, Milestone> = {
-  Created: "Booked",
+  Created: "Created",
   Booked: "Booked",
   Collected: "Booked",
   Received: "Booked",
   Loaded: "In Transit",
   Departed: "In Transit",
   "In Transit": "In Transit",
-  Arrived: "In Transit",
-  Unloaded: "In Transit",
+  Arrived: "Arrived",
+  Unloaded: "Arrived",
   Customs: "Customs",
   Detained: "Customs",
   Released: "Customs",
-  "On-Delivery": "Delivered",
+  "On-Delivery": "On Delivery",
   Delivered: "Delivered",
 };
 

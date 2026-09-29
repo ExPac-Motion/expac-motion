@@ -3366,13 +3366,29 @@ select.badge-select.lost {
   background: #eef4e3;
   color: var(--green-dark);
 }
+.ms-tag.created {
+  background: #eef1ec;
+  color: var(--ink);
+}
 .ms-tag.transit {
   background: #fff4e0;
   color: #b9791b;
 }
+.ms-tag.arrived {
+  background: #e3f2f7;
+  color: #0e7490;
+}
 .ms-tag.customs {
   background: #e6f0fb;
   color: #1d5ba8;
+}
+.ms-tag.ondelivery {
+  background: #f1e9fb;
+  color: #7c4dbb;
+}
+.ms-tag.delivered {
+  background: var(--green);
+  color: #fff;
 }
 .mini-stats {
   display: flex;

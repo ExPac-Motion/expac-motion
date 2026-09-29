@@ -34,10 +34,13 @@ function modeBucket(mode: string | null | undefined): ModeKey | "Other" {
 }
 
 function milestoneTag(m: Milestone): string {
-  if (m === "Delivered") return "ms-tag";
+  if (m === "Created") return "ms-tag created";
+  if (m === "Booked") return "ms-tag booked";
   if (m === "In Transit") return "ms-tag transit";
+  if (m === "Arrived") return "ms-tag arrived";
   if (m === "Customs") return "ms-tag customs";
-  return "ms-tag";
+  if (m === "On Delivery") return "ms-tag ondelivery";
+  return "ms-tag delivered";
 }
 
 /* ---------------- icons (inherit currentColor) ---------------- */
