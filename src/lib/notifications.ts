@@ -178,6 +178,7 @@ export function buildNotifications(
         text: `Campaign sent — ${c.name}`,
         when: c.sent_at as string,
         to: "/crm?tab=campaigns",
+        navState: { openCampaignId: c.id },
       });
 
   for (const m of src.messages ?? []) {
@@ -225,7 +226,8 @@ export function buildNotifications(
               ? `Follow-up skipped — ${f.email}`
               : `Follow-up sent — ${f.email}`,
         when: f.created_at,
-        to: "/crm?tab=followups",
+        to: f.lead_id ? "/crm?tab=leads" : "/crm?tab=followups",
+        navState: f.lead_id ? { openLeadId: f.lead_id } : undefined,
         leadId: f.lead_id,
       });
 

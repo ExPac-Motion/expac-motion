@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
@@ -8,6 +9,7 @@ import {
   Loading,
   RowActions,
   RowActionsHead,
+  useDeepLinkReturn,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -418,6 +420,8 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function CampaignsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { data, isLoading, isError, error } = useMailCampaigns();
   const recipientsQ = useAllCampaignRecipients();
   const remove = useDeleteMailCampaign();
@@ -427,6 +431,27 @@ export default function CampaignsPage() {
   const [viewing, setViewing] = useState<MailCampaign | null>(null);
 
   const rows = data ?? [];
+  const { arm, closeAndReturn } = useDeepLinkReturn();
+
+  // Deep-link from a Notification: navigate here with
+  // { state: { openCampaignId } } to pop the existing detail modal open on a
+  // specific campaign, same as clicking "View" on its row. Closing it then
+  // returns to Notifications instead of stranding the user here.
+  useEffect(() => {
+    const openId = (location.state as { openCampaignId?: string } | null)
+      ?.openCampaignId;
+    if (!openId || rows.length === 0) return;
+    const row = rows.find((r) => r.id === openId);
+    if (row) {
+      setViewing(row);
+      arm();
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: {},
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, rows]);
 
   const trackingByCampaign = useMemo(() => {
     const grouped = new Map<string, MailRecipientStatus[]>();
@@ -547,7 +572,10 @@ export default function CampaignsPage() {
 
       {creating && <NewCampaignModal onClose={() => setCreating(false)} />}
       {viewing && (
-        <CampaignDetailModal campaign={viewing} onClose={() => setViewing(null)} />
+        <CampaignDetailModal
+          campaign={viewing}
+          onClose={() => closeAndReturn(() => setViewing(null))}
+        />
       )}
     </>
   );
