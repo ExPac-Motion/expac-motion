@@ -3277,12 +3277,19 @@ select.badge-select.lost {
   text-overflow: ellipsis;
 }
 .pipe-row .track {
+  display: block;
   height: 10px;
   background: #f0efe9;
   border-radius: 6px;
   overflow: hidden;
 }
 .pipe-row .fill {
+  /* `.track`'s own width only works because being a direct grid item
+     (.pipe-row is display:grid) blockifies it regardless of this being a
+     <span> — .fill is nested one level deeper and gets no such implicit
+     promotion, so its width was silently ignored (inline elements ignore
+     width/height) until this made it explicit. */
+  display: block;
   height: 100%;
   background: var(--green);
   border-radius: 6px;
