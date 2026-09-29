@@ -14,6 +14,32 @@ export type Milestone =
   | "On Delivery"
   | "Delivered";
 
+/** One colour per Operational Funnel stage — same hues as the .ms-tag
+ *  badge variants, so a shipment's status colour reads consistently
+ *  wherever it shows up. */
+export const MILESTONE_COLOR: Record<Milestone, string> = {
+  Created: "#94a3b8",
+  Booked: "#8cbc43",
+  "In Transit": "#e0a83e",
+  Arrived: "#2fa4b9",
+  Customs: "#3b82c4",
+  "On Delivery": "#9b6fd1",
+  Delivered: "#5a9c2f",
+};
+
+/** One colour per stage for the 5-row pipeline bars (Quotation Pipeline,
+ *  Opportunities Pipeline, Quotes by Status) — all three share the same
+ *  New Lead / Sent / Accepted / Completed / Lost shape, applied by row
+ *  index rather than a lookup since STATUS_ORDER and OPPORTUNITY_STAGES
+ *  use different key types for the same five conceptual stages. */
+export const PIPE_STAGE_COLORS: string[] = [
+  "#94a3b8",
+  "#e0a83e",
+  "#8cbc43",
+  "#2fa4b9",
+  "#d9534f",
+];
+
 /* ---------- Settings ---------- */
 
 export type UserRole = "admin" | "user" | "client" | "restricted";

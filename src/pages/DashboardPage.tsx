@@ -7,7 +7,9 @@ import { chargeTotals, fxOf } from "../lib/calc";
 import { formatDate, money, portCode } from "../lib/format";
 import {
   isShipmentComplete,
+  MILESTONE_COLOR,
   MILESTONES,
+  PIPE_STAGE_COLORS,
   STATUS_LABEL,
   STATUS_ORDER,
   type Job,
@@ -290,6 +292,7 @@ export default function DashboardPage() {
                           width: grown
                             ? `${(funnel.counts[i] / funnel.max) * 100}%`
                             : "0%",
+                          background: MILESTONE_COLOR[m],
                         }}
                       />
                     </div>
@@ -323,7 +326,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="pipe">
-              {pipeline.rows.map((p) => {
+              {pipeline.rows.map((p, i) => {
                 return (
                   <button
                     key={p.st}
@@ -338,6 +341,7 @@ export default function DashboardPage() {
                           width: grown
                             ? `${(p.val / pipeline.max) * 100}%`
                             : "0%",
+                          background: PIPE_STAGE_COLORS[i],
                         }}
                       />
                     </span>

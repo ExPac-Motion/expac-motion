@@ -30,6 +30,7 @@ import {
 import { money, timeAgo } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
+  PIPE_STAGE_COLORS,
   STATUS_LABEL,
   STATUS_ORDER,
   WON_QUOTE_STATUSES,
@@ -559,7 +560,7 @@ export default function SalesDashboardTab() {
             </div>
           </div>
           <div className="pipe">
-            {oppPipeline.rows.map((r) => (
+            {oppPipeline.rows.map((r, i) => (
               <button
                 key={r.key}
                 className="pipe-row"
@@ -567,7 +568,13 @@ export default function SalesDashboardTab() {
               >
                 <span className="nm">{r.label}</span>
                 <span className="track">
-                  <span className="fill" style={{ width: w(r.value, oppPipeline.max) }} />
+                  <span
+                    className="fill"
+                    style={{
+                      width: w(r.value, oppPipeline.max),
+                      background: PIPE_STAGE_COLORS[i],
+                    }}
+                  />
                 </span>
                 <span>
                   <span className="amt">{money(r.value)}</span>
@@ -606,7 +613,7 @@ export default function SalesDashboardTab() {
             </div>
           </div>
           <div className="pipe">
-            {quotePipeline.rows.map((r) => (
+            {quotePipeline.rows.map((r, i) => (
               <button
                 key={r.st}
                 className="pipe-row"
@@ -616,7 +623,10 @@ export default function SalesDashboardTab() {
                 <span className="track">
                   <span
                     className="fill"
-                    style={{ width: w(r.value, quotePipeline.max) }}
+                    style={{
+                      width: w(r.value, quotePipeline.max),
+                      background: PIPE_STAGE_COLORS[i],
+                    }}
                   />
                 </span>
                 <span>
