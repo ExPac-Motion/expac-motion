@@ -25,6 +25,7 @@ import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   useCreateClientInvite,
+  useLeadSources,
   useProfiles,
   useReplaceClientContacts,
 } from "../lib/hooks";
@@ -116,6 +117,8 @@ export default function ContactsPage({
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
   );
+  const sourcesQ = useLeadSources();
+  const sources = sourcesQ.data ?? [];
   const replaceClientContacts = useReplaceClientContacts();
   const [extraContacts, setExtraContacts] = useState<LeadContactDraft[]>([]);
 
@@ -631,11 +634,26 @@ export default function ContactsPage({
               <div className="grid2">
                 <div className="field">
                   <label>Source</label>
-                  <input
-                    name="source"
-                    placeholder="Referral, website, trade show…"
-                    defaultValue={current?.source ?? ""}
-                  />
+                  <select name="source" defaultValue={current?.source ?? ""}>
+                    <option value="">—</option>
+                    {(current?.source &&
+                    !sources.some((s) => s.name === current.source)
+                      ? [
+                          {
+                            id: current.source,
+                            name: current.source,
+                            sort_order: -1,
+                            created_at: "",
+                          },
+                          ...sources,
+                        ]
+                      : sources
+                    ).map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="field">
                   <label>Description</label>

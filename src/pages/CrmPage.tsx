@@ -6,6 +6,7 @@ import FormsPage from "./crm/FormsPage";
 import LeadsPage from "./crm/LeadsPage";
 import MediaPage from "./crm/MediaPage";
 import LeadStatusesPage from "./crm/LeadStatusesPage";
+import LeadSourcesPage from "./crm/LeadSourcesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
 import SalesDashboardTab from "./crm/SalesDashboardTab";
 import SalesPersonPage from "./crm/SalesPersonPage";
@@ -18,6 +19,7 @@ type Tab =
   | "leads"
   | "opportunities"
   | "statuses"
+  | "sources"
   | "team"
   | "templates"
   | "campaigns"
@@ -31,6 +33,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   leads: { eyebrow: "Prospects", title: "Leads" },
   opportunities: { eyebrow: "Client relationships", title: "Opportunities" },
   statuses: { eyebrow: "Configuration", title: "Lead Statuses" },
+  sources: { eyebrow: "Configuration", title: "Lead Sources" },
   team: { eyebrow: "Configuration", title: "Sales Person" },
   templates: { eyebrow: "Outreach", title: "Templates" },
   campaigns: { eyebrow: "Outreach", title: "Campaigns" },
@@ -57,6 +60,7 @@ export default function CrmPage() {
       {tab === "leads" && <LeadsPage />}
       {tab === "opportunities" && <OpportunitiesTab />}
       {tab === "statuses" && <LeadStatusesPage />}
+      {tab === "sources" && <LeadSourcesPage />}
       {tab === "team" && <SalesPersonPage />}
       {tab === "templates" && <TemplatesPage />}
       {tab === "campaigns" && <CampaignsPage />}

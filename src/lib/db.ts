@@ -53,6 +53,8 @@ import type {
   LeadContactDraft,
   LeadStatus,
   LeadStatusPatch,
+  LeadSource,
+  LeadSourcePatch,
   Opportunity,
   OpportunityPatch,
   MailTemplate,
@@ -1232,6 +1234,27 @@ export async function saveLeadStatus(
 
 export async function deleteLeadStatus(id: string): Promise<void> {
   unwrap(await supabase.from("lead_statuses").delete().eq("id", id));
+}
+
+export async function listLeadSources(): Promise<LeadSource[]> {
+  return unwrap<LeadSource[]>(
+    await supabase.from("lead_sources").select("*").order("sort_order"),
+  );
+}
+
+export async function saveLeadSource(
+  id: string | undefined,
+  patch: LeadSourcePatch,
+): Promise<LeadSource> {
+  return unwrap<LeadSource>(
+    id
+      ? await supabase.from("lead_sources").update(patch).eq("id", id).select("*").single()
+      : await supabase.from("lead_sources").insert(patch).select("*").single(),
+  );
+}
+
+export async function deleteLeadSource(id: string): Promise<void> {
+  unwrap(await supabase.from("lead_sources").delete().eq("id", id));
 }
 
 export async function listLeads(): Promise<Lead[]> {

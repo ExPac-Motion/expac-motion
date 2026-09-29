@@ -26,6 +26,7 @@ import type {
   LeadPatch,
   LeadContactDraft,
   LeadStatusPatch,
+  LeadSourcePatch,
   OpportunityPatch,
   MailTemplatePatch,
   FollowUpRulePatch,
@@ -917,6 +918,24 @@ export function useDeleteLeadStatus() {
   return useMutation({
     mutationFn: db.deleteLeadStatus,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lead_statuses"] }),
+  });
+}
+export function useLeadSources() {
+  return useQuery({ queryKey: ["lead_sources"], queryFn: db.listLeadSources });
+}
+export function useSaveLeadSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; patch: LeadSourcePatch }) =>
+      db.saveLeadSource(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead_sources"] }),
+  });
+}
+export function useDeleteLeadSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteLeadSource,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead_sources"] }),
   });
 }
 export function useLeads() {

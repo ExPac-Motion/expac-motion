@@ -88,6 +88,7 @@ const NAV: NavModule[] = [
       { to: "/crm?tab=leads", label: "Leads" },
       { to: "/crm?tab=opportunities", label: "Opportunities" },
       { to: "/crm?tab=statuses", label: "Lead Statuses" },
+      { to: "/crm?tab=sources", label: "Lead Sources" },
       { to: "/crm?tab=team", label: "Sales Person" },
       { to: "/crm?tab=templates", label: "Templates" },
       { to: "/crm?tab=campaigns", label: "Campaigns" },

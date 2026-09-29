@@ -33,6 +33,7 @@ import {
   useDeleteLead,
   useLeadContacts,
   useLeadStatuses,
+  useLeadSources,
   useLeads,
   useMailTemplates,
   useProfiles,
@@ -118,6 +119,7 @@ export default function LeadsPage() {
   const location = useLocation();
   const { data, isLoading, isError, error } = useLeads();
   const statusesQ = useLeadStatuses();
+  const sourcesQ = useLeadSources();
   const remove = useDeleteLead();
   const bulkCreate = useCreateLeadsBulk();
   const bulkUpdate = useUpdateLeadsBulk();
@@ -144,6 +146,7 @@ export default function LeadsPage() {
 
   const rows = useMemo(() => data ?? [], [data]);
   const statuses = statusesQ.data ?? [];
+  const sources = sourcesQ.data ?? [];
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
   );
@@ -819,8 +822,8 @@ export default function LeadsPage() {
             {
               key: "source",
               label: "Source",
-              type: "text",
-              placeholder: "Referral, website, trade show…",
+              type: "select",
+              options: sources.map((s) => ({ value: s.name, label: s.name })),
             },
             {
               key: "description",
@@ -1014,10 +1017,19 @@ function LeadEditModal({
   const save = useSaveLead();
   const replaceContacts = useReplaceLeadContacts();
   const statusesQ = useLeadStatuses();
+  const sourcesQ = useLeadSources();
   const profilesQ = useProfiles();
   const { toast, error: toastError } = useToast();
 
   const statuses = statusesQ.data ?? [];
+  // Include the lead's current value even if it's since been removed from
+  // (or was never added to) the managed list, so editing an older lead never
+  // silently blanks/resets a value the dropdown doesn't otherwise offer.
+  const sources = sourcesQ.data ?? [];
+  const sourceOptions =
+    lead?.source && !sources.some((s) => s.name === lead.source)
+      ? [{ id: lead.source, name: lead.source, sort_order: -1, created_at: "" }, ...sources]
+      : sources;
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
   );
@@ -1107,11 +1119,14 @@ function LeadEditModal({
         <div className="grid2">
           <div className="field">
             <label>Source</label>
-            <input
-              name="source"
-              placeholder="Referral, website, trade show…"
-              defaultValue={lead?.source ?? ""}
-            />
+            <select name="source" defaultValue={lead?.source ?? ""}>
+              <option value="">—</option>
+              {sourceOptions.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Description</label>

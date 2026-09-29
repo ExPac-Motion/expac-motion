@@ -334,6 +334,16 @@ export interface LeadStatus {
 }
 export type LeadStatusPatch = Partial<Omit<LeadStatus, "id" | "created_at">>;
 
+/** Managed picklist for the free-text Lead/Customer "source" field — this
+ *  only supplies the dropdown's options, `source` itself stays plain text. */
+export interface LeadSource {
+  id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+export type LeadSourcePatch = Partial<Omit<LeadSource, "id" | "created_at">>;
+
 export interface Lead {
   id: string;
   company: string;
