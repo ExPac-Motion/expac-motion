@@ -320,20 +320,7 @@ export default function DashboardPage() {
                     className={`pipe-row${accent ? " accent" : ""}`}
                     onClick={() => navigate(`/quotes?status=${p.st}`)}
                   >
-                    <span className="nm">
-                      {STATUS_LABEL[p.st]}
-                      {accent && (
-                        <span
-                          className="ms-tag"
-                          style={{
-                            background: "var(--green)",
-                            color: "#fff",
-                          }}
-                        >
-                          Follow Up
-                        </span>
-                      )}
-                    </span>
+                    <span className="nm">{STATUS_LABEL[p.st]}</span>
                     <span className="track">
                       <span
                         className="fill"

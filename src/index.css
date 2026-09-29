@@ -3288,8 +3288,21 @@ select.badge-select.lost {
   border-radius: 6px;
   transition: width 0.6s ease;
 }
-.pipe-row.accent .fill {
+.pipe-row.accent {
+  background: var(--green);
+  color: #fff;
+}
+.pipe-row.accent:hover {
   background: var(--green-dark);
+}
+.pipe-row.accent .track {
+  background: rgba(255, 255, 255, 0.25);
+}
+.pipe-row.accent .fill {
+  background: #fff;
+}
+.pipe-row.accent .cnt {
+  color: rgba(255, 255, 255, 0.85);
 }
 .pipe-row .amt {
   font-family: var(--display);
