@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompanySettings, useJobs, useQuote } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
-import { docTypeBySlug, shipmentInfoRows } from "../lib/docTemplates";
+import { docTypeBySlug, shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 
 function n2(v: number | string | null | undefined): string {
@@ -79,14 +79,26 @@ export default function ShipmentDocPrintPage() {
         </div>
 
         <div className="qs-bar">Shipment Information</div>
+        {/* Shipper + Consignee on their own two-column top row; pre-line prints
+            company / address / tel on separate lines. */}
+        <div
+          className="qs-info"
+          style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 4 }}
+        >
+          {shipmentPartyRows(job).map(([k, v]) => (
+            <div key={k}>
+              <div className="k">{k}</div>
+              <div className="v" style={{ whiteSpace: "pre-line" }}>
+                {v}
+              </div>
+            </div>
+          ))}
+        </div>
         <div className="qs-info">
           {rows.map(([k, v]) => (
             <div key={k}>
               <div className="k">{k}</div>
-              {/* pre-line so the party rows print company / address / tel on separate lines */}
-              <div className="v" style={{ whiteSpace: "pre-line" }}>
-                {v}
-              </div>
+              <div className="v">{v}</div>
             </div>
           ))}
         </div>

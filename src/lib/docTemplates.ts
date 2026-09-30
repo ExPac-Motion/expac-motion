@@ -42,6 +42,25 @@ function partyBlock(
   return [company, address, tel].filter((s) => s && s.trim()).join("\n");
 }
 
+/** Top row of Shipment Information: Shipper / Exporter then Customer /
+ *  Consignee, printed on their own two-column row above the main grid. */
+export function shipmentPartyRows(job: Job): [string, string][] {
+  return [
+    [
+      "Shipper / Exporter",
+      partyBlock(job.supplier?.company, job.supplier?.address, job.supplier?.phone),
+    ],
+    [
+      "Customer / Consignee",
+      partyBlock(
+        job.client?.company,
+        job.client?.address,
+        job.client?.company_phone || job.client?.phone,
+      ),
+    ],
+  ];
+}
+
 /** Every shipment field worth printing on operational paperwork — deliberately
  *  excludes commercial value / insurance (those only ever live on the quote,
  *  and never belong on ops-facing documents). Container Type and Incoterms
@@ -60,18 +79,6 @@ export function shipmentInfoRows(
   const rows: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],
-    [
-      "Shipper / Exporter",
-      partyBlock(job.supplier?.company, job.supplier?.address, job.supplier?.phone),
-    ],
-    [
-      "Customer / Consignee",
-      partyBlock(
-        job.client?.company,
-        job.client?.address,
-        job.client?.company_phone || job.client?.phone,
-      ),
-    ],
     ["Port of Load", portCode(job.origin)],
     ["Port of Discharge", portCode(job.destination)],
     ["Shipping Line", job.shipping_line || "—"],
