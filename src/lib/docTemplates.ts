@@ -70,7 +70,13 @@ export function shipmentInfoRows(
   job: Job,
   quote?: Pick<
     Quote,
-    "hbl_no" | "hawb_no" | "incoterms" | "delivery_terms"
+    | "hbl_no"
+    | "hawb_no"
+    | "incoterms"
+    | "delivery_terms"
+    | "commodity"
+    | "flight_no"
+    | "flight_date"
   > | null,
 ): [string, string][] {
   const isSea = job.mode.startsWith("Sea Freight");
@@ -98,6 +104,9 @@ export function shipmentInfoRows(
     ["ETD", formatDate(job.etd)],
     ["ETA", formatDate(job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
+    ["Commodity", quote?.commodity || "—"],
+    ["Flight No", quote?.flight_no || "—"],
+    ["Flight Date", formatDate(quote?.flight_date)],
   );
   return rows;
 }
