@@ -80,6 +80,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     commercial_value: q.commercial_value != null ? String(q.commercial_value) : "",
     insurance_amount: q.insurance_amount != null ? String(q.insurance_amount) : "",
     vessel_name: "",
+    voyage_no: "",
     mbl_no: "",
     hbl_no: "",
     container_no: "",

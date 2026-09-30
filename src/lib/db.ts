@@ -431,6 +431,16 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       p_consignee_lead_id: draft.consignee_lead_id || null,
     }),
   );
+  // Voyage No (0107) is saved outside save_quote so the RPC signature stays
+  // unchanged. Tolerate the column not existing yet (migration not applied)
+  // so quote saving never breaks over it.
+  const { error: voyageErr } = await supabase
+    .from("quotes")
+    .update({ voyage_no: draft.voyage_no.trim() || null })
+    .eq("id", id);
+  if (voyageErr && voyageErr.code !== "PGRST204" && voyageErr.code !== "42703") {
+    throw voyageErr;
+  }
   return id;
 }
 

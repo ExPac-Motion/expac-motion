@@ -63,15 +63,21 @@ export function shipmentPartyRows(job: Job): [string, string][] {
 
 /** Every shipment field worth printing on operational paperwork — deliberately
  *  excludes commercial value / insurance (those only ever live on the quote,
- *  and never belong on ops-facing documents). Container Type and Incoterms
- *  only apply to Sea Freight; HBL/HAWB Number is shown on every document,
- *  resolved from the linked quote's HBL (sea) or HAWB (air) field. */
+ *  and never belong on ops-facing documents). Sea and Air differ, using the
+ *  Quote Builder's own labels: Sea prints MBL No / HBL No, Voyage No,
+ *  Container Type and Incoterms; Air (every non-sea mode) prints MAWB No /
+ *  HAWB No, Agent / Airline, Flight No and Flight Date. */
 export function shipmentInfoRows(
   job: Job,
   quote?: Pick<
     Quote,
+    | "mbl_no"
     | "hbl_no"
+    | "mawb_no"
     | "hawb_no"
+    | "voyage_no"
+    | "carrier_name"
+    | "customer_reference"
     | "incoterms"
     | "delivery_terms"
     | "commodity"
@@ -80,7 +86,6 @@ export function shipmentInfoRows(
   > | null,
 ): [string, string][] {
   const isSea = job.mode.startsWith("Sea Freight");
-  const hblHawb = isSea ? quote?.hbl_no : quote?.hawb_no;
 
   const rows: [string, string][] = [
     ["Shipment Reference", job.reference],
@@ -89,24 +94,37 @@ export function shipmentInfoRows(
     ["Port of Discharge", portCode(job.destination)],
     ["Shipping Line", job.shipping_line || "—"],
     ["Vessel", job.vessel_name || "—"],
-    ["Container No", job.container_no || "—"],
   ];
-  if (isSea) rows.push(["Container Type", job.container_type || "—"]);
-  rows.push(
-    ["AWB / MBL No", job.awb_mbl || "—"],
-    ["HBL/HAWB Number", hblHawb || "—"],
-  );
-  if (isSea) rows.push(["Incoterms", quote?.incoterms || "—"]);
+  if (isSea) rows.push(["Voyage No", quote?.voyage_no || "—"]);
+  rows.push(["Container No", job.container_no || "—"]);
+  if (isSea) {
+    rows.push(
+      ["Container Type", job.container_type || "—"],
+      ["MBL No", quote?.mbl_no || job.awb_mbl || "—"],
+      ["HBL No", quote?.hbl_no || "—"],
+      ["Incoterms", quote?.incoterms || "—"],
+    );
+  } else {
+    rows.push(
+      ["MAWB No", quote?.mawb_no || job.awb_mbl || "—"],
+      ["HAWB No", quote?.hawb_no || "—"],
+      ["Agent / Airline", quote?.carrier_name || job.carrier_name || "—"],
+    );
+  }
   rows.push(
     ["Delivery Terms", quote?.delivery_terms || "—"],
-    ["PO / Customer Ref", job.po_no || "—"],
+    ["Customer Reference", job.po_no || quote?.customer_reference || "—"],
     ["Shipment Status", job.shipment_status || "—"],
     ["ETD", formatDate(job.etd)],
     ["ETA", formatDate(job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
     ["Commodity", quote?.commodity || "—"],
-    ["Flight No", quote?.flight_no || "—"],
-    ["Flight Date", formatDate(quote?.flight_date)],
   );
+  if (!isSea) {
+    rows.push(
+      ["Flight No", quote?.flight_no || "—"],
+      ["Flight Date", formatDate(quote?.flight_date)],
+    );
+  }
   return rows;
 }

@@ -998,6 +998,8 @@ export interface Quote {
   commercial_value: number | null;
   insurance_amount: number | null;
   vessel_name: string | null;
+  /** Sea Freight voyage number (migration 0107) — printed on shipment docs. */
+  voyage_no?: string | null;
   mbl_no: string | null;
   hbl_no: string | null;
   container_no: string | null;
@@ -1497,6 +1499,7 @@ export interface QuoteDraft {
   commercial_value: string;
   insurance_amount: string;
   vessel_name: string;
+  voyage_no: string;
   mbl_no: string;
   hbl_no: string;
   container_no: string;

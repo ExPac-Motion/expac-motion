@@ -128,6 +128,7 @@ function blankDraft(): QuoteDraft {
     commercial_value: "",
     insurance_amount: "",
     vessel_name: "",
+    voyage_no: "",
     mbl_no: "",
     hbl_no: "",
     container_no: "",
@@ -176,6 +177,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     commercial_value: q.commercial_value != null ? String(q.commercial_value) : "",
     insurance_amount: q.insurance_amount != null ? String(q.insurance_amount) : "",
     vessel_name: q.vessel_name ?? "",
+    voyage_no: q.voyage_no ?? "",
     mbl_no: q.mbl_no ?? "",
     hbl_no: q.hbl_no ?? "",
     container_no: q.container_no ?? "",
@@ -1085,6 +1087,13 @@ export default function QuoteBuilderPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="field">
+            <label>Voyage No</label>
+            <input
+              value={draft.voyage_no}
+              onChange={(e) => set("voyage_no", e.target.value)}
+            />
           </div>
         </div>
       </div>
