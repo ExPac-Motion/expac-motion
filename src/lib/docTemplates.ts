@@ -63,11 +63,11 @@ export function shipmentPartyRows(job: Job): [string, string][] {
 
 /** Every shipment field worth printing on operational paperwork — deliberately
  *  excludes commercial value / insurance (those only ever live on the quote,
- *  and never belong on ops-facing documents). Sea and Air differ, using the
- *  Quote Builder's own labels: Sea prints MBL No / HBL No, Voyage No,
- *  Container Type and Incoterms; Air (every non-sea mode) prints MAWB No /
- *  HAWB No, Agent / Airline, Flight No and Flight Date. Prepared By is the
- *  quote's sales person. */
+ *  and never belong on ops-facing documents). Sea and Air each print a fixed
+ *  sequence using the Quote Builder's labels: Sea has Shipping Line, Vessel,
+ *  Voyage No, Container No/Type, MBL No, HBL No; Air (every non-sea mode) has
+ *  Agent / Airline, Flight No/Date, MAWB No, HAWB No. Both then share
+ *  Incoterms → Prepared By (the quote's sales person). */
 export function shipmentInfoRows(
   job: Job,
   quote?: Pick<
@@ -89,46 +89,40 @@ export function shipmentInfoRows(
   preparedBy?: string | null,
 ): [string, string][] {
   const isSea = job.mode.startsWith("Sea Freight");
-
-  const rows: [string, string][] = [
+  const head: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],
     ["Port of Load", portCode(job.origin)],
     ["Port of Discharge", portCode(job.destination)],
-    ["Shipping Line", job.shipping_line || "—"],
-    ["Vessel", job.vessel_name || "—"],
   ];
-  if (isSea) rows.push(["Voyage No", quote?.voyage_no || "—"]);
-  rows.push(["Container No", job.container_no || "—"]);
-  if (isSea) {
-    rows.push(
-      ["Container Type", job.container_type || "—"],
-      ["MBL No", quote?.mbl_no || job.awb_mbl || "—"],
-      ["HBL No", quote?.hbl_no || "—"],
-      ["Incoterms", quote?.incoterms || "—"],
-    );
-  } else {
-    rows.push(
-      ["MAWB No", quote?.mawb_no || job.awb_mbl || "—"],
-      ["HAWB No", quote?.hawb_no || "—"],
-      ["Agent / Airline", quote?.carrier_name || job.carrier_name || "—"],
-    );
-  }
-  rows.push(
-    ["Delivery Terms", quote?.delivery_terms || "—"],
-    ["Customer Reference", job.po_no || quote?.customer_reference || "—"],
+  const middle: [string, string][] = isSea
+    ? [
+        ["Shipping Line", job.shipping_line || "—"],
+        ["Vessel", job.vessel_name || "—"],
+        ["Voyage No", quote?.voyage_no || "—"],
+        ["Container No", job.container_no || "—"],
+        ["Container Type", job.container_type || "—"],
+        ["MBL No", quote?.mbl_no || job.awb_mbl || "—"],
+        ["HBL No", quote?.hbl_no || "—"],
+      ]
+    : [
+        ["Agent / Airline", quote?.carrier_name || job.carrier_name || "—"],
+        ["Flight No", quote?.flight_no || "—"],
+        ["Flight Date", formatDate(quote?.flight_date)],
+        ["MAWB No", quote?.mawb_no || job.awb_mbl || "—"],
+        ["HAWB No", quote?.hawb_no || "—"],
+      ];
+  const tail: [string, string][] = [
+    ["Incoterms", quote?.incoterms || "—"],
     ["Shipment Status", job.shipment_status || "—"],
+    ["Customer Reference", job.po_no || quote?.customer_reference || "—"],
+    ["Delivery Terms", quote?.delivery_terms || "—"],
+    ["Commodity", quote?.commodity || "—"],
     ["ETD", formatDate(job.etd)],
     ["ETA", formatDate(job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
-    ["Commodity", quote?.commodity || "—"],
     ["Prepared By", preparedBy || "—"],
-  );
-  if (!isSea) {
-    rows.push(
-      ["Flight No", quote?.flight_no || "—"],
-      ["Flight Date", formatDate(quote?.flight_date)],
-    );
-  }
+  ];
+  const rows = [...head, ...middle, ...tail];
   return rows;
 }
