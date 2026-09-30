@@ -192,7 +192,9 @@ export default function TaskEditModal({
     try {
       await del.mutateAsync(task.id);
       toast("Deleted");
-      onClose();
+      // Stay open (only Save / Cancel / X close the window): switch to a
+      // fresh item on the same record; the open-tasks panel refreshes.
+      pick(null);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not delete");
     }
