@@ -400,12 +400,14 @@ export default function DashboardPage() {
                 <table className="job-mini">
                   <thead>
                     <tr>
-                      <th>Reference</th>
+                      <th>Shipment</th>
                       <th>Customer</th>
                       <th>Trade lane</th>
                       <th>Mode</th>
                       <th>Milestone</th>
+                      <th>ETD</th>
                       <th>ETA</th>
+                      <th>PDD</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -430,7 +432,11 @@ export default function DashboardPage() {
                             {j.milestone}
                           </span>
                         </td>
-                        <td>{formatDate(j.eta)}</td>
+                        <td className="nowrap">{formatDate(j.etd)}</td>
+                        <td className="nowrap">{formatDate(j.eta)}</td>
+                        <td className="nowrap">
+                          {formatDate(j.provisional_delivery_date)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
