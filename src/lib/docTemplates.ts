@@ -31,6 +31,35 @@ export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undef
   return DOCUMENT_TYPES_LIST.find((d) => d.slug === slug);
 }
 
+export interface DocParty {
+  label: string;
+  company: string;
+  address: string;
+  tel: string;
+}
+
+/** The two parties printed at the top of Shipment Information — Shipper /
+ *  Exporter first, then Customer / Consignee — each with its company name,
+ *  address and telephone number. */
+export function shipmentParties(job: Job): DocParty[] {
+  const s = job.supplier;
+  const c = job.client;
+  return [
+    {
+      label: "Shipper / Exporter",
+      company: s?.company || "—",
+      address: s?.address || "—",
+      tel: s?.phone || "—",
+    },
+    {
+      label: "Customer / Consignee",
+      company: c?.company || "—",
+      address: c?.address || "—",
+      tel: c?.company_phone || c?.phone || "—",
+    },
+  ];
+}
+
 /** Every shipment field worth printing on operational paperwork — deliberately
  *  excludes commercial value / insurance (those only ever live on the quote,
  *  and never belong on ops-facing documents). Container Type and Incoterms
@@ -49,11 +78,8 @@ export function shipmentInfoRows(
   const rows: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],
-    ["Customer / Consignee", job.client?.company ?? "—"],
-    ["Shipper / Exporter", job.supplier?.company ?? "—"],
     ["Port of Load", portCode(job.origin)],
     ["Port of Discharge", portCode(job.destination)],
-    ["Agent / Airline", job.carrier_name || "—"],
     ["Shipping Line", job.shipping_line || "—"],
     ["Vessel", job.vessel_name || "—"],
     ["Container No", job.container_no || "—"],

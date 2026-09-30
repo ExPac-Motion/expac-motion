@@ -1121,9 +1121,18 @@ export interface Job {
     | (Pick<Client, "id" | "company"> & {
         email?: string | null;
         contact?: string | null;
+        address?: string | null;
+        phone?: string | null;
+        company_phone?: string | null;
       })
     | null;
-  supplier?: (Pick<Supplier, "id" | "company"> & { email?: string | null }) | null;
+  supplier?:
+    | (Pick<Supplier, "id" | "company"> & {
+        email?: string | null;
+        address?: string | null;
+        phone?: string | null;
+      })
+    | null;
   job_events?: JobEvent[];
 }
 
