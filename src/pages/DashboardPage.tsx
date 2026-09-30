@@ -119,7 +119,7 @@ export default function DashboardPage() {
   const dueValue = useMemo(
     () =>
       dueForApproval.reduce(
-        (s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sell,
+        (s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sellIncl,
         0,
       ),
     [dueForApproval],
@@ -140,7 +140,7 @@ export default function DashboardPage() {
     const rows = STATUS_ORDER.map((st) => {
       const qs = quotes.filter((q) => q.status === st);
       const val = qs.reduce(
-        (s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sell,
+        (s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sellIncl,
         0,
       );
       return { st, count: qs.length, val };
@@ -157,7 +157,7 @@ export default function DashboardPage() {
     const openValue = quotes
       .map((q, i) => ({ q, t: withT[i] }))
       .filter((x) => x.q.status !== "accepted" && x.q.status !== "completed")
-      .reduce((s, x) => s + x.t.sell, 0);
+      .reduce((s, x) => s + x.t.sellIncl, 0);
     const avgMargin =
       withT.length > 0
         ? withT.reduce((s, t) => s + t.margin, 0) / withT.length
@@ -329,7 +329,7 @@ export default function DashboardPage() {
             <div className="panel-head">
               <div>
                 <h2>Quotation Pipeline</h2>
-                <p>Value by stage, from your saved quotes</p>
+                <p>Value by stage (incl. VAT), from your saved quotes</p>
               </div>
               <div className="mini-stats">
                 <div>

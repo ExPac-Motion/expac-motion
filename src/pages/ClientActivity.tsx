@@ -37,7 +37,7 @@ export default function ClientActivity({ clientId }: { clientId: string }) {
   const pipeline = STATUS_ORDER.map((st) => {
     const rows = quotes.filter((q) => q.status === st);
     const value = rows.reduce(
-      (sum, q) => sum + chargeTotals(q.quote_lines, fxOf(q)).sell,
+      (sum, q) => sum + chargeTotals(q.quote_lines, fxOf(q)).sellIncl,
       0,
     );
     return { st, count: rows.length, value };

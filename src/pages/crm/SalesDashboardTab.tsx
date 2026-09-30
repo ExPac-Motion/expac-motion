@@ -236,7 +236,7 @@ export default function SalesDashboardTab() {
     const rows = STATUS_ORDER.map((st) => {
       const inStatus = quotes.filter((q) => q.status === st);
       const value = inStatus
-        .map((q) => chargeTotals(q.quote_lines, fxOf(q)).sell)
+        .map((q) => chargeTotals(q.quote_lines, fxOf(q)).sellIncl)
         .reduce((s, v) => s + v, 0);
       return { st, count: inStatus.length, value };
     });
@@ -536,7 +536,7 @@ export default function SalesDashboardTab() {
           <div className="panel-head">
             <div>
               <h2>Opportunities Pipeline</h2>
-              <p>Value by stage · click to open the board</p>
+              <p>Value by stage (incl. VAT) · click to open the board</p>
             </div>
             <div className="mini-stats">
               <div>
@@ -589,7 +589,7 @@ export default function SalesDashboardTab() {
           <div className="panel-head">
             <div>
               <h2>Quotes by Status</h2>
-              <p>Value by status · click to open the list</p>
+              <p>Value by status (incl. VAT) · click to open the list</p>
             </div>
             <div className="mini-stats">
               <div>
