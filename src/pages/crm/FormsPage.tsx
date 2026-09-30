@@ -492,7 +492,7 @@ function FormEditor({
       {tab === "share" && (
         <div className="panel" style={{ maxWidth: 680 }}>
           {dirty && (
-            <div className="wf-err" style={{ background: "#fdf6e3", color: "#8a6d00" }}>
+            <div className="wf-err" style={{ background: "var(--amber-tint)", color: "var(--amber-ink)" }}>
               You have unsaved changes — Save first so the shared form matches.
             </div>
           )}

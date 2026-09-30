@@ -174,7 +174,7 @@ export default function SalesPersonPage() {
           return (
             <span
               style={{
-                color: r <= costOfSalesTarget ? "var(--green-dark)" : "#d9534f",
+                color: r <= costOfSalesTarget ? "var(--green-dark)" : "var(--orange)",
                 fontWeight: 700,
               }}
             >

@@ -309,7 +309,7 @@ function ActivePortalUsers() {
                   </td>
                   <td>
                     {u.role === "restricted" ? (
-                      <span className="tag" style={{ background: "#f4dede", color: "#8a2c2c" }}>
+                      <span className="tag" style={{ background: "var(--orange-tint)", color: "var(--orange-ink)" }}>
                         Revoked
                       </span>
                     ) : (

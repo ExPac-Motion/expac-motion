@@ -121,12 +121,12 @@ function CampaignDetailModal({
           <span className="tag">Opened {stats.opened}</span>
           <span className="tag">Clicked {stats.clicked}</span>
           {stats.bounced > 0 && (
-            <span className="tag" style={{ background: "#fdecea", color: "#b3261e" }}>
+            <span className="tag" style={{ background: "var(--orange-tint)", color: "var(--orange-ink)" }}>
               Bounced {stats.bounced}
             </span>
           )}
           {stats.failed > 0 && (
-            <span className="tag" style={{ background: "#fdecea", color: "#b3261e" }}>
+            <span className="tag" style={{ background: "var(--orange-tint)", color: "var(--orange-ink)" }}>
               Failed {stats.failed}
             </span>
           )}

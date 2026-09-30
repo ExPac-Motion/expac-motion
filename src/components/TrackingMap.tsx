@@ -97,12 +97,12 @@ export default function TrackingMap({
         }
 
         if (ok(pol)) {
-          L.circleMarker([pol.lat, pol.lon], dot("#245bc6"))
+          L.circleMarker([pol.lat, pol.lon], dot("#02a5aa"))
             .addTo(map)
             .bindPopup(`Origin — ${pol.label ?? ""}`);
         }
         if (ok(pod)) {
-          L.circleMarker([pod.lat, pod.lon], dot("#c0392b"))
+          L.circleMarker([pod.lat, pod.lon], dot("#ef4910"))
             .addTo(map)
             .bindPopup(`Destination — ${pod.label ?? ""}`);
         }

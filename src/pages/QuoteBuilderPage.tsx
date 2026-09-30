@@ -1762,7 +1762,7 @@ export default function QuoteBuilderPage() {
                 color:
                   costOfSalesRatio <= costOfSalesTarget
                     ? "var(--green-dark)"
-                    : "#d9534f",
+                    : "var(--orange)",
               }}
               title={`Cost ÷ Customer total excl. VAT · target ≤ ${costOfSalesTarget}%`}
             >

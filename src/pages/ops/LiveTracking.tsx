@@ -221,7 +221,7 @@ export default function LiveTracking() {
           </div>
           <div>
             <div className="k">Exceptions</div>
-            <div className="v" style={{ color: summary.exceptions ? "#b3261e" : undefined }}>
+            <div className="v" style={{ color: summary.exceptions ? "var(--orange-ink)" : undefined }}>
               {summary.exceptions}
             </div>
           </div>

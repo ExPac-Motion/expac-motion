@@ -89,11 +89,11 @@ function buildMonthRange(fromKey: string, toKey: string): string[] {
 
 const COLORS = {
   sales: "#8cbc43",
-  revenue: "#4a6fa5",
-  ratio: "#d98e04",
-  target: "#d9534f",
-  leadsCreated: "#8e7cc3",
-  leadsConverted: "#2e7d32",
+  revenue: "#02a5aa",
+  ratio: "#e9a91b",
+  target: "#ef4910",
+  leadsCreated: "#202426",
+  leadsConverted: "#719d2f",
 };
 
 export default function TrendsTab() {

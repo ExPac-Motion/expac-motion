@@ -205,7 +205,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
           </div>
           <div>
             <div className="k">Overdue</div>
-            <div className="v" style={{ color: counts.overdue ? "#b3261e" : undefined }}>
+            <div className="v" style={{ color: counts.overdue ? "var(--orange-ink)" : undefined }}>
               {counts.overdue}
             </div>
           </div>

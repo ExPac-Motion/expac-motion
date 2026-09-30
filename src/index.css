@@ -1,14 +1,29 @@
 :root {
   --green: #8cbc43;
   --green-dark: #719d2f;
-  --ink: rgb(46, 46, 46);
-  --ink-2: rgb(46, 46, 46);
+  --ink: #333333;
+  --ink-2: #333333;
   --paper: #f4f1ea;
   --white: #fff;
   --muted: #6f756d;
   --line: rgba(32, 36, 38, 0.12);
   --shadow: 0 12px 32px rgba(32, 36, 38, 0.1);
   --radius: 16px;
+  /* ExPac brand palette — use these (and their tints) for any accent:
+     #8cbc43 green, #333333 text, #202426 night, #f4f1ea paper,
+     #e9a91b amber, #02a5aa teal, #ef4910 orange-red. */
+  --green-tint: #eef4e3;
+  --night: #202426;
+  --night-tint: #e4e6e7;
+  --amber: #e9a91b;
+  --amber-ink: #8f6406;
+  --amber-tint: #fcf1d6;
+  --teal: #02a5aa;
+  --teal-ink: #017a7e;
+  --teal-tint: #ddf2f2;
+  --orange: #ef4910;
+  --orange-ink: #c23a0b;
+  --orange-tint: #fde4da;
   /* --- FONT EXPERIMENT (local only, not committed) --- */
   --display: -apple-system, system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu,
     Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji",
@@ -240,7 +255,7 @@ input[type="number"] {
   color: var(--ink);
 }
 .subnav-tab.active {
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
 }
 .brand {
@@ -386,7 +401,7 @@ input[type="number"] {
   white-space: nowrap;
 }
 .btn:hover {
-  background: #9bca52;
+  background: #a3c96b;
 }
 .btn:disabled {
   opacity: 0.55;
@@ -412,8 +427,8 @@ input[type="number"] {
   padding: 8px 10px;
 }
 .btn.danger {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .btn.small {
   padding: 6px 10px;
@@ -426,7 +441,7 @@ input[type="number"] {
 }
 /* Non-interactive status pill that keeps the .btn box (size/shape). */
 .btn.status {
-  background: #eef4e3;
+  background: var(--green-tint);
   border-color: var(--green);
   color: var(--green-dark);
   cursor: default;
@@ -849,8 +864,8 @@ table.dt th.dt-sortable {
   color: hsl(235, 45%, 42%);
 }
 .job-status.is-in-transit {
-  background: #fff2d9 !important;
-  color: #8a5a00;
+  background: var(--amber-tint) !important;
+  color: var(--amber-ink);
 }
 .job-status.is-arrived {
   background: hsl(90, 45%, 87%) !important;
@@ -865,8 +880,8 @@ table.dt th.dt-sortable {
   color: hsl(25, 65%, 34%);
 }
 .job-status.is-detained {
-  background: #fde4e1 !important;
-  color: #b02b2b;
+  background: var(--orange-tint) !important;
+  color: var(--orange-ink);
 }
 .job-status.is-released {
   background: hsl(130, 40%, 89%) !important;
@@ -882,7 +897,7 @@ table.dt th.dt-sortable {
 }
 /* ETA cell on Active Shipments — same pill format as the Status cell.
    is-due:  arriving within 5 days / passed, nothing outstanding (pale).
-   is-risk: same, but an open task or not yet cleared (solid #ef4910). */
+   is-risk: same, but an open task or not yet cleared (solid var(--orange)). */
 .job-eta.is-due,
 .job-eta.is-risk {
   font-weight: 700;
@@ -890,14 +905,14 @@ table.dt th.dt-sortable {
   text-align: center;
 }
 .job-eta.is-due {
-  background: #fde4da !important;
-  color: #c23a0b !important;
-  border-color: #fde4da !important;
+  background: var(--orange-tint) !important;
+  color: var(--orange-ink) !important;
+  border-color: var(--orange-tint) !important;
 }
 .job-eta.is-risk {
-  background: #ef4910 !important;
+  background: var(--orange) !important;
   color: #fff !important;
-  border-color: #ef4910 !important;
+  border-color: var(--orange) !important;
 }
 /* DateInput (src/components/DateInput.tsx): dd/mm/yyyy text field with a
    calendar button; the native date input only hosts the picker. */
@@ -930,7 +945,7 @@ table.dt th.dt-sortable {
   color: #fff;
 }
 .date-input:has(.is-due) .date-input-btn {
-  color: #c23a0b;
+  color: var(--orange-ink);
 }
 .date-input .date-input-native {
   position: absolute !important;
@@ -946,8 +961,8 @@ table.dt th.dt-sortable {
 }
 /* "At risk" filter toggle when active. */
 .btn.at-risk-on {
-  background: #ef4910;
-  border-color: #ef4910;
+  background: var(--orange);
+  border-color: var(--orange);
   color: #fff;
 }
 
@@ -965,20 +980,20 @@ table.dt th.dt-sortable {
   color: #555;
 }
 .badge.sent {
-  background: #e6f0fb;
-  color: #1d5ba8;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
 }
 .badge.accepted {
   background: #e5f3d9;
   color: var(--green-dark);
 }
 .badge.completed {
-  background: #d9efe4;
-  color: #0f6b4f;
+  background: var(--green-tint);
+  color: var(--green-dark);
 }
 .badge.lost {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 /* Status badge that's also a real <select> — inherits the global select's
    chevron/appearance rules (index.css:58) but keeps the pill look. */
@@ -999,20 +1014,20 @@ select.badge-select.open {
   color: #555;
 }
 select.badge-select.sent {
-  background-color: #e6f0fb;
-  color: #1d5ba8;
+  background-color: var(--teal-tint);
+  color: var(--teal-ink);
 }
 select.badge-select.accepted {
   background-color: #e5f3d9;
   color: var(--green-dark);
 }
 select.badge-select.completed {
-  background-color: #d9efe4;
-  color: #0f6b4f;
+  background-color: var(--green-tint);
+  color: var(--green-dark);
 }
 select.badge-select.lost {
-  background-color: #fdecea;
-  color: #b3261e;
+  background-color: var(--orange-tint);
+  color: var(--orange-ink);
 }
 
 /* ---------- Forms ---------- */
@@ -1027,7 +1042,7 @@ select.badge-select.lost {
   font-size: 0.75rem;
   font-weight: 700;
   /* blue so the field labels stand out from the black values when scanning */
-  color: rgb(36, 91, 198);
+  color: var(--teal-ink);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1163,7 +1178,7 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .rte-ai-menu button:hover {
-  background: #eef4e3;
+  background: var(--green-tint);
 }
 .rte-toolbar button,
 .rte-toolbar select {
@@ -1267,7 +1282,7 @@ select.badge-select.lost {
   display: inline-flex;
 }
 .ui-pop .btn.active {
-  background: #eef4e3;
+  background: var(--green-tint);
   border-color: var(--green);
 }
 .ui-pop-badge {
@@ -1359,7 +1374,7 @@ select.badge-select.lost {
   display: grid;
   place-items: center;
   flex: none;
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
 }
 .opp-col-icon svg {
@@ -1384,12 +1399,12 @@ select.badge-select.lost {
   display: block;
   font-size: 0.9rem;
   line-height: 1.25;
-  color: rgb(36, 91, 198);
+  color: var(--teal-ink);
 }
 /* Primary row name (Customers / Suppliers / Leads / Sales Person /
    Templates / Campaigns / Forms list tables) */
 .row-name {
-  color: rgb(36, 91, 198);
+  color: var(--teal-ink);
 }
 .opp-line {
   font-size: 0.8rem;
@@ -1578,15 +1593,15 @@ select.badge-select.lost {
   align-items: center;
 }
 .wf-err {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 0.85rem;
   margin-bottom: 10px;
 }
 .wf-req {
-  color: #b3261e;
+  color: var(--orange-ink);
 }
 .wf-upload-status {
   margin: 6px 0 0;
@@ -1697,7 +1712,7 @@ select.badge-select.lost {
   margin-left: 8px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
   font-size: 0.66rem;
   font-weight: 700;
@@ -1742,7 +1757,7 @@ select.badge-select.lost {
 }
 /* Column headings in the blue used for form-field labels */
 .charge-table th {
-  color: rgb(36, 91, 198);
+  color: var(--teal-ink);
 }
 .charge-table input,
 .charge-table select {
@@ -2147,7 +2162,7 @@ select.badge-select.lost {
   animation: toast-in 0.2s ease;
 }
 .toast.error {
-  background: #b3261e;
+  background: var(--orange-ink);
 }
 @keyframes toast-in {
   from {
@@ -2190,8 +2205,8 @@ select.badge-select.lost {
   margin-bottom: 20px;
 }
 .auth-error {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
   border-radius: 9px;
   padding: 10px 12px;
   font-size: 0.82rem;
@@ -2379,17 +2394,17 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .row-icon-btn.danger {
-  color: #b3261e;
+  color: var(--orange-ink);
 }
 .row-icon-btn.danger:hover {
-  background: #fdecea;
+  background: var(--orange-tint);
 }
 .row-icon-btn.has-unread {
   color: var(--green-dark);
 }
 /* Open task pending on this row — same blue as the heading labels. */
 .row-icon-btn.has-open-task {
-  color: rgb(36, 91, 198);
+  color: var(--teal-ink);
 }
 .row-icon-dot {
   position: absolute;
@@ -2398,7 +2413,7 @@ select.badge-select.lost {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #e0522f;
+  background: var(--orange);
   border: 1.5px solid var(--white);
 }
 .email-cell {
@@ -2474,6 +2489,9 @@ select.badge-select.lost {
  * from the user. Verify any sanctioned change at /quotes/demo/print (DEV).
  * ==================================================================== */
 .qs-wrap {
+  /* pinned: the app text colour moved to brand #333333 (2026-09-30); the
+     locked print keeps its signed-off ink */
+  --ink: rgb(46, 46, 46);
   background: #e9e7e0;
   min-height: 100vh;
   padding: 24px 16px 60px;
@@ -2911,7 +2929,7 @@ select.badge-select.lost {
 /* category rows: keep the green tint + rule, but format the text like the
    column-header rows (SERVICE DESCRIPTION) — 9.5px uppercase grey */
 .qs-charges tr.group td {
-  background: #eef4e3;
+  background: var(--green-tint);
   font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -3092,7 +3110,7 @@ select.badge-select.lost {
   display: grid;
   place-items: center;
   flex: none;
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
 }
 .kpi-icon svg {
@@ -3275,7 +3293,7 @@ select.badge-select.lost {
   background: #f5f4ef;
 }
 .donut-legend button.selected {
-  background: #eef4e3;
+  background: var(--green-tint);
 }
 .donut-legend .sw {
   width: 10px;
@@ -3443,7 +3461,7 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .ms-tag {
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
 }
 .ms-tag.created {
@@ -3451,20 +3469,20 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .ms-tag.transit {
-  background: #fff4e0;
-  color: #b9791b;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
 }
 .ms-tag.arrived {
-  background: #e3f2f7;
-  color: #0e7490;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
 }
 .ms-tag.customs {
-  background: #e6f0fb;
-  color: #1d5ba8;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .ms-tag.ondelivery {
-  background: #f1e9fb;
-  color: #7c4dbb;
+  background: var(--night-tint);
+  color: var(--night);
 }
 .ms-tag.delivered {
   background: var(--green);
@@ -3510,7 +3528,7 @@ select.badge-select.lost {
   border-color: var(--green);
 }
 .ct-chip.alert {
-  border-color: #f0c9c4;
+  border-color: #f7c3ad;
 }
 .ct-chip-n {
   display: grid;
@@ -3519,14 +3537,14 @@ select.badge-select.lost {
   height: 24px;
   padding: 0 6px;
   border-radius: 999px;
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
   font-family: var(--display);
   font-weight: 700;
 }
 .ct-chip.alert .ct-chip-n {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .ct-tabs {
   display: flex;
@@ -3615,7 +3633,7 @@ select.badge-select.lost {
   font-size: 1.05rem;
 }
 .vault-totals b.neg {
-  color: #b3261e;
+  color: var(--orange-ink);
 }
 .vault-totals b.pos {
   color: var(--green-dark);
@@ -3708,8 +3726,8 @@ select.badge-select.lost {
   background: #fffdf3;
 }
 .vault-inline.vault-bad {
-  border-color: #b3261e;
-  background: #fdecea;
+  border-color: var(--orange-ink);
+  background: var(--orange-tint);
 }
 .vault-tag {
   font-size: 0.68rem;
@@ -3724,8 +3742,8 @@ select.badge-select.lost {
   color: var(--green-dark);
 }
 .vault-tag.expense {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .vault-todos {
   list-style: none;
@@ -3867,7 +3885,7 @@ select.badge-select.lost {
   background: var(--green);
 }
 .prio-dot.high {
-  background: #d9534f;
+  background: var(--orange);
 }
 .task-title {
   flex: 1;
@@ -3892,8 +3910,8 @@ select.badge-select.lost {
   white-space: nowrap;
 }
 .due-badge.over {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 
 /* --- Tasks & Notes: board view --- */
@@ -4005,8 +4023,8 @@ select.badge-select.lost {
 }
 .cal-ev.k-etd,
 .cal-tag.k-etd {
-  background: #fff4e0;
-  color: #b9791b;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
 }
 .cal-ev.k-eta,
 .cal-tag.k-eta,
@@ -4017,8 +4035,8 @@ select.badge-select.lost {
 }
 .cal-ev.k-task,
 .cal-tag.k-task {
-  background: #e6eef7;
-  color: #1d5ba8;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
 }
 .cal-ev.k-note,
 .cal-tag.k-note {
@@ -4027,8 +4045,8 @@ select.badge-select.lost {
 }
 .cal-ev.k-quote-expiry,
 .cal-tag.k-quote-expiry {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .cal-daypanel {
   width: 320px;
@@ -4123,12 +4141,12 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .ms-tag.tone-alert {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .ms-tag.tone-mid {
-  background: #fff4e0;
-  color: #b9791b;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
 }
 .ms-tag.tone-done {
   background: #e6f3d9;
@@ -4139,7 +4157,7 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .eta-slip {
-  color: #b3261e;
+  color: var(--orange-ink);
   font-weight: 700;
 }
 .trk-map {
@@ -4448,7 +4466,7 @@ select.badge-select.lost {
   margin: 4px 0 2px;
 }
 .msg-err {
-  color: #b3261e;
+  color: var(--orange-ink);
   font-size: 0.76rem;
   margin: 2px 0;
 }
@@ -4597,8 +4615,8 @@ select.badge-select.lost {
   opacity: 1;
 }
 .media-folder-del:hover {
-  background: #fdecea;
-  color: #b3261e;
+  background: var(--orange-tint);
+  color: var(--orange-ink);
 }
 .media-folder-edit:hover {
   background: #f6faef;
@@ -4696,7 +4714,7 @@ select.badge-select.lost {
   margin-top: 6px;
 }
 .media-actions .danger {
-  color: #b3261e;
+  color: var(--orange-ink);
 }
 .media-move {
   font-size: 0.78rem;
@@ -4790,7 +4808,7 @@ select.badge-select.lost {
   color: var(--ink);
 }
 .gsearch-hit.active {
-  background: #eef4e3;
+  background: var(--green-tint);
 }
 .gsearch-hit-label {
   font-weight: 700;
@@ -4817,7 +4835,7 @@ select.badge-select.lost {
   height: 16px;
   padding: 0 3px;
   border-radius: 999px;
-  background: #e11d48;
+  background: var(--orange);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 700;
@@ -4882,7 +4900,7 @@ select.badge-select.lost {
   background: #f5f4ef;
 }
 .notif-item.unread {
-  background: #eef4e3;
+  background: var(--green-tint);
 }
 .notif-ico {
   width: 26px;
@@ -4890,7 +4908,7 @@ select.badge-select.lost {
   border-radius: 7px;
   display: grid;
   place-items: center;
-  background: #eef4e3;
+  background: var(--green-tint);
   color: var(--green-dark);
 }
 .notif-ico svg {
@@ -4898,16 +4916,16 @@ select.badge-select.lost {
   height: 15px;
 }
 .notif-ico.shipments {
-  background: #e6f0f4;
-  color: #22668a;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
 }
 .notif-ico.operations {
-  background: #eaf6ec;
-  color: #16a34a;
+  background: var(--green-tint);
+  color: var(--green-dark);
 }
 .notif-ico.mail {
-  background: #f3eefc;
-  color: #6b3fa0;
+  background: var(--night-tint);
+  color: var(--night);
 }
 .notif-text {
   font-size: 0.82rem;
@@ -4949,7 +4967,7 @@ select.badge-select.lost {
   border-bottom: 1px solid var(--line);
 }
 .notif-tab-row.unread {
-  background: #eef4e3;
+  background: var(--green-tint);
   border-radius: 8px;
 }
 .notif-tab-text {
@@ -5079,7 +5097,7 @@ select.badge-select.lost {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
 }
 .portal-chat-toggle:hover {
-  background: #1c1e1c;
+  background: var(--night);
 }
 .portal-chat-panel {
   width: 320px;

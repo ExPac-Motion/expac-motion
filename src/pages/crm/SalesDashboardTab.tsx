@@ -487,7 +487,7 @@ export default function SalesDashboardTab() {
               color:
                 kpis.costRatio <= settings.cost_of_sales_target
                   ? "var(--green-dark)"
-                  : "#d9534f",
+                  : "var(--orange)",
             }}
           >
             {kpis.costRatio.toFixed(1)}%

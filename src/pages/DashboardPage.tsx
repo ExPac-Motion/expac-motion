@@ -20,10 +20,10 @@ type ModeKey = "Sea" | "Air" | "Road" | "Courier";
 type ModeFilter = "All" | ModeKey;
 
 const MODE_META: { key: ModeKey; label: string; color: string }[] = [
-  { key: "Sea", label: "Sea Freight", color: "#7ea63c" },
-  { key: "Air", label: "Air Freight", color: "#3f7d8c" },
-  { key: "Road", label: "Road Freight", color: "#c98a2e" },
-  { key: "Courier", label: "Courier Express", color: "#7d6a9c" },
+  { key: "Sea", label: "Sea Freight", color: "#8cbc43" },
+  { key: "Air", label: "Air Freight", color: "#02a5aa" },
+  { key: "Road", label: "Road Freight", color: "#e9a91b" },
+  { key: "Courier", label: "Courier Express", color: "#202426" },
 ];
 
 function modeBucket(mode: string | null | undefined): ModeKey | "Other" {

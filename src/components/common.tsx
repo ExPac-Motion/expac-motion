@@ -580,7 +580,7 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
 export function ErrorNote({ error }: { error: unknown }) {
   const msg = error instanceof Error ? error.message : "Could not load data";
   return (
-    <div className="empty" style={{ color: "#b3261e" }}>
+    <div className="empty" style={{ color: "var(--orange-ink)" }}>
       {msg}
     </div>
   );

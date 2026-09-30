@@ -18,13 +18,13 @@ export type Milestone =
  *  badge variants, so a shipment's status colour reads consistently
  *  wherever it shows up. */
 export const MILESTONE_COLOR: Record<Milestone, string> = {
-  Created: "#94a3b8",
+  Created: "#9aa39a",
   Booked: "#8cbc43",
-  "In Transit": "#e0a83e",
-  Arrived: "#2fa4b9",
-  Customs: "#3b82c4",
-  "On Delivery": "#9b6fd1",
-  Delivered: "#5a9c2f",
+  "In Transit": "#e9a91b",
+  Arrived: "#02a5aa",
+  Customs: "#ef4910",
+  "On Delivery": "#202426",
+  Delivered: "#719d2f",
 };
 
 /** One colour per stage for the 5-row pipeline bars (Quotation Pipeline,
@@ -33,11 +33,11 @@ export const MILESTONE_COLOR: Record<Milestone, string> = {
  *  index rather than a lookup since STATUS_ORDER and OPPORTUNITY_STAGES
  *  use different key types for the same five conceptual stages. */
 export const PIPE_STAGE_COLORS: string[] = [
-  "#94a3b8",
-  "#e0a83e",
+  "#9aa39a",
+  "#e9a91b",
   "#8cbc43",
-  "#2fa4b9",
-  "#d9534f",
+  "#02a5aa",
+  "#ef4910",
 ];
 
 /* ---------- Settings ---------- */
