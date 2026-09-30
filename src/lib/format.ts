@@ -14,6 +14,7 @@ const CURRENCY_SYMBOL: Record<string, string> = {
   USD: "$ ",
   CNY: "¥ ",
   EUR: "€ ",
+  GBP: "£ ",
 };
 
 /** Money in an arbitrary currency (symbol + comma-grouped 2dp), e.g. "€ 1 234.56". */

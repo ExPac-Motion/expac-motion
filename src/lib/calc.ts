@@ -50,6 +50,8 @@ export interface FxRates {
   usd: number;
   cny: number;
   eur: number;
+  /** GBP -> ZAR; optional so older call sites default to 0. */
+  gbp?: number;
 }
 
 /** Pulls FX rates off a quote (or draft-like object) with safe fallbacks. */
@@ -57,11 +59,13 @@ export function fxOf(q: {
   fx_usd_zar?: number | string | null;
   fx_cny_zar?: number | string | null;
   fx_eur_zar?: number | string | null;
+  fx_gbp_zar?: number | string | null;
 }): FxRates {
   return {
     usd: Number(q?.fx_usd_zar) || 0,
     cny: Number(q?.fx_cny_zar) || 0,
     eur: Number(q?.fx_eur_zar) || 0,
+    gbp: Number(q?.fx_gbp_zar) || 0,
   };
 }
 
@@ -69,6 +73,7 @@ export function buyRate(cur: QuoteLine["cur"], fx: FxRates): number {
   if (cur === "USD") return fx.usd;
   if (cur === "CNY") return fx.cny;
   if (cur === "EUR") return fx.eur;
+  if (cur === "GBP") return fx.gbp ?? 0;
   return 1; // ZAR
 }
 
@@ -266,6 +271,7 @@ export function intlFreightBuyUsd(lines: QuoteLine[], fx: FxRates): number {
       if (l.cur === "USD") return s + amt;
       if (l.cur === "CNY") return s + (fx.usd ? (amt * fx.cny) / fx.usd : 0);
       if (l.cur === "EUR") return s + (fx.usd ? (amt * fx.eur) / fx.usd : 0);
+      if (l.cur === "GBP") return s + (fx.usd ? (amt * (fx.gbp ?? 0)) / fx.usd : 0);
       return s + (fx.usd ? amt / fx.usd : 0); // ZAR
     }, 0);
 }

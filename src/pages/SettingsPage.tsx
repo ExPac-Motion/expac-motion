@@ -193,6 +193,7 @@ function DefaultsTab() {
       default_fx_usd_zar: Number(fd.get("default_fx_usd_zar")) || 0,
       default_fx_cny_zar: Number(fd.get("default_fx_cny_zar")) || 0,
       default_fx_eur_zar: Number(fd.get("default_fx_eur_zar")) || 0,
+      default_fx_gbp_zar: Number(fd.get("default_fx_gbp_zar")) || 0,
       default_vat_pct: Number(fd.get("default_vat_pct")) || 0,
       default_incoterm: String(fd.get("default_incoterm") || ""),
     };
@@ -235,6 +236,15 @@ function DefaultsTab() {
             type="number"
             step="0.01"
             defaultValue={data.default_fx_eur_zar}
+          />
+        </div>
+        <div className="field">
+          <label>Default FX Rate — GBP/ZAR</label>
+          <input
+            name="default_fx_gbp_zar"
+            type="number"
+            step="0.01"
+            defaultValue={data.default_fx_gbp_zar ?? 24}
           />
         </div>
       </div>

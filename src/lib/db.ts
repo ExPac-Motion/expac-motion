@@ -345,6 +345,7 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
       usd: Number(draft.fx_usd_zar) || 0,
       cny: Number(draft.fx_cny_zar) || 0,
       eur: Number(draft.fx_eur_zar) || 0,
+      gbp: Number(draft.fx_gbp_zar) || 0,
     },
     pack,
     commercialValue: draft.commercial_value,
@@ -441,6 +442,15 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     .eq("id", id);
   if (voyageErr && voyageErr.code !== "PGRST204" && voyageErr.code !== "42703") {
     throw voyageErr;
+  }
+  // GBP rate (0113): saved outside save_quote like the fields below, and
+  // tolerated while the column doesn't exist yet.
+  const { error: gbpErr } = await supabase
+    .from("quotes")
+    .update({ fx_gbp_zar: Number(draft.fx_gbp_zar) || 0 })
+    .eq("id", id);
+  if (gbpErr && gbpErr.code !== "PGRST204" && gbpErr.code !== "42703") {
+    throw gbpErr;
   }
   // Routing / Transit Time (0108): separate update, same missing-column
   // tolerance, so a not-yet-applied 0108 can't block the voyage_no save.

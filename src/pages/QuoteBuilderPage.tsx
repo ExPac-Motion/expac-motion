@@ -150,6 +150,7 @@ function blankDraft(): QuoteDraft {
     fx_usd_zar: "18.50",
     fx_cny_zar: "2.60",
     fx_eur_zar: "20.00",
+    fx_gbp_zar: "0",
     sell_currency: "",
     value_currency: "ZAR",
     packing: [newPackingItem(0)],
@@ -201,6 +202,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     fx_usd_zar: q.fx_usd_zar != null ? String(q.fx_usd_zar) : "0",
     fx_cny_zar: q.fx_cny_zar != null ? String(q.fx_cny_zar) : "0",
     fx_eur_zar: q.fx_eur_zar != null ? String(q.fx_eur_zar) : "0",
+    fx_gbp_zar: q.fx_gbp_zar != null ? String(q.fx_gbp_zar) : "0",
     sell_currency: q.sell_currency ?? "",
     value_currency: q.value_currency ?? "ZAR",
     packing: (q.packing_list_items ?? []).map((p, i) => ({
@@ -217,6 +219,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
         usd: Number(q.fx_usd_zar) || 0,
         cny: Number(q.fx_cny_zar) || 0,
         eur: Number(q.fx_eur_zar) || 0,
+        gbp: Number(q.fx_gbp_zar) || 0,
       };
       const cur = (l.cur as QuoteLine["cur"]) ?? "USD";
       let buy = Number(l.buy) || 0;
@@ -331,8 +334,9 @@ export default function QuoteBuilderPage() {
       usd: Number(draft?.fx_usd_zar) || 0,
       cny: Number(draft?.fx_cny_zar) || 0,
       eur: Number(draft?.fx_eur_zar) || 0,
+      gbp: Number(draft?.fx_gbp_zar) || 0,
     }),
-    [draft?.fx_usd_zar, draft?.fx_cny_zar, draft?.fx_eur_zar],
+    [draft?.fx_usd_zar, draft?.fx_cny_zar, draft?.fx_eur_zar, draft?.fx_gbp_zar],
   );
   const vFactor = volumetricFactor(draft?.mode);
   const packTotals = useMemo(
@@ -414,7 +418,19 @@ export default function QuoteBuilderPage() {
       usd: Number(d.fx_usd_zar) || 0,
       cny: Number(d.fx_cny_zar) || 0,
       eur: Number(d.fx_eur_zar) || 0,
+      gbp: Number(d.fx_gbp_zar) || 0,
     };
+  }
+
+  /** Turn on EUR / GBP for this quote with the Settings default rate, if it
+   *  isn't already set (rate 0 = currency not in use). No-op otherwise. */
+  function addCurrency(cur: string) {
+    if (cur === "EUR" && Number(draft?.fx_eur_zar) <= 0) {
+      setFx("fx_eur_zar", String(settingsQ.data?.default_fx_eur_zar || "20.00"));
+    }
+    if (cur === "GBP" && Number(draft?.fx_gbp_zar) <= 0) {
+      setFx("fx_gbp_zar", String(settingsQ.data?.default_fx_gbp_zar || "24.00"));
+    }
   }
 
   async function getLiveRates() {
@@ -424,6 +440,8 @@ export default function QuoteBuilderPage() {
       setFx("fx_usd_zar", r.rate("USD").toFixed(4));
       setFx("fx_cny_zar", r.rate("CNY").toFixed(4));
       setFx("fx_eur_zar", r.rate("EUR").toFixed(4));
+      // GBP only when this quote uses it (keeps the rate row tidy).
+      if (Number(draft?.fx_gbp_zar) > 0) setFx("fx_gbp_zar", r.rate("GBP").toFixed(4));
       setFxAsOf(r.asOf);
       toast("Live rates applied");
     } catch (e) {
@@ -434,7 +452,10 @@ export default function QuoteBuilderPage() {
   }
 
   // FX rate change: recompute every line's sell.
-  function setFx(key: "fx_usd_zar" | "fx_cny_zar" | "fx_eur_zar", value: string) {
+  function setFx(
+    key: "fx_usd_zar" | "fx_cny_zar" | "fx_eur_zar" | "fx_gbp_zar",
+    value: string,
+  ) {
     setDraft((d) => {
       if (!d) return d;
       const next = { ...d, [key]: value };
@@ -1367,22 +1388,27 @@ export default function QuoteBuilderPage() {
               />
             </div>
           )}
-          {Number(draft.fx_eur_zar) <= 0 && (
+          {Number(draft.fx_gbp_zar) > 0 && (
+            <div>
+              <label>GBP → ZAR</label>
+              <input
+                type="number"
+                step="0.01"
+                value={draft.fx_gbp_zar}
+                onChange={(e) => setFx("fx_gbp_zar", e.target.value)}
+              />
+            </div>
+          )}
+          {(Number(draft.fx_eur_zar) <= 0 || Number(draft.fx_gbp_zar) <= 0) && (
             <select
               className="fx-add-currency"
               value=""
               title="Add another quoting currency"
-              onChange={(e) => {
-                if (e.target.value === "EUR") {
-                  setFx(
-                    "fx_eur_zar",
-                    String(settingsQ.data?.default_fx_eur_zar || "20.00"),
-                  );
-                }
-              }}
+              onChange={(e) => addCurrency(e.target.value)}
             >
               <option value="">+ Add currency</option>
-              <option value="EUR">EUR</option>
+              {Number(draft.fx_eur_zar) <= 0 && <option value="EUR">EUR</option>}
+              {Number(draft.fx_gbp_zar) <= 0 && <option value="GBP">GBP (UK)</option>}
             </select>
           )}
           <button
@@ -1727,7 +1753,10 @@ export default function QuoteBuilderPage() {
           {draft.sell_currency && (
             <select
               value={draft.sell_currency}
-              onChange={(e) => set("sell_currency", e.target.value)}
+              onChange={(e) => {
+                set("sell_currency", e.target.value);
+                addCurrency(e.target.value);
+              }}
             >
               {LINE_CURRENCIES.filter((c) => c !== "ZAR").map((c) => (
                 <option key={c} value={c}>

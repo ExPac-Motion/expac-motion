@@ -125,6 +125,8 @@ export interface CompanySettings {
   default_fx_usd_zar: number;
   default_fx_cny_zar: number;
   default_fx_eur_zar: number;
+  /** Migration 0113. */
+  default_fx_gbp_zar?: number;
   default_vat_pct: number;
   default_incoterm: string;
   /** Company-wide Total Sales target (Grand Total incl. VAT). */
@@ -807,8 +809,8 @@ export const CHARGE_CATEGORIES: ChargeCategory[] = [
   "Customs Clearance, VAT and Duty Charges",
 ];
 
-export type LineCurrency = "USD" | "CNY" | "ZAR" | "EUR";
-export const LINE_CURRENCIES: LineCurrency[] = ["USD", "CNY", "ZAR", "EUR"];
+export type LineCurrency = "USD" | "CNY" | "ZAR" | "EUR" | "GBP";
+export const LINE_CURRENCIES: LineCurrency[] = ["USD", "CNY", "ZAR", "EUR", "GBP"];
 
 export interface Incoterm {
   code: string;
@@ -1026,6 +1028,8 @@ export interface Quote {
   fx_usd_zar: number;
   fx_cny_zar: number;
   fx_eur_zar: number;
+  /** GBP -> ZAR (migration 0113); 0 = GBP not used on this quote. */
+  fx_gbp_zar?: number;
   /** When set, the customer-facing Sell/Total figures display converted
    *  into this currency instead of ZAR (same fx rate as above). Null = ZAR. */
   sell_currency: LineCurrency | null;
@@ -1536,6 +1540,7 @@ export interface QuoteDraft {
   fx_usd_zar: string;
   fx_cny_zar: string;
   fx_eur_zar: string;
+  fx_gbp_zar: string;
   sell_currency: string;
   value_currency: string;
   packing: PackingItem[];
