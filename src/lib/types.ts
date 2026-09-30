@@ -992,6 +992,10 @@ export interface Quote {
   valid_until: string | null;
   status: QuoteStatus;
   accepted_at: string | null;
+  /** First time the quote reached Sent / Not Proceeding — stamped by
+   *  trigger (migration 0111); null on quotes from before it. */
+  sent_at?: string | null;
+  lost_at?: string | null;
   /** TEMP (0052): manual Opportunities-board value while the old CRM is
    *  migrated. NULL → the board uses the computed quotation total. */
   opportunity_value: number | null;

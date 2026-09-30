@@ -39,6 +39,28 @@ import {
   type QuoteStatus,
 } from "../../lib/types";
 
+/** Targets for the quote KPI widgets (fixed for now). */
+const WIN_RATE_TARGET = 50; // %, higher is better
+const TURNAROUND_TARGET_HRS = 4; // hours, lower is better
+
+/** Green when the value meets its target, orange when not, plain when n/a. */
+function kpiTone(v: number | null, good: (v: number) => boolean): string | undefined {
+  if (v === null) return undefined;
+  return good(v) ? "var(--green-dark)" : "var(--orange)";
+}
+
+/** "▲ 8.2%" / "▼ 3.1%". */
+function arrow(pct: number): string {
+  return `${pct >= 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}%`;
+}
+
+/** Hours as "45 min" / "3.5 hrs" / "2.4 days". */
+function duration(h: number): string {
+  if (h < 1) return `${Math.round(h * 60)} min`;
+  if (h < 48) return `${h.toFixed(1)} hrs`;
+  return `${(h / 24).toFixed(1)} days`;
+}
+
 function isThisMonth(iso: string | null): boolean {
   if (!iso) return false;
   const d = new Date(iso);
@@ -78,6 +100,30 @@ const Icon = {
   won: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M20 6L9 17l-5-5" />
+    </svg>
+  ),
+  winRate: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  ),
+  deal: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M14 7h7v7" />
+    </svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  ),
+  trend: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
     </svg>
   ),
   sales: (
@@ -198,6 +244,84 @@ export default function SalesDashboardTab() {
       converted,
       totalLeads: leadsThisMonth.length,
       convRate,
+    };
+  }, [quotes, leads]);
+
+  // Quote Win Rate / Average Deal Size / Quote Turnaround / Revenue vs
+  // Last Month. Revenue figures excl. VAT. "Decided" this month = won
+  // (accepted_at) + lost (lost_at, else updated_at) + expired (still
+  // open/sent with valid_until passed this month). Turnaround = median of
+  // enquiry start (the lead's created_at, else the quote's) -> sent_at, for
+  // quotes sent this month (sent_at is stamped from migration 0111 on).
+  const quoteKpis = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const last = new Date(y, m - 1, 1);
+    const inMonth = (iso: string | null | undefined, yy: number, mm: number) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      return d.getFullYear() === yy && d.getMonth() === mm;
+    };
+    const p2 = (n: number) => String(n).padStart(2, "0");
+    const today = `${y}-${p2(m + 1)}-${p2(now.getDate())}`;
+    const won = (yy: number, mm: number) =>
+      quotes.filter(
+        (q) => WON_QUOTE_STATUSES.includes(q.status) && inMonth(q.accepted_at, yy, mm),
+      );
+    const rev = (qs: typeof quotes) =>
+      qs.reduce((s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sell, 0);
+    const wonNow = won(y, m);
+    const wonLast = won(last.getFullYear(), last.getMonth());
+    const revNow = rev(wonNow);
+    const revLast = rev(wonLast);
+
+    const lost = quotes.filter(
+      (q) => q.status === "lost" && inMonth(q.lost_at ?? q.updated_at, y, m),
+    ).length;
+    const expired = quotes.filter(
+      (q) =>
+        (q.status === "open" || q.status === "sent") &&
+        !!q.valid_until &&
+        q.valid_until.slice(0, 10) < today &&
+        inMonth(q.valid_until.slice(0, 10) + "T12:00:00", y, m),
+    ).length;
+    const decided = wonNow.length + lost + expired;
+    const winRate = decided > 0 ? (wonNow.length / decided) * 100 : null;
+
+    const avgNow = wonNow.length ? revNow / wonNow.length : 0;
+    const avgLast = wonLast.length ? revLast / wonLast.length : 0;
+    const avgChange = avgLast > 0 && wonNow.length ? ((avgNow - avgLast) / avgLast) * 100 : null;
+
+    const leadCreated = new Map(leads.map((l) => [l.id, l.created_at]));
+    const hours = quotes
+      .filter((q) => inMonth(q.sent_at, y, m))
+      .map((q) => {
+        const start = (q.lead_id && leadCreated.get(q.lead_id)) || q.created_at;
+        return (new Date(q.sent_at as string).getTime() - new Date(start).getTime()) / 3_600_000;
+      })
+      .filter((h) => h >= 0)
+      .sort((a, b) => a - b);
+    const median =
+      hours.length === 0
+        ? null
+        : hours.length % 2
+          ? hours[(hours.length - 1) / 2]
+          : (hours[hours.length / 2 - 1] + hours[hours.length / 2]) / 2;
+
+    const revChange = revLast > 0 ? ((revNow - revLast) / revLast) * 100 : null;
+    return {
+      wonCount: wonNow.length,
+      decided,
+      winRate,
+      avgNow,
+      avgChange,
+      turnaroundHrs: median,
+      sentCount: hours.length,
+      revNow,
+      revLast,
+      revChange,
+      lastMonthName: last.toLocaleString("en-ZA", { month: "long" }),
     };
   }, [quotes, leads]);
 
@@ -537,6 +661,86 @@ export default function SalesDashboardTab() {
           <div className="kpi-value">{kpis.wonCount}</div>
           <div className="kpi-foot">
             <span>{money(kpis.wonValue)} won this month</span>
+          </div>
+        </div>
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.winRate}</span>
+            <span className="kpi-label">Quote Win Rate</span>
+          </div>
+          <div
+            className="kpi-value"
+            style={{ color: kpiTone(quoteKpis.winRate, (v) => v >= WIN_RATE_TARGET) }}
+          >
+            {quoteKpis.winRate === null ? "—" : `${quoteKpis.winRate.toFixed(0)}%`}
+          </div>
+          <div className="kpi-foot">
+            <span>
+              {quoteKpis.wonCount} of {quoteKpis.decided} decided quotes · target ≥{" "}
+              {WIN_RATE_TARGET}%
+            </span>
+          </div>
+        </div>
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.deal}</span>
+            <span className="kpi-label">Average Deal Size</span>
+          </div>
+          <div className="kpi-value">
+            {quoteKpis.wonCount ? money(quoteKpis.avgNow) : "—"}
+          </div>
+          <div className="kpi-foot">
+            <span>
+              per won quote, excl. VAT
+              {quoteKpis.avgChange !== null && (
+                <>
+                  {" · "}
+                  <span style={{ color: kpiTone(quoteKpis.avgChange, (v) => v >= 0) }}>
+                    {arrow(quoteKpis.avgChange)}
+                  </span>{" "}
+                  vs last month
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.clock}</span>
+            <span className="kpi-label">Quote Turnaround</span>
+          </div>
+          <div
+            className="kpi-value"
+            style={{
+              color: kpiTone(quoteKpis.turnaroundHrs, (v) => v < TURNAROUND_TARGET_HRS),
+            }}
+          >
+            {quoteKpis.turnaroundHrs === null ? "—" : duration(quoteKpis.turnaroundHrs)}
+          </div>
+          <div className="kpi-foot">
+            <span>
+              {quoteKpis.sentCount
+                ? `Median, this month · target < ${TURNAROUND_TARGET_HRS} hrs`
+                : "No quotes sent yet this month"}
+            </span>
+          </div>
+        </div>
+        <div className="kpi static">
+          <div className="kpi-top">
+            <span className="kpi-icon">{Icon.trend}</span>
+            <span className="kpi-label">Revenue vs Last Month</span>
+          </div>
+          <div
+            className="kpi-value"
+            style={{ color: kpiTone(quoteKpis.revChange, (v) => v >= 0) }}
+          >
+            {quoteKpis.revChange === null ? "—" : arrow(quoteKpis.revChange)}
+          </div>
+          <div className="kpi-foot">
+            <span>
+              {money(quoteKpis.revNow)} vs {money(quoteKpis.revLast)} in{" "}
+              {quoteKpis.lastMonthName}
+            </span>
           </div>
         </div>
       </div>
