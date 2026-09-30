@@ -47,6 +47,15 @@ function partyBlock(
     .join("\n");
 }
 
+/** Sea-style fields (vessel, container, MBL/HBL) vs Air-style (flight, MAWB/
+ *  HAWB). Road Freight uses the Sea layout until it gets its own; Air and
+ *  Courier (CX) share the Air layout. Drives both the shipment documents and
+ *  which fields the Quote Builder shows. */
+export function usesSeaLayout(mode: string | null | undefined): boolean {
+  const m = mode ?? "";
+  return m.startsWith("Sea Freight") || m.startsWith("Road Freight");
+}
+
 /** Top row of Shipment Information: Shipper / Exporter then Customer /
  *  Consignee, printed on their own two-column row above the main grid. */
 export function shipmentPartyRows(job: Job): [string, string][] {
@@ -106,10 +115,7 @@ export function shipmentInfoRows(
   tracking?: Pick<JobTracking, "vessel_name" | "voyage" | "carrier" | "etd" | "eta"> | null,
 ): [string, string][] {
   const t = tracking ?? null;
-  // Road Freight uses the Sea layout until it gets its own; Air and Courier
-  // (CX) share the Air layout.
-  const isSea =
-    job.mode.startsWith("Sea Freight") || job.mode.startsWith("Road Freight");
+  const isSea = usesSeaLayout(job.mode);
   const head: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],

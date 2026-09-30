@@ -41,6 +41,7 @@ import {
   type FxRates,
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
+import { usesSeaLayout } from "../lib/docTemplates";
 import { fetchZarRates } from "../lib/fx";
 import {
   AUTO_REFERENCE,
@@ -946,76 +947,121 @@ export default function QuoteBuilderPage() {
             />
           </div>
 
-          {/* Row 5 */}
-          <div className="field">
-            <label>Vessel Name</label>
-            <input
-              value={draft.vessel_name}
-              onChange={(e) => set("vessel_name", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>Container Number</label>
-            <input
-              value={draft.container_no}
-              onChange={(e) => set("container_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>Container Type</label>
-            <input
-              value={draft.container_type}
-              onChange={(e) => set("container_type", e.target.value)}
-              placeholder="e.g. 1x 20GP, 2x 40HC"
-            />
-          </div>
-          <div className="field">
-            <label>MBL No</label>
-            <input
-              value={draft.mbl_no}
-              onChange={(e) => set("mbl_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>HBL No</label>
-            <input
-              value={draft.hbl_no}
-              onChange={(e) => set("hbl_no", e.target.value)}
-            />
-          </div>
+          {/* Mode-specific fields — only the selected mode's fields are shown
+              (same split as the shipment documents; Road uses Sea for now).
+              Values typed under another mode are kept, just hidden. */}
+          {usesSeaLayout(draft.mode) ? (
+            <>
+            <div className="field">
+              <label>Carrier</label>
+              <input
+                value={draft.shipping_line}
+                onChange={(e) => set("shipping_line", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Vessel Name</label>
+              <input
+                value={draft.vessel_name}
+                onChange={(e) => set("vessel_name", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Voyage No</label>
+              <input
+                value={draft.voyage_no}
+                onChange={(e) => set("voyage_no", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Container Number</label>
+              <input
+                value={draft.container_no}
+                onChange={(e) => set("container_no", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Container Type</label>
+              <input
+                value={draft.container_type}
+                onChange={(e) => set("container_type", e.target.value)}
+                placeholder="e.g. 1x 20GP, 2x 40HC"
+              />
+            </div>
+            <div className="field">
+              <label>MBL No</label>
+              <input
+                value={draft.mbl_no}
+                onChange={(e) => set("mbl_no", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>HBL No</label>
+              <input
+                value={draft.hbl_no}
+                onChange={(e) => set("hbl_no", e.target.value)}
+              />
+            </div>
+            </>
+          ) : (
+            <>
+            <div className="field">
+              <label>Agent/Airline Name (internal only)</label>
+              <input
+                value={draft.carrier_name}
+                onChange={(e) => set("carrier_name", e.target.value)}
+              />
+              <span className="hint">Not shown on the customer quotation.</span>
+            </div>
+            <div className="field">
+              <label>Flight No</label>
+              <input
+                value={draft.flight_no}
+                onChange={(e) => set("flight_no", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Flight Date</label>
+              <input
+                type="date"
+                value={draft.flight_date}
+                onChange={(e) => set("flight_date", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Routing</label>
+              <input
+                value={draft.routing}
+                onChange={(e) => set("routing", e.target.value)}
+                placeholder="e.g. CAN – DXB – JNB"
+              />
+            </div>
+            <div className="field">
+              <label>Transit Time</label>
+              <input
+                value={draft.transit_time}
+                onChange={(e) => set("transit_time", e.target.value)}
+                placeholder="e.g. 3–5 days"
+              />
+            </div>
+            <div className="field">
+              <label>MAWB No</label>
+              <input
+                value={draft.mawb_no}
+                onChange={(e) => set("mawb_no", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>HAWB No</label>
+              <input
+                value={draft.hawb_no}
+                onChange={(e) => set("hawb_no", e.target.value)}
+              />
+            </div>
+            </>
+          )}
 
-          {/* Row 6 */}
-          <div className="field">
-            <label>MAWB No</label>
-            <input
-              value={draft.mawb_no}
-              onChange={(e) => set("mawb_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>HAWB No</label>
-            <input
-              value={draft.hawb_no}
-              onChange={(e) => set("hawb_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>Flight No</label>
-            <input
-              value={draft.flight_no}
-              onChange={(e) => set("flight_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>Flight Date</label>
-            <input
-              type="date"
-              value={draft.flight_date}
-              onChange={(e) => set("flight_date", e.target.value)}
-            />
-          </div>
-
-          {/* Row 7 — internal only */}
+          {/* Internal only / every mode */}
           <div className="field">
             <label>Agent (internal only)</label>
             <select
@@ -1047,14 +1093,6 @@ export default function QuoteBuilderPage() {
             <span className="hint">Not shown on the customer quotation.</span>
           </div>
           <div className="field">
-            <label>Agent/Airline Name (internal only)</label>
-            <input
-              value={draft.carrier_name}
-              onChange={(e) => set("carrier_name", e.target.value)}
-            />
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
             <label>Transporter (internal only)</label>
             <select
               value={draft.transporter_id}
@@ -1069,15 +1107,6 @@ export default function QuoteBuilderPage() {
             </select>
             <span className="hint">Not shown on the customer quotation.</span>
           </div>
-
-          {/* Row 8 */}
-          <div className="field">
-            <label>Carrier</label>
-            <input
-              value={draft.shipping_line}
-              onChange={(e) => set("shipping_line", e.target.value)}
-            />
-          </div>
           <div className="field">
             <label>Sales Person</label>
             <select
@@ -1091,29 +1120,6 @@ export default function QuoteBuilderPage() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="field">
-            <label>Voyage No</label>
-            <input
-              value={draft.voyage_no}
-              onChange={(e) => set("voyage_no", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>Routing</label>
-            <input
-              value={draft.routing}
-              onChange={(e) => set("routing", e.target.value)}
-              placeholder="e.g. CAN – DXB – JNB"
-            />
-          </div>
-          <div className="field">
-            <label>Transit Time</label>
-            <input
-              value={draft.transit_time}
-              onChange={(e) => set("transit_time", e.target.value)}
-              placeholder="e.g. 3–5 days"
-            />
           </div>
         </div>
       </div>
