@@ -23,7 +23,7 @@ export const MILESTONE_COLOR: Record<Milestone, string> = {
   "In Transit": "#e9a91b",
   Arrived: "#02a5aa",
   Customs: "#ef4910",
-  "On Delivery": "#202426",
+  "On Delivery": "#3b82c4",
   Delivered: "#719d2f",
 };
 

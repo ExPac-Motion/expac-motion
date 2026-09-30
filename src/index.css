@@ -24,6 +24,10 @@
   --orange: #ef4910;
   --orange-ink: #c23a0b;
   --orange-tint: #fde4da;
+  /* blue kept from the pre-brand palette (user choice): On Delivery, Courier */
+  --blue: #3b82c4;
+  --blue-ink: #1d5ba8;
+  --blue-tint: #e6f0fb;
   /* --- FONT EXPERIMENT (local only, not committed) --- */
   --display: -apple-system, system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu,
     Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji",
@@ -3481,8 +3485,8 @@ select.badge-select.lost {
   color: var(--orange-ink);
 }
 .ms-tag.ondelivery {
-  background: var(--night-tint);
-  color: var(--night);
+  background: var(--blue-tint);
+  color: var(--blue-ink);
 }
 .ms-tag.delivered {
   background: var(--green);
