@@ -31,33 +31,15 @@ export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undef
   return DOCUMENT_TYPES_LIST.find((d) => d.slug === slug);
 }
 
-export interface DocParty {
-  label: string;
-  company: string;
-  address: string;
-  tel: string;
-}
-
-/** The two parties printed at the top of Shipment Information — Shipper /
- *  Exporter first, then Customer / Consignee — each with its company name,
- *  address and telephone number. */
-export function shipmentParties(job: Job): DocParty[] {
-  const s = job.supplier;
-  const c = job.client;
-  return [
-    {
-      label: "Shipper / Exporter",
-      company: s?.company || "—",
-      address: s?.address || "—",
-      tel: s?.phone || "—",
-    },
-    {
-      label: "Customer / Consignee",
-      company: c?.company || "—",
-      address: c?.address || "—",
-      tel: c?.company_phone || c?.phone || "—",
-    },
-  ];
+/** A party's company name, address and tel on separate lines (printed with
+ *  white-space: pre-line); missing address/tel lines are simply left out. */
+function partyBlock(
+  company: string | null | undefined,
+  address: string | null | undefined,
+  tel: string | null | undefined,
+): string {
+  if (!company) return "—";
+  return [company, address, tel].filter((s) => s && s.trim()).join("\n");
 }
 
 /** Every shipment field worth printing on operational paperwork — deliberately
@@ -78,6 +60,18 @@ export function shipmentInfoRows(
   const rows: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],
+    [
+      "Shipper / Exporter",
+      partyBlock(job.supplier?.company, job.supplier?.address, job.supplier?.phone),
+    ],
+    [
+      "Customer / Consignee",
+      partyBlock(
+        job.client?.company,
+        job.client?.address,
+        job.client?.company_phone || job.client?.phone,
+      ),
+    ],
     ["Port of Load", portCode(job.origin)],
     ["Port of Discharge", portCode(job.destination)],
     ["Shipping Line", job.shipping_line || "—"],

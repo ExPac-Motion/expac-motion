@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompanySettings, useJobs, useQuote } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
-import { docTypeBySlug, shipmentInfoRows, shipmentParties } from "../lib/docTemplates";
+import { docTypeBySlug, shipmentInfoRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 
 function n2(v: number | string | null | undefined): string {
@@ -79,30 +79,14 @@ export default function ShipmentDocPrintPage() {
         </div>
 
         <div className="qs-bar">Shipment Information</div>
-        <div className="qs-parties">
-          {shipmentParties(job).map((p) => (
-            <div key={p.label} className="qs-party">
-              <div className="qs-party-title">{p.label}</div>
-              <div className="qs-party-row">
-                <span className="k">Company Name:</span>
-                <span className="v">{p.company}</span>
-              </div>
-              <div className="qs-party-row">
-                <span className="k">Address:</span>
-                <span className="v addr">{p.address}</span>
-              </div>
-              <div className="qs-party-row">
-                <span className="k">Tel:</span>
-                <span className="v">{p.tel}</span>
-              </div>
-            </div>
-          ))}
-        </div>
         <div className="qs-info">
           {rows.map(([k, v]) => (
             <div key={k}>
               <div className="k">{k}</div>
-              <div className="v">{v}</div>
+              {/* pre-line so the party rows print company / address / tel on separate lines */}
+              <div className="v" style={{ whiteSpace: "pre-line" }}>
+                {v}
+              </div>
             </div>
           ))}
         </div>
