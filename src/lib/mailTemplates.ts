@@ -6,6 +6,7 @@ import {
   EMAIL_FONT_STACK,
   emailButtonHtml,
   MAIL_LINK_STYLE,
+  PUBLIC_APP_URL,
 } from "./mailStyle";
 import type {
   Job,
@@ -330,11 +331,7 @@ const TRACKING_ANCHOR_LABEL = "Provisional Delivery Date:";
 /** Job and Quote share the same reference/shipment number — a quote not
  *  yet accepted just won't have tracking data yet on the other end. */
 function trackingUrl(entity: { reference: string }): string {
-  const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://expac-motion.pages.dev";
-  return `${origin}/track?ref=${encodeURIComponent(entity.reference)}`;
+  return `${PUBLIC_APP_URL}/track?ref=${encodeURIComponent(entity.reference)}`;
 }
 
 /** Insert `line` right after the line containing `label`, with exactly one

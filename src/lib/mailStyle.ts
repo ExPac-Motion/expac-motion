@@ -99,3 +99,15 @@ export function linkifyHtml(html: string): string {
     })
     .join("");
 }
+
+/**
+ * Public origin for every link placed in outgoing mail (Live Tracking,
+ * unsubscribe). Always the app's own branded domain — never
+ * window.location.origin, which is expac-motion.pages.dev when the team
+ * works there: links to the shared pages.dev hosting domain (widely abused
+ * for phishing) push mail into spam. Override with VITE_PUBLIC_APP_URL.
+ */
+export const PUBLIC_APP_URL = (
+  (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined) ||
+  "https://expac-motion.co.za"
+).replace(/\/+$/, "");

@@ -51,7 +51,7 @@ import {
 import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail, SUPPORT_BCC } from "./mail";
 import { buildQuotePdf } from "./quotePdf";
-import { linkifyHtml } from "./mailStyle";
+import { linkifyHtml, PUBLIC_APP_URL } from "./mailStyle";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -1255,7 +1255,7 @@ export function useSendCampaign() {
           const i = cursor++;
           const row = rows[i];
           const recipient = recipients.find((r) => r.leadId === row.lead_id);
-          const unsubscribeUrl = `${window.location.origin}/unsubscribe?r=${row.id}`;
+          const unsubscribeUrl = `${PUBLIC_APP_URL}/unsubscribe?r=${row.id}`;
           const mergeCtx = {
             name: recipient?.name || "",
             company: recipient?.company || "",
@@ -1271,7 +1271,7 @@ export function useSendCampaign() {
               text: htmlToText(html),
               fromName,
               replyTo,
-              unsubscribeUrl: `${window.location.origin}/api/unsubscribe?r=${row.id}`,
+              unsubscribeUrl: `${PUBLIC_APP_URL}/api/unsubscribe?r=${row.id}`,
             });
             await db.updateMailCampaignRecipient(row.id, {
               status: "sent",
