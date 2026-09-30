@@ -82,8 +82,8 @@ export default function ShipmentDocPrintPage() {
         {/* Shipper + Consignee on their own two-column top row; pre-line prints
             company / address / tel on separate lines. */}
         <div
-          className="qs-info spread"
-          style={{ gridTemplateColumns: "auto auto", marginBottom: 4 }}
+          className="qs-info"
+          style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 4 }}
         >
           {shipmentPartyRows(job).map(([k, v]) => (
             <div key={k}>
