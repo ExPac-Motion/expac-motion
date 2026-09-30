@@ -560,7 +560,7 @@ export async function acceptQuote(quoteId: string): Promise<string> {
 
 /* ---------- Jobs ---------- */
 const JOB_SELECT =
-  "*, client:clients(id,company,email,contact,address,phone,company_phone), supplier:suppliers(id,company,email,address,phone), job_events(*)";
+  "*, client:clients(id,company,email,contact,address,phone,company_phone), supplier:suppliers(id,company,email,contact,address,phone), job_events(*)";
 
 export async function listJobs(): Promise<Job[]> {
   const rows = unwrap<Job[]>(

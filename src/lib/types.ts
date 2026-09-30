@@ -1131,6 +1131,7 @@ export interface Job {
   supplier?:
     | (Pick<Supplier, "id" | "company"> & {
         email?: string | null;
+        contact?: string | null;
         address?: string | null;
         phone?: string | null;
       })

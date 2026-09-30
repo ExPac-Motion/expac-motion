@@ -31,15 +31,20 @@ export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undef
   return DOCUMENT_TYPES_LIST.find((d) => d.slug === slug);
 }
 
-/** A party's company name, address and tel on separate lines (printed with
- *  white-space: pre-line); missing address/tel lines are simply left out. */
+/** A party's company name, then "Add:", "Attn:" and "Tel:" lines (printed
+ *  with white-space: pre-line); any missing line is simply left out. */
 function partyBlock(
   company: string | null | undefined,
   address: string | null | undefined,
+  contact: string | null | undefined,
   tel: string | null | undefined,
 ): string {
   if (!company) return "—";
-  return [company, address, tel].filter((s) => s && s.trim()).join("\n");
+  const line = (label: string, v: string | null | undefined) =>
+    v && v.trim() ? `${label} ${v.trim()}` : null;
+  return [company, line("Add:", address), line("Attn:", contact), line("Tel:", tel)]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** Top row of Shipment Information: Shipper / Exporter then Customer /
@@ -48,13 +53,19 @@ export function shipmentPartyRows(job: Job): [string, string][] {
   return [
     [
       "Shipper / Exporter",
-      partyBlock(job.supplier?.company, job.supplier?.address, job.supplier?.phone),
+      partyBlock(
+        job.supplier?.company,
+        job.supplier?.address,
+        job.supplier?.contact,
+        job.supplier?.phone,
+      ),
     ],
     [
       "Customer / Consignee",
       partyBlock(
         job.client?.company,
         job.client?.address,
+        job.client?.contact,
         job.client?.company_phone || job.client?.phone,
       ),
     ],
