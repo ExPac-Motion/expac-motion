@@ -66,7 +66,8 @@ export function shipmentPartyRows(job: Job): [string, string][] {
  *  and never belong on ops-facing documents). Sea and Air differ, using the
  *  Quote Builder's own labels: Sea prints MBL No / HBL No, Voyage No,
  *  Container Type and Incoterms; Air (every non-sea mode) prints MAWB No /
- *  HAWB No, Agent / Airline, Flight No and Flight Date. */
+ *  HAWB No, Agent / Airline, Flight No and Flight Date. Prepared By is the
+ *  quote's sales person. */
 export function shipmentInfoRows(
   job: Job,
   quote?: Pick<
@@ -84,6 +85,8 @@ export function shipmentInfoRows(
     | "flight_no"
     | "flight_date"
   > | null,
+  /** The ExPac controller / sales person on the quote (profile full name). */
+  preparedBy?: string | null,
 ): [string, string][] {
   const isSea = job.mode.startsWith("Sea Freight");
 
@@ -119,6 +122,7 @@ export function shipmentInfoRows(
     ["ETA", formatDate(job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
     ["Commodity", quote?.commodity || "—"],
+    ["Prepared By", preparedBy || "—"],
   );
   if (!isSea) {
     rows.push(

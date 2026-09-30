@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useCompanySettings, useJobs, useQuote } from "../lib/hooks";
+import { useCompanySettings, useJobs, useProfiles, useQuote } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
 import { docTypeBySlug, shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
@@ -25,6 +25,7 @@ export default function ShipmentDocPrintPage() {
   const { data: settings } = useCompanySettings();
   const job = jobs?.find((j) => j.id === id);
   const quoteQ = useQuote(job?.quote_id ?? undefined);
+  const profilesQ = useProfiles();
   const packingRows = quoteQ.data?.packing_list_items ?? [];
   const vFactor = volumetricFactor(job?.mode);
   const pack = packingTotals(packingRows, vFactor);
@@ -44,7 +45,10 @@ export default function ShipmentDocPrintPage() {
   if (!job) return <div className="center-note">Shipment not found</div>;
   if (!def) return <div className="center-note">Unknown document type</div>;
 
-  const rows = shipmentInfoRows(job, quoteQ.data);
+  const preparedBy = profilesQ.data?.find(
+    (p) => p.id === quoteQ.data?.sales_person_id,
+  )?.full_name;
+  const rows = shipmentInfoRows(job, quoteQ.data, preparedBy);
 
   return (
     <div className="qs-wrap">
