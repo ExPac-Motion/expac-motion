@@ -82,8 +82,8 @@ export default function ShipmentDocPrintPage() {
         {/* Shipper + Consignee on their own two-column top row; pre-line prints
             company / address / tel on separate lines. */}
         <div
-          className="qs-info"
-          style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 4 }}
+          className="qs-info spread"
+          style={{ gridTemplateColumns: "auto auto", marginBottom: 4 }}
         >
           {shipmentPartyRows(job).map(([k, v]) => (
             <div key={k}>
@@ -94,10 +94,9 @@ export default function ShipmentDocPrintPage() {
             </div>
           ))}
         </div>
-        {/* Four equal columns (the quote's .qs-info uses 1fr 1fr auto auto) so
-            Port of Load / Discharge aren't squeezed right and column 3 lines
-            up under Customer / Consignee. */}
-        <div className="qs-info" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+        {/* Four content-sized columns spread edge to edge with equal gaps:
+            first column on the left page edge, last on the right. */}
+        <div className="qs-info spread" style={{ gridTemplateColumns: "repeat(4, auto)" }}>
           {rows.map(([k, v]) => (
             <div key={k}>
               <div className="k">{k}</div>

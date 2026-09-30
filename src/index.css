@@ -2721,7 +2721,13 @@ select.badge-select.lost {
 }
 .qs-info .v {
   font-weight: 700;
-}.qs-pkcaption {
+}
+/* Document Vault print docs: content-sized columns spread edge to edge, so
+   the first column sits on the page's left edge and the last on its right. */
+.qs-info.spread {
+  justify-content: space-between;
+}
+.qs-pkcaption {
   font-size: 11px;
   color: var(--muted);
   margin-bottom: 2px;
