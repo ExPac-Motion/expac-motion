@@ -1,5 +1,5 @@
 import { formatDate, portCode } from "./format";
-import type { Job, Quote } from "./types";
+import type { Job, JobTracking, Quote } from "./types";
 
 export interface DocumentTypeDef {
   slug: string;
@@ -100,7 +100,12 @@ export function shipmentInfoRows(
   > | null,
   /** The ExPac controller / sales person on the quote (profile full name). */
   preparedBy?: string | null,
+  /** Live tracking row for this job. Its vessel / voyage / carrier / ETD / ETA
+   *  win over the typed values, so a document printed before the webhook's
+   *  write-back lands is still current. */
+  tracking?: Pick<JobTracking, "vessel_name" | "voyage" | "carrier" | "etd" | "eta"> | null,
 ): [string, string][] {
+  const t = tracking ?? null;
   // Road Freight uses the Sea layout until it gets its own; Air and Courier
   // (CX) share the Air layout.
   const isSea =
@@ -113,16 +118,16 @@ export function shipmentInfoRows(
   ];
   const middle: [string, string][] = isSea
     ? [
-        ["Shipping Line", job.shipping_line || "—"],
-        ["Vessel", job.vessel_name || "—"],
-        ["Voyage No", quote?.voyage_no || "—"],
+        ["Shipping Line", t?.carrier || job.shipping_line || "—"],
+        ["Vessel", t?.vessel_name || job.vessel_name || "—"],
+        ["Voyage No", t?.voyage || quote?.voyage_no || "—"],
         ["Container No", job.container_no || "—"],
         ["Container Type", job.container_type || "—"],
         ["MBL No", quote?.mbl_no || job.awb_mbl || "—"],
         ["HBL No", quote?.hbl_no || "—"],
       ]
     : [
-        ["Agent / Airline", quote?.carrier_name || job.carrier_name || "—"],
+        ["Agent / Airline", t?.carrier || quote?.carrier_name || job.carrier_name || "—"],
         ["Flight No", quote?.flight_no || "—"],
         ["Flight Date", formatDate(quote?.flight_date)],
         ["Routing", quote?.routing || "—"],
@@ -136,8 +141,8 @@ export function shipmentInfoRows(
     ["Customer Reference", job.po_no || quote?.customer_reference || "—"],
     ["Delivery Terms", quote?.delivery_terms || "—"],
     ["Commodity", quote?.commodity || "—"],
-    ["ETD", formatDate(job.etd)],
-    ["ETA", formatDate(job.eta)],
+    ["ETD", formatDate(t?.etd || job.etd)],
+    ["ETA", formatDate(t?.eta || job.eta)],
     ["Provisional Delivery Date", formatDate(job.provisional_delivery_date)],
     ["Prepared By", preparedBy || "—"],
   ];

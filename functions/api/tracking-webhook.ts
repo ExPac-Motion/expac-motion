@@ -309,6 +309,44 @@ async function findJob(env, { shipsgoId, numbers }) {
   return null;
 }
 
+/**
+ * Push the tracked vessel / voyage / carrier / ETD / ETA back onto the job and
+ * its quote, so the Quote Builder and every shipment document show the live
+ * values. Tracking OVERWRITES what an operator typed (agreed 2026-09-30), but
+ * only with values it actually has — a missing field never blanks one out.
+ * Sea: carrier -> shipping_line, plus vessel_name / voyage_no. Air / Courier:
+ * carrier -> carrier_name (Agent / Airline). Failures are swallowed so the
+ * tracking update itself always succeeds.
+ */
+async function writeBackToShipment(env, jobId, n) {
+  try {
+    const jobs = await sbGet(env, `jobs?id=eq.${jobId}&select=quote_id,mode&limit=1`);
+    const job = jobs[0];
+    if (!job) return;
+    const isSea = String(job.mode || "").startsWith("Sea Freight");
+
+    const common = {};
+    if (n.etd) common.etd = n.etd;
+    if (n.eta) common.eta = n.eta;
+    if (n.carrier) common[isSea ? "shipping_line" : "carrier_name"] = n.carrier;
+    if (isSea && n.vesselName) common.vessel_name = n.vesselName;
+
+    // With a quote, patch the quote only: trg_quote_fields_sync (0101) copies
+    // vessel / carrier / ETD / ETA on to the job. Without one, patch the job.
+    if (job.quote_id) {
+      const quotePatch = { ...common };
+      if (isSea && n.voyage) quotePatch.voyage_no = n.voyage;
+      if (Object.keys(quotePatch).length) {
+        await sbPatch(env, `quotes?id=eq.${job.quote_id}`, quotePatch);
+      }
+    } else if (Object.keys(common).length) {
+      await sbPatch(env, `jobs?id=eq.${jobId}`, common);
+    }
+  } catch {
+    /* never fail the webhook over the write-back */
+  }
+}
+
 export async function onRequestPost(context) {
   const env = context.env || {};
   if (!env.SHIPSGO_WEBHOOK_SECRET || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -367,6 +405,7 @@ export async function onRequestPost(context) {
   patch.raw = payload;
 
   await sbPatch(env, `job_tracking?job_id=eq.${jobId}`, patch);
+  await writeBackToShipment(env, jobId, n);
 
   const eventRows = n.movements
     .filter((m) => m.code)
