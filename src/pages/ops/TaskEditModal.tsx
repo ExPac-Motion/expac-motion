@@ -136,7 +136,7 @@ export default function TaskEditModal({
       kind: f.kind,
       title: f.title.trim(),
       body: f.body.trim() || null,
-      status: f.kind === "note" ? "open" : f.status,
+      status: f.status,
       priority: f.priority,
       due_date: f.due_date || null,
       job_id: f.job_id || null,
@@ -209,12 +209,11 @@ export default function TaskEditModal({
               className="btn danger"
               onClick={onDelete}
               disabled={del.isPending}
-              style={task.kind === "task" ? undefined : { marginRight: "auto" }}
             >
               Delete
             </button>
           )}
-          {task?.kind === "task" &&
+          {task &&
             (["doing", "done"] as const).map((s, i) => (
               <button
                 key={s}

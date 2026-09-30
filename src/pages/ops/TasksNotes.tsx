@@ -428,6 +428,11 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                     {t.title}
                     {t.body && <span className="task-body"> — {t.body}</span>}
                   </button>
+                  {t.kind === "note" && t.status !== "open" && (
+                    <span className={`note-status is-${t.status}`}>
+                      {t.status === "doing" ? "Doing" : "Done"}
+                    </span>
+                  )}
                   {t.due_date && (
                     <span className={`due-badge${overdue ? " over" : ""}`}>
                       {overdue

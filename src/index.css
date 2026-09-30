@@ -974,6 +974,22 @@ table.dt th.dt-sortable {
   border-color: var(--green);
   color: var(--ink);
 }
+/* Tasks & Notes list: a note's Doing / Done status (tasks show it in their check). */
+.note-status {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.note-status.is-doing {
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+}
+.note-status.is-done {
+  background: var(--green-tint);
+  color: var(--green-dark);
+}
 /* Task form: existing open/doing tasks on the record it was opened from. */
 .task-existing {
   background: var(--amber-tint);
