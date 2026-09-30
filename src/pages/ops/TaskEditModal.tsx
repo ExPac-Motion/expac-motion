@@ -164,6 +164,28 @@ export default function TaskEditModal({
     }
   }
 
+  /** Doing / Done footer buttons: save just the status straight away and
+   *  keep the window open (it only closes on Save / Cancel / ✕). Clicking
+   *  the active one sets the task back to Open. */
+  async function markStatus(s: "doing" | "done") {
+    if (!task) return;
+    const next: OpsTask["status"] = f.status === s ? "open" : s;
+    try {
+      const updated = await save.mutateAsync({
+        id: task.id,
+        values: {
+          status: next,
+          done_at: next === "done" ? new Date().toISOString() : null,
+        },
+      });
+      setTask(updated);
+      set("status", next);
+      toast(`Marked ${next[0].toUpperCase() + next.slice(1)}`);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not update status");
+    }
+  }
+
   async function onDelete() {
     if (!task) return;
     if (!window.confirm("Delete this item?")) return;
@@ -187,11 +209,28 @@ export default function TaskEditModal({
               className="btn danger"
               onClick={onDelete}
               disabled={del.isPending}
-              style={{ marginRight: "auto" }}
+              style={task.kind === "task" ? undefined : { marginRight: "auto" }}
             >
               Delete
             </button>
           )}
+          {task?.kind === "task" &&
+            (["doing", "done"] as const).map((s, i) => (
+              <button
+                key={s}
+                className={`btn ${f.status === s ? `status-on is-${s}` : "outline"}`}
+                onClick={() => markStatus(s)}
+                disabled={save.isPending}
+                title={
+                  f.status === s
+                    ? "Click again to set back to Open"
+                    : `Mark as ${s === "doing" ? "Doing" : "Done"} (saves now, window stays open)`
+                }
+                style={i === 1 ? { marginRight: "auto" } : undefined}
+              >
+                {s === "doing" ? "Doing" : "Done"}
+              </button>
+            ))}
           <button className="btn outline" onClick={onClose}>
             Cancel
           </button>

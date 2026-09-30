@@ -963,6 +963,17 @@ table.dt th.dt-sortable {
   opacity: 0;
   pointer-events: none;
 }
+/* Task window footer: Doing / Done when that is the current status. */
+.btn.status-on.is-doing {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+.btn.status-on.is-done {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--ink);
+}
 /* Task form: existing open/doing tasks on the record it was opened from. */
 .task-existing {
   background: var(--amber-tint);
