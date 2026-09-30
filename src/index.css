@@ -3332,6 +3332,69 @@ select.badge-select.lost {
 .dash-2 .panel {
   margin-bottom: 0;
 }
+/* Dashboard: Arrivals in the Next 10 Days */
+.arrivals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.arrival-row {
+  display: grid;
+  grid-template-columns: 96px 1fr auto 78px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 7px 6px;
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.arrivals li:last-child .arrival-row {
+  border-bottom: 0;
+}
+.arrival-row:hover {
+  background: var(--green-tint);
+  border-radius: 8px;
+}
+.arrival-cust {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arrival-lane {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.arrival-eta {
+  white-space: nowrap;
+  font-weight: 700;
+}
+.arrival-days {
+  justify-self: end;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  background: var(--night-tint);
+}
+.arrival-days.is-soon {
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+}
+.arrival-days.is-today {
+  background: var(--orange-tint);
+  color: var(--orange-ink);
+}
 .donut-wrap {
   display: flex;
   align-items: center;

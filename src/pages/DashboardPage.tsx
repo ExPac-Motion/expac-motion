@@ -165,6 +165,26 @@ export default function DashboardPage() {
     return { openValue, avgMargin, total: quotes.length };
   }, [quotes]);
 
+  // Active shipments whose ETA falls today .. today+10 (local dates),
+  // soonest first — the "Arrivals in the Next 10 Days" widget.
+  const arrivals = useMemo(() => {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, "0");
+    const iso = (x: Date) => `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
+    const today = iso(d);
+    const end = iso(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 10));
+    const dayMs = 86_400_000;
+    const t0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    return activeJobs
+      .filter((j) => j.eta && j.eta.slice(0, 10) >= today && j.eta.slice(0, 10) <= end)
+      .map((j) => {
+        const [y, m, dd] = (j.eta as string).slice(0, 10).split("-").map(Number);
+        const days = Math.round((new Date(y, m - 1, dd).getTime() - t0) / dayMs);
+        return { j, days };
+      })
+      .sort((a, b) => a.days - b.days || a.j.reference.localeCompare(b.j.reference));
+  }, [activeJobs]);
+
   const shownJobs = useMemo(
     () =>
       activeJobs.filter(
@@ -303,7 +323,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ---- Quotation pipeline ---- */}
+          {/* ---- Quotation pipeline + arrivals in the next 10 days ---- */}
+          <div className="dash-2">
           <div className="panel">
             <div className="panel-head">
               <div>
@@ -356,6 +377,52 @@ export default function DashboardPage() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-head">
+              <div>
+                <h2>Arrivals in the Next 10 Days</h2>
+                <p>Inbound shipments by ETA, soonest first</p>
+              </div>
+              <div className="mini-stats">
+                <div>
+                  <div className="k">Arriving</div>
+                  <div className="v">{arrivals.length}</div>
+                </div>
+              </div>
+            </div>
+            {arrivals.length === 0 ? (
+              <div className="empty">No shipments due to arrive in the next 10 days.</div>
+            ) : (
+              <ul className="arrivals">
+                {arrivals.map(({ j, days }) => (
+                  <li key={j.id}>
+                    <button
+                      className="arrival-row"
+                      onClick={() => navigate("/jobs", { state: { openJobId: j.id } })}
+                      title="Open this shipment"
+                    >
+                      <span className="ref-link">{j.reference}</span>
+                      <span className="arrival-cust">
+                        {j.client?.company ?? "—"}
+                        <span className="arrival-lane">
+                          {portCode(j.origin)} → {portCode(j.destination)} ·{" "}
+                          {modeBucket(j.mode)}
+                        </span>
+                      </span>
+                      <span className="arrival-eta">{formatDate(j.eta)}</span>
+                      <span
+                        className={`arrival-days${days === 0 ? " is-today" : days <= 5 ? " is-soon" : ""}`}
+                      >
+                        {days === 0 ? "Today" : `in ${days} day${days === 1 ? "" : "s"}`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           </div>
 
           {/* ---- Active jobs list (filtered by the mode widgets) ---- */}
