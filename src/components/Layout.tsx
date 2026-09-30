@@ -33,6 +33,7 @@ const NAV: NavModule[] = [
       { to: "/ops?tab=calendar", label: "Calendar" },
       { to: "/ops?tab=tracking", label: "Live Tracking" },
       { to: "/ops?tab=docvault", label: "Document Vault" },
+      { to: "/ops?tab=worldclock", label: "World Clock" },
     ],
   },
   {

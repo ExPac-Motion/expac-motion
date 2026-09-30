@@ -18,6 +18,7 @@ import CalendarBoard from "./ops/CalendarBoard";
 import LiveTracking from "./ops/LiveTracking";
 import PersonalVaultPage from "./ops/PersonalVaultPage";
 import DocumentVaultTab from "./ops/DocumentVaultTab";
+import WorldClock from "./ops/WorldClock";
 
 type Tab =
   | "tasks"
@@ -25,7 +26,8 @@ type Tab =
   | "calendar"
   | "tracking"
   | "vault"
-  | "docvault";
+  | "docvault"
+  | "worldclock";
 
 interface Chip {
   label: string;
@@ -125,7 +127,7 @@ export default function OpsControlTowerPage() {
     <>
       <PageHeader eyebrow="Command centre" title="Control Tower" />
 
-      {tab !== "vault" && tab !== "docvault" && chips.length > 0 && (
+      {tab !== "vault" && tab !== "docvault" && tab !== "worldclock" && chips.length > 0 && (
         <div className="ct-band">
           {chips.map((c) => (
             <button
@@ -146,6 +148,7 @@ export default function OpsControlTowerPage() {
       {tab === "tracking" && <LiveTracking />}
       {tab === "vault" && canVault && <PersonalVaultPage />}
       {tab === "docvault" && <DocumentVaultTab />}
+      {tab === "worldclock" && <WorldClock />}
     </>
   );
 }

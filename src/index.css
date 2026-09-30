@@ -3780,6 +3780,92 @@ select.badge-select.lost {
   border-bottom-color: var(--green);
 }
 
+/* --- World Clock --- */
+.wc-region + .wc-region {
+  margin-top: 18px;
+}
+.wc-region-name {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.wc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+}
+.wc-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--white);
+}
+.wc-card.home {
+  border-color: var(--green);
+  background: var(--green-tint);
+}
+.wc-card.night {
+  background: var(--night-tint);
+}
+.wc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.wc-city {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.wc-country {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.wc-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.wc-badge.open {
+  background: var(--green-tint);
+  color: var(--green-dark);
+  border: 1px solid var(--green);
+}
+.wc-badge.closed {
+  background: var(--white);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.wc-time {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 8px;
+  line-height: 1.1;
+}
+.wc-sec {
+  font-size: 1rem;
+  color: var(--muted);
+}
+.wc-date {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+.wc-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 /* --- Personal Vault --- */
 .vault-grid {
   display: grid;
