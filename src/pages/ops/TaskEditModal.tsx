@@ -8,11 +8,14 @@ import {
   useDeleteOpsTask,
   useJobs,
   useLeads,
+  useOpsTasks,
   useProfiles,
   useQuotes,
   useSaveOpsTask,
   useSuppliers,
 } from "../../lib/hooks";
+import { formatDate } from "../../lib/format";
+import { isTaskOverdue } from "../../lib/opsCalendar";
 import {
   OPS_TASK_PRIORITIES,
   OPS_TASK_STATUSES,
@@ -62,7 +65,17 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
   };
 }
 
-export default function TaskEditModal({ task, defaults, onClose }: Props) {
+/** The record a new task is being created against, most specific first. */
+const LINK_KEYS = ["job_id", "quote_id", "client_id", "lead_id", "supplier_id"] as const;
+
+export default function TaskEditModal({
+  task: initialTask,
+  defaults,
+  onClose,
+}: Props) {
+  // Which task the form is editing — starts as the one passed in (null =
+  // new), and switches when an existing task is picked from the panel.
+  const [task, setTask] = useState<OpsTask | null>(initialTask);
   const { toast, error } = useToast();
   const save = useSaveOpsTask();
   const del = useDeleteOpsTask();
@@ -76,6 +89,40 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
   );
 
   const [f, setF] = useState<Form>(() => seed(task, defaults));
+
+  // Existing open / doing tasks on the same record (shipment, quote,
+  // customer, lead or supplier) the form was opened from.
+  const allTasks = useOpsTasks().data ?? [];
+  const linkKey = LINK_KEYS.find((k) => defaults?.[k]);
+  const linkId = linkKey ? (defaults?.[linkKey] as string) : null;
+  const linkLabel = !linkKey
+    ? ""
+    : linkKey === "job_id"
+      ? jobs.find((j) => j.id === linkId)?.reference ?? "this shipment"
+      : linkKey === "quote_id"
+        ? quotes.find((q) => q.id === linkId)?.reference ?? "this quote"
+        : linkKey === "client_id"
+          ? clients.find((c) => c.id === linkId)?.company ?? "this customer"
+          : linkKey === "lead_id"
+            ? leads.find((l) => l.id === linkId)?.company ?? "this lead"
+            : suppliers.find((s) => s.id === linkId)?.company ?? "this supplier";
+  const openOnRecord = linkKey
+    ? allTasks
+        .filter(
+          (t) =>
+            t.kind === "task" &&
+            t.status !== "done" &&
+            t[linkKey] === linkId,
+        )
+        .sort((a, b) =>
+          (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"),
+        )
+    : [];
+
+  function pick(t: OpsTask | null) {
+    setTask(t);
+    setF(seed(t, t ? undefined : defaults));
+  }
   function set<K extends keyof Form>(k: K, v: Form[K]) {
     setF((p) => ({ ...p, [k]: v }));
   }
@@ -154,6 +201,52 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
         </>
       }
     >
+      {linkKey && (
+        <div className="task-existing">
+          <div className="task-existing-head">
+            <strong>
+              Open tasks for {linkLabel} ({openOnRecord.length})
+            </strong>
+            {task && (
+              <button type="button" className="link-btn" onClick={() => pick(null)}>
+                + New task instead
+              </button>
+            )}
+          </div>
+          {openOnRecord.length === 0 ? (
+            <p className="hint" style={{ margin: 0 }}>
+              No open tasks yet — add one below.
+            </p>
+          ) : (
+            <ul>
+              {openOnRecord.map((t) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    className={`task-existing-row${task?.id === t.id ? " on" : ""}`}
+                    onClick={() => pick(t)}
+                    title="Open this task"
+                  >
+                    <span className={`task-existing-status is-${t.status}`}>
+                      {t.status === "doing" ? "Doing" : "Open"}
+                    </span>
+                    <span className="task-existing-title">{t.title}</span>
+                    {t.due_date && (
+                      <span
+                        className={`task-existing-due${isTaskOverdue(t) ? " over" : ""}`}
+                      >
+                        {formatDate(t.due_date)}
+                        {t.due_time ? ` ${hhmm(t.due_time)}` : ""}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="grid2">
         <div className="field">
           <label>Type</label>

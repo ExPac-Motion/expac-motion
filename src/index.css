@@ -963,6 +963,74 @@ table.dt th.dt-sortable {
   opacity: 0;
   pointer-events: none;
 }
+/* Task form: existing open/doing tasks on the record it was opened from. */
+.task-existing {
+  background: var(--amber-tint);
+  border: 1px solid #f3dfa6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.task-existing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.task-existing ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 168px;
+  overflow-y: auto;
+}
+.task-existing-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid transparent;
+  background: var(--white);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+  text-align: left;
+  color: var(--ink);
+}
+.task-existing-row:hover,
+.task-existing-row.on {
+  border-color: var(--amber);
+}
+.task-existing-status {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: var(--night-tint);
+}
+.task-existing-status.is-doing {
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+}
+.task-existing-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-existing-due {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.task-existing-due.over {
+  color: var(--orange-ink);
+  font-weight: 700;
+}
 /* "At risk" filter toggle when active. */
 .btn.at-risk-on {
   background: var(--orange);
