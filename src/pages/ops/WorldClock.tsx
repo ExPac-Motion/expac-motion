@@ -52,6 +52,8 @@ const REGIONS: Region[] = [
       { city: "Singapore", country: "Singapore", zone: "Asia/Singapore" },
       { city: "Ho Chi Minh City", country: "Vietnam", zone: "Asia/Ho_Chi_Minh" },
       { city: "Bangkok", country: "Thailand", zone: "Asia/Bangkok" },
+      { city: "Jakarta", country: "Indonesia", zone: "Asia/Jakarta" },
+      { city: "Kuala Lumpur", country: "Malaysia", zone: "Asia/Kuala_Lumpur" },
       { city: "Tokyo", country: "Japan", zone: "Asia/Tokyo" },
     ],
   },
