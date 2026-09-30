@@ -144,7 +144,7 @@ export default function SalesPersonPage() {
       },
       {
         key: "sales",
-        header: "Total Sales",
+        header: "Total Sales (incl. VAT)",
         width: 150,
         sortValue: (p) => st(p.id).sales,
         render: (p) => money(st(p.id).sales),

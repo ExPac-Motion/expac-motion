@@ -447,7 +447,7 @@ export default function SalesDashboardTab() {
       <div className="dash-kpis sales-kpis">
         <SalesKpi
           icon={Icon.sales}
-          label="Total Sales"
+          label="Total Sales (incl. VAT)"
           value={money(kpis.sales)}
           actual={kpis.sales}
           target={settings.sales_target}
