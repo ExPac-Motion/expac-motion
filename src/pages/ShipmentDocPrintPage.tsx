@@ -94,7 +94,10 @@ export default function ShipmentDocPrintPage() {
             </div>
           ))}
         </div>
-        <div className="qs-info">
+        {/* Four equal columns (the quote's .qs-info uses 1fr 1fr auto auto) so
+            Port of Load / Discharge aren't squeezed right and column 3 lines
+            up under Customer / Consignee. */}
+        <div className="qs-info" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
           {rows.map(([k, v]) => (
             <div key={k}>
               <div className="k">{k}</div>
