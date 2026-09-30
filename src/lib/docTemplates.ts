@@ -65,7 +65,7 @@ export function shipmentPartyRows(job: Job): [string, string][] {
  *  excludes commercial value / insurance (those only ever live on the quote,
  *  and never belong on ops-facing documents). Sea and Air each print a fixed
  *  sequence using the Quote Builder's labels: Sea has Shipping Line, Vessel,
- *  Voyage No, Container No/Type, MBL No, HBL No; Air (every non-sea mode) has
+ *  Voyage No, Container No/Type, MBL No, HBL No; Air (Air Freight + Courier CX; Road uses Sea for now) has
  *  Agent / Airline, Flight No/Date, MAWB No, HAWB No. Both then share
  *  Incoterms → Prepared By (the quote's sales person). */
 export function shipmentInfoRows(
@@ -88,7 +88,10 @@ export function shipmentInfoRows(
   /** The ExPac controller / sales person on the quote (profile full name). */
   preparedBy?: string | null,
 ): [string, string][] {
-  const isSea = job.mode.startsWith("Sea Freight");
+  // Road Freight uses the Sea layout until it gets its own; Air and Courier
+  // (CX) share the Air layout.
+  const isSea =
+    job.mode.startsWith("Sea Freight") || job.mode.startsWith("Road Freight");
   const head: [string, string][] = [
     ["Shipment Reference", job.reference],
     ["Mode", job.mode],
