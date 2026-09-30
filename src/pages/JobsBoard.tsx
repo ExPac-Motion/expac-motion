@@ -248,7 +248,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
   const [recordFilter, setRecordFilter] = useState<
-    "nostatus" | "notracking" | "atrisk" | null
+    "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null
   >(null);
 
   function openComms(j: Job) {
@@ -283,7 +283,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   // just the shipments that chip counted, instead of the full board.
   useEffect(() => {
     const state = location.state as
-      | { filter?: "nostatus" | "notracking" }
+      | { filter?: "nostatus" | "notracking" | "uninvoiced" }
       | null;
     if (!state?.filter) return;
     setRecordFilter(state.filter);
@@ -342,7 +342,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       ? modeRows.filter((j) => !j.shipment_status || j.shipment_status === "Booked")
       : recordFilter === "notracking"
         ? modeRows.filter((j) => !trackableRef(j))
-        : recordFilter === "atrisk"
+        : recordFilter === "uninvoiced"
+          ? modeRows.filter((j) => !j.invoiced_at)
+          : recordFilter === "atrisk"
           ? modeRows.filter((j) => etaUrgency(j, openTaskJobIds.has(j.id)) === "risk")
           : modeRows;
   const atRiskCount =
@@ -604,6 +606,32 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         ),
       },
       {
+        key: "invoiced_at",
+        header: "Invoiced",
+        width: 120,
+        sortValue: (j) => j.invoiced_at ?? "",
+        render: (j) => (
+          <JobDateCell
+            value={j.invoiced_at}
+            title="Date invoiced — blank = not yet invoiced"
+            onCommit={(v) => save(j.id, { invoiced_at: v })}
+          />
+        ),
+      },
+      {
+        key: "invoice_no",
+        header: "Invoice No",
+        width: 120,
+        sortValue: (j) => j.invoice_no ?? "",
+        render: (j) => (
+          <JobTextCell
+            value={j.invoice_no}
+            placeholder="—"
+            onCommit={(v) => save(j.id, { invoice_no: v })}
+          />
+        ),
+      },
+      {
         key: "pol",
         header: "POL",
         width: 110,
@@ -641,7 +669,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                 <strong>
                   {recordFilter === "nostatus"
                     ? "shipments without status"
-                    : recordFilter === "atrisk"
+                    : recordFilter === "uninvoiced"
+                      ? "shipments not yet invoiced"
+                      : recordFilter === "atrisk"
                       ? "at-risk shipments (ETA ≤5 days, work outstanding)"
                       : "shipments without a tracking no."}
                 </strong>{" "}
@@ -761,6 +791,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           noun="shipment"
           busy={bulkUpdate.isPending}
           fields={[
+            { key: "invoiced_at", label: "Invoiced (date)", type: "date" },
             {
               key: "shipment_status",
               label: "Shipment Status",

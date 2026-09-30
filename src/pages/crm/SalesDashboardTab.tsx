@@ -13,6 +13,7 @@ import {
   useAllCampaignRecipients,
   useCompanySettings,
   useFollowUpLog,
+  useJobs,
   useLeadStatuses,
   useLeads,
   useMailCampaigns,
@@ -31,9 +32,8 @@ import { money, timeAgo } from "../../lib/format";
 import {
   OPPORTUNITY_STAGES,
   PIPE_STAGE_COLORS,
-  STATUS_LABEL,
-  STATUS_ORDER,
   WON_QUOTE_STATUSES,
+  isShipmentComplete,
   type CompanySettingsPatch,
   type OpportunityStatus,
   type QuoteStatus,
@@ -109,6 +109,7 @@ const Icon = {
 export default function SalesDashboardTab() {
   const navigate = useNavigate();
   const quotesQ = useQuotes();
+  const jobsQ = useJobs();
   const leadsQ = useLeads();
   const statusesQ = useLeadStatuses();
   const oppsQ = useOpportunities();
@@ -232,28 +233,37 @@ export default function SalesDashboardTab() {
     };
   }, [oppsWithQuotes, settingsQ.data]);
 
-  const quotePipeline = useMemo(() => {
-    const rows = STATUS_ORDER.map((st) => {
-      const inStatus = quotes.filter((q) => q.status === st);
-      const value = inStatus
-        .map((q) => chargeTotals(q.quote_lines, fxOf(q)).sellIncl)
-        .reduce((s, v) => s + v, 0);
-      return { st, count: inStatus.length, value };
-    });
-    const totalValue = rows.reduce((s, r) => s + r.value, 0);
-    // Scaled against an overall pipeline target when one's set (Edit
-    // Targets), otherwise against total pipeline value across every status —
-    // never against just whichever single status holds the most, or that
-    // status always renders as a full bar regardless of how it's doing.
-    const target = settingsQ.data?.quotes_pipeline_target || 0;
-    const max = Math.max(1, target > 0 ? target : totalValue);
-    const won = rows
-      .filter((r) => WON_QUOTE_STATUSES.includes(r.st))
-      .reduce((s, r) => s + r.count, 0);
-    const lost = rows.find((r) => r.st === "lost")?.count ?? 0;
-    const winRate = won + lost > 0 ? (won / (won + lost)) * 100 : 0;
-    return { rows, max, totalValue, winRate, total: quotes.length, target };
-  }, [quotes, settingsQ.data]);
+  // Financial Snapshot. Month to date = quotes won (accepted/completed) with
+  // accepted_at this month; Revenue / Cost / GP are excl. VAT (revenue
+  // figures). Unbilled = every shipment without an invoice date, valued at
+  // its quote's Grand Total incl. VAT (what is still to be billed).
+  const snapshot = useMemo(() => {
+    const won = quotes.filter(
+      (q) => WON_QUOTE_STATUSES.includes(q.status) && isThisMonth(q.accepted_at),
+    );
+    const t = won.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
+    const revenue = t.reduce((s, x) => s + x.sell, 0);
+    const cost = t.reduce((s, x) => s + x.cost, 0);
+    const gp = revenue - cost;
+    const margin = revenue > 0 ? (gp / revenue) * 100 : 0;
+    const quoteById = new Map(quotes.map((q) => [q.id, q]));
+    const notInvoiced = (jobsQ.data ?? []).filter((j) => !j.invoiced_at);
+    const unbilledValue = notInvoiced.reduce((s, j) => {
+      const q = j.quote_id ? quoteById.get(j.quote_id) : undefined;
+      return s + (q ? chargeTotals(q.quote_lines, fxOf(q)).sellIncl : 0);
+    }, 0);
+    const completedNotInvoiced = notInvoiced.filter(isShipmentComplete).length;
+    return {
+      revenue,
+      cost,
+      gp,
+      margin,
+      wonCount: won.length,
+      unbilledValue,
+      unbilledCount: notInvoiced.length,
+      completedNotInvoiced,
+    };
+  }, [quotes, jobsQ.data]);
 
   const leaderboard = useMemo(() => {
     const people = (profilesQ.data ?? []).filter(
@@ -588,53 +598,52 @@ export default function SalesDashboardTab() {
         <div className="panel">
           <div className="panel-head">
             <div>
-              <h2>Quotes by Status</h2>
-              <p>Value by status (incl. VAT) · click to open the list</p>
-            </div>
-            <div className="mini-stats">
-              <div>
-                <div className="k">Total value</div>
-                <div className="v">{money(quotePipeline.totalValue)}</div>
-              </div>
-              <div>
-                <div className="k">Win rate</div>
-                <div className="v">{quotePipeline.winRate.toFixed(0)}%</div>
-              </div>
-              <div>
-                <div className="k">Quotes</div>
-                <div className="v">{quotePipeline.total}</div>
-              </div>
-              {quotePipeline.target > 0 && (
-                <div>
-                  <div className="k">Target</div>
-                  <div className="v">{money(quotePipeline.target)}</div>
-                </div>
-              )}
+              <h2>Financial Snapshot</h2>
+              <p>Month to date · won quotes, excl. VAT</p>
             </div>
           </div>
-          <div className="pipe">
-            {quotePipeline.rows.map((r, i) => (
-              <button
-                key={r.st}
-                className="pipe-row"
-                onClick={() => navigate(`/quotes?status=${r.st}`)}
-              >
-                <span className="nm">{STATUS_LABEL[r.st]}</span>
-                <span className="track">
-                  <span
-                    className="fill"
-                    style={{
-                      width: w(r.value, quotePipeline.max),
-                      background: PIPE_STAGE_COLORS[i],
-                    }}
-                  />
-                </span>
-                <span>
-                  <span className="amt">{money(r.value)}</span>
-                  <span className="cnt"> · {r.count}</span>
-                </span>
-              </button>
-            ))}
+          <div className="fin-snap">
+            <div className="fin-tile">
+              <div className="k">Revenue</div>
+              <div className="v">{money(snapshot.revenue)}</div>
+              <div className="s">
+                {snapshot.wonCount} won quote{snapshot.wonCount === 1 ? "" : "s"}
+              </div>
+            </div>
+            <div className="fin-tile">
+              <div className="k">Cost</div>
+              <div className="v">{money(snapshot.cost)}</div>
+            </div>
+            <div className="fin-tile">
+              <div className="k">Gross Profit</div>
+              <div className="v">{money(snapshot.gp)}</div>
+            </div>
+            <div className="fin-tile">
+              <div className="k">GP Margin</div>
+              <div className="v">{snapshot.margin.toFixed(1)}%</div>
+            </div>
+            <button
+              className="fin-tile is-link"
+              onClick={() => navigate("/jobs", { state: { filter: "uninvoiced" } })}
+              title="Open the shipments not yet invoiced"
+            >
+              <div className="k">Unbilled Jobs</div>
+              <div className="v">{money(snapshot.unbilledValue)}</div>
+              <div className="s">
+                {snapshot.unbilledCount} job{snapshot.unbilledCount === 1 ? "" : "s"} · incl. VAT
+              </div>
+            </button>
+            <button
+              className={`fin-tile is-link${snapshot.completedNotInvoiced ? " is-alert" : ""}`}
+              onClick={() =>
+                navigate("/jobs/completed", { state: { filter: "uninvoiced" } })
+              }
+              title="Open delivered shipments not yet invoiced"
+            >
+              <div className="k">Completed Not Invoiced</div>
+              <div className="v">{snapshot.completedNotInvoiced}</div>
+              <div className="s">delivered, awaiting invoice</div>
+            </button>
           </div>
         </div>
       </div>
@@ -855,7 +864,6 @@ function TargetsModal({
       sales_new_leads_target: Number(fd.get("sales_new_leads_target")) || 0,
       opportunities_pipeline_target:
         Number(fd.get("opportunities_pipeline_target")) || 0,
-      quotes_pipeline_target: Number(fd.get("quotes_pipeline_target")) || 0,
     };
     try {
       await update.mutateAsync(patch);
@@ -903,16 +911,6 @@ function TargetsModal({
             step="0.01"
             placeholder="0 = scale against the pipeline's own total"
             defaultValue={settings.opportunities_pipeline_target}
-          />
-        </div>
-        <div className="field">
-          <label>Quotes by Status Target (R)</label>
-          <input
-            name="quotes_pipeline_target"
-            type="number"
-            step="0.01"
-            placeholder="0 = scale against the pipeline's own total"
-            defaultValue={settings.quotes_pipeline_target}
           />
         </div>
         <div

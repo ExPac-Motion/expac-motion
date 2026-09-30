@@ -3332,6 +3332,50 @@ select.badge-select.lost {
 .dash-2 .panel {
   margin-bottom: 0;
 }
+/* Sales CRM: Financial Snapshot tiles (2 × 3) */
+.fin-snap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fin-tile {
+  background: var(--paper);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+}
+.fin-tile .k {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fin-tile .v {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin-top: 2px;
+}
+.fin-tile .s {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.fin-tile.is-link {
+  cursor: pointer;
+}
+.fin-tile.is-link:hover {
+  border-color: var(--green);
+}
+.fin-tile.is-alert {
+  background: var(--orange-tint);
+}
+.fin-tile.is-alert .v {
+  color: var(--orange-ink);
+}
 /* Dashboard: Arrivals in the Next 10 Days */
 .arrivals {
   list-style: none;

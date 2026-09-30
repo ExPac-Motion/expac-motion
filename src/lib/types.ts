@@ -1115,6 +1115,10 @@ export interface Job {
   shipping_line: string | null;
   vessel_name: string | null;
   provisional_delivery_date: string | null;
+  /** Date invoiced (migration 0110) — null = not yet invoiced. Entered by
+   *  hand for now; a future Sage Accounting sync fills it. */
+  invoiced_at?: string | null;
+  invoice_no?: string | null;
   /** Carrier / airline name, seeded from the quote; shown on the board. */
   carrier_name: string | null;
   /** Carrier SCAC — set for a bill-of-lading tracking registration. */
@@ -1163,6 +1167,8 @@ export type JobPatch = Partial<
     | "po_no"
     | "shipment_status"
     | "notes"
+    | "invoiced_at"
+    | "invoice_no"
     | "ops_remarks"
     | "awb_mbl"
     | "container_no"
