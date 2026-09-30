@@ -97,20 +97,40 @@ function JobTextCell({
     />
   );
 }
+/** Days from today (local) to a YYYY-MM-DD date; negative once it's passed. */
+function daysUntil(date: string | null | undefined): number | null {
+  if (!date) return null;
+  const [y, m, d] = date.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const target = new Date(y, m - 1, d);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+/** ETA is 5 days or less away, or already passed (arrived). */
+function etaIsDue(eta: string | null | undefined): boolean {
+  const n = daysUntil(eta);
+  return n !== null && n <= 5;
+}
+
 function JobDateCell({
   value,
   onCommit,
   title,
+  className,
 }: {
   value: string | null | undefined;
   onCommit: (v: string) => void;
   title?: string;
+  className?: string;
 }) {
   const [v, setV] = useState(value ?? "");
   useEffect(() => setV(value ?? ""), [value]);
   return (
     <input
       type="date"
+      className={className}
       value={v}
       title={title}
       onChange={(e) => {
@@ -514,9 +534,28 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         header: "ETA",
         width: 120,
         sortValue: (j) => j.eta ?? "",
-        render: (j) => (
-          <JobDateCell value={j.eta} onCommit={(v) => save(j.id, { eta: v })} />
-        ),
+        render: (j) => {
+          // Active board only: flag shipments arriving within 5 days or
+          // already past their ETA.
+          const due = mode === "active" && etaIsDue(j.eta);
+          const n = daysUntil(j.eta);
+          return (
+            <JobDateCell
+              value={j.eta}
+              className={due ? "job-eta is-due" : undefined}
+              title={
+                due && n !== null
+                  ? n < 0
+                    ? `ETA passed ${-n} day${n === -1 ? "" : "s"} ago`
+                    : n === 0
+                      ? "Arriving today"
+                      : `Arriving in ${n} day${n === 1 ? "" : "s"}`
+                  : undefined
+              }
+              onCommit={(v) => save(j.id, { eta: v })}
+            />
+          );
+        },
       },
       {
         key: "pdd",

@@ -880,6 +880,19 @@ table.dt th.dt-sortable {
   background: #e7f3d8 !important;
   color: var(--green-dark);
 }
+/* ETA cell on Active Shipments: arriving within 5 days or already past —
+   same pill format as the Status cell. */
+.job-eta.is-due {
+  background: #ef4910 !important;
+  color: #fff !important;
+  font-weight: 700;
+  border-radius: 999px !important;
+  text-align: center;
+  border-color: #ef4910 !important;
+}
+.job-eta.is-due::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
 
 /* ---------- Badges ---------- */
 .badge {
