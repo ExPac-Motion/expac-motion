@@ -16,7 +16,12 @@ import {
   useSaveOpsTask,
   useUpdateOpsTasksBulk,
 } from "../../lib/hooks";
-import { daysBetween, todayIso } from "../../lib/opsCalendar";
+import {
+  daysBetween,
+  isTaskOverdue,
+  nowHHMM,
+  todayIso,
+} from "../../lib/opsCalendar";
 import {
   OPS_TASK_PRIORITIES,
   OPS_TASK_STATUSES,
@@ -27,6 +32,13 @@ import {
 import TaskEditModal from "./TaskEditModal";
 import { hhmm } from "../../components/TimeInput";
 import { formatDate } from "../../lib/format";
+
+/** Overdue badge text: "3d late", or "late 14:00" when it's today's due
+ *  time that has passed. */
+function lateLabel(t: OpsTask, today: string): string {
+  const days = Math.abs(daysBetween(today, (t.due_date ?? today).slice(0, 10)));
+  return days > 0 ? `${days}d late` : `late ${hhmm(t.due_time)}`;
+}
 
 /** Due badge text (not overdue): "today" / dd/mm/yyyy, plus the due time. */
 function dueLabel(t: OpsTask, today: string): string {
@@ -77,7 +89,18 @@ export default function TasksNotes({ focus }: { focus?: string }) {
   const [creating, setCreating] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const today = todayIso();
+  // Re-evaluated every minute so a task turns overdue the moment its due
+  // time passes, without a reload.
+  const [clock, setClock] = useState(() => ({ today: todayIso(), now: nowHHMM() }));
+  useEffect(() => {
+    const id = window.setInterval(
+      () => setClock({ today: todayIso(), now: nowHHMM() }),
+      60_000,
+    );
+    return () => window.clearInterval(id);
+  }, []);
+  const today = clock.today;
+  const over = (t: OpsTask) => isTaskOverdue(t, clock.today, clock.now);
   const all = useMemo(() => tasksQ.data ?? [], [tasksQ.data]);
   const { arm, closeAndReturn } = useDeepLinkReturn();
 
@@ -104,10 +127,11 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     const open = all.filter((t) => t.kind === "task" && t.status !== "done");
     return {
       open: open.length,
-      dueToday: open.filter((t) => t.due_date === today).length,
-      overdue: open.filter((t) => t.due_date && t.due_date < today).length,
+      dueToday: open.filter((t) => t.due_date === today && !over(t)).length,
+      overdue: open.filter(over).length,
     };
-  }, [all, today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [all, clock]);
 
   const rows = useMemo(() => {
     let list = all;
@@ -117,11 +141,11 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     if (scopeF === "standalone")
       list = list.filter((t) => !t.job_id && !t.quote_id && !t.client_id);
     if (focus === "overdue")
-      list = list.filter(
-        (t) => t.status !== "done" && t.due_date && t.due_date < today,
-      );
+      list = list.filter(over);
     if (focus === "today")
-      list = list.filter((t) => t.status !== "done" && t.due_date === today);
+      list = list.filter(
+        (t) => t.status !== "done" && t.due_date === today && !over(t),
+      );
     const q = search.trim().toLowerCase();
     if (q)
       list = list.filter(
@@ -132,7 +156,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
     const rank = (t: OpsTask) => {
       if (t.status === "done") return 5;
-      if (t.due_date && t.due_date < today) return 0; // overdue
+      if (over(t)) return 0; // overdue
       if (t.due_date === today) return 1;
       if (t.due_date) return 2;
       return 3;
@@ -375,8 +399,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
           </div>
           <ul className="task-list">
             {rows.map((t) => {
-              const overdue =
-                t.status !== "done" && t.due_date && t.due_date < today;
+              const overdue = over(t);
               const chip = linkChip(t);
               return (
                 <li
@@ -408,7 +431,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                   {t.due_date && (
                     <span className={`due-badge${overdue ? " over" : ""}`}>
                       {overdue
-                        ? `${Math.abs(daysBetween(today, t.due_date))}d late`
+                        ? lateLabel(t, today)
                         : dueLabel(t, today)}
                     </span>
                   )}
@@ -459,8 +482,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                 </div>
                 <div className="stack-sm">
                   {colRows.map((t) => {
-                    const overdue =
-                      t.status !== "done" && t.due_date && t.due_date < today;
+                    const overdue = over(t);
                     const chip = linkChip(t);
                     return (
                       <div key={t.id} className="task-card">
@@ -478,7 +500,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                           {t.due_date && (
                             <span className={`due-badge${overdue ? " over" : ""}`}>
                               {overdue
-                                ? `${Math.abs(daysBetween(today, t.due_date))}d late`
+                                ? lateLabel(t, today)
                                 : dueLabel(t, today)}
                             </span>
                           )}

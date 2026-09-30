@@ -12,6 +12,28 @@ export function todayIso(): string {
   return iso(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
+/** Local time of day as "HH:MM" (24-hour). */
+export function nowHHMM(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * A task is overdue once it isn't done and either its due date has passed,
+ * or it's due today and its due time has passed. With no due time it stays
+ * "due today" until the day ends.
+ */
+export function isTaskOverdue(
+  t: Pick<OpsTask, "status" | "due_date" | "due_time">,
+  today: string = todayIso(),
+  now: string = nowHHMM(),
+): boolean {
+  if (t.status === "done" || !t.due_date) return false;
+  const d = t.due_date.slice(0, 10);
+  if (d < today) return true;
+  return d === today && !!t.due_time && t.due_time.slice(0, 5) <= now;
+}
+
 /** Days between two ISO dates (b - a), calendar days. */
 export function daysBetween(a: string, b: string): number {
   const ms = new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime();

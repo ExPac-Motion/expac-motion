@@ -1,3 +1,4 @@
+import { isTaskOverdue, nowHHMM, todayIso } from "./opsCalendar";
 import type {
   FollowUpLogEntry,
   Job,
@@ -160,7 +161,9 @@ export function buildNotifications(
         key: `task-${t.id}`,
         domain: "operations",
         text: `${
-          new Date(t.due_date).getTime() < now - DAY ? "Overdue task" : "Task due"
+          isTaskOverdue(t, todayIso(), nowHHMM(new Date(now)))
+            ? "Overdue task"
+            : "Task due"
         } — ${t.title}`,
         when: t.due_date,
         to: "/ops?tab=tasks",

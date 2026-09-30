@@ -7,7 +7,7 @@ import {
   useOpsTasks,
   useQuotes,
 } from "../lib/hooks";
-import { todayIso } from "../lib/opsCalendar";
+import { isTaskOverdue, todayIso } from "../lib/opsCalendar";
 import { trackableRef, trackingTone } from "../lib/tracking";
 import { isShipmentComplete } from "../lib/types";
 import { useAuth } from "../auth/AuthProvider";
@@ -68,8 +68,10 @@ export default function OpsControlTowerPage() {
     const trackByJob = new Map(trackings.map((t) => [t.job_id, t]));
 
     const openTasks = tasks.filter((t) => t.kind === "task" && t.status !== "done");
-    const overdue = openTasks.filter((t) => t.due_date && t.due_date < today).length;
-    const dueToday = openTasks.filter((t) => t.due_date === today).length;
+    const overdue = openTasks.filter((t) => isTaskOverdue(t, today)).length;
+    const dueToday = openTasks.filter(
+      (t) => t.due_date === today && !isTaskOverdue(t, today),
+    ).length;
 
     const noStatus = activeJobs.filter(
       (j) => !j.shipment_status || j.shipment_status === "Booked",
