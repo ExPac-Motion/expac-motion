@@ -94,9 +94,9 @@ export default function ShipmentDocPrintPage() {
             </div>
           ))}
         </div>
-        {/* Four content-sized columns spread edge to edge with equal gaps:
-            first column on the left page edge, last on the right. */}
-        <div className="qs-info spread" style={{ gridTemplateColumns: "repeat(4, auto)" }}>
+        {/* Four equal columns; with the same gap as the 1fr 1fr row above,
+            column 3 (Port of Load) starts exactly under Customer / Consignee. */}
+        <div className="qs-info" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
           {rows.map(([k, v]) => (
             <div key={k}>
               <div className="k">{k}</div>
