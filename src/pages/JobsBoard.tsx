@@ -114,6 +114,22 @@ function etaIsDue(eta: string | null | undefined): boolean {
   return n !== null && n <= 5;
 }
 
+/** Statuses at which clearance is done — nothing left to lodge before arrival. */
+const CLEARED_STATUSES = new Set(["Released", "On-Delivery", "Delivered"]);
+
+/**
+ * ETA urgency on the Active board. "risk": ETA due (≤5 days / passed) with
+ * work still outstanding — an open task, or not yet cleared (status before
+ * Released). "due": ETA due but nothing outstanding. These are the shipments
+ * where a pending clearance or delivery lodgement starts costing money.
+ */
+function etaUrgency(j: Job, hasOpenTask: boolean): "risk" | "due" | null {
+  if (!etaIsDue(j.eta)) return null;
+  const outstanding =
+    hasOpenTask || !CLEARED_STATUSES.has(j.shipment_status ?? "");
+  return outstanding ? "risk" : "due";
+}
+
 function JobDateCell({
   value,
   onCommit,
@@ -237,7 +253,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
   const [recordFilter, setRecordFilter] = useState<
-    "nostatus" | "notracking" | null
+    "nostatus" | "notracking" | "atrisk" | null
   >(null);
 
   function openComms(j: Job) {
@@ -331,7 +347,14 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       ? modeRows.filter((j) => !j.shipment_status || j.shipment_status === "Booked")
       : recordFilter === "notracking"
         ? modeRows.filter((j) => !trackableRef(j))
-        : modeRows;
+        : recordFilter === "atrisk"
+          ? modeRows.filter((j) => etaUrgency(j, openTaskJobIds.has(j.id)) === "risk")
+          : modeRows;
+  const atRiskCount =
+    mode === "active"
+      ? modeRows.filter((j) => etaUrgency(j, openTaskJobIds.has(j.id)) === "risk")
+          .length
+      : 0;
   const modeLabel = MODE_TABS.find((t) => t.key === modeTab)?.label ?? "";
   const sel = useRowSelection(jobs ?? [], rows);
 
@@ -537,20 +560,33 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         render: (j) => {
           // Active board only: flag shipments arriving within 5 days or
           // already past their ETA.
-          const due = mode === "active" && etaIsDue(j.eta);
+          const level =
+            mode === "active" ? etaUrgency(j, openTaskJobIds.has(j.id)) : null;
           const n = daysUntil(j.eta);
+          const when =
+            n === null
+              ? ""
+              : n < 0
+                ? `ETA passed ${-n} day${n === -1 ? "" : "s"} ago`
+                : n === 0
+                  ? "Arriving today"
+                  : `Arriving in ${n} day${n === 1 ? "" : "s"}`;
           return (
             <JobDateCell
               value={j.eta}
-              className={due ? "job-eta is-due" : undefined}
+              className={
+                level === "risk"
+                  ? "job-eta is-risk"
+                  : level === "due"
+                    ? "job-eta is-due"
+                    : undefined
+              }
               title={
-                due && n !== null
-                  ? n < 0
-                    ? `ETA passed ${-n} day${n === -1 ? "" : "s"} ago`
-                    : n === 0
-                      ? "Arriving today"
-                      : `Arriving in ${n} day${n === 1 ? "" : "s"}`
-                  : undefined
+                level === "risk"
+                  ? `${when} — work outstanding (open task or not yet cleared)`
+                  : level === "due"
+                    ? `${when} — nothing outstanding`
+                    : undefined
               }
               onCommit={(v) => save(j.id, { eta: v })}
             />
@@ -610,7 +646,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                 <strong>
                   {recordFilter === "nostatus"
                     ? "shipments without status"
-                    : "shipments without a tracking no."}
+                    : recordFilter === "atrisk"
+                      ? "at-risk shipments (ETA ≤5 days, work outstanding)"
+                      : "shipments without a tracking no."}
                 </strong>{" "}
                 ·{" "}
                 <button
@@ -645,6 +683,18 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             rowKey={(j) => j.id}
             headerTools={recordFilter ? "row" : "pull"}
             toolbar={
+              <>
+              {mode === "active" && (
+                <button
+                  className={`btn btn-sm ${recordFilter === "atrisk" ? "at-risk-on" : "outline"}`}
+                  onClick={() =>
+                    setRecordFilter(recordFilter === "atrisk" ? null : "atrisk")
+                  }
+                  title="ETA within 5 days (or passed) with an open task or not yet cleared"
+                >
+                  At risk ({atRiskCount})
+                </button>
+              )}
               <button
                 className="btn outline btn-sm"
                 onClick={() => setBulkOpen(true)}
@@ -657,6 +707,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               >
                 Bulk Edit{sel.count ? ` (${sel.count})` : ""}
               </button>
+              </>
             }
           />
         )}

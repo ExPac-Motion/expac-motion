@@ -880,18 +880,33 @@ table.dt th.dt-sortable {
   background: #e7f3d8 !important;
   color: var(--green-dark);
 }
-/* ETA cell on Active Shipments: arriving within 5 days or already past —
-   same pill format as the Status cell. */
-.job-eta.is-due {
-  background: #ef4910 !important;
-  color: #fff !important;
+/* ETA cell on Active Shipments — same pill format as the Status cell.
+   is-due:  arriving within 5 days / passed, nothing outstanding (pale).
+   is-risk: same, but an open task or not yet cleared (solid #ef4910). */
+.job-eta.is-due,
+.job-eta.is-risk {
   font-weight: 700;
   border-radius: 999px !important;
   text-align: center;
+}
+.job-eta.is-due {
+  background: #fde4da !important;
+  color: #c23a0b !important;
+  border-color: #fde4da !important;
+}
+.job-eta.is-risk {
+  background: #ef4910 !important;
+  color: #fff !important;
   border-color: #ef4910 !important;
 }
-.job-eta.is-due::-webkit-calendar-picker-indicator {
+.job-eta.is-risk::-webkit-calendar-picker-indicator {
   filter: invert(1);
+}
+/* "At risk" filter toggle when active. */
+.btn.at-risk-on {
+  background: #ef4910;
+  border-color: #ef4910;
+  color: #fff;
 }
 
 /* ---------- Badges ---------- */
