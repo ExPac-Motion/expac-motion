@@ -250,8 +250,12 @@ export function renderShipmentEmail(
 }
 
 const RULE_LINE = /^_+$/;
-/** A "Label: value" line — the label (with its colon) is what gets bolded. */
-const LABEL_LINE = /^([^:\n]+:)(.*)$/;
+/** A "Label: value" line — the label (with its colon) is what gets bolded.
+ *  Only a label-like prefix counts: starts with a letter, ≤41 chars, no
+ *  commas / sentence punctuation, and the colon ends the line or is followed
+ *  by a space. Otherwise free-text remarks got bolded up to any colon in
+ *  them — e.g. a ":)" smiley, a time like 10:30, or a URL. */
+const LABEL_LINE = /^(\s*[A-Za-z][A-Za-z0-9 /&()'#.-]{0,40}:)(\s.*|)$/;
 /** Sign-off lines that mark the end of the shipment-data block — the
  *  signature after this (incl. its own "T: / E: / Postal Address:" lines)
  *  is never bolded by the general Label: rule, even though those also
