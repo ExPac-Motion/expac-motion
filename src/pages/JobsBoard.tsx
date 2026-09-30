@@ -24,7 +24,9 @@ import {
 import { useToast } from "../components/Toast";
 import {
   useCreateJob,
+  useCreateQuoteForJob,
   useDeleteJob,
+  useDuplicateJobQuote,
   useDeleteShipmentDocument,
   useJobs,
   useMarkJobMessagesRead,
@@ -185,6 +187,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const bulkUpdate = useUpdateJobsBulk();
   const deleteJob = useDeleteJob();
   const createJob = useCreateJob();
+  const duplicateJobQuote = useDuplicateJobQuote();
   const setMilestone = useSetJobMilestone();
   const { toast, error: toastError } = useToast();
   const [params] = useSearchParams();
@@ -270,6 +273,16 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   async function onDuplicateJob(j: Job) {
     try {
+      // With a quote: copy the quote too and open the copy in the Quote
+      // Builder — the new shipment is created linked to it.
+      if (j.quote_id) {
+        const newQuoteId = await duplicateJobQuote.mutateAsync(j);
+        if (newQuoteId) {
+          toast("Shipment duplicated with its quote");
+          navigate(`/quotes/${newQuoteId}`);
+          return;
+        }
+      }
       const created = await createJob.mutateAsync({
         reference: newReference(j.mode),
         mode: j.mode,
@@ -714,6 +727,37 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   );
 }
 
+/** For a shipment with no quote (e.g. duplicated before Duplicate copied
+ *  quotes): builds a quote from the shipment's fields, links it, and opens it
+ *  in the Quote Builder so its details can be completed. */
+function CreateQuoteForJob({ job, onDone }: { job: Job; onDone: () => void }) {
+  const navigate = useNavigate();
+  const createQuote = useCreateQuoteForJob();
+  const { toast, error: toastError } = useToast();
+  return (
+    <p style={{ marginTop: 8 }}>
+      <span className="hint">This shipment has no quotation. </span>
+      <button
+        type="button"
+        className="btn small outline"
+        disabled={createQuote.isPending}
+        onClick={async () => {
+          try {
+            const quoteId = await createQuote.mutateAsync(job);
+            toast("Quotation created and linked");
+            onDone();
+            navigate(`/quotes/${quoteId}`);
+          } catch (e) {
+            toastError(e instanceof Error ? e.message : "Could not create quotation");
+          }
+        }}
+      >
+        {createQuote.isPending ? "Creating…" : "Create quotation"}
+      </button>
+    </p>
+  );
+}
+
 function JobViewModal({
   job,
   onClose,
@@ -756,12 +800,14 @@ function JobViewModal({
         <ViewField label="Created On" value={formatDate(job.created_at)} />
       </div>
       <ViewField label="Notes" value={job.notes || "—"} />
-      {job.quote_id && (
+      {job.quote_id ? (
         <p style={{ marginTop: 8 }}>
           <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
             View originating quotation →
           </Link>
         </p>
+      ) : (
+        <CreateQuoteForJob job={job} onDone={onClose} />
       )}
 
       <DocumentsSection job={job} />

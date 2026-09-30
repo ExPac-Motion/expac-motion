@@ -27,20 +27,18 @@ import {
   useUnreadQuoteMessages,
   useUpdateQuotesBulk,
 } from "../lib/hooks";
+import { duplicateQuoteDraft } from "../lib/quoteDraft";
 import { chargeTotals, fxOf } from "../lib/calc";
 import {
   currencyAmount,
   formatDate,
   money,
-  newReference,
   portCode,
-  todayPlusDays,
 } from "../lib/format";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
   type Quote,
-  type QuoteDraft,
   type QuoteStatus,
 } from "../lib/types";
 
@@ -52,59 +50,6 @@ function isQuoteStatus(v: string | null): v is QuoteStatus {
     v === "completed" ||
     v === "lost"
   );
-}
-
-/** Everything but booking-specific fields (vessel/flight/MBL/HBL/dates), which
- * reset since a duplicate is a new shipment even on the same trade lane. */
-function draftFromQuote(q: Quote): QuoteDraft {
-  return {
-    id: null,
-    reference: newReference(q.mode),
-    customer_reference: "",
-    client_id: q.client_id ?? "",
-    lead_id: "",
-    sales_person_id: q.sales_person_id ?? "",
-    supplier_id: q.supplier_id ?? "",
-    consignee_id: q.consignee_id ?? "",
-    consignee_lead_id: q.consignee_lead_id ?? "",
-    agent_id: q.agent_id ?? "",
-    transporter_id: q.transporter_id ?? "",
-    clearing_agent_id: q.clearing_agent_id ?? "",
-    mode: q.mode,
-    commodity: q.commodity ?? "",
-    origin: q.origin ?? "",
-    destination: q.destination ?? "",
-    delivery_terms: q.delivery_terms ?? "",
-    valid_until: todayPlusDays(14),
-    status: "open",
-    commercial_value: q.commercial_value != null ? String(q.commercial_value) : "",
-    insurance_amount: q.insurance_amount != null ? String(q.insurance_amount) : "",
-    vessel_name: "",
-    voyage_no: "",
-    routing: "",
-    transit_time: "",
-    mbl_no: "",
-    hbl_no: "",
-    container_no: "",
-    container_type: "",
-    etd: "",
-    eta: "",
-    provisional_delivery_date: "",
-    incoterms: q.incoterms ?? "",
-    mawb_no: "",
-    hawb_no: "",
-    flight_no: "",
-    flight_date: "",
-    carrier_name: "",
-    shipping_line: q.shipping_line ?? "",
-    fx_usd_zar: String(q.fx_usd_zar ?? ""),
-    fx_cny_zar: String(q.fx_cny_zar ?? ""),
-    fx_eur_zar: String(q.fx_eur_zar ?? ""),
-    sell_currency: q.sell_currency ?? "",
-    value_currency: q.value_currency ?? "ZAR",
-    packing: q.packing_list_items ?? [],
-    lines: q.quote_lines ?? [],
-  };
 }
 
 /** Inline status dropdown for the Quotations list — lets a status change
@@ -232,7 +177,7 @@ export default function QuotesListPage() {
 
   async function onDuplicate(q: Quote) {
     try {
-      const newId = await save.mutateAsync(draftFromQuote(q));
+      const newId = await save.mutateAsync(duplicateQuoteDraft(q));
       toast("Quote duplicated");
       navigate(`/quotes/${newId}`);
     } catch (e) {

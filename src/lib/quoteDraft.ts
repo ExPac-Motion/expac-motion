@@ -1,0 +1,113 @@
+import { newReference, todayPlusDays } from "./format";
+import type { Job, Quote, QuoteDraft } from "./types";
+import { usesSeaLayout } from "./docTemplates";
+
+/** Duplicate of a quote as a new draft. Everything but booking-specific fields
+ * (vessel/flight/MBL/HBL/dates), which reset since a duplicate is a new
+ * shipment even on the same trade lane. Used by Duplicate on the Quotations
+ * list and on the Shipments board. */
+export function duplicateQuoteDraft(q: Quote): QuoteDraft {
+  return {
+    id: null,
+    reference: newReference(q.mode),
+    customer_reference: "",
+    client_id: q.client_id ?? "",
+    lead_id: "",
+    sales_person_id: q.sales_person_id ?? "",
+    supplier_id: q.supplier_id ?? "",
+    consignee_id: q.consignee_id ?? "",
+    consignee_lead_id: q.consignee_lead_id ?? "",
+    agent_id: q.agent_id ?? "",
+    transporter_id: q.transporter_id ?? "",
+    clearing_agent_id: q.clearing_agent_id ?? "",
+    mode: q.mode,
+    commodity: q.commodity ?? "",
+    origin: q.origin ?? "",
+    destination: q.destination ?? "",
+    delivery_terms: q.delivery_terms ?? "",
+    valid_until: todayPlusDays(14),
+    status: "open",
+    commercial_value: q.commercial_value != null ? String(q.commercial_value) : "",
+    insurance_amount: q.insurance_amount != null ? String(q.insurance_amount) : "",
+    vessel_name: "",
+    voyage_no: "",
+    routing: "",
+    transit_time: "",
+    mbl_no: "",
+    hbl_no: "",
+    container_no: "",
+    container_type: "",
+    etd: "",
+    eta: "",
+    provisional_delivery_date: "",
+    incoterms: q.incoterms ?? "",
+    mawb_no: "",
+    hawb_no: "",
+    flight_no: "",
+    flight_date: "",
+    carrier_name: "",
+    shipping_line: q.shipping_line ?? "",
+    fx_usd_zar: String(q.fx_usd_zar ?? ""),
+    fx_cny_zar: String(q.fx_cny_zar ?? ""),
+    fx_eur_zar: String(q.fx_eur_zar ?? ""),
+    sell_currency: q.sell_currency ?? "",
+    value_currency: q.value_currency ?? "ZAR",
+    packing: q.packing_list_items ?? [],
+    lines: q.quote_lines ?? [],
+  };
+}
+
+/** A new quote built from a shipment that has none (e.g. one duplicated
+ * before Duplicate copied quotes). Keeps the shipment's own number so the
+ * quote and shipment share one reference; charges and packing start empty. */
+export function quoteDraftFromJob(job: Job): QuoteDraft {
+  const sea = usesSeaLayout(job.mode);
+  return {
+    id: null,
+    reference: job.reference,
+    customer_reference: job.po_no ?? "",
+    client_id: job.client_id ?? "",
+    lead_id: "",
+    sales_person_id: "",
+    supplier_id: job.supplier_id ?? "",
+    consignee_id: "",
+    consignee_lead_id: "",
+    agent_id: "",
+    transporter_id: "",
+    clearing_agent_id: "",
+    mode: job.mode,
+    commodity: "",
+    origin: job.origin ?? "",
+    destination: job.destination ?? "",
+    delivery_terms: "",
+    valid_until: todayPlusDays(14),
+    status: "open",
+    commercial_value: "",
+    insurance_amount: "",
+    vessel_name: job.vessel_name ?? "",
+    voyage_no: "",
+    routing: "",
+    transit_time: "",
+    mbl_no: sea ? (job.awb_mbl ?? "") : "",
+    hbl_no: "",
+    container_no: job.container_no ?? "",
+    container_type: job.container_type ?? "",
+    etd: job.etd ?? "",
+    eta: job.eta ?? "",
+    provisional_delivery_date: job.provisional_delivery_date ?? "",
+    incoterms: "",
+    mawb_no: sea ? "" : (job.awb_mbl ?? ""),
+    hawb_no: "",
+    flight_no: "",
+    flight_date: "",
+    carrier_name: job.carrier_name ?? "",
+    shipping_line: job.shipping_line ?? "",
+    fx_usd_zar: "18.50",
+    fx_cny_zar: "2.60",
+    fx_eur_zar: "20.00",
+    sell_currency: "",
+    value_currency: "ZAR",
+    packing: [],
+    lines: [],
+  };
+}

@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { duplicateQuoteDraft, quoteDraftFromJob } from "./quoteDraft";
 import {
   insuranceAmount,
   packingTotals,
@@ -613,7 +614,47 @@ export async function updateJobsBulk(
   unwrap(await supabase.from("jobs").update(clean).in("id", ids).select("id"));
 }
 
-/** Inserts a standalone job row (Duplicate on the board) — not tied to a quote. */
+/**
+ * Duplicate on the Shipments board. A job with a quote gets that quote copied
+ * (same as Duplicate on Quotations) and the copy accepted, so accept_quote
+ * creates the new shipment already linked to its own editable quote. Returns
+ * the new quote id, or null when the job had no quote (caller then falls back
+ * to a bare createJob copy).
+ */
+export async function duplicateJobQuote(job: Job): Promise<string | null> {
+  if (!job.quote_id) return null;
+  const src = await getQuote(job.quote_id);
+  const newQuoteId = await saveQuote(duplicateQuoteDraft(src));
+  await acceptQuote(newQuoteId);
+  return newQuoteId;
+}
+
+/**
+ * Give a quote-less shipment its own quote, built from the shipment's fields
+ * and keeping its reference. Saved as open, linked to the job, THEN marked
+ * accepted — in that order so trg_quote_won (0056) sees the linked job and
+ * doesn't create a second shipment. Returns the new quote id.
+ */
+export async function createQuoteForJob(job: Job): Promise<string> {
+  const quoteId = await saveQuote(quoteDraftFromJob(job));
+  unwrap(
+    await supabase
+      .from("jobs")
+      .update({ quote_id: quoteId })
+      .eq("id", job.id)
+      .select("id"),
+  );
+  unwrap(
+    await supabase
+      .from("quotes")
+      .update({ status: "accepted" })
+      .eq("id", quoteId)
+      .select("id"),
+  );
+  return quoteId;
+}
+
+/** Inserts a standalone job row (Duplicate fallback for a quote-less job). */
 export async function createJob(values: JobInsert): Promise<Job> {
   return unwrap<Job>(
     await supabase.from("jobs").insert(values).select(JOB_SELECT).single(),

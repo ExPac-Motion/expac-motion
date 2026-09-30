@@ -1434,6 +1434,28 @@ export function useUpdateJobsBulk() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 }
+/** Duplicate a shipment together with its quote (see db.duplicateJobQuote). */
+export function useDuplicateJobQuote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (job: Job) => db.duplicateJobQuote(job),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+    },
+  });
+}
+/** Give a quote-less shipment its own linked quote (see db.createQuoteForJob). */
+export function useCreateQuoteForJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (job: Job) => db.createQuoteForJob(job),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+    },
+  });
+}
 export function useCreateJob() {
   const qc = useQueryClient();
   return useMutation({
