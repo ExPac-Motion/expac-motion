@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import DateInput from "../../components/DateInput";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import {
@@ -893,9 +894,8 @@ function OpportunityModal({
           </div>
           <div className="field">
             <label>Expected Close Date</label>
-            <input
+            <DateInput
               name="close_date"
-              type="date"
               defaultValue={opportunity?.close_date ?? ""}
             />
           </div>

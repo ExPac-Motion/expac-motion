@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
+import { formatDateTime } from "../lib/format";
 
 export interface MapPoint {
   lat: number | null | undefined;
@@ -111,7 +112,7 @@ export default function TrackingMap({
             .addTo(map)
             .bindPopup(
               `${e.description ?? "Event"}${
-                e.occurred_at ? `<br>${new Date(e.occurred_at).toLocaleString()}` : ""
+                e.occurred_at ? `<br>${formatDateTime(e.occurred_at)}` : ""
               }`,
             );
         }
@@ -126,7 +127,7 @@ export default function TrackingMap({
             .addTo(map)
             .bindPopup(
               `${vessel.label ?? "Vessel"}${
-                vessel.at ? `<br>as of ${new Date(vessel.at).toLocaleString()}` : ""
+                vessel.at ? `<br>as of ${formatDateTime(vessel.at)}` : ""
               }`,
             );
         }

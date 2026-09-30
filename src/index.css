@@ -899,8 +899,50 @@ table.dt th.dt-sortable {
   color: #fff !important;
   border-color: #ef4910 !important;
 }
-.job-eta.is-risk::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+/* DateInput (src/components/DateInput.tsx): dd/mm/yyyy text field with a
+   calendar button; the native date input only hosts the picker. */
+.date-input {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.date-input > input[type="text"] {
+  width: 100%;
+  padding-right: 26px !important;
+}
+.date-input-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.date-input-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.date-input:has(.is-risk) .date-input-btn {
+  color: #fff;
+}
+.date-input:has(.is-due) .date-input-btn {
+  color: #c23a0b;
+}
+.date-input .date-input-native {
+  position: absolute !important;
+  right: 0;
+  bottom: 0;
+  width: 1px !important;
+  min-width: 0 !important;
+  height: 1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0;
+  pointer-events: none;
 }
 /* "At risk" filter toggle when active. */
 .btn.at-risk-on {

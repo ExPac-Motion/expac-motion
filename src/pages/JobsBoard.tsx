@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
+import DateInput from "../components/DateInput";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import TaskEditModal from "./ops/TaskEditModal";
 import {
@@ -141,18 +142,12 @@ function JobDateCell({
   title?: string;
   className?: string;
 }) {
-  const [v, setV] = useState(value ?? "");
-  useEffect(() => setV(value ?? ""), [value]);
   return (
-    <input
-      type="date"
+    <DateInput
+      value={value ?? ""}
       className={className}
-      value={v}
       title={title}
-      onChange={(e) => {
-        setV(e.target.value);
-        onCommit(e.target.value);
-      }}
+      onChange={onCommit}
     />
   );
 }
@@ -1209,16 +1204,15 @@ function JobEditModal({
         <div className="grid3">
           <div className="field">
             <label>ETD</label>
-            <input type="date" name="etd" defaultValue={job.etd ?? ""} />
+            <DateInput name="etd" defaultValue={job.etd ?? ""} />
           </div>
           <div className="field">
             <label>ETA</label>
-            <input type="date" name="eta" defaultValue={job.eta ?? ""} />
+            <DateInput name="eta" defaultValue={job.eta ?? ""} />
           </div>
           <div className="field">
             <label>PDD</label>
-            <input
-              type="date"
+            <DateInput
               name="provisional_delivery_date"
               defaultValue={job.provisional_delivery_date ?? ""}
             />

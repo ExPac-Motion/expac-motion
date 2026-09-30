@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import DateInput from "../../components/DateInput";
 import {
   EmptyState,
   ErrorNote,
@@ -365,10 +366,9 @@ function PersonalBudget({
           value={form.amount}
           onChange={(e) => set("amount", e.target.value)}
         />
-        <input
-          type="date"
+        <DateInput
           value={form.occurred_on}
-          onChange={(e) => set("occurred_on", e.target.value)}
+          onChange={(v) => set("occurred_on", v)}
         />
         <input
           placeholder="Note (optional)"

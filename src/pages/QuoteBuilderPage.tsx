@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import DateInput from "../components/DateInput";
 import { useNavigate, useParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import { ErrorNote, Loading, PageHeader } from "../components/common";
@@ -885,10 +886,9 @@ export default function QuoteBuilderPage() {
           </div>
           <div className="field">
             <label>Valid Until</label>
-            <input
-              type="date"
+            <DateInput
               value={draft.valid_until}
-              onChange={(e) => set("valid_until", e.target.value)}
+              onChange={(v) => set("valid_until", v)}
             />
           </div>
 
@@ -924,26 +924,23 @@ export default function QuoteBuilderPage() {
           </div>
           <div className="field">
             <label>ETD</label>
-            <input
-              type="date"
+            <DateInput
               value={draft.etd}
-              onChange={(e) => set("etd", e.target.value)}
+              onChange={(v) => set("etd", v)}
             />
           </div>
           <div className="field">
             <label>ETA</label>
-            <input
-              type="date"
+            <DateInput
               value={draft.eta}
-              onChange={(e) => set("eta", e.target.value)}
+              onChange={(v) => set("eta", v)}
             />
           </div>
           <div className="field">
             <label>Provisional Delivery Date</label>
-            <input
-              type="date"
+            <DateInput
               value={draft.provisional_delivery_date}
-              onChange={(e) => set("provisional_delivery_date", e.target.value)}
+              onChange={(v) => set("provisional_delivery_date", v)}
             />
           </div>
 
@@ -1022,10 +1019,9 @@ export default function QuoteBuilderPage() {
             </div>
             <div className="field">
               <label>Flight Date</label>
-              <input
-                type="date"
+              <DateInput
                 value={draft.flight_date}
-                onChange={(e) => set("flight_date", e.target.value)}
+                onChange={(v) => set("flight_date", v)}
               />
             </div>
             <div className="field">

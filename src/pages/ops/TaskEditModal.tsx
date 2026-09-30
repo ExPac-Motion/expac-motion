@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DateInput from "../../components/DateInput";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import {
@@ -186,10 +187,9 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
       <div className="grid2">
         <div className="field">
           <label>Due date</label>
-          <input
-            type="date"
+          <DateInput
             value={f.due_date}
-            onChange={(e) => set("due_date", e.target.value)}
+            onChange={(v) => set("due_date", v)}
           />
         </div>
         {f.kind === "task" && (
