@@ -1,5 +1,6 @@
 import { useState } from "react";
 import DateInput from "../../components/DateInput";
+import TimeInput, { hhmm } from "../../components/TimeInput";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import {
@@ -34,6 +35,7 @@ type Form = {
   status: OpsTask["status"];
   priority: OpsTask["priority"];
   due_date: string;
+  due_time: string;
   job_id: string;
   quote_id: string;
   client_id: string;
@@ -50,6 +52,7 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
     status: task?.status ?? "open",
     priority: task?.priority ?? (defaults?.priority as Form["priority"]) ?? "normal",
     due_date: task?.due_date ?? (defaults?.due_date as string) ?? "",
+    due_time: hhmm(task?.due_time),
     job_id: task?.job_id ?? (defaults?.job_id as string) ?? "",
     quote_id: task?.quote_id ?? (defaults?.quote_id as string) ?? "",
     client_id: task?.client_id ?? (defaults?.client_id as string) ?? "",
@@ -96,6 +99,9 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
       supplier_id: f.supplier_id || null,
       assigned_to: f.assigned_to || null,
     };
+    // Only send due_time when there is one (or one is being cleared), so
+    // saving still works before migration 0109 adds the column.
+    if (f.due_time || task?.due_time) values.due_time = f.due_time || null;
     if (!task && defaults?.source_notification_key) {
       values.source_notification_key = defaults.source_notification_key as string;
     }
@@ -174,22 +180,19 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
         </div>
       </div>
 
-      <div className="field">
-        <label>Title</label>
-        <input
-          autoFocus
-          value={f.title}
-          onChange={(e) => set("title", e.target.value)}
-          placeholder="What needs doing?"
-        />
-      </div>
-
+      {/* Title shares its row with Status (a note has no status, so its
+          title takes the full row). */}
       <div className="grid2">
-        <div className="field">
-          <label>Due date</label>
-          <DateInput
-            value={f.due_date}
-            onChange={(v) => set("due_date", v)}
+        <div
+          className="field"
+          style={f.kind === "task" ? undefined : { gridColumn: "1 / -1" }}
+        >
+          <label>Title</label>
+          <input
+            autoFocus
+            value={f.title}
+            onChange={(e) => set("title", e.target.value)}
+            placeholder="What needs doing?"
           />
         </div>
         {f.kind === "task" && (
@@ -207,6 +210,20 @@ export default function TaskEditModal({ task, defaults, onClose }: Props) {
             </select>
           </div>
         )}
+      </div>
+
+      <div className="grid2">
+        <div className="field">
+          <label>Due date</label>
+          <DateInput
+            value={f.due_date}
+            onChange={(v) => set("due_date", v)}
+          />
+        </div>
+        <div className="field">
+          <label>Due time</label>
+          <TimeInput value={f.due_time} onChange={(v) => set("due_time", v)} />
+        </div>
       </div>
 
       <div className="grid2">

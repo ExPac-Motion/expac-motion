@@ -11,6 +11,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
 import Modal from "./Modal";
+import DateInput from "./DateInput";
+import TimeInput from "./TimeInput";
 
 /** Rounded search field with a magnifier icon, for list pages. */
 export function SearchInput({
@@ -333,7 +335,7 @@ export function useRowSelection<T extends { id: string }>(
 export type BulkField = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "number" | "select" | "toggle";
+  type: "text" | "textarea" | "number" | "select" | "toggle" | "date" | "time";
   /** Options for `type: "select"`. */
   options?: { value: string; label: string }[];
   /** Labels for `type: "toggle"` (defaults Yes / No). */
@@ -446,6 +448,20 @@ export function BulkEditModal({
                   <option value="true">{f.onLabel ?? "Yes"}</option>
                   <option value="false">{f.offLabel ?? "No"}</option>
                 </select>
+              ) : f.type === "date" ? (
+                <div style={{ marginTop: 6 }}>
+                  <DateInput
+                    value={val[f.key] ?? ""}
+                    onChange={(v) => setVal((p) => ({ ...p, [f.key]: v }))}
+                  />
+                </div>
+              ) : f.type === "time" ? (
+                <div style={{ marginTop: 6 }}>
+                  <TimeInput
+                    value={val[f.key] ?? ""}
+                    onChange={(v) => setVal((p) => ({ ...p, [f.key]: v }))}
+                  />
+                </div>
               ) : f.type === "textarea" ? (
                 <textarea
                   rows={3}

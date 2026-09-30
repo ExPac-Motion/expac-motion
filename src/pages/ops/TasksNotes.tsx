@@ -25,6 +25,15 @@ import {
   type OpsTaskStatus,
 } from "../../lib/types";
 import TaskEditModal from "./TaskEditModal";
+import { hhmm } from "../../components/TimeInput";
+import { formatDate } from "../../lib/format";
+
+/** Due badge text (not overdue): "today" / dd/mm/yyyy, plus the due time. */
+function dueLabel(t: OpsTask, today: string): string {
+  const day = t.due_date === today ? "today" : formatDate(t.due_date);
+  const time = hhmm(t.due_time);
+  return time ? `${day} ${time}` : day;
+}
 
 type StatusFilter = "all" | OpsTaskStatus;
 type ScopeFilter = "all" | "linked" | "standalone";
@@ -131,7 +140,10 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     return [...list].sort((a, b) => {
       const r = rank(a) - rank(b);
       if (r !== 0) return r;
-      if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+      if (a.due_date && b.due_date)
+        return (a.due_date + (a.due_time ?? "99")).localeCompare(
+          b.due_date + (b.due_time ?? "99"),
+        );
       if (a.due_date) return -1;
       if (b.due_date) return 1;
       return b.created_at.localeCompare(a.created_at);
@@ -397,9 +409,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                     <span className={`due-badge${overdue ? " over" : ""}`}>
                       {overdue
                         ? `${Math.abs(daysBetween(today, t.due_date))}d late`
-                        : t.due_date === today
-                          ? "today"
-                          : t.due_date}
+                        : dueLabel(t, today)}
                     </span>
                   )}
                   {t.assignee?.full_name && (
@@ -469,9 +479,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
                             <span className={`due-badge${overdue ? " over" : ""}`}>
                               {overdue
                                 ? `${Math.abs(daysBetween(today, t.due_date))}d late`
-                                : t.due_date === today
-                                  ? "today"
-                                  : t.due_date}
+                                : dueLabel(t, today)}
                             </span>
                           )}
                           {t.assignee?.full_name && (
@@ -542,8 +550,12 @@ export default function TasksNotes({ focus }: { focus?: string }) {
             {
               key: "due_date",
               label: "Due date",
-              type: "text",
-              placeholder: "YYYY-MM-DD",
+              type: "date",
+            },
+            {
+              key: "due_time",
+              label: "Due time",
+              type: "time",
             },
             {
               key: "assigned_to",

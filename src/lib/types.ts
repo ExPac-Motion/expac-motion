@@ -1274,6 +1274,8 @@ export interface OpsTask {
   status: OpsTaskStatus;
   priority: OpsTaskPriority;
   due_date: string | null;
+  /** Optional time of day, "HH:MM:SS" from Postgres (migration 0109). */
+  due_time?: string | null;
   job_id: string | null;
   quote_id: string | null;
   client_id: string | null;
@@ -1305,6 +1307,7 @@ export type OpsTaskPatch = Partial<
     | "status"
     | "priority"
     | "due_date"
+    | "due_time"
     | "job_id"
     | "quote_id"
     | "client_id"
