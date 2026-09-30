@@ -81,6 +81,8 @@ function draftFromQuote(q: Quote): QuoteDraft {
     insurance_amount: q.insurance_amount != null ? String(q.insurance_amount) : "",
     vessel_name: "",
     voyage_no: "",
+    routing: "",
+    transit_time: "",
     mbl_no: "",
     hbl_no: "",
     container_no: "",

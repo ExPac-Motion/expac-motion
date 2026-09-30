@@ -1000,6 +1000,9 @@ export interface Quote {
   vessel_name: string | null;
   /** Sea Freight voyage number (migration 0107) — printed on shipment docs. */
   voyage_no?: string | null;
+  /** Air Freight routing / transit time (migration 0108) — printed on shipment docs. */
+  routing?: string | null;
+  transit_time?: string | null;
   mbl_no: string | null;
   hbl_no: string | null;
   container_no: string | null;
@@ -1501,6 +1504,8 @@ export interface QuoteDraft {
   insurance_amount: string;
   vessel_name: string;
   voyage_no: string;
+  routing: string;
+  transit_time: string;
   mbl_no: string;
   hbl_no: string;
   container_no: string;

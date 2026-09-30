@@ -441,6 +441,18 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
   if (voyageErr && voyageErr.code !== "PGRST204" && voyageErr.code !== "42703") {
     throw voyageErr;
   }
+  // Routing / Transit Time (0108): separate update, same missing-column
+  // tolerance, so a not-yet-applied 0108 can't block the voyage_no save.
+  const { error: routingErr } = await supabase
+    .from("quotes")
+    .update({
+      routing: draft.routing.trim() || null,
+      transit_time: draft.transit_time.trim() || null,
+    })
+    .eq("id", id);
+  if (routingErr && routingErr.code !== "PGRST204" && routingErr.code !== "42703") {
+    throw routingErr;
+  }
   return id;
 }
 

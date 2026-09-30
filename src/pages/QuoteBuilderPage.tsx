@@ -129,6 +129,8 @@ function blankDraft(): QuoteDraft {
     insurance_amount: "",
     vessel_name: "",
     voyage_no: "",
+    routing: "",
+    transit_time: "",
     mbl_no: "",
     hbl_no: "",
     container_no: "",
@@ -178,6 +180,8 @@ function draftFromQuote(q: Quote): QuoteDraft {
     insurance_amount: q.insurance_amount != null ? String(q.insurance_amount) : "",
     vessel_name: q.vessel_name ?? "",
     voyage_no: q.voyage_no ?? "",
+    routing: q.routing ?? "",
+    transit_time: q.transit_time ?? "",
     mbl_no: q.mbl_no ?? "",
     hbl_no: q.hbl_no ?? "",
     container_no: q.container_no ?? "",
@@ -1093,6 +1097,22 @@ export default function QuoteBuilderPage() {
             <input
               value={draft.voyage_no}
               onChange={(e) => set("voyage_no", e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Routing</label>
+            <input
+              value={draft.routing}
+              onChange={(e) => set("routing", e.target.value)}
+              placeholder="e.g. CAN – DXB – JNB"
+            />
+          </div>
+          <div className="field">
+            <label>Transit Time</label>
+            <input
+              value={draft.transit_time}
+              onChange={(e) => set("transit_time", e.target.value)}
+              placeholder="e.g. 3–5 days"
             />
           </div>
         </div>

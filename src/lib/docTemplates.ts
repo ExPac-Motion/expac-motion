@@ -77,7 +77,7 @@ export function shipmentPartyRows(job: Job): [string, string][] {
  *  and never belong on ops-facing documents). Sea and Air each print a fixed
  *  sequence using the Quote Builder's labels: Sea has Shipping Line, Vessel,
  *  Voyage No, Container No/Type, MBL No, HBL No; Air (Air Freight + Courier CX; Road uses Sea for now) has
- *  Agent / Airline, Flight No/Date, MAWB No, HAWB No. Both then share
+ *  Agent / Airline, Flight No/Date, Routing, Transit Time, MAWB No, HAWB No. Both then share
  *  Incoterms → Prepared By (the quote's sales person). */
 export function shipmentInfoRows(
   job: Job,
@@ -88,6 +88,8 @@ export function shipmentInfoRows(
     | "mawb_no"
     | "hawb_no"
     | "voyage_no"
+    | "routing"
+    | "transit_time"
     | "carrier_name"
     | "customer_reference"
     | "incoterms"
@@ -123,6 +125,8 @@ export function shipmentInfoRows(
         ["Agent / Airline", quote?.carrier_name || job.carrier_name || "—"],
         ["Flight No", quote?.flight_no || "—"],
         ["Flight Date", formatDate(quote?.flight_date)],
+        ["Routing", quote?.routing || "—"],
+        ["Transit Time", quote?.transit_time || "—"],
         ["MAWB No", quote?.mawb_no || job.awb_mbl || "—"],
         ["HAWB No", quote?.hawb_no || "—"],
       ];
