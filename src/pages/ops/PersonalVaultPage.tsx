@@ -123,26 +123,29 @@ export default function PersonalVaultPage() {
   const [scope, setScope] = useState<VaultBudgetScope>("personal");
   const [month, setMonth] = useState<string>(thisMonth());
   return (
-    <>
-      <div className="vault-grid vault-grid--budget">
+    // Two columns: Budget with Notes underneath (wide), Expense Control with
+    // the Calendar underneath (narrow) -- the Calendar moves down as Expense
+    // Control grows.
+    <div className="vault-grid vault-grid--budget">
+      <div className="vault-col">
         <PersonalBudget
           scope={scope}
           setScope={setScope}
           month={month}
           setMonth={setMonth}
         />
+        <VaultNotes scope={scope} />
+      </div>
+      <div className="vault-col vault-col--side">
         <ExpenseControl
           scope={scope}
           setScope={setScope}
           month={month}
           setMonth={setMonth}
         />
-      </div>
-      <div className="vault-grid">
-        <VaultNotes scope={scope} />
         <VaultCalendar scope={scope} />
       </div>
-    </>
+    </div>
   );
 }
 

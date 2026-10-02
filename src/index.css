@@ -3873,9 +3873,27 @@ select.badge-select.lost {
   gap: 16px;
   align-items: start;
 }
-/* Budget row: wider Budget, narrower Expense Control (Notes/Calendar keep 3:2). */
+/* Vault: Budget + Notes in the wide left column, Expense Control + Calendar
+   in the narrow right one. */
 .vault-grid.vault-grid--budget {
   grid-template-columns: minmax(0, 13fr) minmax(0, 7fr);
+}
+.vault-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.vault-col > .panel {
+  margin-bottom: 16px;
+}
+/* The calendar's usual 560px grid + 320px day panel don't fit the narrow
+   column: let the grid shrink and drop the day panel underneath. */
+.vault-col--side .cal-grid {
+  min-width: 0;
+  flex-basis: 100%;
+}
+.vault-col--side .cal-daypanel {
+  width: 100%;
 }
 @media (max-width: 1000px) {
   .vault-grid,
