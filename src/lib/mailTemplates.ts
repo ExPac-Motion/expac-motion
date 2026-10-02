@@ -278,10 +278,11 @@ const SIG_VALUE_STYLE = "color:#2e2e2e;text-decoration:none;cursor:text";
 /** A signature line starting with one of the contact labels. */
 const SIG_START = /^\s*(\| )?(T|WA|F|E|Office|Portal|Postal Address):/;
 
-/** Join the signature's contact lines (T: / WA: / F: / E: / Office: /
- *  Portal: / Postal Address:) into one " | "-separated run, however the
- *  template in Settings happens to break them -- so E: always follows F:
- *  and Postal Address: follows Portal:, wrapping naturally to the width. */
+/** Lay the signature's contact lines out as exactly two lines, however
+ *  the template in Settings happens to break them:
+ *    T: | WA: | F: | E:
+ *    Office: | Portal: | Postal Address:
+ *  (joined with " | ", then split once before Office:). */
 function joinSignatureLines(text: string): string {
   const out: string[] = [];
   for (const line of text.split("\n")) {
@@ -293,7 +294,9 @@ function joinSignatureLines(text: string): string {
       out.push(line);
     }
   }
-  return out.join("\n");
+  return out
+    .map((l) => (SIG_START.test(l) ? l.replace(/\s*\|\s*(?=Office:)/, "\n") : l))
+    .join("\n");
 }
 
 /** Bolds the T:/WA:/F:/E:/Office:/Portal:/Postal Address: labels (brand
