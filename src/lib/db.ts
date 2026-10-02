@@ -7,6 +7,9 @@ import {
   volumetricFactor,
 } from "./calc";
 import type {
+  PartnerKind,
+  PartnerRateStructure,
+  PartnerRateStructureDraft,
   Client,
   CompanySettings,
   CompanySettingsPatch,
@@ -2241,4 +2244,43 @@ export async function saveTablePrefs(
       )
       .select("table_key"),
   );
+}
+
+/* ---------- Partner rate structures (agents / transporters / clearing agents) ---------- */
+
+export async function listPartnerRateStructures(
+  kind: PartnerKind,
+  partnerId: string,
+): Promise<PartnerRateStructure[]> {
+  return unwrap(
+    await supabase
+      .from("partner_rate_structures")
+      .select("*")
+      .eq("partner_kind", kind)
+      .eq("partner_id", partnerId)
+      .order("created_at", { ascending: true }),
+  );
+}
+export async function savePartnerRateStructure(input: {
+  id?: string;
+  values: PartnerRateStructureDraft;
+}): Promise<PartnerRateStructure> {
+  const row = { ...input.values, updated_at: new Date().toISOString() };
+  return unwrap(
+    input.id
+      ? await supabase
+          .from("partner_rate_structures")
+          .update(row)
+          .eq("id", input.id)
+          .select("*")
+          .single()
+      : await supabase
+          .from("partner_rate_structures")
+          .insert(row)
+          .select("*")
+          .single(),
+  );
+}
+export async function deletePartnerRateStructure(id: string): Promise<void> {
+  unwrap(await supabase.from("partner_rate_structures").delete().eq("id", id));
 }

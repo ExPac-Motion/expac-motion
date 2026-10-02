@@ -34,7 +34,15 @@ import { normalizeWebsite } from "../lib/format";
 import { PORTAL_SIGNUP_ENABLED } from "../lib/flags";
 import ClientActivity from "./ClientActivity";
 import TaskEditModal from "./ops/TaskEditModal";
-import type { Contact, LeadContactDraft } from "../lib/types";
+import type { Contact, LeadContactDraft, PartnerKind } from "../lib/types";
+import {
+  ChipRow,
+  CoverageEditor,
+  CoverageView,
+  coverageOf,
+  type Coverage,
+} from "./partners/PartnerCoverage";
+import RateStructures from "./partners/RateStructures";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
@@ -97,6 +105,10 @@ export default function ContactsPage({
   const { label, title, eyebrow } = COPY[kind];
   const Label = titleCase(label);
   const isClient = kind === "client";
+  // Agents / transporters / clearing agents carry coverage (modes, countries,
+  // ports) and rate structures.
+  const isPartner =
+    kind === "agent" || kind === "transporter" || kind === "clearing_agent";
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
@@ -152,6 +164,12 @@ export default function ContactsPage({
     );
   }
 
+  // Partner coverage being edited in the form (controlled, not FormData).
+  const [coverage, setCoverage] = useState<Coverage>(coverageOf(null));
+  useEffect(() => {
+    if (editing !== null) setCoverage(coverageOf(editing === "new" ? null : editing));
+  }, [editing]);
+
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const { arm, closeAndReturn } = useDeepLinkReturn();
 
@@ -179,7 +197,18 @@ export default function ContactsPage({
     const q = search.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) =>
-      [r.company, r.contact, r.email, r.phone, r.vat_no, r.import_code]
+      [
+        r.company,
+        r.contact,
+        r.email,
+        r.phone,
+        r.vat_no,
+        r.import_code,
+        ...(r.modes ?? []),
+        ...(r.countries ?? []),
+        ...(r.ports ?? []),
+        r.coverage_notes,
+      ]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q)),
     );
@@ -219,6 +248,12 @@ export default function ContactsPage({
       values.description = String(fd.get("description") || "").trim() || null;
       values.notes = String(fd.get("notes") || "").trim() || null;
       values.sales_person_id = String(fd.get("sales_person_id") || "") || null;
+    }
+    if (isPartner) {
+      values.modes = coverage.modes;
+      values.countries = coverage.countries;
+      values.ports = coverage.ports;
+      values.coverage_notes = coverage.coverage_notes.trim() || null;
     }
     if (kind === "agent") {
       values.also_clearing_agent = fd.get("also_clearing_agent") === "on";
@@ -281,6 +316,12 @@ export default function ContactsPage({
       values.description = row.description ?? null;
       values.notes = row.notes ?? null;
       values.sales_person_id = row.sales_person_id ?? null;
+    }
+    if (isPartner) {
+      values.modes = row.modes ?? [];
+      values.countries = row.countries ?? [];
+      values.ports = row.ports ?? [];
+      values.coverage_notes = row.coverage_notes ?? null;
     }
     if (kind === "agent") values.also_clearing_agent = Boolean(row.also_clearing_agent);
     if (kind === "clearing_agent") values.also_agent = Boolean(row.also_agent);
@@ -409,6 +450,31 @@ export default function ContactsPage({
         sortValue: (r) => r.phone ?? "",
         render: (r) => r.phone || "—",
       },
+      ...(isPartner
+        ? ([
+            {
+              key: "modes",
+              header: "Services / Modes",
+              width: 220,
+              sortValue: (r) => (r.modes ?? []).join(", "),
+              render: (r) => <ChipRow items={r.modes ?? []} />,
+            },
+            {
+              key: "countries",
+              header: "Countries",
+              width: 200,
+              sortValue: (r) => (r.countries ?? []).join(", "),
+              render: (r) => <ChipRow items={r.countries ?? []} />,
+            },
+            {
+              key: "ports",
+              header: "Ports / Airports",
+              width: 200,
+              sortValue: (r) => (r.ports ?? []).join(", "),
+              render: (r) => <ChipRow items={r.ports ?? []} />,
+            },
+          ] as DataColumn<Contact>[])
+        : []),
       {
         key: "vat_no",
         header: `${Label} VAT No`,
@@ -503,8 +569,8 @@ export default function ContactsPage({
               setInviteLink(null);
             })
           }
-          wide={kind === "client"}
-          stickyHeader={kind === "client"}
+          wide={kind === "client" || isPartner}
+          stickyHeader={kind === "client" || isPartner}
           headerActions={
             <>
               {kind === "client" && PORTAL_SIGNUP_ENABLED && (
@@ -589,6 +655,16 @@ export default function ContactsPage({
             <ViewField label="Notes" value={viewing.notes || "—"} />
           )}
           {kind === "client" && <ClientActivity clientId={viewing.id} />}
+          {isPartner && (
+            <>
+              <CoverageView value={coverageOf(viewing)} />
+              <RateStructures
+                kind={kind as PartnerKind}
+                partnerId={viewing.id}
+                partnerName={viewing.company}
+              />
+            </>
+          )}
         </Modal>
       )}
 
@@ -596,7 +672,7 @@ export default function ContactsPage({
         <Modal
           title={current ? `Edit ${label}` : `Add ${label}`}
           onClose={() => setEditing(null)}
-          wide={isClient}
+          wide={isClient || isPartner}
         >
           <form onSubmit={onSubmit}>
             {isClient ? (
@@ -806,6 +882,9 @@ export default function ContactsPage({
                   />
                 </div>
               </>
+            )}
+            {isPartner && (
+              <CoverageEditor value={coverage} onChange={setCoverage} />
             )}
             {kind === "agent" && (
               <label className="check">

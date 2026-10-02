@@ -905,6 +905,13 @@ export interface Contact {
   /** Non-null on a row that mirrors a record in the other table (read-only here). */
   source_supplier_id?: string | null;
   source_client_id?: string | null;
+  /** Coverage (agents / transporters / clearing agents only, migration 0114):
+   *  modes handled (QuoteMode labels), countries and UN/LOCODE ports /
+   *  airports serviced, plus free-text notes. */
+  modes?: string[] | null;
+  countries?: string[] | null;
+  ports?: string[] | null;
+  coverage_notes?: string | null;
   created_at: string;
   /** Joined for display (clients only). */
   sales_person?: Pick<Profile, "id" | "full_name"> | null;
@@ -920,6 +927,62 @@ export interface ClientContact {
   phone: string | null;
   created_at: string;
 }
+/** Partner books that carry coverage + rate structures (migration 0114). */
+export type PartnerKind = "agent" | "transporter" | "clearing_agent";
+
+export interface RateBreak {
+  /** e.g. "0-45KG", "Min 100 KGS (Consol Run)". */
+  label: string;
+  rate: number | null;
+}
+export interface RateCharge {
+  description: string;
+  amount: number | null;
+  /** Free text, e.g. "Per AWB", "0.13 USD/KG, min 29.00 USD/AWB". */
+  basis: string;
+}
+export interface RateTier {
+  /** e.g. "1-299kg". */
+  label: string;
+  amount: number | null;
+}
+/** One block of a rate structure: a commodity/service on one routing, with
+ *  its weight breaks, origin charges and pick-up tiers — one table of the
+ *  agent's rate sheet. */
+export interface RateBlock {
+  id: string;
+  commodity: string;
+  carrier: string;
+  depart_from: string;
+  routing: string;
+  transit: string;
+  terms: string;
+  notes: string;
+  breaks: RateBreak[];
+  charges: RateCharge[];
+  pickup: RateTier[];
+}
+export interface PartnerRateStructure {
+  id: string;
+  partner_kind: PartnerKind;
+  partner_id: string;
+  title: string;
+  mode: string | null;
+  origin: string | null;
+  destination: string | null;
+  currency: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  notes: string | null;
+  blocks: RateBlock[];
+  created_at: string;
+  updated_at: string;
+}
+export type PartnerRateStructureDraft = Omit<
+  PartnerRateStructure,
+  "id" | "created_at" | "updated_at"
+>;
+
 export type Client = Contact;
 export type Supplier = Contact;
 export type Agent = Contact;

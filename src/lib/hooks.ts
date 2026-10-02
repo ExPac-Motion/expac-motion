@@ -36,6 +36,7 @@ import type {
   VaultBudgetDraft,
   VaultBudgetEntry,
   VaultBudgetScope,
+  PartnerKind,
   VaultNote,
   VaultNoteDraft,
   VaultTodo,
@@ -1596,5 +1597,29 @@ export function useSaveTablePrefs(tableKey: string) {
     onMutate: (layout) => {
       qc.setQueryData(["ui_table_prefs", tableKey], layout);
     },
+  });
+}
+
+/* ---------- Partner rate structures ---------- */
+
+export function usePartnerRateStructures(kind: PartnerKind, partnerId: string | null) {
+  return useQuery({
+    queryKey: ["partner_rate_structures", kind, partnerId],
+    queryFn: () => db.listPartnerRateStructures(kind, partnerId as string),
+    enabled: !!partnerId,
+  });
+}
+export function useSavePartnerRateStructure() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.savePartnerRateStructure,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_structures"] }),
+  });
+}
+export function useDeletePartnerRateStructure() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deletePartnerRateStructure,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_structures"] }),
   });
 }

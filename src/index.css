@@ -5544,3 +5544,276 @@ select.badge-select.lost {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---------- Partner coverage + rate structures (Agents / Transporters / Clearing Agents) ---------- */
+.cov-fieldset {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px 4px;
+  margin: 6px 0 14px;
+}
+.cov-fieldset legend {
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0 6px;
+}
+.cov-chipinput {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: #fff;
+  min-height: 38px;
+}
+.cov-chipinput input {
+  border: 0 !important;
+  outline: none;
+  flex: 1 1 120px;
+  min-width: 80px;
+  padding: 3px 2px !important;
+  background: transparent;
+  box-shadow: none !important;
+}
+.cov-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--teal-tint, #e0f4f4);
+  color: var(--teal-ink, #017a7e);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cov-chip button {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+.cov-chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cov-view,
+.rs-wrap {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+.cov-view h3,
+.rs-wrap h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+.cov-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.cov-grid .hint {
+  margin-bottom: 6px;
+}
+.cov-notes {
+  grid-column: 1 / -1;
+}
+.cov-notes p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.rs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.rs-head h3 {
+  margin: 0;
+}
+.rs-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.rs-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.rs-card-head h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.rs-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.rs-expired {
+  color: var(--orange-ink);
+  font-weight: 700;
+}
+.rs-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.rs-table {
+  width: 100%;
+  min-width: 1100px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.rs-table th {
+  text-align: left;
+  vertical-align: bottom;
+  background: var(--paper, #f4f1ea);
+  padding: 6px 8px;
+  white-space: normal;
+  border: 1px solid var(--line);
+}
+.rs-table td {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  vertical-align: top;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.rs-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.rs-table tr.rs-block-start td {
+  border-top: 2px solid var(--ink, #333);
+}
+.rs-notes {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+.rs-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 12px;
+}
+.rs-span2 {
+  grid-column: span 2;
+}
+.rs-block {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--teal, #02a5aa);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 14px 0;
+}
+.rs-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.rs-subgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 2.2fr) minmax(0, 0.9fr);
+  gap: 16px;
+  margin-top: 6px;
+}
+.rs-subhead {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+.rs-edit {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.rs-edit th {
+  text-align: left;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 2px 4px;
+}
+.rs-edit td {
+  padding: 2px 4px 2px 0;
+}
+.rs-edit input {
+  width: 100%;
+  min-width: 0;
+}
+.rs-edit td:last-child {
+  width: 32px;
+}
+.rs-num {
+  text-align: right;
+}
+.rs-addrow {
+  margin-top: 4px;
+}
+@media (max-width: 1000px) {
+  .rs-form-grid,
+  .rs-subgrid,
+  .cov-grid {
+    grid-template-columns: 1fr;
+  }
+  .rs-span2 {
+    grid-column: auto;
+  }
+}
+/* Rate sheets flow with the window -- no capped, separately scrolling box. */
+.rs-card .table-wrap {
+  max-height: none;
+  overflow-y: visible;
+}
+.rs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.rs-tab {
+  border: 0;
+  background: none;
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--muted);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+.rs-tab.on {
+  color: var(--ink, #333);
+  border-bottom-color: var(--green);
+}
+.rs-tab-n {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--green-tint);
+  color: var(--green-dark);
+  font-size: 0.7rem;
+}

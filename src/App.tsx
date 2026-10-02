@@ -24,6 +24,7 @@ import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import AgentsPage from "./pages/AgentsPage";
 import TransportersPage from "./pages/TransportersPage";
+import RateStructureDemoPage from "./pages/partners/RateStructureDemoPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ShipmentDocPrintPage from "./pages/ShipmentDocPrintPage";
@@ -147,6 +148,9 @@ function AppRoutes() {
         <Route path="/login" element={<LoginRoute />} />
           {import.meta.env.DEV && (
             <Route path="/quotes/demo/print" element={<QuotePrintDemoPage />} />
+          )}
+          {import.meta.env.DEV && (
+            <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/forms/:id" element={<FormPublicPage />} />
