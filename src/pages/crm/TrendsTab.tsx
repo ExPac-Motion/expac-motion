@@ -31,7 +31,7 @@ import {
 } from "../../lib/types";
 import QuoteDetailModal from "../QuoteDetailModal";
 
-type Preset = "this_year" | "last_6" | "last_12" | "custom";
+type Preset = "last_month" | "this_year" | "last_6" | "last_12" | "custom";
 
 interface MonthBucket {
   month: string; // "YYYY-MM"
@@ -113,11 +113,15 @@ export default function TrendsTab() {
 
   const now = useMemo(() => new Date(), []);
   const nowKey = monthKeyOf(now);
-  const [preset, setPreset] = useState<Preset>("last_12");
+  const [preset, setPreset] = useState<Preset>("last_month");
   const [customFrom, setCustomFrom] = useState(monthKeyOf(addMonths(now, -11)));
   const [customTo, setCustomTo] = useState(nowKey);
 
   const [fromKey, toKey] = useMemo((): [string, string] => {
+    if (preset === "last_month") {
+      const k = monthKeyOf(addMonths(now, -1));
+      return [k, k];
+    }
     if (preset === "this_year") return [`${now.getFullYear()}-01`, nowKey];
     if (preset === "last_6") return [monthKeyOf(addMonths(now, -5)), nowKey];
     if (preset === "last_12") return [monthKeyOf(addMonths(now, -11)), nowKey];
@@ -339,6 +343,7 @@ export default function TrendsTab() {
         >
           {(
             [
+              ["last_month", "Last Month"],
               ["last_12", "Last 12 months"],
               ["last_6", "Last 6 months"],
               ["this_year", "This year"],
