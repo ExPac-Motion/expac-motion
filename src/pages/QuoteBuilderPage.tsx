@@ -920,24 +920,24 @@ export default function QuoteBuilderPage() {
             ))}
           </datalist>
           <div className="field">
-            <label>Destination/Port of Discharge</label>
-            <input
-              list="qb-locodes"
-              value={draft.destination}
-              onChange={(e) => set("destination", e.target.value)}
-              placeholder="ZADUR — Durban, South Africa"
-            />
-            <span className="hint">
-              Pick a UN/LOCODE or type your own (start with the 5-char code).
-            </span>
-          </div>
-          <div className="field">
             <label>Origin/Port of Load</label>
             <input
               list="qb-locodes"
               value={draft.origin}
               onChange={(e) => set("origin", e.target.value)}
               placeholder="CNSHA — Shanghai, China"
+            />
+            <span className="hint">
+              Pick a UN/LOCODE or type your own (start with the 5-char code).
+            </span>
+          </div>
+          <div className="field">
+            <label>Destination/Port of Discharge</label>
+            <input
+              list="qb-locodes"
+              value={draft.destination}
+              onChange={(e) => set("destination", e.target.value)}
+              placeholder="ZADUR — Durban, South Africa"
             />
             <span className="hint">
               Pick a UN/LOCODE or type your own (start with the 5-char code).
