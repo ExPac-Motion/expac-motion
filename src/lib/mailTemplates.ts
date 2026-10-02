@@ -186,9 +186,8 @@ Air and Ocean Freight Clearing & Forwarding, Great Voyages Starts Here”
 
 T: +27 (0) 11 568 8281 | WA: +27 (0) 82 682 3332 | F: +27 (0) 86 482 2371 | E: support@expac.co.za | Office: admin@expac.co.za | Portal: www.expac.co.za | Postal Address: PostNet Suite 84, Private Bag X1015, Lyttelton, 0140
 
-Our team operates flexibly across multiple time zones, allowing us to provide responsive support
-and seamless collaboration no matter where you are located. This means faster turnarounds, greater
-availability, and a workflow that adapts to your schedule.`;
+Our team operates flexibly across multiple time zones, allowing us to provide responsive support and seamless collaboration
+no matter where you are located. This means faster turnarounds, greater availability, and a workflow that adapts to your schedule.`;
 
 const REPLY_TEMPLATE: ShipmentCommsTemplate = {
   subject: "Re: Shipment {{ shipment.number }}",
@@ -279,12 +278,21 @@ const SIG_LINK_STYLE = "color:#2e2e2e;text-decoration:none";
 /** A signature line starting with one of the contact labels. */
 const SIG_START = /^\s*(\| )?(T|WA|F|E|Office|Portal|Postal Address):/;
 
+/** The signature's closing paragraph, laid out as two lines (break after
+ *  "collaboration") however the template in Settings happens to wrap it. */
+const CLOSING_PARAGRAPH = /Our team operates flexibly[\s\S]*?adapts to your schedule\./;
+const CLOSING_TEXT =
+  "Our team operates flexibly across multiple time zones, allowing us to provide responsive support and seamless collaboration\n" +
+  "no matter where you are located. This means faster turnarounds, greater availability, and a workflow that adapts to your schedule.";
+
 /** Lay the signature's contact lines out as exactly two lines, however
  *  the template in Settings happens to break them:
  *    T: | WA: | F: | E:
  *    Office: | Portal: | Postal Address:
- *  (joined with " | ", then split once before Office:). */
+ *  (joined with " | ", then split once before Office:). Also normalises
+ *  the closing paragraph (CLOSING_TEXT). */
 function joinSignatureLines(text: string): string {
+  text = text.replace(CLOSING_PARAGRAPH, CLOSING_TEXT);
   const out: string[] = [];
   for (const line of text.split("\n")) {
     const prev = out[out.length - 1];
