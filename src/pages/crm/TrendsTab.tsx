@@ -55,7 +55,7 @@ interface MonthBucket {
   convertedLeads: Lead[];
 }
 
-type DrillKind = "sales" | "revenue" | "ratio" | "leadsCreated" | "leadsConverted";
+type DrillKind = "sales" | "revenue" | "gp" | "ratio" | "leadsCreated" | "leadsConverted";
 
 function monthKeyOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -91,6 +91,7 @@ function buildMonthRange(fromKey: string, toKey: string): string[] {
 const COLORS = {
   sales: "#8cbc43",
   revenue: "#02a5aa",
+  gp: "#5e8a26",
   ratio: "#e9a91b",
   target: "#ef4910",
   leadsCreated: "#02a5aa",
@@ -213,6 +214,9 @@ export default function TrendsTab() {
       const b = map.get(month)!;
       return {
         ...b,
+        // Gross Profit from quote-backed revenue only -- historical
+        // opportunities have no cost behind them, so no GP either.
+        gp: b.costTrackedRevenue - b.costTotal,
         costRatio:
           b.costTrackedRevenue > 0
             ? (b.costTotal / b.costTrackedRevenue) * 100
@@ -225,6 +229,7 @@ export default function TrendsTab() {
   const summary = useMemo(() => {
     let sales = 0;
     let revenue = 0;
+    let gp = 0;
     let cost = 0;
     let tracked = 0;
     let leadsCreated = 0;
@@ -232,6 +237,7 @@ export default function TrendsTab() {
     for (const b of monthlyData) {
       sales += b.salesTotal;
       revenue += b.revenueTotal;
+      gp += b.gp;
       cost += b.costTotal;
       tracked += b.costTrackedRevenue;
       leadsCreated += b.leadsCreated;
@@ -240,6 +246,7 @@ export default function TrendsTab() {
     return {
       sales,
       revenue,
+      gp,
       ratio: tracked > 0 ? (cost / tracked) * 100 : null,
       leadsCreated,
       leadsConverted,
@@ -264,7 +271,7 @@ export default function TrendsTab() {
 
   function drillQuotes(kind: DrillKind, b: MonthBucket): Quote[] {
     if (kind === "sales") return b.salesQuotes;
-    if (kind === "revenue" || kind === "ratio") return b.revenueQuotes;
+    if (kind === "revenue" || kind === "gp" || kind === "ratio") return b.revenueQuotes;
     return [];
   }
   function drillOpportunities(kind: DrillKind, b: MonthBucket): Opportunity[] {
@@ -279,6 +286,7 @@ export default function TrendsTab() {
   const drillTitle: Record<DrillKind, string> = {
     sales: "Sales",
     revenue: "Revenue (accepted quotes)",
+    gp: "Gross Profit — accepted quotes",
     ratio: "Cost of Sales — accepted quotes",
     leadsCreated: "Leads created",
     leadsConverted: "Leads converted to customer",
@@ -352,6 +360,15 @@ export default function TrendsTab() {
             <div className="s">accepted in range</div>
           </div>
           <div className="fin-tile">
+            <div className="k">Gross Profit</div>
+            <div className="v">{money(summary.gp)}</div>
+            <div className="s">
+              {summary.revenue > 0
+                ? `${((summary.gp / summary.revenue) * 100).toFixed(1)}% margin`
+                : "accepted in range"}
+            </div>
+          </div>
+          <div className="fin-tile">
             <div className="k">Cost of Sales Ratio</div>
             <div
               className="v"
@@ -383,7 +400,7 @@ export default function TrendsTab() {
           </div>
         </div>
 
-        <h3 className="trends-h">Sales &amp; Revenue</h3>
+        <h3 className="trends-h">Sales, Revenue &amp; Gross Profit</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={monthlyData} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} barGap={2}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
@@ -405,6 +422,14 @@ export default function TrendsTab() {
               fill={COLORS.revenue}
               radius={[4, 4, 0, 0]}
               onClick={(_, index) => setDrill({ kind: "revenue", bucket: monthlyData[index] })}
+              cursor="pointer"
+            />
+            <Bar
+              dataKey="gp"
+              name="Gross Profit"
+              fill={COLORS.gp}
+              radius={[4, 4, 0, 0]}
+              onClick={(_, index) => setDrill({ kind: "gp", bucket: monthlyData[index] })}
               cursor="pointer"
             />
           </BarChart>
@@ -585,6 +610,7 @@ export default function TrendsTab() {
                         <th className="num">
                           {drill.kind === "sales" ? "Sell (incl. VAT)" : "Sell (excl. VAT)"}
                         </th>
+                        {drill.kind === "gp" && <th className="num">Gross Profit</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -608,6 +634,7 @@ export default function TrendsTab() {
                             <td className="num">
                               {money(drill.kind === "sales" ? t.sellIncl : t.sell)}
                             </td>
+                            {drill.kind === "gp" && <td className="num">{money(t.gp)}</td>}
                           </tr>
                         );
                       })}
