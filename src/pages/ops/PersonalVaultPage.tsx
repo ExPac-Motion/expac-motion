@@ -160,7 +160,7 @@ function ScopeToggle({
   setScope: (s: VaultBudgetScope) => void;
 }) {
   return (
-    <div className="chips" style={{ marginRight: 4 }}>
+    <div className="chips">
       {(["personal", "business"] as VaultBudgetScope[]).map((s) => (
         <button
           key={s}
@@ -545,7 +545,16 @@ function PersonalBudget({
         </EmptyState>
       ) : (
         <div className="table-wrap">
-          <table className="table--compact">
+          <table className="table--compact vault-budget-table">
+            <colgroup>
+              <col className="c-date" />
+              <col className="c-type" />
+              <col className="c-cat" />
+              <col className="c-amt" />
+              <col className="c-amt" />
+              <col />
+              <col className="c-act" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Date</th>

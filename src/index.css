@@ -3893,11 +3893,41 @@ select.badge-select.lost {
 .vault-head h3 {
   margin: 0;
   font-size: 1rem;
+  white-space: nowrap;
+  flex: none;
 }
 .vault-month {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* Budget table: compact fixed Date / Type / Amount columns so Note gets
+   the spare width (contact details etc.). */
+.vault-budget-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.vault-budget-table col.c-date {
+  width: 104px;
+}
+.vault-budget-table col.c-type {
+  width: 84px;
+}
+.vault-budget-table col.c-cat {
+  width: 17%;
+}
+.vault-budget-table col.c-amt {
+  width: 116px;
+}
+.vault-budget-table col.c-act {
+  width: 96px;
+}
+.vault-budget-table th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .vault-month input {
   border: 1px solid var(--line);
