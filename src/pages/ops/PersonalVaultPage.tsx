@@ -124,7 +124,7 @@ export default function PersonalVaultPage() {
   const [month, setMonth] = useState<string>(thisMonth());
   return (
     <>
-      <div className="vault-grid">
+      <div className="vault-grid vault-grid--budget">
         <PersonalBudget
           scope={scope}
           setScope={setScope}
