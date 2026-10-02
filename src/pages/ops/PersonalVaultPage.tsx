@@ -166,6 +166,7 @@ function PersonalBudget({
 
   const [form, setForm] = useState<VaultBudgetDraft>(emptyEntry());
   const [carrying, setCarrying] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   const set = <K extends keyof VaultBudgetDraft>(
     k: K,
@@ -284,6 +285,67 @@ function PersonalBudget({
     }
   }
 
+  /** Personal only: copy this month's income/expense lines into next month
+   *  (same category, amount and note; Amount Paid starts at 0 again). Skips
+   *  the Balance Brought Forward line, zero-amount Expense Control transfers,
+   *  and anything next month already has, so a second click adds nothing. */
+  async function copyToNextMonth() {
+    if (!month || scope !== "personal") return;
+    const next = nextMonthOf(month);
+    const [ny, nm] = next.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+    const key = (kind: string, category: string | null, amount: number) =>
+      `${kind}|${(category ?? "").trim().toLowerCase()}|${amount}`;
+    const existing = new Set(
+      (q.data ?? [])
+        .filter(
+          (e) =>
+            (e.scope ?? "personal") === "personal" &&
+            e.occurred_on.startsWith(next),
+        )
+        .map((e) => key(e.kind, e.category, Number(e.amount))),
+    );
+    const toCopy = rows.filter(
+      (e) =>
+        e.category !== CARRY_FORWARD_CATEGORY &&
+        Number(e.amount) > 0 &&
+        !existing.has(key(e.kind, e.category, Number(e.amount))),
+    );
+    if (toCopy.length === 0) {
+      toast(`${monthLabel(next)} already has all of these entries`);
+      return;
+    }
+    if (
+      !window.confirm(
+        `Copy ${toCopy.length} entr${toCopy.length === 1 ? "y" : "ies"} from ${monthLabel(month)} into ${monthLabel(next)}? Amount Paid starts at 0.`,
+      )
+    )
+      return;
+    setCopying(true);
+    try {
+      for (const e of toCopy) {
+        const day = Math.min(Number(e.occurred_on.slice(8, 10)) || 1, lastDay);
+        await save.mutateAsync({
+          values: {
+            kind: e.kind,
+            category: e.category ?? "",
+            amount: String(e.amount),
+            amount_paid: "",
+            occurred_on: `${next}-${String(day).padStart(2, "0")}`,
+            note: e.note ?? "",
+            scope: "personal",
+          },
+        });
+      }
+      toast(`Copied ${toCopy.length} to ${monthLabel(next)}`);
+      setMonth(next);
+    } catch (e2) {
+      error(e2 instanceof Error ? e2.message : "Could not copy");
+    } finally {
+      setCopying(false);
+    }
+  }
+
   return (
     <section className="panel">
       <div className="vault-head">
@@ -313,6 +375,17 @@ function PersonalBudget({
               title={`Add ${monthLabel(nextMonthOf(month))}'s opening balance from this month's total`}
             >
               Carry Balance Forward →
+            </button>
+          )}
+          {month && scope === "personal" && (
+            <button
+              type="button"
+              className="btn outline btn-sm"
+              onClick={copyToNextMonth}
+              disabled={copying || rows.length === 0}
+              title={`Copy this month's income and expenses into ${monthLabel(nextMonthOf(month))}`}
+            >
+              Copy to Next Month →
             </button>
           )}
         </div>
