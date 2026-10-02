@@ -61,12 +61,19 @@ function duration(h: number): string {
   return `${(h / 24).toFixed(1)} days`;
 }
 
-function isThisMonth(iso: string | null): boolean {
+/** Selected reporting month (m is 0-based, like Date#getMonth). */
+type Period = { y: number; m: number };
+const currentPeriod = (): Period => {
+  const n = new Date();
+  return { y: n.getFullYear(), m: n.getMonth() };
+};
+function inPeriod(iso: string | null | undefined, p: Period): boolean {
   if (!iso) return false;
   const d = new Date(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  return d.getFullYear() === p.y && d.getMonth() === p.m;
 }
+const periodLabel = (p: Period) =>
+  new Date(p.y, p.m, 1).toLocaleString("en-ZA", { month: "long", year: "numeric" });
 
 const OPEN_OPP_STATUSES: OpportunityStatus[] = [
   "new_lead",
@@ -165,6 +172,18 @@ export default function SalesDashboardTab() {
   const followLogQ = useFollowUpLog();
   const settingsQ = useCompanySettings();
   const [editingTargets, setEditingTargets] = useState(false);
+  // Month the dashboard reports on — this month by default; step back to
+  // review earlier months. Live views (pipeline, unbilled, open opps, lead
+  // sources, activity) ignore it.
+  const [period, setPeriod] = useState<Period>(currentPeriod);
+  const nowP = currentPeriod();
+  const isCurrent = period.y === nowP.y && period.m === nowP.m;
+  const shift = (n: number) =>
+    setPeriod((p) => {
+      const d = new Date(p.y, p.m + n, 1);
+      return { y: d.getFullYear(), m: d.getMonth() };
+    });
+  const inMonthWord = isCurrent ? "this month" : `in ${periodLabel(period)}`;
 
   const [grown, setGrown] = useState(false);
   useEffect(() => {
@@ -199,7 +218,7 @@ export default function SalesDashboardTab() {
 
   const kpis = useMemo(() => {
     const acceptedThisMonth = quotes.filter(
-      (q) => WON_QUOTE_STATUSES.includes(q.status) && isThisMonth(q.accepted_at),
+      (q) => WON_QUOTE_STATUSES.includes(q.status) && inPeriod(q.accepted_at, period),
     );
     const totals = acceptedThisMonth.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
     const revenue = totals.reduce((s, t) => s + t.sell, 0);
@@ -212,13 +231,13 @@ export default function SalesDashboardTab() {
     // Target 85% or lower — going over erodes margin.
     const costOfSales = totals.reduce((s, t) => s + t.cost, 0);
     const costRatio = revenue > 0 ? (costOfSales / revenue) * 100 : 0;
-    const leadsThisMonth = leads.filter((l) => isThisMonth(l.created_at));
+    const leadsThisMonth = leads.filter((l) => inPeriod(l.created_at, period));
     const newLeads = leadsThisMonth.length;
     // Open Pipeline: VAT-inclusive total of this month's not-yet-won quotes
     // (New Lead + Quote Sent) — same Grand Total formula as Revenue/Sales
     // above, just for quotes that haven't been accepted yet.
     const openQuotesThisMonth = quotes.filter(
-      (q) => OPEN_QUOTE_STATUSES.includes(q.status) && isThisMonth(q.created_at),
+      (q) => OPEN_QUOTE_STATUSES.includes(q.status) && inPeriod(q.created_at, period),
     );
     const openPipeline = openQuotesThisMonth.reduce(
       (s, q) => s + chargeTotals(q.quote_lines, fxOf(q)).sellIncl,
@@ -245,7 +264,7 @@ export default function SalesDashboardTab() {
       totalLeads: leadsThisMonth.length,
       convRate,
     };
-  }, [quotes, leads]);
+  }, [quotes, leads, period]);
 
   // Quote Win Rate / Average Deal Size / Quote Turnaround / Revenue vs
   // Last Month. Revenue figures excl. VAT. "Decided" this month = won
@@ -255,8 +274,7 @@ export default function SalesDashboardTab() {
   // quotes sent this month (sent_at is stamped from migration 0111 on).
   const quoteKpis = useMemo(() => {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
+    const { y, m } = period;
     const last = new Date(y, m - 1, 1);
     const inMonth = (iso: string | null | undefined, yy: number, mm: number) => {
       if (!iso) return false;
@@ -264,7 +282,7 @@ export default function SalesDashboardTab() {
       return d.getFullYear() === yy && d.getMonth() === mm;
     };
     const p2 = (n: number) => String(n).padStart(2, "0");
-    const today = `${y}-${p2(m + 1)}-${p2(now.getDate())}`;
+    const today = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`;
     const won = (yy: number, mm: number) =>
       quotes.filter(
         (q) => WON_QUOTE_STATUSES.includes(q.status) && inMonth(q.accepted_at, yy, mm),
@@ -323,7 +341,7 @@ export default function SalesDashboardTab() {
       revChange,
       lastMonthName: last.toLocaleString("en-ZA", { month: "long" }),
     };
-  }, [quotes, leads]);
+  }, [quotes, leads, period]);
 
   const oppPipeline = useMemo(() => {
     const rows = OPPORTUNITY_STAGES.map((stage) => {
@@ -363,7 +381,7 @@ export default function SalesDashboardTab() {
   // its quote's Grand Total incl. VAT (what is still to be billed).
   const snapshot = useMemo(() => {
     const won = quotes.filter(
-      (q) => WON_QUOTE_STATUSES.includes(q.status) && isThisMonth(q.accepted_at),
+      (q) => WON_QUOTE_STATUSES.includes(q.status) && inPeriod(q.accepted_at, period),
     );
     const t = won.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
     const revenue = t.reduce((s, x) => s + x.sell, 0);
@@ -387,7 +405,7 @@ export default function SalesDashboardTab() {
       unbilledCount: notInvoiced.length,
       completedNotInvoiced,
     };
-  }, [quotes, jobsQ.data]);
+  }, [quotes, jobsQ.data, period]);
 
   const leaderboard = useMemo(() => {
     const people = (profilesQ.data ?? []).filter(
@@ -398,7 +416,7 @@ export default function SalesDashboardTab() {
         const mine = quotes.filter(
           (q) =>
             WON_QUOTE_STATUSES.includes(q.status) &&
-            isThisMonth(q.accepted_at) &&
+            inPeriod(q.accepted_at, period) &&
             q.sales_person_id === p.id,
         );
         const t = mine.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
@@ -418,7 +436,7 @@ export default function SalesDashboardTab() {
         };
       })
       .sort((a, b) => b.revenue - a.revenue);
-  }, [profilesQ.data, quotes, opps]);
+  }, [profilesQ.data, quotes, opps, period]);
 
   const campaignPerf = useMemo(() => {
     const byCampaign = new Map<
@@ -436,7 +454,7 @@ export default function SalesDashboardTab() {
       if (r.status === "clicked") cur.clicked += 1;
       byCampaign.set(r.campaign_id, cur);
     }
-    const sentThisMonth = campaigns.filter((c) => isThisMonth(c.sent_at));
+    const sentThisMonth = campaigns.filter((c) => inPeriod(c.sent_at, period));
     let mAttempted = 0;
     let mOpened = 0;
     let mClicked = 0;
@@ -458,7 +476,7 @@ export default function SalesDashboardTab() {
       monthOpenRate: mAttempted > 0 ? (mOpened / mAttempted) * 100 : 0,
       monthClickRate: mAttempted > 0 ? (mClicked / mAttempted) * 100 : 0,
     };
-  }, [recipients, campaigns]);
+  }, [recipients, campaigns, period]);
 
   const leadSources = useMemo(() => {
     const map = new Map<string, number>();
@@ -561,11 +579,40 @@ export default function SalesDashboardTab() {
         }}
       >
         <p className="muted" style={{ margin: 0 }}>
-          A live view of the whole Sales CRM — this calendar month unless noted.
+          Sales performance for <strong>{periodLabel(period)}</strong>
+          {isCurrent ? " (month to date)" : ""} — pipeline, unbilled and lead
+          sources are always live.
         </p>
-        <button className="btn outline" onClick={() => setEditingTargets(true)}>
-          Edit Targets
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            className="btn outline"
+            onClick={() => shift(-1)}
+            title="Previous month"
+            aria-label="Previous month"
+          >
+            ‹
+          </button>
+          <span style={{ fontWeight: 700, minWidth: 130, textAlign: "center" }}>
+            {periodLabel(period)}
+          </span>
+          <button
+            className="btn outline"
+            onClick={() => shift(1)}
+            disabled={isCurrent}
+            title="Next month"
+            aria-label="Next month"
+          >
+            ›
+          </button>
+          {!isCurrent && (
+            <button className="btn outline" onClick={() => setPeriod(currentPeriod())}>
+              This Month
+            </button>
+          )}
+          <button className="btn outline" onClick={() => setEditingTargets(true)}>
+            Edit Targets
+          </button>
+        </div>
       </div>
 
       <div className="dash-kpis sales-kpis">
@@ -586,7 +633,7 @@ export default function SalesDashboardTab() {
           <div className="kpi-foot">
             <span>
               {kpis.openOppCount} open quote
-              {kpis.openOppCount === 1 ? "" : "s"} this month
+              {kpis.openOppCount === 1 ? "" : "s"} {inMonthWord}
             </span>
           </div>
         </div>
@@ -607,7 +654,7 @@ export default function SalesDashboardTab() {
           </div>
           <div className="kpi-value">{money(kpis.grossProfit)}</div>
           <div className="kpi-foot">
-            <span>Revenue minus cost of sales, this month</span>
+            <span>Revenue minus cost of sales, {inMonthWord}</span>
           </div>
         </div>
         <div className="kpi static">
@@ -660,7 +707,7 @@ export default function SalesDashboardTab() {
           </div>
           <div className="kpi-value">{kpis.wonCount}</div>
           <div className="kpi-foot">
-            <span>{money(kpis.wonValue)} won this month</span>
+            <span>{money(kpis.wonValue)} won {inMonthWord}</span>
           </div>
         </div>
         <div className="kpi static">
@@ -720,8 +767,8 @@ export default function SalesDashboardTab() {
           <div className="kpi-foot">
             <span>
               {quoteKpis.sentCount
-                ? `Median, this month · target < ${TURNAROUND_TARGET_HRS} hrs`
-                : "No quotes sent yet this month"}
+                ? `Median, ${inMonthWord} · target < ${TURNAROUND_TARGET_HRS} hrs`
+                : `No quotes sent ${inMonthWord}`}
             </span>
           </div>
         </div>
@@ -803,7 +850,7 @@ export default function SalesDashboardTab() {
           <div className="panel-head">
             <div>
               <h2>Financial Snapshot</h2>
-              <p>Month to date · won quotes, excl. VAT</p>
+              <p>{isCurrent ? "Month to date" : periodLabel(period)} · won quotes, excl. VAT · unbilled is live</p>
             </div>
           </div>
           <div className="fin-snap">
@@ -856,7 +903,7 @@ export default function SalesDashboardTab() {
         <div className="panel-head">
           <div>
             <h2>Sales Person Leaderboard</h2>
-            <p>This month's won revenue &amp; gross profit, plus open pipeline</p>
+            <p>Won revenue &amp; gross profit {inMonthWord}, plus open pipeline (live)</p>
           </div>
         </div>
         {leaderboard.length === 0 ? (
@@ -900,7 +947,7 @@ export default function SalesDashboardTab() {
             </div>
             <div className="mini-stats">
               <div>
-                <div className="k">Sent this month</div>
+                <div className="k">{isCurrent ? "Sent this month" : `Sent in ${periodLabel(period).split(" ")[0]}`}</div>
                 <div className="v">{campaignPerf.monthSent}</div>
               </div>
               <div>
