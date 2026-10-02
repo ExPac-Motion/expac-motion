@@ -231,10 +231,17 @@ function PersonalBudget({
         due += Math.max(0, amt - amtPaid);
       }
     }
-    // Balance tracks payment surplus/shortfall against committed
-    // expenses -- how much more (or less) has actually been paid out
-    // (including Expense Control transfers) than was originally due.
-    return { income, expense, paid, due, balance: paid - expense };
+    // Balance is what is left of the income after what has actually been
+    // paid out (including Expense Control transfers). Over Budget is how much
+    // more has been paid than was budgeted (negative = under budget).
+    return {
+      income,
+      expense,
+      paid,
+      due,
+      balance: income - paid,
+      overBudget: paid - expense,
+    };
   }, [rows]);
 
   async function onAdd(e: FormEvent) {
@@ -469,6 +476,12 @@ function PersonalBudget({
         <div>
           <span className="k">Expenses Due</span>
           <b className={totals.due > 0 ? "neg" : "pos"}>{money(totals.due)}</b>
+        </div>
+        <div>
+          <span className="k">Over Budget</span>
+          <b className={totals.overBudget > 0 ? "neg" : "pos"}>
+            {money(totals.overBudget)}
+          </b>
         </div>
         <div>
           <span className="k">Balance</span>
