@@ -878,10 +878,10 @@ export default function SalesDashboardTab() {
               onClick={() => navigate("/jobs", { state: { filter: "uninvoiced" } })}
               title="Open the shipments not yet invoiced"
             >
-              <div className="k">Unbilled Jobs</div>
+              <div className="k">Unbilled Shipments</div>
               <div className="v">{money(snapshot.unbilledValue)}</div>
               <div className="s">
-                {snapshot.unbilledCount} job{snapshot.unbilledCount === 1 ? "" : "s"} · incl. VAT
+                {snapshot.unbilledCount} shipment{snapshot.unbilledCount === 1 ? "" : "s"} · incl. VAT
               </div>
             </button>
             <button
