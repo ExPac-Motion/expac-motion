@@ -21,6 +21,7 @@ import {
   RowActionsHead,
   useDeepLinkReturn,
   useRowSelection,
+  SearchInput,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import {
@@ -247,6 +248,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   );
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
+  const [search, setSearch] = useState("");
   const [recordFilter, setRecordFilter] = useState<
     "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null
   >(null);
@@ -336,7 +338,28 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       ? j.shipment_status === DELIVERED_STATUS
       : j.shipment_status !== DELIVERED_STATUS,
   );
-  const modeRows = stageRows.filter((j) => matchesModeTab(j.mode, modeTab));
+  // Quick search: shipment no., customer, shipper, PO / reference, AWB/MBL,
+  // container, vessel, carrier, ports, notes.
+  const q = search.trim().toLowerCase();
+  const modeRows = stageRows
+    .filter((j) => matchesModeTab(j.mode, modeTab))
+    .filter(
+      (j) =>
+        !q ||
+        [
+          j.reference,
+          j.client?.company,
+          j.supplier?.company,
+          j.po_no,
+          j.awb_mbl,
+          j.container_no,
+          j.vessel_name,
+          j.carrier_name,
+          j.origin,
+          j.destination,
+          j.notes,
+        ].some((v) => v && String(v).toLowerCase().includes(q)),
+    );
   const rows =
     recordFilter === "nostatus"
       ? modeRows.filter((j) => !j.shipment_status || j.shipment_status === "Booked")
@@ -661,6 +684,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             <h2>{copy.heading}</h2>
             <p>
               {copy.sub(rows.length)}
+              {q ? ` · matching "${search.trim()}"` : ""}
               {modeTab !== "All" ? ` · ${modeLabel} only` : ""}
             </p>
             {recordFilter && (
@@ -685,6 +709,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               </p>
             )}
           </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search shipment no., customer, shipper, PO…"
+          />
         </div>
 
         {isLoading ? (
@@ -693,7 +722,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           <ErrorNote error={error} />
         ) : rows.length === 0 ? (
           <EmptyState>
-            {recordFilter
+            {q
+              ? `No shipments match "${search.trim()}".`
+              : recordFilter
               ? "Nothing matches that filter — every shipment in this view has one."
               : modeTab !== "All" && stageRows.length > 0
                 ? `No ${modeLabel} shipments in this view.`
@@ -706,7 +737,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             columns={jobCols}
             rows={rows}
             rowKey={(j) => j.id}
-            headerTools={recordFilter ? "row" : "pull"}
+            // The search box sits on the right of the heading, so the
+            // table tools always take their own row below it.
+            headerTools="row"
             toolbar={
               <>
               {mode === "active" && (

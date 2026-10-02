@@ -9,6 +9,7 @@ import {
   RowActions,
   RowActionsHead,
   useRowSelection,
+  SearchInput,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
@@ -185,10 +186,29 @@ export default function QuotesListPage() {
     }
   }
 
+  // Quick search: quote/shipment no., customer or lead, shipper, customer
+  // reference, commodity, ports, vessel, container.
+  const [search, setSearch] = useState("");
   const rows = useMemo(() => {
     const list = quotes ?? [];
-    return filter === "all" ? list : list.filter((q) => q.status === filter);
-  }, [quotes, filter]);
+    const byStatus = filter === "all" ? list : list.filter((q) => q.status === filter);
+    const term = search.trim().toLowerCase();
+    if (!term) return byStatus;
+    return byStatus.filter((q) =>
+      [
+        q.reference,
+        q.client?.company,
+        q.lead?.company,
+        q.supplier?.company,
+        q.customer_reference,
+        q.commodity,
+        q.origin,
+        q.destination,
+        q.vessel_name,
+        q.container_no,
+      ].some((v) => v && String(v).toLowerCase().includes(term)),
+    );
+  }, [quotes, filter, search]);
 
   const sel = useRowSelection(quotes ?? [], rows);
 
@@ -571,8 +591,16 @@ export default function QuotesListPage() {
         <div className="panel-head">
           <div>
             <h2>{filter === "all" ? "All Quotes" : `${STATUS_LABEL[filter]} Quotes`}</h2>
-            <p>{rows.length} total</p>
+            <p>
+              {rows.length} total
+              {search.trim() ? ` · matching "${search.trim()}"` : ""}
+            </p>
           </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search quote no., customer, shipper, reference…"
+          />
         </div>
 
         {isLoading ? (
@@ -583,7 +611,9 @@ export default function QuotesListPage() {
           <EmptyState>
             {(quotes ?? []).length === 0
               ? 'No quotations yet. Click "New Quotation" to build your first one.'
-              : "No quotes match this filter."}
+              : search.trim()
+                ? `No quotes match "${search.trim()}".`
+                : "No quotes match this filter."}
           </EmptyState>
         ) : (
           <DataTable
@@ -593,6 +623,7 @@ export default function QuotesListPage() {
             rows={rows}
             rowKey={(q) => q.id}
             onRowClick={(q) => setOpenId(q.id)}
+            headerTools="row"
           />
         )}
       </div>
