@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import DateInput from "../../components/DateInput";
 import {
   EmptyState,
@@ -43,6 +43,30 @@ function monthLabel(m: string): string {
   });
 }
 const CARRY_FORWARD_CATEGORY = "Balance Brought Forward";
+
+/** Personal lines in month `from` worth carrying into month `to`: skips the
+ *  Balance Brought Forward line, zero-amount Expense Control transfers, and
+ *  anything `to` already has (same type, category and amount). */
+function personalCopyList(
+  personal: VaultBudgetEntry[],
+  from: string,
+  to: string,
+): VaultBudgetEntry[] {
+  const key = (e: VaultBudgetEntry) =>
+    `${e.kind}|${(e.category ?? "").trim().toLowerCase()}|${Number(e.amount)}`;
+  const existing = new Set(
+    personal.filter((e) => e.occurred_on.startsWith(to)).map(key),
+  );
+  return personal
+    .filter(
+      (e) =>
+        e.occurred_on.startsWith(from) &&
+        e.category !== CARRY_FORWARD_CATEGORY &&
+        Number(e.amount) > 0 &&
+        !existing.has(key(e)),
+    )
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
 
 const emptyEntry = (): VaultBudgetDraft => ({
   kind: "expense",
@@ -285,32 +309,66 @@ function PersonalBudget({
     }
   }
 
-  /** Personal only: copy this month's income/expense lines into next month
-   *  (same category, amount and note; Amount Paid starts at 0 again). Skips
-   *  the Balance Brought Forward line, zero-amount Expense Control transfers,
-   *  and anything next month already has, so a second click adds nothing. */
+  /** Insert copies of `list` into month `to` (same category, amount, note and
+   *  day of month; Amount Paid starts at 0 again). */
+  async function copyEntries(list: VaultBudgetEntry[], to: string) {
+    const [ty, tm] = to.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
+    for (const e of list) {
+      const day = Math.min(Number(e.occurred_on.slice(8, 10)) || 1, lastDay);
+      await save.mutateAsync({
+        values: {
+          kind: e.kind,
+          category: e.category ?? "",
+          amount: String(e.amount),
+          amount_paid: "",
+          occurred_on: `${to}-${String(day).padStart(2, "0")}`,
+          note: e.note ?? "",
+          scope: "personal",
+        },
+      });
+    }
+  }
+
+  // Personal only: each new month starts with last month's income/expense
+  // lines carried over automatically. Runs once the ledger has loaded, only
+  // while the current month has no lines of its own yet, copying from the
+  // most recent earlier month that has any.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current || !q.data) return;
+    autoRan.current = true;
+    const cur = thisMonth();
+    const personal = q.data.filter((e) => (e.scope ?? "personal") === "personal");
+    const copyable = (e: VaultBudgetEntry) =>
+      e.category !== CARRY_FORWARD_CATEGORY && Number(e.amount) > 0;
+    if (personal.some((e) => e.occurred_on.startsWith(cur) && copyable(e))) return;
+    const from = personal
+      .map((e) => e.occurred_on.slice(0, 7))
+      .filter((m) => m < cur)
+      .sort()
+      .pop();
+    if (!from) return;
+    const list = personalCopyList(personal, from, cur);
+    if (list.length === 0) return;
+    copyEntries(list, cur)
+      .then(() =>
+        toast(`Carried ${list.length} entr${list.length === 1 ? "y" : "ies"} over from ${monthLabel(from)}`),
+      )
+      .catch((e2) =>
+        error(e2 instanceof Error ? e2.message : "Could not carry entries over"),
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data]);
+
+  /** Manual version, for preparing next month ahead of time. */
   async function copyToNextMonth() {
     if (!month || scope !== "personal") return;
     const next = nextMonthOf(month);
-    const [ny, nm] = next.split("-").map(Number);
-    const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
-    const key = (kind: string, category: string | null, amount: number) =>
-      `${kind}|${(category ?? "").trim().toLowerCase()}|${amount}`;
-    const existing = new Set(
-      (q.data ?? [])
-        .filter(
-          (e) =>
-            (e.scope ?? "personal") === "personal" &&
-            e.occurred_on.startsWith(next),
-        )
-        .map((e) => key(e.kind, e.category, Number(e.amount))),
+    const personal = (q.data ?? []).filter(
+      (e) => (e.scope ?? "personal") === "personal",
     );
-    const toCopy = rows.filter(
-      (e) =>
-        e.category !== CARRY_FORWARD_CATEGORY &&
-        Number(e.amount) > 0 &&
-        !existing.has(key(e.kind, e.category, Number(e.amount))),
-    );
+    const toCopy = personalCopyList(personal, month, next);
     if (toCopy.length === 0) {
       toast(`${monthLabel(next)} already has all of these entries`);
       return;
@@ -323,20 +381,7 @@ function PersonalBudget({
       return;
     setCopying(true);
     try {
-      for (const e of toCopy) {
-        const day = Math.min(Number(e.occurred_on.slice(8, 10)) || 1, lastDay);
-        await save.mutateAsync({
-          values: {
-            kind: e.kind,
-            category: e.category ?? "",
-            amount: String(e.amount),
-            amount_paid: "",
-            occurred_on: `${next}-${String(day).padStart(2, "0")}`,
-            note: e.note ?? "",
-            scope: "personal",
-          },
-        });
-      }
+      await copyEntries(toCopy, next);
       toast(`Copied ${toCopy.length} to ${monthLabel(next)}`);
       setMonth(next);
     } catch (e2) {
