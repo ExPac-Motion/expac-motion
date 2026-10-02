@@ -164,11 +164,11 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         <Field label="Commodity" value={q.commodity || "—"} />
         <Field label="Valid Until" value={formatDate(q.valid_until)} />
 
+        <Field label="Origin/Port of Load" value={q.origin || "—"} />
         <Field
           label="Destination/Port of Discharge"
           value={q.destination || "—"}
         />
-        <Field label="Origin/Port of Load" value={q.origin || "—"} />
         <Field label="ETD" value={formatDate(q.etd)} />
         <Field label="ETA" value={formatDate(q.eta)} />
 
