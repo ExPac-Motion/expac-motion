@@ -3875,7 +3875,7 @@ select.badge-select.lost {
 }
 /* Budget row: wider Budget, narrower Expense Control (Notes/Calendar keep 3:2). */
 .vault-grid.vault-grid--budget {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  grid-template-columns: minmax(0, 13fr) minmax(0, 7fr);
 }
 @media (max-width: 1000px) {
   .vault-grid,
