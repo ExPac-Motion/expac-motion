@@ -54,11 +54,16 @@ function n2(v: number | string | null | undefined): string {
 
 const PK_CAPTION = "Dimensions in cm · weights in KGS · volume in CBM";
 
-// A4 printable area with the @page 8mm top/bottom margins removed, in CSS px
-// (1mm = 96/25.4 px). The header + footer repeat on every page; whatever is
-// left is the budget for flowing rows.
+// Content height of one printed page, in CSS px (1mm = 96/25.4 px): the
+// print .qs-page is min-height 277mm with no padding (the @page 8mm margins
+// sit outside it), and the screen .qs-page is 293mm with 8mm padding top and
+// bottom -- the same 277mm of content. The header + footer repeat on every
+// page; whatever is left is the budget for flowing rows. (Was 281mm minus a
+// 74px gutter, which matched the old 262mm screen page and left ~15mm unused
+// at the foot of every printed page -- e.g. a lone Subtotal pushed onto a
+// page of its own.)
 const PX_PER_MM = 96 / 25.4;
-const PAGE_BODY_PX = (297 - 16) * PX_PER_MM;
+const PAGE_BODY_PX = 277 * PX_PER_MM;
 
 export interface CompanyBlock {
   logoPrint: string;
@@ -475,9 +480,9 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
     };
     const headH = h('[data-mk="head"]');
     const footH = h('[data-mk="foot"]');
-    // leave a safety gutter (the 44px gap above the footer + slack so print
-    // rounding / per-OS font metrics never spill a near-blank extra page)
-    const budget = Math.max(160, PAGE_BODY_PX - headH - footH - 74);
+    // footH already includes the 44px gap above the footer; keep ~2mm slack
+    // so print rounding / per-OS font metrics never spill an extra page
+    const budget = Math.max(160, PAGE_BODY_PX - headH - footH - 8);
 
     const out: Block[][] = [[]];
     let used = 0;
@@ -499,13 +504,22 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
       s.rows.forEach((r, i) => {
         const rowH = h(`[data-mk="${s.kind}:row:${i}"]`) || 16;
         const isLast = i === s.rows.length - 1;
-        // keep a category header with at least its first line; keep the last
-        // row with the section's totals block
+        // keep a category header with at least its first line, and a group's
+        // last line with its Subtotal (a Subtotal never starts a page alone);
+        // keep the last row with the section's totals block
+        const nextKey = i + 1 < s.rows.length ? s.rows[i + 1].key : "";
         const nextH =
-          r.key.startsWith("grp:") && i + 1 < s.rows.length
+          r.key.startsWith("grp:") || nextKey.startsWith("sub:")
             ? h(`[data-mk="${s.kind}:row:${i + 1}"]`) || 16
             : 0;
-        const need = rowH + nextH + (isLast ? tailH : 0);
+        // one-line group: its header, line and Subtotal move as one block
+        const afterH =
+          r.key.startsWith("grp:") &&
+          i + 2 < s.rows.length &&
+          s.rows[i + 2].key.startsWith("sub:")
+            ? h(`[data-mk="${s.kind}:row:${i + 2}"]`) || 16
+            : 0;
+        const need = rowH + nextH + afterH + (isLast ? tailH : 0);
         if (used + need > budget) {
           newPage();
           push({ t: "start", s }, startH);

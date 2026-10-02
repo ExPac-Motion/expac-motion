@@ -2652,7 +2652,9 @@ select.badge-select.lost {
 }
 .qs-page {
   width: 210mm;
-  min-height: 278mm;
+  /* 277mm of content (same as the printed page) + 8mm padding top/bottom,
+     so screen, emailed PDF and print all break pages in the same place. */
+  min-height: 293mm;
   display: flex;
   flex-direction: column;
   margin: 0 auto;

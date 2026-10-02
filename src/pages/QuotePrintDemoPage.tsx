@@ -45,14 +45,22 @@ export default function QuotePrintDemoPage() {
     "Destination Handling and Delivery Charges",
     "Customs Clearance, VAT and Duty Charges",
   ];
-  const groups: CategoryGroup[] = cats.map((category, ci) => {
-    const per = Math.ceil(n / cats.length);
-    const lines = Array.from({ length: per }, (_, k) => ({
-      line: makeLine(ci * per + k + 1, category),
-      index: ci * per + k,
-    }));
-    return { category, lines, subtotal: 0, vat: 0, subtotalIncl: 0 };
-  });
+  // ?groups=1,0,5,3 -> exact line count per category (in the order above);
+  // a 0 leaves that category out. Otherwise ?lines= split evenly.
+  const perGroup = params
+    .get("groups")
+    ?.split(",")
+    .map((x) => Math.max(0, Number(x) || 0));
+  const groups: CategoryGroup[] = cats
+    .map((category, ci) => {
+      const per = perGroup ? perGroup[ci] ?? 0 : Math.ceil(n / cats.length);
+      const lines = Array.from({ length: per }, (_, k) => ({
+        line: makeLine(ci * 40 + k + 1, category),
+        index: ci * 40 + k,
+      }));
+      return { category, lines, subtotal: 0, vat: 0, subtotalIncl: 0 };
+    })
+    .filter((g) => g.lines.length > 0);
 
   const packingRows: PackingItem[] = Array.from(
     { length: Number(params.get("pack")) || 6 },
@@ -77,7 +85,12 @@ export default function QuotePrintDemoPage() {
       ["Customer VAT No", "4123456789"],
       ["Tel Number", "+27 11 555 0000"],
       ["Email Address", "jane@democustomer.co.za"],
-      ["Address", "1 Sample Road, Testville, South Africa"],
+      [
+        "Address",
+        params.get("addr") === "long"
+          ? "Bahnhofstraße 13, 27321 Thedinghausen, Germany"
+          : "1 Sample Road, Testville, South Africa",
+      ],
     ],
     shipment: [
       ["Shipper / Exporter", "Overseas Supplier Co."],
@@ -122,7 +135,8 @@ export default function QuotePrintDemoPage() {
       </div>
       <div className="qs-note">
         DEV demo — fabricated quote for checking multi-page layout. Add
-        <code> ?lines=40 </code> or <code> ?pack=12 </code> to the URL.
+        <code> ?lines=40 </code>, <code> ?pack=12 </code>,
+        <code> ?groups=1,0,5,3 </code> or <code> ?addr=long </code> to the URL.
       </div>
       <QuoteSheet data={data} />
     </div>
