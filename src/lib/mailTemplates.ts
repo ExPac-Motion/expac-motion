@@ -275,6 +275,7 @@ const SIG_LINE =
   /(^|\| )(T|WA|F|E|Office|Portal|Postal Address):(\s*)([^|\n]+?)(\s*)(?=\||\n|$)/gm;
 const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
 const SIG_VALUE_STYLE = "color:#2e2e2e;text-decoration:none;cursor:text";
+const SIG_LINK_STYLE = "color:#2e2e2e;text-decoration:none";
 /** A signature line starting with one of the contact labels. */
 const SIG_START = /^\s*(\| )?(T|WA|F|E|Office|Portal|Postal Address):/;
 
@@ -300,7 +301,7 @@ function joinSignatureLines(text: string): string {
 }
 
 /** Bolds the T:/WA:/F:/E:/Office:/Portal:/Postal Address: labels (brand
- *  green); their values stay plain text, never links. */
+ *  green); every value renders as plain dark text. */
 function linkifySignature(html: string): string {
   return html.replace(
     SIG_LINE,
@@ -312,13 +313,22 @@ function linkifySignature(html: string): string {
       value: string,
       trailingWs: string,
     ) => {
-      // Values are never clickable links. They sit in an href-less <a>
-      // with an explicit colour: it isn't a link, but mail apps (Outlook
-      // desktop, Outlook/Gmail mobile) skip text already inside an <a>
-      // when auto-detecting phones/emails/addresses -- which otherwise
-      // turned them blue and underlined. Explicit hex, not "inherit":
-      // Outlook desktop ignores inherit on links.
-      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}<a style="${SIG_VALUE_STYLE}">${value}</a>${trailingWs}`;
+      // Mail apps auto-link phones/emails/addresses and paint them blue.
+      // Phones + postal address: an href-less <a> (not a link) is enough
+      // to stop the detection. Emails + web address: Outlook desktop
+      // auto-links those even inside one, so they get a real link styled
+      // dark with no underline -- explicit hex on the <a> and an inner
+      // <span> (Outlook ignores "inherit" and can override the <a> colour).
+      const href =
+        label === "E" || label === "Office"
+          ? `mailto:${value}`
+          : label === "Portal"
+            ? `https://${value.replace(/^https?:\/\//, "")}`
+            : null;
+      const valueHtml = href
+        ? `<a href="${href}" style="${SIG_LINK_STYLE}"><span style="${SIG_LINK_STYLE}">${value}</span></a>`
+        : `<a style="${SIG_VALUE_STYLE}">${value}</a>`;
+      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}${valueHtml}${trailingWs}`;
     },
   );
 }
