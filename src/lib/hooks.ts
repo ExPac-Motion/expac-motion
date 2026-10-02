@@ -529,7 +529,7 @@ export function useSendMessage() {
         : mail.text;
       try {
         const attachments = picks.length
-          ? await resolveShipmentAttachments(job, picks)
+          ? await resolveShipmentAttachments(picks)
           : undefined;
         const { id } = await sendMail({
           jobId: job.id,
@@ -637,17 +637,38 @@ export function useSendQuoteMessage() {
       template?: "update" | "reply";
       /** Attach the customer quotation PDF (same render as Quotation document). */
       attachQuote?: boolean;
+      /** Shipment documents / vault files / files from the computer. */
+      attachments?: ShipmentAttachmentPick[];
     }) => {
-      const { quote, remarks, to, cc, template = "update", attachQuote } = input;
+      const {
+        quote,
+        remarks,
+        to,
+        cc,
+        template = "update",
+        attachQuote,
+        attachments: picks = [],
+      } = input;
       const settings = await db.getCompanySettings().catch(() => null);
       const mail =
         template === "reply"
           ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies)
           : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms);
+      const attachedNames = [
+        ...(attachQuote ? ["Quotation"] : []),
+        ...picks.map((p) => p.label),
+      ];
+      const body = attachedNames.length
+        ? `${mail.text}
+
+[Attached: ${attachedNames.join(", ")}]`
+        : mail.text;
       try {
-        const attachments = attachQuote
-          ? [await buildQuotePdf(quote.id, quote.reference)]
-          : undefined;
+        const built = [
+          ...(attachQuote ? [await buildQuotePdf(quote.id, quote.reference)] : []),
+          ...(picks.length ? await resolveShipmentAttachments(picks) : []),
+        ];
+        const attachments = built.length ? built : undefined;
         const { id } = await sendMail({
           to,
           cc,
@@ -666,7 +687,7 @@ export function useSendQuoteMessage() {
           to_emails: to,
           cc_emails: cc,
           subject: mail.subject,
-          body: mail.text,
+          body,
           remarks,
           status: "sent",
           provider_id: id,
@@ -681,7 +702,7 @@ export function useSendQuoteMessage() {
           to_emails: to,
           cc_emails: cc,
           subject: mail.subject,
-          body: mail.text,
+          body,
           remarks,
           status: "failed",
           error: e instanceof Error ? e.message : String(e),

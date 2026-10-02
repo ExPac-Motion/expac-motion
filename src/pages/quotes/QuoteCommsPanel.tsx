@@ -8,7 +8,10 @@ import {
   useCompanySettings,
   useQuoteMessages,
   useSendQuoteMessage,
+  useJobs,
 } from "../../lib/hooks";
+import AttachDocumentPicker from "../../components/AttachDocumentPicker";
+import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
 import { buildQuoteCommsEmail, buildQuoteCommsReply } from "../../lib/mailTemplates";
 import { formatDateTime } from "../../lib/format";
 import type { Quote, QuoteMessage, MessageStatus } from "../../lib/types";
@@ -50,6 +53,14 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
   const [ccText, setCcText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [attachQuote, setAttachQuote] = useState(false);
+  // Attach document: files from the computer (e.g. a shipper's invoice) and,
+  // once the quote is a shipment, that shipment's documents.
+  const [picks, setPicks] = useState<ShipmentAttachmentPick[]>([]);
+  const jobsQ = useJobs();
+  const attachJob = useMemo(() => {
+    const j = (jobsQ.data ?? []).find((x) => x.quote_id === quote.id);
+    return j ? { id: j.id, reference: j.reference } : null;
+  }, [jobsQ.data, quote.id]);
 
   const contactsQ = useClientContacts(quote.client_id ?? undefined);
 
@@ -124,10 +135,20 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
       .map((s) => s.trim())
       .filter(Boolean);
     try {
-      await send.mutateAsync({ quote, remarks, to, cc, template, attachQuote });
-      toast("Message sent");
+      await send.mutateAsync({
+        quote,
+        remarks,
+        to,
+        cc,
+        template,
+        attachQuote,
+        attachments: picks,
+      });
+      const n = picks.length + (attachQuote ? 1 : 0);
+      toast(n ? `Message sent with ${n} attachment${n === 1 ? "" : "s"}` : "Message sent");
       setRemarks("");
       setAttachQuote(false);
+      setPicks([]);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not send");
     }
@@ -272,6 +293,12 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
               Attach "Quotation - {quote.reference}.pdf"
             </label>
           </div>
+          <AttachDocumentPicker
+            job={attachJob}
+            quote={null}
+            picks={picks}
+            onChange={setPicks}
+          />
           {showPreview && <pre className="msg-preview">{preview}</pre>}
           <div className="comms-send-row">
             <button
@@ -282,7 +309,9 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
             </button>
             <button className="btn" onClick={onSend} disabled={send.isPending}>
               {send.isPending
-                ? "Sending…"
+                ? picks.length || attachQuote
+                  ? "Attaching & sending…"
+                  : "Sending…"
                 : template === "reply"
                   ? "Send Reply"
                   : "Send Update"}

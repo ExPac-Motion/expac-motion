@@ -8,12 +8,22 @@
 import { getShipmentDocumentUrl } from "./db";
 import { docName } from "./format";
 import { buildQuotePdf, type QuoteAttachment } from "./quotePdf";
-import type { Job, ShipmentDocument } from "./types";
+import type { ShipmentDocument } from "./types";
 
 export type ShipmentAttachmentPick =
-  | { key: string; label: string; kind: "generated"; slug: string; title: string }
+  | {
+      key: string;
+      label: string;
+      kind: "generated";
+      slug: string;
+      title: string;
+      jobId: string;
+      reference: string;
+    }
   | { key: string; label: string; kind: "file"; doc: ShipmentDocument }
-  | { key: string; label: string; kind: "quote"; quoteId: string; reference: string };
+  | { key: string; label: string; kind: "quote"; quoteId: string; reference: string }
+  /** A file picked from the computer for this email only (not stored). */
+  | { key: string; label: string; kind: "local"; file: File };
 
 const LOAD_TIMEOUT_MS = 20_000;
 
@@ -141,15 +151,19 @@ export async function fetchStoredDocument(doc: ShipmentDocument): Promise<QuoteA
 
 /** Build every picked attachment, in order. */
 export async function resolveShipmentAttachments(
-  job: Job,
   picks: ShipmentAttachmentPick[],
 ): Promise<QuoteAttachment[]> {
   const out: QuoteAttachment[] = [];
   for (const p of picks) {
     if (p.kind === "generated") {
-      out.push(await buildShipmentDocPdf(job.id, p.slug, p.title, job.reference));
+      out.push(await buildShipmentDocPdf(p.jobId, p.slug, p.title, p.reference));
     } else if (p.kind === "file") {
       out.push(await fetchStoredDocument(p.doc));
+    } else if (p.kind === "local") {
+      out.push({
+        filename: p.file.name,
+        content: bufferToBase64(await p.file.arrayBuffer()),
+      });
     } else {
       out.push(await buildQuotePdf(p.quoteId, p.reference));
     }
