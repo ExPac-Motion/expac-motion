@@ -264,6 +264,17 @@ export function useSaveQuote() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
   });
 }
+/** Re-date a duplicated quote (and its shipment) on its first builder save. */
+export function useFinalizeCopiedQuote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.finalizeCopiedQuote,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+    },
+  });
+}
 export function useDeleteQuote() {
   const qc = useQueryClient();
   return useMutation({

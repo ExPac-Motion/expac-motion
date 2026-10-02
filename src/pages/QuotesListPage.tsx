@@ -29,6 +29,7 @@ import {
   useUpdateQuotesBulk,
 } from "../lib/hooks";
 import { duplicateQuoteDraft } from "../lib/quoteDraft";
+import { markQuoteCopied } from "../lib/db";
 import { chargeTotals, fxOf } from "../lib/calc";
 import {
   currencyAmount,
@@ -179,6 +180,7 @@ export default function QuotesListPage() {
   async function onDuplicate(q: Quote) {
     try {
       const newId = await save.mutateAsync(duplicateQuoteDraft(q));
+      await markQuoteCopied(newId);
       toast("Quote duplicated");
       navigate(`/quotes/${newId}`);
     } catch (e) {

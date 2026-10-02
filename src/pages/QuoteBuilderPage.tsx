@@ -14,6 +14,7 @@ import {
   useQuote,
   useRateSheet,
   useSaveQuote,
+  useFinalizeCopiedQuote,
   useSaveSupplier,
   useSuppliers,
   useTransporters,
@@ -297,6 +298,7 @@ export default function QuoteBuilderPage() {
   const clearingAgentsQ = useClearingAgents();
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
+  const finalizeCopied = useFinalizeCopiedQuote();
   const saveSupplier = useSaveSupplier();
   const settingsQ = useCompanySettings();
   const ratesQ = useRateSheet();
@@ -614,7 +616,9 @@ export default function QuoteBuilderPage() {
       return;
     }
     try {
-      await saveQuote.mutateAsync(draft);
+      const savedId = await saveQuote.mutateAsync(draft);
+      // A duplicated quote takes today's date on its first save.
+      await finalizeCopied.mutateAsync(savedId);
       toast("Quotation saved");
       navigate(`/quotes`);
     } catch (e) {

@@ -638,8 +638,41 @@ export async function duplicateJobQuote(job: Job): Promise<string | null> {
   if (!job.quote_id) return null;
   const src = await getQuote(job.quote_id);
   const newQuoteId = await saveQuote(duplicateQuoteDraft(src));
+  await markQuoteCopied(newQuoteId);
   await acceptQuote(newQuoteId);
   return newQuoteId;
+}
+
+/** Flag a just-duplicated quote (0115) so its first Quote Builder save
+ *  re-dates it -- see finalizeCopiedQuote. Never blocks the duplicate. */
+export async function markQuoteCopied(quoteId: string): Promise<void> {
+  const { error } = await supabase
+    .from("quotes")
+    .update({ copied: true })
+    .eq("id", quoteId);
+  if (error) console.warn("Could not flag the quote as a copy:", error.message);
+}
+
+/** First Quote Builder save of a duplicated quote: its created date -- and
+ *  its shipment's, when the copy came from the Shipments board -- becomes
+ *  today, and the copy flag clears so later saves leave the date alone. */
+export async function finalizeCopiedQuote(quoteId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("quotes")
+    .update({ created_at: new Date().toISOString(), copied: false })
+    .eq("id", quoteId)
+    .eq("copied", true)
+    .select("id");
+  if (error) {
+    console.warn("Could not re-date the copied quote:", error.message);
+    return;
+  }
+  if (!data?.length) return; // not a copy (or already finalised)
+  const { error: jobErr } = await supabase
+    .from("jobs")
+    .update({ created_at: new Date().toISOString() })
+    .eq("quote_id", quoteId);
+  if (jobErr) console.warn("Could not re-date the copied shipment:", jobErr.message);
 }
 
 /**
