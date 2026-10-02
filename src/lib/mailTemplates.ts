@@ -274,6 +274,27 @@ const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
 const SIG_LINE =
   /(^|\| )(T|WA|F|E|Office|Portal|Postal Address):(\s*)([^|\n]+?)(\s*)(?=\||\n|$)/gm;
 const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
+const SIG_VALUE_STYLE = "color:#2e2e2e;text-decoration:none;cursor:text";
+/** A signature line starting with one of the contact labels. */
+const SIG_START = /^\s*(\| )?(T|WA|F|E|Office|Portal|Postal Address):/;
+
+/** Join the signature's contact lines (T: / WA: / F: / E: / Office: /
+ *  Portal: / Postal Address:) into one " | "-separated run, however the
+ *  template in Settings happens to break them -- so E: always follows F:
+ *  and Postal Address: follows Portal:, wrapping naturally to the width. */
+function joinSignatureLines(text: string): string {
+  const out: string[] = [];
+  for (const line of text.split("\n")) {
+    const prev = out[out.length - 1];
+    if (prev !== undefined && SIG_START.test(line) && SIG_START.test(prev)) {
+      const next = line.trim().replace(/^\| /, "");
+      out[out.length - 1] = `${prev.replace(/\s*\|?\s*$/, "")} | ${next}`;
+    } else {
+      out.push(line);
+    }
+  }
+  return out.join("\n");
+}
 
 /** Bolds the T:/WA:/F:/E:/Office:/Portal:/Postal Address: labels (brand
  *  green); their values stay plain text, never links. */
@@ -288,9 +309,13 @@ function linkifySignature(html: string): string {
       value: string,
       trailingWs: string,
     ) => {
-      // Values stay plain text (no hyperlinks) -- the user asked for no
-      // blue/underlined links in the signature.
-      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}${value}${trailingWs}`;
+      // Values are never clickable links. They sit in an href-less <a>
+      // with an explicit colour: it isn't a link, but mail apps (Outlook
+      // desktop, Outlook/Gmail mobile) skip text already inside an <a>
+      // when auto-detecting phones/emails/addresses -- which otherwise
+      // turned them blue and underlined. Explicit hex, not "inherit":
+      // Outlook desktop ignores inherit on links.
+      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}<a style="${SIG_VALUE_STYLE}">${value}</a>${trailingWs}`;
     },
   );
 }
@@ -338,7 +363,8 @@ export function shipmentEmailHtml(
 ): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const formatted = boldHeadings ? formatShipmentBody(text, esc) : esc(text);
+  const joined = joinSignatureLines(text);
+  const formatted = boldHeadings ? formatShipmentBody(joined, esc) : esc(joined);
   let body = linkifySignature(formatted);
   if (entity) {
     body = insertAfterLabelLine(

@@ -46,7 +46,20 @@ const EMAIL_BODY_STYLE =
 function withDefaultFont(html) {
   if (!html) return html;
   if (String(html).includes("data-expac-mail-body")) return html;
-  return '<div data-expac-mail-body style="' + EMAIL_BODY_STYLE + '">' + html + "</div>";
+  // Full document so the head can ask mail apps (iOS Mail, Outlook/Gmail
+  // mobile) not to auto-link phone numbers, emails, addresses and dates --
+  // they were turning the signature blue and underlined.
+  return (
+    '<!doctype html><html><head><meta charset="utf-8">' +
+    '<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">' +
+    '<meta name="x-apple-disable-message-reformatting">' +
+    "<style>a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important}</style>" +
+    '</head><body><div data-expac-mail-body style="' +
+    EMAIL_BODY_STYLE +
+    '">' +
+    html +
+    "</div></body></html>"
+  );
 }
 
 async function verifyUser(env, authHeader) {
