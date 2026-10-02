@@ -43,6 +43,12 @@ function monthLabel(m: string): string {
   });
 }
 const CARRY_FORWARD_CATEGORY = "Balance Brought Forward";
+/** Earliest month each side auto-carries FROM. Business starts fresh in
+ *  October 2026 (filled by hand), so its first automatic copy is Oct -> Nov. */
+const AUTO_CARRY_FIRST_SOURCE: Record<VaultBudgetScope, string> = {
+  personal: "",
+  business: "2026-10",
+};
 
 /** One side's (Personal or Business) lines in month `from` worth carrying
  *  into month `to`: skips the
@@ -356,7 +362,7 @@ function PersonalBudget({
           .filter((m) => m < cur)
           .sort()
           .pop();
-        if (!from) continue;
+        if (!from || from < AUTO_CARRY_FIRST_SOURCE[s]) continue;
         const list = monthCopyList(side, from, cur);
         if (list.length === 0) continue;
         try {
