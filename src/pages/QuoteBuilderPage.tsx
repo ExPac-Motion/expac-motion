@@ -277,6 +277,11 @@ function draftFromQuote(q: Quote): QuoteDraft {
   };
 }
 
+/** Added to every live exchange rate fetched with "Get live rates" -- the
+ *  market rate is not the buying rate, and this covers currency movement
+ *  between quoting and booking. */
+const LIVE_RATE_BUFFER_ZAR = 0.3;
+
 export default function QuoteBuilderPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -437,13 +442,17 @@ export default function QuoteBuilderPage() {
     setFxLoading(true);
     try {
       const r = await fetchZarRates();
-      setFx("fx_usd_zar", r.rate("USD").toFixed(4));
-      setFx("fx_cny_zar", r.rate("CNY").toFixed(4));
-      setFx("fx_eur_zar", r.rate("EUR").toFixed(4));
+      // Live (market) rates are not the buying rate: add a fixed buffer to
+      // each one to cover currency movement between quoting and booking.
+      const buffered = (cur: string) =>
+        (r.rate(cur) + LIVE_RATE_BUFFER_ZAR).toFixed(4);
+      setFx("fx_usd_zar", buffered("USD"));
+      setFx("fx_cny_zar", buffered("CNY"));
+      setFx("fx_eur_zar", buffered("EUR"));
       // GBP only when this quote uses it (keeps the rate row tidy).
-      if (Number(draft?.fx_gbp_zar) > 0) setFx("fx_gbp_zar", r.rate("GBP").toFixed(4));
+      if (Number(draft?.fx_gbp_zar) > 0) setFx("fx_gbp_zar", buffered("GBP"));
       setFxAsOf(r.asOf);
-      toast("Live rates applied");
+      toast(`Live rates applied (+R${LIVE_RATE_BUFFER_ZAR.toFixed(2)} buffer each)`);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not fetch live rates");
     } finally {
@@ -1422,7 +1431,8 @@ export default function QuoteBuilderPage() {
           <span className="hint">
             Sell (R) = Buy × (1 + Margin%) × the rate for the line's currency.
             Line totals are in ZAR.
-            {fxAsOf && ` Live rates as at ${fxAsOf}.`}
+            {fxAsOf &&
+              ` Live rates as at ${fxAsOf}, plus R${LIVE_RATE_BUFFER_ZAR.toFixed(2)} each for currency movement.`}
           </span>
         </div>
 
