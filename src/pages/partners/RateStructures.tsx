@@ -27,6 +27,8 @@ const uid = () => Math.random().toString(36).slice(2, 10);
  *  sheet design for every mode -- only these labels and defaults change. */
 interface ModeTemplate {
   qty: string;
+  /** Shorter wording for the editor's narrow break column. */
+  qtyShort: string;
   per: string;
   breaks: string[];
   charges: { description: string; basis: string }[];
@@ -45,6 +47,7 @@ interface ModeTemplate {
 
 const AIR: ModeTemplate = {
   qty: "Chargeable Weight",
+  qtyShort: "Weight",
   per: "KG",
   breaks: ["0-45KG", "0-100KG", "0-300KG", "0-500KG", "0-1000KG"],
   charges: [
@@ -71,6 +74,7 @@ const MODE_TEMPLATES: Record<string, ModeTemplate> = {
   "Air Freight (AIR)": AIR,
   "Courier Express (CX)": {
     qty: "Weight Band",
+    qtyShort: "Weight",
     per: "KG",
     breaks: ["0.5-5KG", "5-10KG", "10-21KG", "21-45KG", "45-100KG", "100KG+"],
     charges: [
@@ -94,6 +98,7 @@ const MODE_TEMPLATES: Record<string, ModeTemplate> = {
   },
   "Sea Freight (FCL)": {
     qty: "Container",
+    qtyShort: "Container",
     per: "Container",
     breaks: ["20' GP", "40' GP", "40' HC", "40' RF"],
     charges: [
@@ -106,7 +111,7 @@ const MODE_TEMPLATES: Record<string, ModeTemplate> = {
     ],
     chargesTitle: "Origin Charges",
     pickupTitle: "Inland Haulage",
-    pickupTier: "Container / distance",
+    pickupTier: "Haulage",
     pickup: ["20' within 50km", "40' within 50km", "20' 50-150km", "40' 50-150km"],
     carrier: "Shipping Line",
     carrierPh: "e.g. MSC, Maersk, COSCO",
@@ -118,6 +123,7 @@ const MODE_TEMPLATES: Record<string, ModeTemplate> = {
   },
   "Sea Freight (LCL)": {
     qty: "Volume / Weight",
+    qtyShort: "W/M",
     per: "W/M",
     breaks: ["Min 1 W/M", "1-5 W/M", "5-10 W/M", "10-15 W/M"],
     charges: [
@@ -141,6 +147,7 @@ const MODE_TEMPLATES: Record<string, ModeTemplate> = {
   },
   "Road Freight (RDX)": {
     qty: "Vehicle / Load",
+    qtyShort: "Vehicle",
     per: "Load",
     breaks: ["1 Ton", "4 Ton", "8 Ton", "14 Ton", "Superlink 34 Ton"],
     charges: [
@@ -455,7 +462,7 @@ export function RateStructureSheet({
               <th>{basis.qty}</th>
               <th className="num">Freight [{s.currency}/{basis.per}]</th>
               <th>{basis.chargesTitle}</th>
-              <th className="num">Amount [{s.currency}]</th>
+              <th className="num">Rate [{s.currency}]</th>
               <th>{basis.pickupTitle}</th>
               <th>{basis.carrier}</th>
               <th>{basis.departFrom}</th>
@@ -745,9 +752,14 @@ export function RateStructureEditor({
                 Freight rates [{d.currency}/{basis.per}]
               </div>
               <table className="rs-edit">
+                <colgroup>
+                  <col className="rs-c-fixed" />
+                  <col className="rs-c-fixed" />
+                  <col className="rs-c-x" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>{basis.qty}</th>
+                    <th>{basis.qtyShort}</th>
                     <th>Rate</th>
                     <th />
                   </tr>
@@ -786,10 +798,16 @@ export function RateStructureEditor({
                 {basis.chargesTitle} [{d.currency}]
               </div>
               <table className="rs-edit">
+                <colgroup>
+                  <col />
+                  <col className="rs-c-fixed" />
+                  <col />
+                  <col className="rs-c-x" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Description</th>
-                    <th>Amount</th>
+                    <th>Rate</th>
                     <th>Basis</th>
                     <th />
                   </tr>
@@ -840,10 +858,15 @@ export function RateStructureEditor({
             <div>
               <div className="rs-subhead">{basis.pickupTitle} [{d.currency}]</div>
               <table className="rs-edit">
+                <colgroup>
+                  <col className="rs-c-fixed" />
+                  <col className="rs-c-fixed" />
+                  <col className="rs-c-x" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>{basis.pickupTier}</th>
-                    <th>Amount</th>
+                    <th>Rate</th>
                     <th />
                   </tr>
                 </thead>

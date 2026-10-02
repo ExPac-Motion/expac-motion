@@ -5733,7 +5733,9 @@ select.badge-select.lost {
 }
 .rs-subgrid {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 2.2fr) minmax(0, 0.9fr);
+  /* Freight + pick-up tables are two equal fixed columns wide; the charges
+     table takes the rest (its Description + Basis columns stretch). */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 16px;
   margin-top: 6px;
 }
@@ -5744,10 +5746,26 @@ select.badge-select.lost {
 }
 .rs-edit {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
 }
+/* Every label / rate column is the same width; only Description and Basis
+   (no class) stretch. */
+.rs-edit col.rs-c-fixed {
+  width: 120px;
+}
+.rs-edit col.rs-c-x {
+  width: 34px;
+}
+.rs-subgrid > div:first-child .rs-edit,
+.rs-subgrid > div:last-child .rs-edit {
+  width: 274px;
+}
 .rs-edit th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: left;
   font-size: 11px;
   color: var(--muted);
@@ -5759,9 +5777,6 @@ select.badge-select.lost {
 .rs-edit input {
   width: 100%;
   min-width: 0;
-}
-.rs-edit td:last-child {
-  width: 32px;
 }
 .rs-num {
   text-align: right;
