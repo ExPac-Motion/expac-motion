@@ -113,7 +113,7 @@ export default function TrendsTab() {
 
   const now = useMemo(() => new Date(), []);
   const nowKey = monthKeyOf(now);
-  const [preset, setPreset] = useState<Preset>("this_month");
+  const [preset, setPreset] = useState<Preset>("last_12");
   const [customFrom, setCustomFrom] = useState(monthKeyOf(addMonths(now, -11)));
   const [customTo, setCustomTo] = useState(nowKey);
 
@@ -340,9 +340,9 @@ export default function TrendsTab() {
         >
           {(
             [
-              ["this_month", "This Month"],
               ["last_12", "Last 12 months"],
               ["last_6", "Last 6 months"],
+              ["this_month", "This Month"],
               ["this_year", "This year"],
               ["custom", "Custom"],
             ] as [Preset, string][]
