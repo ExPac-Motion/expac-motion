@@ -3338,6 +3338,26 @@ select.badge-select.lost {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+/* Sales CRM > Trends: range totals row + chart headings + a 2-up chart row. */
+.fin-snap.trends-summary {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: 20px;
+}
+.trends-h {
+  margin: 4px 0 8px;
+  font-size: 0.95rem;
+}
+.trends-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 20px;
+}
+@media (max-width: 900px) {
+  .trends-pair {
+    grid-template-columns: 1fr;
+  }
+}
 .fin-tile {
   background: var(--paper);
   border: 1px solid transparent;

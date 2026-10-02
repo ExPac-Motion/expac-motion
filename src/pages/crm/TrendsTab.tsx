@@ -1,11 +1,12 @@
-import { useMemo, useState, type Key } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bar,
+  BarChart,
+  Cell,
+  LabelList,
   CartesianGrid,
-  ComposedChart,
   Legend,
-  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -92,8 +93,8 @@ const COLORS = {
   revenue: "#02a5aa",
   ratio: "#e9a91b",
   target: "#ef4910",
-  leadsCreated: "#202426",
-  leadsConverted: "#719d2f",
+  leadsCreated: "#02a5aa",
+  leadsConverted: "#8cbc43",
 };
 
 export default function TrendsTab() {
@@ -220,6 +221,31 @@ export default function TrendsTab() {
     });
   }, [quotes, leads, opps, fromKey, toKey]);
 
+  // Whole-range totals for the quick-view tiles above the charts.
+  const summary = useMemo(() => {
+    let sales = 0;
+    let revenue = 0;
+    let cost = 0;
+    let tracked = 0;
+    let leadsCreated = 0;
+    let leadsConverted = 0;
+    for (const b of monthlyData) {
+      sales += b.salesTotal;
+      revenue += b.revenueTotal;
+      cost += b.costTotal;
+      tracked += b.costTrackedRevenue;
+      leadsCreated += b.leadsCreated;
+      leadsConverted += b.leadsConverted;
+    }
+    return {
+      sales,
+      revenue,
+      ratio: tracked > 0 ? (cost / tracked) * 100 : null,
+      leadsCreated,
+      leadsConverted,
+    };
+  }, [monthlyData]);
+
   const [drill, setDrill] = useState<{ kind: DrillKind; bucket: MonthBucket } | null>(
     null,
   );
@@ -262,7 +288,7 @@ export default function TrendsTab() {
     <>
       <p className="muted" style={{ margin: "0 0 14px" }}>
         Sales, Revenue, Cost of Sales Ratio and lead flow by month. Click any
-        bar or point to see the records behind it.
+        bar to see the records behind it.
       </p>
 
       <div className="panel">
@@ -314,161 +340,186 @@ export default function TrendsTab() {
           )}
         </div>
 
-        <ResponsiveContainer width="100%" height={420}>
-          <ComposedChart data={monthlyData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+        <div className="fin-snap trends-summary">
+          <div className="fin-tile">
+            <div className="k">Sales (incl. VAT)</div>
+            <div className="v">{money(summary.sales)}</div>
+            <div className="s">quotes created in range</div>
+          </div>
+          <div className="fin-tile">
+            <div className="k">Revenue (excl. VAT)</div>
+            <div className="v">{money(summary.revenue)}</div>
+            <div className="s">accepted in range</div>
+          </div>
+          <div className="fin-tile">
+            <div className="k">Cost of Sales Ratio</div>
+            <div
+              className="v"
+              style={{
+                color:
+                  summary.ratio === null
+                    ? undefined
+                    : summary.ratio <= costOfSalesTarget
+                      ? "var(--green-dark)"
+                      : "var(--orange)",
+              }}
+            >
+              {summary.ratio === null ? "—" : `${summary.ratio.toFixed(1)}%`}
+            </div>
+            <div className="s">target ≤ {costOfSalesTarget}%</div>
+          </div>
+          <div className="fin-tile">
+            <div className="k">Leads Created</div>
+            <div className="v">{summary.leadsCreated}</div>
+          </div>
+          <div className="fin-tile">
+            <div className="k">Leads Converted</div>
+            <div className="v">{summary.leadsConverted}</div>
+            <div className="s">
+              {summary.leadsCreated
+                ? `${((summary.leadsConverted / summary.leadsCreated) * 100).toFixed(0)}% of created`
+                : "—"}
+            </div>
+          </div>
+        </div>
+
+        <h3 className="trends-h">Sales &amp; Revenue</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={monthlyData} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} barGap={2}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-            <YAxis
-              yAxisId="currency"
-              tick={{ fontSize: 12 }}
-              tickFormatter={(v: number) => money(v)}
-              width={90}
-            />
-            <YAxis
-              yAxisId="ratio"
-              orientation="right"
-              domain={[0, 120]}
-              tick={{ fontSize: 12 }}
-              tickFormatter={(v: number) => `${v}%`}
-              width={50}
-            />
-            <YAxis
-              yAxisId="count"
-              orientation="right"
-              tick={{ fontSize: 12 }}
-              width={40}
-              hide
-            />
-            <Tooltip
-              formatter={(value, name) => {
-                const v = Number(value) || 0;
-                if (name === "Cost of Sales Ratio") return [`${v.toFixed(1)}%`, name];
-                if (name === "Leads Created" || name === "Leads Converted")
-                  return [v, name];
-                return [money(v), name];
-              }}
-            />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => money(v)} width={90} />
+            <Tooltip formatter={(value, name) => [money(Number(value) || 0), name]} />
             <Legend />
-            <ReferenceLine
-              yAxisId="ratio"
-              y={costOfSalesTarget}
-              stroke={COLORS.target}
-              strokeDasharray="6 4"
-              label={{
-                value: `Target ${costOfSalesTarget}%`,
-                position: "insideTopRight",
-                fill: COLORS.target,
-                fontSize: 11,
-              }}
-            />
             <Bar
-              yAxisId="currency"
               dataKey="salesTotal"
-              name="Sales"
+              name="Sales (incl. VAT)"
               fill={COLORS.sales}
-              radius={[3, 3, 0, 0]}
+              radius={[4, 4, 0, 0]}
               onClick={(_, index) => setDrill({ kind: "sales", bucket: monthlyData[index] })}
               cursor="pointer"
             />
             <Bar
-              yAxisId="currency"
               dataKey="revenueTotal"
-              name="Revenue"
+              name="Revenue (excl. VAT)"
               fill={COLORS.revenue}
-              radius={[3, 3, 0, 0]}
-              onClick={(_, index) =>
-                setDrill({ kind: "revenue", bucket: monthlyData[index] })
-              }
+              radius={[4, 4, 0, 0]}
+              onClick={(_, index) => setDrill({ kind: "revenue", bucket: monthlyData[index] })}
               cursor="pointer"
             />
-            <Line
-              yAxisId="ratio"
-              dataKey="costRatio"
-              name="Cost of Sales Ratio"
-              stroke={COLORS.ratio}
-              strokeWidth={2}
-              connectNulls
-              dot={(props: unknown) => {
-                const { cx, cy, index, key } = props as {
-                  cx?: number;
-                  cy?: number;
-                  index?: number;
-                  key?: Key;
-                };
-                if (cx == null || cy == null || index == null) return <g key={key} />;
-                return (
-                  <circle
-                    key={key}
-                    cx={cx}
-                    cy={cy}
-                    r={4}
-                    fill={COLORS.ratio}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setDrill({ kind: "ratio", bucket: monthlyData[index] })}
-                  />
-                );
-              }}
-            />
-            <Line
-              yAxisId="count"
-              dataKey="leadsCreated"
-              name="Leads Created"
-              stroke={COLORS.leadsCreated}
-              strokeWidth={2}
-              dot={(props: unknown) => {
-                const { cx, cy, index, key } = props as {
-                  cx?: number;
-                  cy?: number;
-                  index?: number;
-                  key?: Key;
-                };
-                if (cx == null || cy == null || index == null) return <g key={key} />;
-                return (
-                  <circle
-                    key={key}
-                    cx={cx}
-                    cy={cy}
-                    r={4}
-                    fill={COLORS.leadsCreated}
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      setDrill({ kind: "leadsCreated", bucket: monthlyData[index] })
-                    }
-                  />
-                );
-              }}
-            />
-            <Line
-              yAxisId="count"
-              dataKey="leadsConverted"
-              name="Leads Converted"
-              stroke={COLORS.leadsConverted}
-              strokeWidth={2}
-              dot={(props: unknown) => {
-                const { cx, cy, index, key } = props as {
-                  cx?: number;
-                  cy?: number;
-                  index?: number;
-                  key?: Key;
-                };
-                if (cx == null || cy == null || index == null) return <g key={key} />;
-                return (
-                  <circle
-                    key={key}
-                    cx={cx}
-                    cy={cy}
-                    r={4}
-                    fill={COLORS.leadsConverted}
-                    style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      setDrill({ kind: "leadsConverted", bucket: monthlyData[index] })
-                    }
-                  />
-                );
-              }}
-            />
-          </ComposedChart>
+          </BarChart>
         </ResponsiveContainer>
+
+        <div className="trends-pair">
+          <div>
+            <h3 className="trends-h">Cost of Sales Ratio</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlyData} margin={{ top: 18, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis
+                  domain={[0, (max: number) => Math.max(100, Math.ceil(max / 10) * 10)]}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(v: number) => `${v}%`}
+                  width={44}
+                />
+                <Tooltip
+                  formatter={(value) => {
+                    const v = Number(value) || 0;
+                    return [
+                      `${v.toFixed(1)}% · ${v <= costOfSalesTarget ? "on target" : "over target"}`,
+                      "Cost of Sales Ratio",
+                    ];
+                  }}
+                />
+                <ReferenceLine
+                  y={costOfSalesTarget}
+                  stroke={COLORS.target}
+                  strokeDasharray="6 4"
+                  label={{
+                    value: `Target ${costOfSalesTarget}%`,
+                    position: "insideTopRight",
+                    fill: COLORS.target,
+                    fontSize: 11,
+                  }}
+                />
+                <Bar
+                  dataKey="costRatio"
+                  name="Cost of Sales Ratio"
+                  radius={[4, 4, 0, 0]}
+                  onClick={(_, index) => setDrill({ kind: "ratio", bucket: monthlyData[index] })}
+                  cursor="pointer"
+                >
+                  {monthlyData.map((b) => (
+                    <Cell
+                      key={b.month}
+                      fill={
+                        b.costRatio !== null && b.costRatio > costOfSalesTarget
+                          ? COLORS.target
+                          : COLORS.ratio
+                      }
+                    />
+                  ))}
+                  <LabelList
+                    dataKey="costRatio"
+                    position="top"
+                    fontSize={11}
+                    fill="var(--muted)"
+                    formatter={(v: unknown) => (v == null ? "" : `${Math.round(Number(v))}%`)}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <h3 className="trends-h">Leads Created &amp; Converted</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlyData} margin={{ top: 18, right: 16, left: 0, bottom: 0 }} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
+                <Tooltip />
+                <Legend />
+                <Bar
+                  dataKey="leadsCreated"
+                  name="Leads Created"
+                  fill={COLORS.leadsCreated}
+                  radius={[4, 4, 0, 0]}
+                  onClick={(_, index) =>
+                    setDrill({ kind: "leadsCreated", bucket: monthlyData[index] })
+                  }
+                  cursor="pointer"
+                >
+                  <LabelList
+                    dataKey="leadsCreated"
+                    position="top"
+                    fontSize={11}
+                    fill="var(--muted)"
+                    formatter={(v: unknown) => (Number(v) ? String(v) : "")}
+                  />
+                </Bar>
+                <Bar
+                  dataKey="leadsConverted"
+                  name="Leads Converted"
+                  fill={COLORS.leadsConverted}
+                  radius={[4, 4, 0, 0]}
+                  onClick={(_, index) =>
+                    setDrill({ kind: "leadsConverted", bucket: monthlyData[index] })
+                  }
+                  cursor="pointer"
+                >
+                  <LabelList
+                    dataKey="leadsConverted"
+                    position="top"
+                    fontSize={11}
+                    fill="var(--muted)"
+                    formatter={(v: unknown) => (Number(v) ? String(v) : "")}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {drill && (
