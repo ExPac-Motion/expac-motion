@@ -69,7 +69,16 @@ export default function ShipmentDocPrintPage() {
         </button>
       </div>
 
-      <div className="qs-sheet">
+      <div
+        className="qs-sheet"
+        // Everything this sheet shows has loaded -- the Shipment Comms
+        // "Attach document" PDF capture waits for this before rendering.
+        data-ready={
+          settings && !quoteQ.isLoading && !profilesQ.isLoading && !trackingQ.isLoading
+            ? "1"
+            : undefined
+        }
+      >
         <div className="qs-companyhead">
           <img
             className="logo"

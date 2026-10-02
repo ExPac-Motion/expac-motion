@@ -53,6 +53,10 @@ import { resolveMergeFields, htmlToText } from "./mailMerge";
 import { sendMail, SUPPORT_BCC } from "./mail";
 import { buildQuotePdf } from "./quotePdf";
 import { linkifyHtml, PUBLIC_APP_URL } from "./mailStyle";
+import {
+  resolveShipmentAttachments,
+  type ShipmentAttachmentPick,
+} from "./shipmentAttachments";
 
 /* ---------- Clients ---------- */
 export function useClients() {
@@ -508,14 +512,25 @@ export function useSendMessage() {
       /** 'reply' = quick chat-style message (Settings -> Shipment Replies),
        *  no shipment-data block. Defaults to the full status-update template. */
       template?: "update" | "reply";
+      /** Shipment documents / vault files / quotation to attach. */
+      attachments?: ShipmentAttachmentPick[];
     }) => {
-      const { job, remarks, to, cc, template = "update" } = input;
+      const { job, remarks, to, cc, template = "update", attachments: picks = [] } = input;
       const settings = await db.getCompanySettings().catch(() => null);
       const mail =
         template === "reply"
           ? buildShipmentReply(job, remarks, settings?.shipment_replies)
           : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms);
+      // The thread keeps a note of what went out attached (not in the email).
+      const body = picks.length
+        ? `${mail.text}
+
+[Attached: ${picks.map((p) => p.label).join(", ")}]`
+        : mail.text;
       try {
+        const attachments = picks.length
+          ? await resolveShipmentAttachments(job, picks)
+          : undefined;
         const { id } = await sendMail({
           jobId: job.id,
           to,
@@ -524,6 +539,7 @@ export function useSendMessage() {
           subject: mail.subject,
           html: mail.html,
           text: mail.text,
+          attachments,
           fromName: settings?.mail_sender_name || undefined,
           replyTo: settings?.mail_reply_to || undefined,
         });
@@ -534,7 +550,7 @@ export function useSendMessage() {
           to_emails: to,
           cc_emails: cc,
           subject: mail.subject,
-          body: mail.text,
+          body,
           remarks,
           status: "sent",
           provider_id: id,
@@ -549,7 +565,7 @@ export function useSendMessage() {
           to_emails: to,
           cc_emails: cc,
           subject: mail.subject,
-          body: mail.text,
+          body,
           remarks,
           status: "failed",
           error: e instanceof Error ? e.message : String(e),

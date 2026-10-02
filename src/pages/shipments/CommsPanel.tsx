@@ -8,7 +8,10 @@ import {
   useCompanySettings,
   useMessages,
   useSendMessage,
+  useShipmentDocuments,
 } from "../../lib/hooks";
+import { DOCUMENT_TYPES_LIST } from "../../lib/docTemplates";
+import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
 import { buildShipmentEmail, buildShipmentReply } from "../../lib/mailTemplates";
 import { formatDateTime } from "../../lib/format";
 import type { Job, Message, MessageStatus } from "../../lib/types";
@@ -46,6 +49,48 @@ export default function CommsPanel({ job }: { job: Job }) {
   const [showPreview, setShowPreview] = useState(false);
 
   const contactsQ = useClientContacts(job.client_id ?? undefined);
+
+  // Attach document: the shipment's generated documents, its Document Vault
+  // uploads, and the linked quotation -- each picked one goes out as a PDF /
+  // file attachment on the next email.
+  const docsQ = useShipmentDocuments(job.id);
+  const [picks, setPicks] = useState<ShipmentAttachmentPick[]>([]);
+  const [showAttach, setShowAttach] = useState(false);
+  const attachOptions = useMemo(() => {
+    const generated: ShipmentAttachmentPick[] = DOCUMENT_TYPES_LIST.map((d) => ({
+      key: `gen:${d.slug}`,
+      label: d.title,
+      kind: "generated",
+      slug: d.slug,
+      title: d.title,
+    }));
+    const files: ShipmentAttachmentPick[] = (docsQ.data ?? []).map((d) => ({
+      key: `file:${d.id}`,
+      label: d.name,
+      kind: "file",
+      doc: d,
+    }));
+    const quote: ShipmentAttachmentPick[] = job.quote_id
+      ? [
+          {
+            key: "quote",
+            label: "Quotation",
+            kind: "quote",
+            quoteId: job.quote_id,
+            reference: job.reference,
+          },
+        ]
+      : [];
+    return { generated, files, quote };
+  }, [docsQ.data, job.quote_id, job.reference]);
+  const picked = (key: string) => picks.some((p) => p.key === key);
+  function togglePick(opt: ShipmentAttachmentPick) {
+    setPicks((prev) =>
+      prev.some((p) => p.key === opt.key)
+        ? prev.filter((p) => p.key !== opt.key)
+        : [...prev, opt],
+    );
+  }
 
   // Customer (primary + every extra contact with an email) then the shipper,
   // de-duplicated by address.
@@ -108,9 +153,11 @@ export default function CommsPanel({ job }: { job: Job }) {
       .map((s) => s.trim())
       .filter(Boolean);
     try {
-      await send.mutateAsync({ job, remarks, to, cc, template });
-      toast("Message sent");
+      await send.mutateAsync({ job, remarks, to, cc, template, attachments: picks });
+      toast(picks.length ? `Message sent with ${picks.length} attachment${picks.length === 1 ? "" : "s"}` : "Message sent");
       setRemarks("");
+      setPicks([]);
+      setShowAttach(false);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not send");
     }
@@ -249,6 +296,67 @@ export default function CommsPanel({ job }: { job: Job }) {
               lang="en"
             />
           </div>
+
+          <div className="comms-attach">
+            <button
+              type="button"
+              className={`chip${showAttach ? " on" : ""}`}
+              onClick={() => setShowAttach((v) => !v)}
+            >
+              📎 Attach document{picks.length ? ` (${picks.length})` : ""}
+            </button>
+            {picks.length > 0 && (
+              <div className="comms-attach-chips">
+                {picks.map((p) => (
+                  <span key={p.key} className="cov-chip">
+                    {p.label}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${p.label}`}
+                      onClick={() => togglePick(p)}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {showAttach && (
+              <div className="comms-attach-list">
+                <div className="hint">Shipment documents (sent as PDF)</div>
+                {attachOptions.generated.map((o) => (
+                  <label key={o.key} className="check">
+                    <input type="checkbox" checked={picked(o.key)} onChange={() => togglePick(o)} />
+                    {o.label}
+                  </label>
+                ))}
+                {attachOptions.quote.map((o) => (
+                  <label key={o.key} className="check">
+                    <input type="checkbox" checked={picked(o.key)} onChange={() => togglePick(o)} />
+                    {o.label}
+                  </label>
+                ))}
+                <div className="hint" style={{ marginTop: 8 }}>
+                  Uploaded to this shipment
+                </div>
+                {docsQ.isLoading ? (
+                  <span className="hint">Loading…</span>
+                ) : attachOptions.files.length === 0 ? (
+                  <span className="hint">No files uploaded to this shipment yet.</span>
+                ) : (
+                  attachOptions.files.map((o) => (
+                    <label key={o.key} className="check">
+                      <input type="checkbox" checked={picked(o.key)} onChange={() => togglePick(o)} />
+                      {o.label}
+                      {o.kind === "file" && o.doc.doc_type && (
+                        <span className="hint"> · {o.doc.doc_type}</span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           {showPreview && <pre className="msg-preview">{preview}</pre>}
           <div className="comms-send-row">
             <button
@@ -259,7 +367,9 @@ export default function CommsPanel({ job }: { job: Job }) {
             </button>
             <button className="btn" onClick={onSend} disabled={send.isPending}>
               {send.isPending
-                ? "Sending…"
+                ? picks.length
+                  ? "Attaching & sending…"
+                  : "Sending…"
                 : template === "reply"
                   ? "Send Reply"
                   : "Send Update"}

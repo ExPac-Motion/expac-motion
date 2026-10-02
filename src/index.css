@@ -5832,3 +5832,28 @@ select.badge-select.lost {
   color: var(--green-dark);
   font-size: 0.7rem;
 }
+
+/* Shipment Comms: Attach document picker */
+.comms-attach {
+  margin: 2px 0 10px;
+}
+.comms-attach-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.comms-attach-list {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.comms-attach-list .check {
+  margin: 0;
+}
