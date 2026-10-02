@@ -5,7 +5,6 @@ import {
   EMAIL_FONT_SIZE,
   EMAIL_FONT_STACK,
   emailButtonHtml,
-  MAIL_LINK_STYLE,
   PUBLIC_APP_URL,
 } from "./mailStyle";
 import type {
@@ -265,45 +264,19 @@ const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
 /** The signature's own contact labels — bold + brand green, wherever the
  *  signature is used (Shipment Comms and Quotation Comms, and both their
  *  Replies variants, all share this one line). Captures the value after
- *  the label too, so it can be turned into a real link (see
+ *  the label too (kept as plain text, never a link -- see
  *  linkifySignature below). Matched only at the start of a line or right
  *  after the "| " separator the signature uses, e.g.
  *  "T: ... | WA: ... | F: ... | E: ... | Office: ... | Portal: ... |
  *  Postal Address: ...". The value is captured non-greedily with its
  *  trailing whitespace split off, so a trailing space before the next
- *  "| " doesn't end up inside the link. */
+ *  "| " stays outside the value. */
 const SIG_LINE =
   /(^|\| )(T|WA|F|E|Office|Portal|Postal Address):(\s*)([^|\n]+?)(\s*)(?=\||\n|$)/gm;
 const SIG_LABEL_COLOR = "rgb(140, 188, 67)";
 
-/** "+27 (0) 11 568 8281" -> "+27115688281" — the (0) is a "drop this for
- *  international dialing" trunk-prefix marker, not itself a digit to dial. */
-function phoneDigits(value: string): string {
-  return value.replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
-}
-
-function sigLabelHref(label: string, value: string): string | null {
-  switch (label) {
-    case "T":
-    case "F":
-      return `tel:${phoneDigits(value)}`;
-    case "WA":
-      return `https://wa.me/${phoneDigits(value).replace(/^\+/, "")}`;
-    case "E":
-    case "Office":
-      return `mailto:${value}`;
-    case "Portal":
-      return `https://${value.replace(/^https?:\/\//, "")}`;
-    case "Postal Address":
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(value)}`;
-    default:
-      return null;
-  }
-}
-
 /** Bolds the T:/WA:/F:/E:/Office:/Portal:/Postal Address: labels (brand
- *  green) and wraps their values in blended-in links — see
- *  MAIL_LINK_STYLE above. */
+ *  green); their values stay plain text, never links. */
 function linkifySignature(html: string): string {
   return html.replace(
     SIG_LINE,
@@ -315,11 +288,9 @@ function linkifySignature(html: string): string {
       value: string,
       trailingWs: string,
     ) => {
-      const href = sigLabelHref(label, value);
-      const valueHtml = href
-        ? `<a href="${href}" style="${MAIL_LINK_STYLE}">${value}</a>`
-        : value;
-      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}${valueHtml}${trailingWs}`;
+      // Values stay plain text (no hyperlinks) -- the user asked for no
+      // blue/underlined links in the signature.
+      return `${prefix}<b style="color:${SIG_LABEL_COLOR}">${label}:</b>${ws}${value}${trailingWs}`;
     },
   );
 }
