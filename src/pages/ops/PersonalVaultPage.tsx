@@ -281,6 +281,11 @@ function PersonalBudget({
   async function carryForward() {
     if (!month) return; // "All time" has no single "next month"
     const next = nextMonthOf(month);
+    // Only a surplus carries over; a shortfall isn't brought into next month.
+    if (totals.balance <= 0) {
+      toast(`Nothing to carry: ${monthLabel(month)}'s balance is ${money(totals.balance)}`);
+      return;
+    }
     const already = (q.data ?? []).some(
       (e) =>
         (e.scope ?? "personal") === scope &&
