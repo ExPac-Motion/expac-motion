@@ -589,6 +589,9 @@ export default function QuotesListPage() {
 
       <div className="panel">
         <div className="panel-head">
+          {/* Search sits right beside the heading, on the same line as the
+              pulled-up table tools -- adds no height above the grid. */}
+          <div className="panel-head-search">
           <div>
             <h2>{filter === "all" ? "All Quotes" : `${STATUS_LABEL[filter]} Quotes`}</h2>
             <p>
@@ -601,6 +604,7 @@ export default function QuotesListPage() {
             onChange={setSearch}
             placeholder="Search quote no., customer, shipper, reference…"
           />
+          </div>
         </div>
 
         {isLoading ? (
@@ -623,7 +627,6 @@ export default function QuotesListPage() {
             rows={rows}
             rowKey={(q) => q.id}
             onRowClick={(q) => setOpenId(q.id)}
-            headerTools="row"
           />
         )}
       </div>

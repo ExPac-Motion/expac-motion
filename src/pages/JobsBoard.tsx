@@ -680,6 +680,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
       <div className="panel jobs-panel">
         <div className="panel-head">
+          {/* Search sits right beside the heading, on the same line as the
+              pulled-up table tools -- adds no height above the grid. */}
+          <div className="panel-head-search">
           <div>
             <h2>{copy.heading}</h2>
             <p>
@@ -714,6 +717,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             onChange={setSearch}
             placeholder="Search shipment no., customer, shipper, PO…"
           />
+          </div>
         </div>
 
         {isLoading ? (
@@ -737,9 +741,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             columns={jobCols}
             rows={rows}
             rowKey={(j) => j.id}
-            // The search box sits on the right of the heading, so the
-            // table tools always take their own row below it.
-            headerTools="row"
+            headerTools={recordFilter ? "row" : "pull"}
             toolbar={
               <>
               {mode === "active" && (

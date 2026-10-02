@@ -571,6 +571,9 @@ tr.clickable:hover {
 }
 .quotes-table td {
   font-size: 12px;
+  /* Same row height as the Shipments board (.jobs-table td). */
+  padding: 4px 6px;
+  vertical-align: middle;
 }
 
 /* ---------- DataTable: grid lines + resizable / draggable columns ---------- */
@@ -5856,4 +5859,18 @@ select.badge-select.lost {
 }
 .comms-attach-list .check {
   margin: 0;
+}
+
+/* Shipments / Quotations: search box inline beside the panel heading. */
+.panel-head-search {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  /* The pulled-up table tools (.dt-tools) are a full-width strip lifted
+     over this row; keep the search box above it so it stays clickable. */
+  position: relative;
+  z-index: 2;
+}
+.panel-head-search .search-box {
+  width: 300px;
 }
