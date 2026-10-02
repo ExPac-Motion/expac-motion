@@ -49,13 +49,17 @@ interface MonthBucket {
    *  revenue doesn't silently read as a 100% margin. */
   costTrackedRevenue: number;
   costRatio: number | null;
+  /** Quotes won (accepted_at) / lost (lost_at, else updated_at) this month. */
+  wonCount: number;
+  lostCount: number;
+  lostQuotes: Quote[];
   leadsCreated: number;
   createdLeads: Lead[];
   leadsConverted: number;
   convertedLeads: Lead[];
 }
 
-type DrillKind = "sales" | "revenue" | "gp" | "ratio" | "leadsCreated" | "leadsConverted";
+type DrillKind = "sales" | "revenue" | "gp" | "ratio" | "won" | "lost" | "leadsCreated" | "leadsConverted";
 
 function monthKeyOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -94,6 +98,8 @@ const COLORS = {
   gp: "#5e8a26",
   ratio: "#e9a91b",
   target: "#ef4910",
+  won: "#8cbc43",
+  lost: "#ef4910",
   leadsCreated: "#02a5aa",
   leadsConverted: "#8cbc43",
 };
@@ -144,6 +150,9 @@ export default function TrendsTab() {
           costTotal: 0,
           costTrackedRevenue: 0,
           costRatio: null,
+          wonCount: 0,
+          lostCount: 0,
+          lostQuotes: [],
           leadsCreated: 0,
           createdLeads: [],
           leadsConverted: 0,
@@ -170,6 +179,15 @@ export default function TrendsTab() {
           bucket.costTotal += t.cost;
           bucket.costTrackedRevenue += t.sell;
           bucket.revenueQuotes.push(q);
+          bucket.wonCount += 1;
+        }
+      }
+      if (q.status === "lost") {
+        const lostKey = (q.lost_at ?? q.updated_at)?.slice(0, 7);
+        const bucket = lostKey ? map.get(lostKey) : undefined;
+        if (bucket) {
+          bucket.lostCount += 1;
+          bucket.lostQuotes.push(q);
         }
       }
     }
@@ -234,7 +252,11 @@ export default function TrendsTab() {
     let tracked = 0;
     let leadsCreated = 0;
     let leadsConverted = 0;
+    let won = 0;
+    let lost = 0;
     for (const b of monthlyData) {
+      won += b.wonCount;
+      lost += b.lostCount;
       sales += b.salesTotal;
       revenue += b.revenueTotal;
       gp += b.gp;
@@ -250,6 +272,8 @@ export default function TrendsTab() {
       ratio: tracked > 0 ? (cost / tracked) * 100 : null,
       leadsCreated,
       leadsConverted,
+      won,
+      lost,
     };
   }, [monthlyData]);
 
@@ -271,7 +295,9 @@ export default function TrendsTab() {
 
   function drillQuotes(kind: DrillKind, b: MonthBucket): Quote[] {
     if (kind === "sales") return b.salesQuotes;
-    if (kind === "revenue" || kind === "gp" || kind === "ratio") return b.revenueQuotes;
+    if (kind === "revenue" || kind === "gp" || kind === "ratio" || kind === "won")
+      return b.revenueQuotes;
+    if (kind === "lost") return b.lostQuotes;
     return [];
   }
   function drillOpportunities(kind: DrillKind, b: MonthBucket): Opportunity[] {
@@ -287,6 +313,8 @@ export default function TrendsTab() {
     sales: "Sales",
     revenue: "Revenue (accepted quotes)",
     gp: "Gross Profit — accepted quotes",
+    won: "Quotes won",
+    lost: "Quotes lost",
     ratio: "Cost of Sales — accepted quotes",
     leadsCreated: "Leads created",
     leadsConverted: "Leads converted to customer",
@@ -384,6 +412,17 @@ export default function TrendsTab() {
               {summary.ratio === null ? "—" : `${summary.ratio.toFixed(1)}%`}
             </div>
             <div className="s">target ≤ {costOfSalesTarget}%</div>
+          </div>
+          <div className="fin-tile">
+            <div className="k">Won vs Lost</div>
+            <div className="v">
+              {summary.won} / {summary.lost}
+            </div>
+            <div className="s">
+              {summary.won + summary.lost
+                ? `${((summary.won / (summary.won + summary.lost)) * 100).toFixed(0)}% won`
+                : "—"}
+            </div>
           </div>
           <div className="fin-tile">
             <div className="k">Leads Created</div>
@@ -491,6 +530,50 @@ export default function TrendsTab() {
                     fontSize={11}
                     fill="var(--muted)"
                     formatter={(v: unknown) => (v == null ? "" : `${Math.round(Number(v))}%`)}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <h3 className="trends-h">Quotes Won vs Lost</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlyData} margin={{ top: 18, right: 16, left: 0, bottom: 0 }} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
+                <Tooltip />
+                <Legend />
+                <Bar
+                  dataKey="wonCount"
+                  name="Won"
+                  fill={COLORS.won}
+                  radius={[4, 4, 0, 0]}
+                  onClick={(_, index) => setDrill({ kind: "won", bucket: monthlyData[index] })}
+                  cursor="pointer"
+                >
+                  <LabelList
+                    dataKey="wonCount"
+                    position="top"
+                    fontSize={11}
+                    fill="var(--muted)"
+                    formatter={(v: unknown) => (Number(v) ? String(v) : "")}
+                  />
+                </Bar>
+                <Bar
+                  dataKey="lostCount"
+                  name="Lost"
+                  fill={COLORS.lost}
+                  radius={[4, 4, 0, 0]}
+                  onClick={(_, index) => setDrill({ kind: "lost", bucket: monthlyData[index] })}
+                  cursor="pointer"
+                >
+                  <LabelList
+                    dataKey="lostCount"
+                    position="top"
+                    fontSize={11}
+                    fill="var(--muted)"
+                    formatter={(v: unknown) => (Number(v) ? String(v) : "")}
                   />
                 </Bar>
               </BarChart>
