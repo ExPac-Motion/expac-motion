@@ -24,6 +24,7 @@ import type {
   Quote,
   QuoteDraft,
   RateSheetPatch,
+  TariffSheetDraft,
   LeadPatch,
   LeadContactDraft,
   LeadStatusPatch,
@@ -1833,6 +1834,21 @@ export function useSaveTariffSheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.saveTariffSheet,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tariff_sheets"] }),
+  });
+}
+export function useUpdateTariffSheetsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: Partial<TariffSheetDraft> }) =>
+      db.updateTariffSheetsBulk(input.ids, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tariff_sheets"] }),
+  });
+}
+export function useDeleteTariffSheetsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteTariffSheetsBulk,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tariff_sheets"] }),
   });
 }

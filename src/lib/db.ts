@@ -2426,6 +2426,21 @@ export async function saveTariffSheet(input: {
 export async function deleteTariffSheet(id: string): Promise<void> {
   unwrap(await supabase.from("tariff_sheets").delete().eq("id", id));
 }
+export async function updateTariffSheetsBulk(
+  ids: string[],
+  patch: Partial<TariffSheetDraft>,
+): Promise<void> {
+  unwrap(
+    await supabase
+      .from("tariff_sheets")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .in("id", ids)
+      .select("id"),
+  );
+}
+export async function deleteTariffSheetsBulk(ids: string[]): Promise<void> {
+  unwrap(await supabase.from("tariff_sheets").delete().in("id", ids));
+}
 
 /* ---------- Partner portal (migration 0121) ---------- */
 

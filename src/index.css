@@ -5658,6 +5658,12 @@ select.badge-select.lost {
   flex-wrap: wrap;
   gap: 4px;
 }
+/* Inside a grid row: one line, overflow clipped — a partner with many modes /
+   countries / ports must not stretch its row (full list on the record). */
+table.dt .cov-chiprow {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
 .cov-view,
 .rs-wrap {
   border-top: 1px solid var(--line);

@@ -394,7 +394,8 @@ export default function ContactsPage({
       {
         key: "actions",
         fixed: true,
-        width: 200,
+        // Partner lists carry a mail icon too (7 icons) — keep them clear of Company.
+        width: isPartner ? 250 : 200,
         header: (
           <RowActionsHead
             checked={sel.allChecked}

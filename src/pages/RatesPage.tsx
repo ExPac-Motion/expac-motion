@@ -19,8 +19,10 @@ import {
   useDeleteRateSheetItem,
   useRateSheet,
   useSaveRateSheetItem,
+  useTariffSheets,
   useUpdateRateSheetItemsBulk,
 } from "../lib/hooks";
+import TradeRoutesList from "./rates/TradeRoutesList";
 import {
   CHARGE_CATEGORIES,
   LINE_CURRENCIES,
@@ -43,6 +45,9 @@ export default function RatesPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  // Trade routes (tier sheets, 0119) first; the earlier flat list second.
+  const [tab, setTab] = useState<"routes" | "earlier">("routes");
+  const tariffQ = useTariffSheets();
 
   const rows = useMemo(() => {
     const list = data ?? [];
@@ -168,6 +173,36 @@ export default function RatesPage() {
 
   const current = editing === "new" ? null : editing;
 
+  const tabs = (
+    <div className="rs-tabs" role="tablist">
+      <button
+        type="button"
+        className={`rs-tab${tab === "routes" ? " on" : ""}`}
+        onClick={() => setTab("routes")}
+      >
+        Trade routes
+        {tariffQ.data ? <span className="rs-tab-n">{tariffQ.data.length}</span> : null}
+      </button>
+      <button
+        type="button"
+        className={`rs-tab${tab === "earlier" ? " on" : ""}`}
+        onClick={() => setTab("earlier")}
+      >
+        Earlier rate list
+        {data ? <span className="rs-tab-n">{data.length}</span> : null}
+      </button>
+    </div>
+  );
+
+  if (tab === "routes") {
+    return (
+      <>
+        <PageHeader eyebrow="Rates & Tariff" title="Rate list" />
+        <TradeRoutesList tabs={tabs} />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader eyebrow="Rates & Tariff" title="Rate list" />
@@ -217,7 +252,7 @@ export default function RatesPage() {
       </PageTools>
 
       <div className="panel">
-
+        {tabs}
         {isLoading ? (
           <Loading />
         ) : isError ? (
