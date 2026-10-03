@@ -12,6 +12,7 @@ import {
   useLeads,
   useProfiles,
   useQuote,
+  useMyProfile,
   useRateSheet,
   useTariffSheets,
   useSaveQuote,
@@ -332,6 +333,7 @@ export default function QuoteBuilderPage() {
   const [dropAt, setDropAt] = useState<{ index: number; after: boolean } | null>(null);
   // Tier rate sheets (migration 0119) for the "Rate tier" / "Trade route" pick.
   const tariffQ = useTariffSheets();
+  const isAdmin = useMyProfile().data?.role === "admin";
   const [tierLoading, setTierLoading] = useState(false);
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
@@ -1232,7 +1234,9 @@ export default function QuoteBuilderPage() {
             </>
           )}
 
-          {/* Tier rate sheets (0119) */}
+          {/* Tier rate sheets (0119) — admin-only, like Rates & Tariff */}
+          {isAdmin && (
+          <>
           <div className="field">
             <label>
               <TierDot tier={draft.rate_tier} />
@@ -1285,6 +1289,8 @@ export default function QuoteBuilderPage() {
             </div>
             <span className="hint">Fills the charge lines from the tier rate sheet.</span>
           </div>
+          </>
+          )}
 
           {/* Internal only / every mode */}
           <div className="field">
@@ -1640,12 +1646,14 @@ export default function QuoteBuilderPage() {
             <div className="charge-group-head">
               <h3>{g.category.toUpperCase()}</h3>
               <div style={{ display: "flex", gap: 8 }}>
+                {isAdmin && (
                 <button
                   className="btn small outline"
                   onClick={() => setRatePickerFor(g.category)}
                 >
                   From Rates
                 </button>
+                )}
                 <button
                   className="btn small outline"
                   onClick={() => addLine(g.category)}

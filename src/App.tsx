@@ -68,6 +68,16 @@ function Protected() {
   return <Layout />;
 }
 
+/** Admin-only pages (Rates & Tariff — buy rates, margins, partner rates).
+ *  Renders inside Protected, so the profile has already loaded. The tables
+ *  themselves are locked to is_admin() (0120); this just keeps other staff
+ *  logins off an empty page. */
+function AdminOnly({ children }: { children: ReactNode }) {
+  const profileQ = useMyProfile();
+  if (profileQ.data?.role !== "admin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 /** Customer-facing shell — a staff login is bounced back to the main app. */
 function PortalProtected() {
   const { session, loading } = useAuth();
@@ -226,8 +236,8 @@ function AppRoutes() {
             <Route path="jobs/completed" element={<CompletedJobsPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="crm" element={<CrmPage />} />
-            <Route path="rates" element={<TierSheetsPage />} />
-            <Route path="rates/list" element={<RatesPage />} />
+            <Route path="rates" element={<AdminOnly><TierSheetsPage /></AdminOnly>} />
+            <Route path="rates/list" element={<AdminOnly><RatesPage /></AdminOnly>} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="transporters" element={<TransportersPage />} />

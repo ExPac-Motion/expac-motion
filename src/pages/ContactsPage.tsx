@@ -27,6 +27,7 @@ import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   useCreateClientInvite,
   useLeadSources,
+  useMyProfile,
   usePartnerRateStructures,
   useProfiles,
   useReplaceClientContacts,
@@ -117,6 +118,7 @@ export default function ContactsPage({
   const { label, title, eyebrow } = COPY[kind];
   const Label = titleCase(label);
   const isClient = kind === "client";
+  const isAdmin = useMyProfile().data?.role === "admin";
   // Agents / transporters / clearing agents carry coverage (modes, countries,
   // ports) and rate structures.
   const isPartner =
@@ -691,16 +693,21 @@ export default function ContactsPage({
           {isPartner && (
             <>
               <CoverageView value={coverageOf(viewing)} />
-              <PartnerRateSheets
-                kind={kind as PartnerKind}
-                partnerId={viewing.id}
-                partnerName={viewing.company}
-              />
-              <LegacyRateStructures
-                kind={kind as PartnerKind}
-                partnerId={viewing.id}
-                partnerName={viewing.company}
-              />
+              {/* Partner buy rates are admin-only (0120). */}
+              {isAdmin && (
+                <>
+                  <PartnerRateSheets
+                    kind={kind as PartnerKind}
+                    partnerId={viewing.id}
+                    partnerName={viewing.company}
+                  />
+                  <LegacyRateStructures
+                    kind={kind as PartnerKind}
+                    partnerId={viewing.id}
+                    partnerName={viewing.company}
+                  />
+                </>
+              )}
             </>
           )}
         </Modal>

@@ -166,6 +166,9 @@ export default function Layout() {
         ? { ...m, children: m.children?.filter((c) => !c.to.includes("portal-access")) }
         : m,
     );
+    // Rates & Tariff (buy rates, margins, partner rates) is admin-only —
+    // the tables are locked to is_admin() in 0120.
+    nav = nav.filter((m) => m.to !== "/rates");
   }
 
   const activeModule = nav.find((m) => isModuleActive(m, pathname));
