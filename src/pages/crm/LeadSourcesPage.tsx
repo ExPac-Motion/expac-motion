@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   EmptyState,
   ErrorNote,
@@ -7,6 +8,7 @@ import {
   PageTools,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -23,8 +25,66 @@ export default function LeadSourcesPage() {
   const { toast, error: toastError } = useToast();
   const [editing, setEditing] = useState<LeadSource | "new" | null>(null);
 
-  const rows = data ?? [];
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const rows = useMemo(() => data ?? [], [data]);
   const current = editing === "new" ? null : editing;
+  const sel = useRowSelection(rows);
+
+  const columns = useMemo<DataColumn<LeadSource>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 150,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (s) => (
+          <RowActions
+            selected={sel.isSelected(s.id)}
+            onSelectToggle={() => sel.toggle(s.id)}
+            onEdit={() => setEditing(s)}
+            onDelete={() => onDelete(s)}
+          />
+        ),
+      },
+      { key: "order", header: "Order", width: 90, sortValue: (s) => s.sort_order, render: (s) => s.sort_order },
+      {
+        key: "name",
+        header: "Name",
+        width: 280,
+        sortValue: (s) => s.name,
+        render: (s) => <strong>{s.name}</strong>,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel],
+  );
+
+  async function onBulkDelete() {
+    if (
+      !window.confirm(
+        `Delete ${sel.count} source${sel.count === 1 ? "" : "s"}? Leads/customers already set to them keep the value — they just won't show as options anymore.`,
+      )
+    )
+      return;
+    setBulkBusy(true);
+    try {
+      for (const id of sel.ids) await remove.mutateAsync(id);
+      toast(`Deleted ${sel.count} source${sel.count === 1 ? "" : "s"}`);
+      sel.clear();
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not delete");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -68,6 +128,7 @@ export default function LeadSourcesPage() {
   return (
     <>
       <PageTools
+        onToolsSlot={setToolsSlot}
         count={isLoading ? undefined : `${rows.length} source${rows.length === 1 ? "" : "s"}`}
         hint={'Options for the "Source" dropdown on Leads and Customers.'}
         primary={
@@ -75,7 +136,16 @@ export default function LeadSourcesPage() {
             + Add Source
           </button>
         }
-      />
+      >
+        <button
+          className="btn danger"
+          onClick={onBulkDelete}
+          disabled={sel.count === 0 || bulkBusy}
+          title={sel.count === 0 ? "Tick rows in the Actions column to delete" : undefined}
+        >
+          Delete{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
       <div className="panel">
 
@@ -86,35 +156,14 @@ export default function LeadSourcesPage() {
         ) : rows.length === 0 ? (
           <EmptyState>No sources yet.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead />
-                  </th>
-                  <th>Order</th>
-                  <th>Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <RowActions
-                        onEdit={() => setEditing(s)}
-                        onDelete={() => onDelete(s)}
-                      />
-                    </td>
-                    <td>{s.sort_order}</td>
-                    <td>
-                      <strong>{s.name}</strong>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="lead-sources"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={rows}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
 

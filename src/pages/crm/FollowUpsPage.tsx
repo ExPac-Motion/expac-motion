@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   BulkEditModal,
   EmptyState,
@@ -163,9 +164,78 @@ export default function FollowUpsPage() {
     return (id: string | null) => (id ? m.get(id) ?? "—" : "—");
   }, [templates]);
 
-  const rules = rulesQ.data ?? [];
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const rules = useMemo(() => rulesQ.data ?? [], [rulesQ.data]);
   const log = logQ.data ?? [];
   const sel = useRowSelection(rules);
+
+  const columns = useMemo<DataColumn<FollowUpRule>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 170,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (r) => (
+          <RowActions
+            selected={sel.isSelected(r.id)}
+            onSelectToggle={() => sel.toggle(r.id)}
+            onView={() => setEditing(r)}
+            onEdit={() => setEditing(r)}
+            onDelete={() => onDelete(r)}
+          />
+        ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        width: 240,
+        sortValue: (r) => r.name,
+        render: (r) => <strong>{r.name}</strong>,
+      },
+      {
+        key: "trigger",
+        header: "Trigger",
+        width: 220,
+        sortValue: (r) => triggerLabel(r.trigger),
+        render: (r) => triggerLabel(r.trigger),
+      },
+      {
+        key: "delay",
+        header: "After",
+        width: 90,
+        sortValue: (r) => r.delay_days,
+        render: (r) => `${r.delay_days}d`,
+      },
+      {
+        key: "template",
+        header: "Template",
+        width: 220,
+        sortValue: (r) => templateName(r.template_id),
+        render: (r) => templateName(r.template_id),
+      },
+      {
+        key: "active",
+        header: "Active",
+        width: 90,
+        sortValue: (r) => (r.active ? 1 : 0),
+        render: (r) =>
+          r.active ? (
+            <span className="ms-tag tone-done">on</span>
+          ) : (
+            <span className="ms-tag tone-start">off</span>
+          ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, templateName],
+  );
 
   async function onDelete(row: FollowUpRule) {
     if (!window.confirm(`Delete rule "${row.name}"?`)) return;
@@ -189,6 +259,7 @@ export default function FollowUpsPage() {
   return (
     <>
       <PageTools
+        onToolsSlot={setToolsSlot}
         count={rulesQ.isLoading ? undefined : `${rules.length} rule${rules.length === 1 ? "" : "s"}`}
         hint="A background job checks these hourly and emails the chosen template once per matching quote / lead / recipient / shipment. Run it by hand any time with the button."
         primary={
@@ -226,54 +297,14 @@ export default function FollowUpsPage() {
         ) : rules.length === 0 ? (
           <EmptyState>No follow-up rules yet.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="table--compact">
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead
-                      checked={sel.allChecked}
-                      indeterminate={sel.someChecked}
-                      onToggle={sel.toggleAll}
-                    />
-                  </th>
-                  <th>Name</th>
-                  <th>Trigger</th>
-                  <th>After</th>
-                  <th>Template</th>
-                  <th>Active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <RowActions
-                        selected={sel.isSelected(r.id)}
-                        onSelectToggle={() => sel.toggle(r.id)}
-                        onView={() => setEditing(r)}
-                        onEdit={() => setEditing(r)}
-                        onDelete={() => onDelete(r)}
-                      />
-                    </td>
-                    <td>
-                      <strong>{r.name}</strong>
-                    </td>
-                    <td>{triggerLabel(r.trigger)}</td>
-                    <td className="nowrap">{r.delay_days}d</td>
-                    <td>{templateName(r.template_id)}</td>
-                    <td>
-                      {r.active ? (
-                        <span className="ms-tag tone-done">on</span>
-                      ) : (
-                        <span className="ms-tag tone-start">off</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="follow-up-rules"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={rules}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
 

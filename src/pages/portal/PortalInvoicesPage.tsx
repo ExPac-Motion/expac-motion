@@ -1,4 +1,6 @@
-import { EmptyState, ErrorNote, Loading, PageHeader } from "../../components/common";
+import { useMemo, useState } from "react";
+import DataTable, { type DataColumn } from "../../components/DataTable";
+import { EmptyState, ErrorNote, Loading, PageHeader, PageTools } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useMyDocumentsAll, useMyJobs } from "../../lib/hooks";
 import { getMyDocumentUrl } from "../../lib/db";
@@ -18,8 +20,15 @@ export default function PortalInvoicesPage() {
   const docsQ = useMyDocumentsAll();
   const jobsQ = useMyJobs();
   const { error: toastError } = useToast();
-  const jobById = new Map((jobsQ.data ?? []).map((j) => [j.id, j]));
-  const invoices = (docsQ.data ?? []).filter((d) => d.doc_type === "Invoice");
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const jobById = useMemo(
+    () => new Map((jobsQ.data ?? []).map((j) => [j.id, j])),
+    [jobsQ.data],
+  );
+  const invoices = useMemo(
+    () => (docsQ.data ?? []).filter((d) => d.doc_type === "Invoice"),
+    [docsQ.data],
+  );
 
   async function onDownload(storagePath: string) {
     const tab = window.open("", "_blank", "noopener");
@@ -32,9 +41,41 @@ export default function PortalInvoicesPage() {
     }
   }
 
+  const columns: DataColumn<(typeof invoices)[number]>[] = [
+    {
+      key: "invoice",
+      header: "Invoice",
+      width: 280,
+      sortValue: (d) => d.name,
+      render: (d) => (
+        <button
+          type="button"
+          className="btn ghost small"
+          style={{ textAlign: "left" }}
+          onClick={() => onDownload(d.storage_path)}
+        >
+          {d.name}
+        </button>
+      ),
+    },
+    {
+      key: "shipment",
+      header: "Shipment",
+      width: 150,
+      sortValue: (d) => jobById.get(d.job_id)?.reference ?? "",
+      render: (d) => jobById.get(d.job_id)?.reference ?? "—",
+    },
+    { key: "size", header: "Size", width: 100, sortValue: (d) => d.size_bytes ?? 0, render: (d) => bytesLabel(d.size_bytes) },
+    { key: "date", header: "Date", width: 120, sortValue: (d) => d.created_at, render: (d) => formatDate(d.created_at) },
+  ];
+
   return (
     <>
       <PageHeader eyebrow="Your account" title="Invoices" />
+      <PageTools
+        count={docsQ.isLoading ? undefined : `${invoices.length} invoice${invoices.length === 1 ? "" : "s"}`}
+        onToolsSlot={setToolsSlot}
+      />
       <div className="panel">
         {docsQ.isLoading ? (
           <Loading />
@@ -43,37 +84,14 @@ export default function PortalInvoicesPage() {
         ) : invoices.length === 0 ? (
           <EmptyState>No invoices shared yet.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="table--compact">
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Shipment</th>
-                  <th>Size</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((d) => (
-                  <tr key={d.id}>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn ghost small"
-                        style={{ textAlign: "left" }}
-                        onClick={() => onDownload(d.storage_path)}
-                      >
-                        {d.name}
-                      </button>
-                    </td>
-                    <td>{jobById.get(d.job_id)?.reference ?? "—"}</td>
-                    <td>{bytesLabel(d.size_bytes)}</td>
-                    <td>{formatDate(d.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="portal-invoices"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={invoices}
+            rowKey={(d) => d.id}
+          />
         )}
       </div>
     </>

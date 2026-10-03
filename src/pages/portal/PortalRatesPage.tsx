@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   EmptyState,
   ErrorNote,
@@ -29,6 +30,28 @@ export default function PortalRatesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ratesQ.data, search]);
 
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const columns = useMemo<DataColumn<(typeof rates)[number]>[]>(
+    () => [
+      { key: "mode", header: "Mode", width: 160, sortValue: (r) => r.mode, render: (r) => r.mode },
+      { key: "origin", header: "Origin", width: 110, sortValue: (r) => r.origin ?? "", render: (r) => r.origin || "Any" },
+      { key: "destination", header: "Destination", width: 110, sortValue: (r) => r.destination ?? "", render: (r) => r.destination || "Any" },
+      { key: "carrier", header: "Carrier", width: 150, sortValue: (r) => r.carrier ?? "", render: (r) => r.carrier || "—" },
+      { key: "description", header: "Description", width: 280, sortValue: (r) => r.description, render: (r) => r.description },
+      { key: "unit", header: "Unit", width: 120, sortValue: (r) => r.unit ?? "", render: (r) => r.unit || "—" },
+      {
+        key: "rate",
+        header: "Rate",
+        width: 130,
+        sortValue: (r) => r.sell,
+        render: (r) => (
+          <strong>{r.cur === "ZAR" ? money(r.sell) : `${r.cur} ${r.sell.toFixed(2)}`}</strong>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
     <>
       <PageHeader eyebrow="Your account" title="Tariff Sheet" />
@@ -45,6 +68,7 @@ export default function PortalRatesPage() {
             ? undefined
             : `${filtered.length}${filtered.length !== rates.length ? ` of ${rates.length}` : ""} rate${rates.length === 1 ? "" : "s"}`
         }
+        onToolsSlot={setToolsSlot}
       />
       <div className="panel">
         {ratesQ.isLoading ? (
@@ -56,38 +80,14 @@ export default function PortalRatesPage() {
             {rates.length === 0 ? "No rates published yet." : `No rates match "${search}".`}
           </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="table--compact">
-              <thead>
-                <tr>
-                  <th>Mode</th>
-                  <th>Origin</th>
-                  <th>Destination</th>
-                  <th>Carrier</th>
-                  <th>Description</th>
-                  <th>Unit</th>
-                  <th>Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.mode}</td>
-                    <td>{r.origin || "Any"}</td>
-                    <td>{r.destination || "Any"}</td>
-                    <td>{r.carrier || "—"}</td>
-                    <td>{r.description}</td>
-                    <td>{r.unit || "—"}</td>
-                    <td>
-                      <strong>
-                        {r.cur === "ZAR" ? money(r.sell) : `${r.cur} ${r.sell.toFixed(2)}`}
-                      </strong>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="portal-rates"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={filtered}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
     </>

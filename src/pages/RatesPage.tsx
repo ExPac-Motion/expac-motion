@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../components/Modal";
+import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   BulkEditModal,
   EmptyState,
@@ -9,6 +10,7 @@ import {
   PageTools,
   RowActions,
   RowActionsHead,
+  SearchInput,
   useRowSelection,
 } from "../components/common";
 import { useToast } from "../components/Toast";
@@ -38,13 +40,77 @@ export default function RatesPage() {
   const [editing, setEditing] = useState<RateSheetItem | "new" | null>(null);
   const [modeFilter, setModeFilter] = useState<QuoteMode | "All">("All");
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   const rows = useMemo(() => {
     const list = data ?? [];
-    return modeFilter === "All" ? list : list.filter((r) => r.mode === modeFilter);
-  }, [data, modeFilter]);
+    const byMode =
+      modeFilter === "All" ? list : list.filter((r) => r.mode === modeFilter);
+    const q = search.trim().toLowerCase();
+    if (!q) return byMode;
+    return byMode.filter((r) =>
+      [r.origin, r.destination, r.carrier, r.category, r.code, r.description, r.unit]
+        .some((v) => (v ?? "").toLowerCase().includes(q)),
+    );
+  }, [data, modeFilter, search]);
 
   const sel = useRowSelection(data ?? [], rows);
+
+  const columns = useMemo<DataColumn<RateSheetItem>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 180,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (r) => (
+          <RowActions
+            selected={sel.isSelected(r.id)}
+            onSelectToggle={() => sel.toggle(r.id)}
+            onView={() => setEditing(r)}
+            onEdit={() => setEditing(r)}
+            onDelete={() => onDelete(r)}
+            onDuplicate={() => onDuplicate(r)}
+          />
+        ),
+      },
+      { key: "mode", header: "Mode", width: 150, sortValue: (r) => r.mode, render: (r) => r.mode },
+      {
+        key: "lane",
+        header: "Lane",
+        width: 170,
+        sortValue: (r) => `${r.origin ?? ""}${r.destination ?? ""}`,
+        render: (r) => `${r.origin || "Any"} → ${r.destination || "Any"}`,
+      },
+      { key: "carrier", header: "Carrier", width: 150, sortValue: (r) => r.carrier ?? "", render: (r) => r.carrier || "—" },
+      { key: "category", header: "Category", width: 170, sortValue: (r) => r.category, render: (r) => r.category },
+      {
+        key: "description",
+        header: "Description",
+        width: 280,
+        sortValue: (r) => `${r.code ?? ""} ${r.description}`,
+        render: (r) => `${r.code ? `${r.code} - ` : ""}${r.description}`,
+      },
+      { key: "unit", header: "Unit", width: 120, sortValue: (r) => r.unit ?? "", render: (r) => r.unit || "—" },
+      {
+        key: "buy",
+        header: "Buy",
+        width: 120,
+        sortValue: (r) => r.buy,
+        render: (r) => `${r.cur} ${r.buy.toFixed(2)}`,
+      },
+      { key: "margin", header: "Margin", width: 100, sortValue: (r) => r.margin, render: (r) => `${r.margin}%` },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel],
+  );
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -105,6 +171,13 @@ export default function RatesPage() {
     <>
       <PageHeader eyebrow="Standard buy/sell rates" title="Rates & Tariff Sheet" />
       <PageTools
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search lane, carrier, description…"
+          />
+        }
         filters={
           <select
             value={modeFilter}
@@ -121,6 +194,7 @@ export default function RatesPage() {
         }
         count={isLoading ? undefined : `${rows.length} rate${rows.length === 1 ? "" : "s"}`}
         hint="Pulled into the Quote Builder instead of typing from memory/Excel."
+        onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setEditing("new")}>
             + Add rate
@@ -150,60 +224,14 @@ export default function RatesPage() {
         ) : rows.length === 0 ? (
           <EmptyState>No rates yet. Add your first one.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="table--compact">
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead
-                      checked={sel.allChecked}
-                      indeterminate={sel.someChecked}
-                      onToggle={sel.toggleAll}
-                    />
-                  </th>
-                  <th>Mode</th>
-                  <th>Lane</th>
-                  <th>Carrier</th>
-                  <th>Category</th>
-                  <th>Description</th>
-                  <th>Unit</th>
-                  <th>Buy</th>
-                  <th>Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <RowActions
-                        selected={sel.isSelected(r.id)}
-                        onSelectToggle={() => sel.toggle(r.id)}
-                        onView={() => setEditing(r)}
-                        onEdit={() => setEditing(r)}
-                        onDelete={() => onDelete(r)}
-                        onDuplicate={() => onDuplicate(r)}
-                      />
-                    </td>
-                    <td className="nowrap">{r.mode}</td>
-                    <td className="nowrap">
-                      {r.origin || "Any"} → {r.destination || "Any"}
-                    </td>
-                    <td>{r.carrier || "—"}</td>
-                    <td className="nowrap">{r.category}</td>
-                    <td>
-                      {r.code ? `${r.code} - ` : ""}
-                      {r.description}
-                    </td>
-                    <td>{r.unit || "—"}</td>
-                    <td className="nowrap">
-                      {r.cur} {r.buy.toFixed(2)}
-                    </td>
-                    <td>{r.margin}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="rate-sheet"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={rows}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
 

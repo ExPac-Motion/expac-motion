@@ -5937,3 +5937,20 @@ select.badge-select.lost {
 .topbar .ct-quickadd input {
   min-width: 220px;
 }
+/* Tasks & Notes list view (DataTable) */
+.task-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+table.dt tr.is-done td {
+  color: var(--muted);
+}
+table.dt tr.is-done .task-title {
+  text-decoration: line-through;
+}
+table.dt .task-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

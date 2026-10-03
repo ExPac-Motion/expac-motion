@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   PageTools,
+  RowActions,
+  RowActionsHead,
   SearchInput,
   useDeepLinkReturn,
   useRowSelection,
@@ -177,6 +180,116 @@ export default function TasksNotes({ focus }: { focus?: string }) {
   }, [all, statusF, scopeF, search, focus, today]);
 
   const sel = useRowSelection(all, rows);
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+
+  const taskCols: DataColumn<OpsTask>[] = [
+    {
+      key: "actions",
+      fixed: true,
+      width: 110,
+      header: (
+        <RowActionsHead
+          checked={sel.allChecked}
+          indeterminate={sel.someChecked}
+          onToggle={sel.toggleAll}
+        />
+      ),
+      render: (t) => (
+        <RowActions
+          selected={sel.isSelected(t.id)}
+          onSelectToggle={() => sel.toggle(t.id)}
+          onEdit={() => setEdit(t)}
+        />
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: 110,
+      sortValue: (t) => t.status,
+      render: (t) =>
+        t.kind === "task" ? (
+          <span className="task-status-cell">
+            <button
+              className={`task-check is-${t.status}`}
+              onClick={() => cycleStatus(t)}
+              title={`Status: ${t.status} — click to advance`}
+              aria-label="Advance status"
+            />
+            {STATUS_LABEL[t.status]}
+          </span>
+        ) : (
+          <span className="task-status-cell">
+            <span className="task-check is-note" title="Note" />
+            {t.status === "open" ? "Note" : STATUS_LABEL[t.status]}
+          </span>
+        ),
+    },
+    {
+      key: "title",
+      header: "Title",
+      width: 360,
+      sortValue: (t) => t.title,
+      render: (t) => (
+        <button className="task-title" onClick={() => setEdit(t)}>
+          <span className={`prio-dot ${PRIO_DOT[t.priority]}`} /> {t.title}
+          {t.body && <span className="task-body"> — {t.body}</span>}
+        </button>
+      ),
+    },
+    {
+      key: "due",
+      header: "Due",
+      width: 140,
+      sortValue: (t) => (t.due_date ? t.due_date + (t.due_time ?? "99") : ""),
+      render: (t) =>
+        t.due_date ? (
+          <span className={`due-badge${over(t) ? " over" : ""}`}>
+            {over(t) ? lateLabel(t, today) : dueLabel(t, today)}
+          </span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "priority",
+      header: "Priority",
+      width: 100,
+      sortValue: (t) => t.priority,
+      render: (t) => t.priority[0].toUpperCase() + t.priority.slice(1),
+    },
+    {
+      key: "assignee",
+      header: "Assignee",
+      width: 150,
+      sortValue: (t) => t.assignee?.full_name ?? "",
+      render: (t) => t.assignee?.full_name || "—",
+    },
+    {
+      key: "linked",
+      header: "Linked to",
+      width: 170,
+      sortValue: (t) => linkChip(t)?.label ?? "",
+      render: (t) => {
+        const chip = linkChip(t);
+        return chip ? (
+          <button className="chip sm" onClick={chip.go} title="Open linked record">
+            {chip.label}
+          </button>
+        ) : (
+          "—"
+        );
+      },
+    },
+    {
+      key: "kind",
+      header: "Type",
+      width: 80,
+      defaultHidden: true,
+      sortValue: (t) => t.kind,
+      render: (t) => (t.kind === "task" ? "Task" : "Note"),
+    },
+  ];
 
   async function addQuick() {
     const title = quick.trim();
@@ -254,6 +367,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
   return (
     <>
       <PageTools
+        onToolsSlot={setToolsSlot}
         search={
           <SearchInput value={search} onChange={setSearch} placeholder="Search tasks & notes…" />
         }
@@ -382,80 +496,15 @@ export default function TasksNotes({ focus }: { focus?: string }) {
         </div>
       ) : view === "list" ? (
         <div className="panel">
-          <div className="task-list-head">
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={sel.allChecked}
-                ref={(el) => {
-                  if (el) el.indeterminate = sel.someChecked && !sel.allChecked;
-                }}
-                onChange={sel.toggleAll}
-              />
-              Select all
-            </label>
-          </div>
-          <ul className="task-list">
-            {rows.map((t) => {
-              const overdue = over(t);
-              const chip = linkChip(t);
-              return (
-                <li
-                  key={t.id}
-                  className={`task-row${t.status === "done" ? " done" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    className="task-select"
-                    checked={sel.isSelected(t.id)}
-                    onChange={() => sel.toggle(t.id)}
-                    title="Select"
-                  />
-                  {t.kind === "task" ? (
-                    <button
-                      className={`task-check is-${t.status}`}
-                      onClick={() => cycleStatus(t)}
-                      title={`Status: ${t.status} — click to advance`}
-                      aria-label="Advance status"
-                    />
-                  ) : (
-                    <span className="task-check is-note" title="Note" />
-                  )}
-                  <span className={`prio-dot ${PRIO_DOT[t.priority]}`} />
-                  <button className="task-title" onClick={() => setEdit(t)}>
-                    {t.title}
-                    {t.body && <span className="task-body"> — {t.body}</span>}
-                  </button>
-                  {t.kind === "note" && t.status !== "open" && (
-                    <span className={`note-status is-${t.status}`}>
-                      {t.status === "doing" ? "Doing" : "Done"}
-                    </span>
-                  )}
-                  {t.due_date && (
-                    <span className={`due-badge${overdue ? " over" : ""}`}>
-                      {overdue
-                        ? lateLabel(t, today)
-                        : dueLabel(t, today)}
-                    </span>
-                  )}
-                  {t.assignee?.full_name && (
-                    <span className="chip sm" title="Assignee">
-                      {t.assignee.full_name}
-                    </span>
-                  )}
-                  {chip && (
-                    <button
-                      className="chip sm"
-                      onClick={chip.go}
-                      title="Open linked record"
-                    >
-                      {chip.label}
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <DataTable
+            tableKey="ops-tasks"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={taskCols}
+            rows={rows}
+            rowKey={(t) => t.id}
+            rowClass={(t) => (t.status === "done" ? "is-done" : undefined)}
+          />
         </div>
       ) : (
         <div

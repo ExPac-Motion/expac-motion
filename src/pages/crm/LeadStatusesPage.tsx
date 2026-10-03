@@ -1,12 +1,15 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Modal from "../../components/Modal";
+import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   PageTools,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useLeadStatuses, useSaveLeadStatus } from "../../lib/hooks";
@@ -19,8 +22,62 @@ export default function LeadStatusesPage() {
   const [editing, setEditing] = useState<LeadStatus | "new" | null>(null);
   const [viewing, setViewing] = useState<LeadStatus | null>(null);
 
-  const rows = data ?? [];
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const rows = useMemo(() => data ?? [], [data]);
   const current = editing === "new" ? null : editing;
+  const sel = useRowSelection(rows);
+
+  const columns = useMemo<DataColumn<LeadStatus>[]>(
+    () => [
+      {
+        key: "actions",
+        fixed: true,
+        width: 150,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
+        render: (s) => (
+          <RowActions
+            selected={sel.isSelected(s.id)}
+            onSelectToggle={() => sel.toggle(s.id)}
+            onView={() => setViewing(s)}
+            onEdit={() => setEditing(s)}
+          />
+        ),
+      },
+      { key: "order", header: "Order", width: 90, sortValue: (s) => s.sort_order, render: (s) => s.sort_order },
+      {
+        key: "colour",
+        header: "Colour",
+        width: 90,
+        render: (s) => (
+          <span className="ls-swatch" style={{ background: s.color }} title={s.color} />
+        ),
+      },
+      {
+        key: "name",
+        header: "Name",
+        width: 240,
+        sortValue: (s) => s.name,
+        render: (s) => <strong>{s.name}</strong>,
+      },
+      {
+        key: "promotes",
+        header: "Promotes to Customer",
+        width: 190,
+        sortValue: (s) => (s.promotes_to_customer ? 1 : 0),
+        render: (s) => (s.promotes_to_customer ? "Yes" : "—"),
+      },
+    ],
+    [sel],
+  );
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,6 +108,7 @@ export default function LeadStatusesPage() {
   return (
     <>
       <PageTools
+        onToolsSlot={setToolsSlot}
         count={isLoading ? undefined : `${rows.length} status${rows.length === 1 ? "" : "es"}`}
         hint={'Setting a lead to a status flagged "promotes to customer" automatically creates a real customer record.'}
         primary={
@@ -58,7 +116,52 @@ export default function LeadStatusesPage() {
             + Add Status
           </button>
         }
-      />
+      >
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={sel.count === 0 ? "Tick rows in the Actions column to bulk edit" : undefined}
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} status${sel.count === 1 ? "" : "es"}`}
+          count={sel.count}
+          noun="status"
+          busy={bulkBusy}
+          fields={[
+            { key: "color", label: "Colour (hex)", type: "text", placeholder: "#64748b", allowClear: false },
+            {
+              key: "promotes_to_customer",
+              label: "Promotes to Customer",
+              type: "toggle",
+              onLabel: "Yes",
+              offLabel: "No",
+            },
+            { key: "sort_order", label: "Sort order", type: "number", allowClear: false },
+          ]}
+          onApply={async (patch) => {
+            setBulkBusy(true);
+            try {
+              for (const id of sel.ids) {
+                await save.mutateAsync({ id, patch: patch as LeadStatusPatch });
+              }
+              toast(`Updated ${sel.count} status${sel.count === 1 ? "" : "es"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e2) {
+              toastError(e2 instanceof Error ? e2.message : "Bulk edit failed");
+            } finally {
+              setBulkBusy(false);
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
+      )}
 
       <div className="panel">
 
@@ -69,45 +172,14 @@ export default function LeadStatusesPage() {
         ) : rows.length === 0 ? (
           <EmptyState>No statuses yet.</EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th className="actions-col">
-                    <RowActionsHead />
-                  </th>
-                  <th>Order</th>
-                  <th>Colour</th>
-                  <th>Name</th>
-                  <th>Promotes to Customer</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <RowActions
-                        onView={() => setViewing(s)}
-                        onEdit={() => setEditing(s)}
-                      />
-                    </td>
-                    <td>{s.sort_order}</td>
-                    <td>
-                      <span
-                        className="ls-swatch"
-                        style={{ background: s.color }}
-                        title={s.color}
-                      />
-                    </td>
-                    <td>
-                      <strong>{s.name}</strong>
-                    </td>
-                    <td>{s.promotes_to_customer ? "Yes" : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey="lead-statuses"
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={rows}
+            rowKey={(r) => r.id}
+          />
         )}
       </div>
 
