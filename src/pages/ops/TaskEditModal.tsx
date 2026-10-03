@@ -4,6 +4,8 @@ import TimeInput, { hhmm } from "../../components/TimeInput";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import {
+  useAgents,
+  useClearingAgents,
   useClients,
   useDeleteOpsTask,
   useJobs,
@@ -13,6 +15,7 @@ import {
   useQuotes,
   useSaveOpsTask,
   useSuppliers,
+  useTransporters,
 } from "../../lib/hooks";
 import { formatDate } from "../../lib/format";
 import { isTaskOverdue } from "../../lib/opsCalendar";
@@ -44,8 +47,20 @@ type Form = {
   client_id: string;
   lead_id: string;
   supplier_id: string;
+  /** "agent:<id>" / "transporter:<id>" / "clearing_agent:<id>" or "". */
+  partner: string;
   assigned_to: string;
 };
+
+const PARTNER_KEYS = ["agent_id", "transporter_id", "clearing_agent_id"] as const;
+function partnerOf(src: Partial<OpsTaskPatch> | OpsTask | null | undefined): string {
+  if (!src) return "";
+  for (const k of PARTNER_KEYS) {
+    const v = src[k];
+    if (v) return k.replace(/_id$/, "") + ":" + v;
+  }
+  return "";
+}
 
 function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
   return {
@@ -61,12 +76,22 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
     client_id: task?.client_id ?? (defaults?.client_id as string) ?? "",
     lead_id: task?.lead_id ?? (defaults?.lead_id as string) ?? "",
     supplier_id: task?.supplier_id ?? (defaults?.supplier_id as string) ?? "",
+    partner: task ? partnerOf(task) : partnerOf(defaults),
     assigned_to: task?.assigned_to ?? (defaults?.assigned_to as string) ?? "",
   };
 }
 
 /** The record a new task is being created against, most specific first. */
-const LINK_KEYS = ["job_id", "quote_id", "client_id", "lead_id", "supplier_id"] as const;
+const LINK_KEYS = [
+  "job_id",
+  "quote_id",
+  "client_id",
+  "lead_id",
+  "supplier_id",
+  "agent_id",
+  "transporter_id",
+  "clearing_agent_id",
+] as const;
 
 export default function TaskEditModal({
   task: initialTask,
@@ -84,6 +109,9 @@ export default function TaskEditModal({
   const clients = useClients().data ?? [];
   const leads = useLeads().data ?? [];
   const suppliers = useSuppliers().data ?? [];
+  const agents = useAgents().data ?? [];
+  const transporters = useTransporters().data ?? [];
+  const clearingAgents = useClearingAgents().data ?? [];
   const teamMembers = (useProfiles().data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
   );
@@ -105,7 +133,11 @@ export default function TaskEditModal({
           ? clients.find((c) => c.id === linkId)?.company ?? "this customer"
           : linkKey === "lead_id"
             ? leads.find((l) => l.id === linkId)?.company ?? "this lead"
-            : suppliers.find((s) => s.id === linkId)?.company ?? "this supplier";
+            : linkKey === "supplier_id"
+              ? suppliers.find((s) => s.id === linkId)?.company ?? "this supplier"
+              : [...agents, ...transporters, ...clearingAgents].find(
+                  (p) => p.id === linkId,
+                )?.company ?? "this partner";
   const openOnRecord = linkKey
     ? allTasks
         .filter(
@@ -146,6 +178,14 @@ export default function TaskEditModal({
       supplier_id: f.supplier_id || null,
       assigned_to: f.assigned_to || null,
     };
+    // Partner links (0117): only sent when set now or before, so saving
+    // keeps working until that migration is applied.
+    const [pKind, pId] = f.partner ? f.partner.split(":") : ["", ""];
+    if (f.partner || (task && partnerOf(task))) {
+      values.agent_id = pKind === "agent" ? pId : null;
+      values.transporter_id = pKind === "transporter" ? pId : null;
+      values.clearing_agent_id = pKind === "clearing_agent" ? pId : null;
+    }
     // Only send due_time when there is one (or one is being cleared), so
     // saving still works before migration 0109 adds the column.
     if (f.due_time || task?.due_time) values.due_time = f.due_time || null;
@@ -433,6 +473,36 @@ export default function TaskEditModal({
             ))}
           </select>
         </div>
+        <div className="field">
+          <label>Link to partner</label>
+          <select value={f.partner} onChange={(e) => set("partner", e.target.value)}>
+            <option value="">—</option>
+            <optgroup label="Agents">
+              {agents.map((a) => (
+                <option key={a.id} value={"agent:" + a.id}>
+                  {a.company}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Transporters">
+              {transporters.map((a) => (
+                <option key={a.id} value={"transporter:" + a.id}>
+                  {a.company}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Clearing Agents">
+              {clearingAgents.map((a) => (
+                <option key={a.id} value={"clearing_agent:" + a.id}>
+                  {a.company}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid2">
         <div className="field">
           <label>Assignee</label>
           <select

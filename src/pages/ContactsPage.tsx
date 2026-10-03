@@ -114,7 +114,6 @@ export default function ContactsPage({
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
   const [taskingRow, setTaskingRow] = useState<Contact | null>(null);
-  const canTask = kind === "client" || kind === "supplier";
   const createInvite = useCreateClientInvite();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -376,7 +375,7 @@ export default function ContactsPage({
       {
         key: "actions",
         fixed: true,
-        width: canTask ? 200 : 180,
+        width: 200,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
@@ -395,7 +394,7 @@ export default function ContactsPage({
             <RowActions
               selected={sel.isSelected(r.id)}
               onSelectToggle={() => sel.toggle(r.id)}
-              onTask={canTask ? () => setTaskingRow(r) : undefined}
+              onTask={() => setTaskingRow(r)}
               taskTitle={`Create a task for this ${label}`}
               onView={() => setViewing(r)}
               onEdit={() => setEditing(r)}
@@ -1020,6 +1019,9 @@ export default function ContactsPage({
           defaults={{
             ...(kind === "client" ? { client_id: taskingRow.id } : {}),
             ...(kind === "supplier" ? { supplier_id: taskingRow.id } : {}),
+            ...(kind === "agent" ? { agent_id: taskingRow.id } : {}),
+            ...(kind === "transporter" ? { transporter_id: taskingRow.id } : {}),
+            ...(kind === "clearing_agent" ? { clearing_agent_id: taskingRow.id } : {}),
             title: `Follow up: ${taskingRow.company}`,
           }}
           onClose={() => setTaskingRow(null)}

@@ -361,6 +361,25 @@ export default function TasksNotes({ focus }: { focus?: string }) {
         go: () =>
           navigate("/suppliers", { state: { openContactId: t.supplier_id } }),
       };
+    if (t.agent?.company)
+      return {
+        label: t.agent.company,
+        go: () => navigate("/agents", { state: { openContactId: t.agent_id } }),
+      };
+    if (t.transporter?.company)
+      return {
+        label: t.transporter.company,
+        go: () =>
+          navigate("/transporters", { state: { openContactId: t.transporter_id } }),
+      };
+    if (t.clearing_agent?.company)
+      return {
+        label: t.clearing_agent.company,
+        go: () =>
+          navigate("/clearing-agents", {
+            state: { openContactId: t.clearing_agent_id },
+          }),
+      };
     return null;
   }
 

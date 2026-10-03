@@ -722,16 +722,24 @@ export async function setJobMilestone(
 }
 
 /* ---------- Operations Control Tower: Tasks & Notes ---------- */
-const OPS_TASK_SELECT =
+const OPS_TASK_SELECT_BASE =
   "*, job:jobs(id,reference), quote:quotes(id,reference), client:clients(id,company), lead:leads(id,company), supplier:suppliers(id,company), assignee:profiles(id,full_name)";
+/** + partner links (migration 0117). Falls back to the base select until
+ *  that migration is applied, so Tasks & Notes never breaks meanwhile. */
+let OPS_TASK_SELECT =
+  OPS_TASK_SELECT_BASE +
+  ", agent:agents(id,company), transporter:transporters(id,company), clearing_agent:clearing_agents(id,company)";
 
 export async function listOpsTasks(): Promise<OpsTask[]> {
-  return unwrap<OpsTask[]>(
-    await supabase
-      .from("ops_tasks")
-      .select(OPS_TASK_SELECT)
-      .order("created_at", { ascending: false }),
-  );
+  const res = await supabase
+    .from("ops_tasks")
+    .select(OPS_TASK_SELECT)
+    .order("created_at", { ascending: false });
+  if (res.error && OPS_TASK_SELECT !== OPS_TASK_SELECT_BASE) {
+    OPS_TASK_SELECT = OPS_TASK_SELECT_BASE;
+    return listOpsTasks();
+  }
+  return unwrap<OpsTask[]>(res as unknown as { data: OpsTask[] | null; error: unknown });
 }
 
 export async function createOpsTask(

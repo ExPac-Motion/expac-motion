@@ -1368,6 +1368,10 @@ export interface OpsTask {
   client_id: string | null;
   lead_id: string | null;
   supplier_id: string | null;
+  /** Partner links (migration 0117). */
+  agent_id?: string | null;
+  transporter_id?: string | null;
+  clearing_agent_id?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1382,6 +1386,9 @@ export interface OpsTask {
   client?: Pick<Client, "id" | "company"> | null;
   lead?: Pick<Lead, "id" | "company"> | null;
   supplier?: Pick<Supplier, "id" | "company"> | null;
+  agent?: Pick<Agent, "id" | "company"> | null;
+  transporter?: Pick<Agent, "id" | "company"> | null;
+  clearing_agent?: Pick<Agent, "id" | "company"> | null;
   assignee?: Pick<Profile, "id" | "full_name"> | null;
 }
 
@@ -1400,6 +1407,9 @@ export type OpsTaskPatch = Partial<
     | "client_id"
     | "lead_id"
     | "supplier_id"
+    | "agent_id"
+    | "transporter_id"
+    | "clearing_agent_id"
     | "done_at"
     | "assigned_to"
     | "source_notification_key"

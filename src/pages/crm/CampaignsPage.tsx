@@ -561,6 +561,7 @@ export default function CampaignsPage() {
 
   const [creating, setCreating] = useState(false);
   const [rescheduling, setRescheduling] = useState<MailCampaign | null>(null);
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   // While anything is scheduled / going out, refresh every 30s so the
   // status and tracking columns follow the server-side sender.
@@ -780,5 +781,4 @@ export default function CampaignsPage() {
     </>
   );
 }
-  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 

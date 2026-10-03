@@ -589,6 +589,7 @@ export default function FormsPage() {
   const { data, isLoading, isError, error } = useWebForms();
   const save = useSaveWebForm();
   const remove = useDeleteWebForm();
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const { toast, error: toastError } = useToast();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -752,5 +753,4 @@ export default function FormsPage() {
     </>
   );
 }
-  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
