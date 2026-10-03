@@ -6016,3 +6016,21 @@ table.dt .task-title {
   color: var(--muted);
   min-width: 96px;
 }
+/* Campaigns: schedule controls */
+.camp-when {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.camp-when .date-input input {
+  width: 130px;
+}
+.camp-when input[type="text"]:not(.date-input input) {
+  width: 90px;
+}
+.camp-sched {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}

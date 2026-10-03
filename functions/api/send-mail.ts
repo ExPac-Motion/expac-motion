@@ -179,7 +179,9 @@ export async function onRequestPost(context) {
   if (!res.ok || !data.id) {
     return json(
       { error: (data && (data.message || data.error)) || "Resend returned " + res.status },
-      res.status >= 500 ? 502 : 400,
+      // 429 passes through so the scheduled-campaign sender (0116) knows to
+      // retry rather than mark the recipient failed.
+      res.status === 429 ? 429 : res.status >= 500 ? 502 : 400,
     );
   }
   return json({ id: data.id });

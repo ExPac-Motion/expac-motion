@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
+import DateInput from "../../components/DateInput";
+import TimeInput from "../../components/TimeInput";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   EmptyState,
   ErrorNote,
@@ -22,7 +25,9 @@ import {
   useMailCampaignRecipients,
   useMailCampaigns,
   useMailTemplates,
+  useScheduleCampaign,
   useSendCampaign,
+  useUpdateMailCampaign,
   useUploadMailAsset,
 } from "../../lib/hooks";
 import { formatDateTime } from "../../lib/format";
@@ -35,7 +40,7 @@ import type {
 function campaignTone(s: MailCampaignStatus): string {
   if (s === "failed") return "alert";
   if (s === "sent") return "done";
-  if (s === "sending") return "mid";
+  if (s === "sending" || s === "scheduled") return "mid";
   return "start";
 }
 function recipientTone(s: MailRecipientStatus): string {
@@ -176,7 +181,16 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
   const { data: statuses } = useLeadStatuses();
   const uploadAsset = useUploadMailAsset();
   const send = useSendCampaign();
+  const schedule = useScheduleCampaign();
   const { toast, error: toastError } = useToast();
+  const [when, setWhen] = useState<"now" | "later">("later");
+  const [schedDate, setSchedDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [schedTime, setSchedTime] = useState("08:00");
+  const busy = send.isPending || schedule.isPending;
 
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
@@ -258,6 +272,29 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
         name: l.contact || l.company,
         company: l.company,
       }));
+
+    if (when === "later") {
+      if (!schedDate || !schedTime) return toastError("Pick a date and time to send");
+      const at = new Date(`${schedDate}T${schedTime}:00`);
+      if (Number.isNaN(at.getTime())) return toastError("That date / time isn't valid");
+      if (at.getTime() < Date.now() - 60_000)
+        return toastError("That time has already passed — pick a later one");
+      try {
+        await schedule.mutateAsync({
+          templateId: templateId || null,
+          name: name.trim(),
+          subject: subject.trim(),
+          body,
+          recipients,
+          scheduledAt: at.toISOString(),
+        });
+        toast(`Campaign scheduled for ${formatDateTime(at.toISOString())}`);
+        onClose();
+      } catch (e) {
+        toastError(e instanceof Error ? e.message : "Could not schedule campaign");
+      }
+      return;
+    }
 
     setProgress({ sent: 0, total: recipients.length });
     try {
@@ -406,14 +443,106 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
           <progress value={progress.sent} max={progress.total} style={{ width: "100%" }} />
         </div>
       )}
+      <div className="field">
+        <label>When</label>
+        <div className="camp-when">
+          <label className="check">
+            <input
+              type="radio"
+              name="camp-when"
+              checked={when === "later"}
+              onChange={() => setWhen("later")}
+            />
+            Schedule
+          </label>
+          {when === "later" && (
+            <>
+              <DateInput value={schedDate} onChange={setSchedDate} />
+              <TimeInput value={schedTime} onChange={setSchedTime} />
+            </>
+          )}
+          <label className="check">
+            <input
+              type="radio"
+              name="camp-when"
+              checked={when === "now"}
+              onChange={() => setWhen("now")}
+            />
+            Send now from this tab
+          </label>
+        </div>
+        <span className="hint">
+          {when === "later"
+            ? "Sent by the server at that time — you can close the app. Change or cancel it any time before then."
+            : "Keep this tab open until it finishes."}
+        </span>
+      </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
-        <button type="button" className="btn outline" onClick={onClose} disabled={send.isPending}>
+        <button type="button" className="btn outline" onClick={onClose} disabled={busy}>
           Cancel
         </button>
-        <button type="button" className="btn" onClick={onSend} disabled={send.isPending}>
+        <button type="button" className="btn" onClick={onSend} disabled={busy}>
           {send.isPending
             ? "Sending…"
-            : `Send to ${selectedCount} recipient${selectedCount === 1 ? "" : "s"}`}
+            : schedule.isPending
+              ? "Scheduling…"
+              : when === "later"
+                ? `Schedule for ${selectedCount} recipient${selectedCount === 1 ? "" : "s"}`
+                : `Send to ${selectedCount} recipient${selectedCount === 1 ? "" : "s"}`}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function RescheduleModal({
+  campaign,
+  onClose,
+}: {
+  campaign: MailCampaign;
+  onClose: () => void;
+}) {
+  const update = useUpdateMailCampaign();
+  const { toast, error: toastError } = useToast();
+  const start = new Date(campaign.scheduled_at ?? Date.now());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const [date, setDate] = useState(
+    `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+  );
+  const [time, setTime] = useState(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
+
+  async function onSave() {
+    const at = new Date(`${date}T${time}:00`);
+    if (Number.isNaN(at.getTime())) return toastError("That date / time isn't valid");
+    if (at.getTime() < Date.now() - 60_000)
+      return toastError("That time has already passed — pick a later one");
+    try {
+      await update.mutateAsync({
+        id: campaign.id,
+        patch: { scheduled_at: at.toISOString() },
+      });
+      toast(`Rescheduled for ${formatDateTime(at.toISOString())}`);
+      onClose();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not reschedule");
+    }
+  }
+
+  return (
+    <Modal title={`Reschedule — ${campaign.name}`} onClose={onClose}>
+      <div className="field">
+        <label>Send at</label>
+        <div className="camp-when">
+          <DateInput value={date} onChange={setDate} />
+          <TimeInput value={time} onChange={setTime} />
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button type="button" className="btn outline" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="btn" onClick={onSave} disabled={update.isPending}>
+          {update.isPending ? "Saving…" : "Save"}
         </button>
       </div>
     </Modal>
@@ -426,9 +555,49 @@ export default function CampaignsPage() {
   const { data, isLoading, isError, error } = useMailCampaigns();
   const recipientsQ = useAllCampaignRecipients();
   const remove = useDeleteMailCampaign();
+  const updateCampaign = useUpdateMailCampaign();
+  const qc = useQueryClient();
   const { toast, error: toastError } = useToast();
 
   const [creating, setCreating] = useState(false);
+  const [rescheduling, setRescheduling] = useState<MailCampaign | null>(null);
+
+  // While anything is scheduled / going out, refresh every 30s so the
+  // status and tracking columns follow the server-side sender.
+  const anyLive = (data ?? []).some(
+    (c) => c.status === "scheduled" || c.status === "sending",
+  );
+  useEffect(() => {
+    if (!anyLive) return;
+    const t = window.setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["mail_campaigns"] });
+      qc.invalidateQueries({ queryKey: ["mail_campaign_recipients"] });
+    }, 30_000);
+    return () => window.clearInterval(t);
+  }, [anyLive, qc]);
+
+  async function onSendNow(c: MailCampaign) {
+    if (!window.confirm(`Send "${c.name}" now instead of at its scheduled time?`)) return;
+    try {
+      await updateCampaign.mutateAsync({
+        id: c.id,
+        patch: { scheduled_at: new Date().toISOString() },
+      });
+      toast("Sending within the next minute");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not update");
+    }
+  }
+
+  async function onCancelSchedule(c: MailCampaign) {
+    if (!window.confirm(`Cancel the scheduled send of "${c.name}"? Nothing will go out.`)) return;
+    try {
+      await updateCampaign.mutateAsync({ id: c.id, patch: { status: "cancelled" } });
+      toast("Scheduled send cancelled");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not cancel");
+    }
+  }
   const [viewing, setViewing] = useState<MailCampaign | null>(null);
 
   const rows = data ?? [];
@@ -518,6 +687,32 @@ export default function CampaignsPage() {
         ),
       },
       {
+        key: "scheduled",
+        header: "Scheduled",
+        width: 250,
+        cellClass: "nowrap",
+        sortValue: (c) => c.scheduled_at ?? "",
+        render: (c) =>
+          c.status === "scheduled" && c.scheduled_at ? (
+            <span className="camp-sched">
+              {formatDateTime(c.scheduled_at)}
+              <button className="link-btn" onClick={() => setRescheduling(c)}>
+                Change
+              </button>
+              <button className="link-btn" onClick={() => onSendNow(c)}>
+                Send now
+              </button>
+              <button className="link-btn" onClick={() => onCancelSchedule(c)}>
+                Cancel
+              </button>
+            </span>
+          ) : c.scheduled_at ? (
+            formatDateTime(c.scheduled_at)
+          ) : (
+            "—"
+          ),
+      },
+      {
         key: "tracking",
         header: "Tracking",
         width: 160,
@@ -540,7 +735,7 @@ export default function CampaignsPage() {
     <>
       <PageTools
         count={isLoading ? undefined : `${rows.length} campaign${rows.length === 1 ? "" : "s"}`}
-        hint={'Send a template to a chosen set of leads. Sends run immediately from this browser tab — there\'s no scheduler yet, so "on specific days" still means opening this page and clicking Send that day.'}
+        hint="Send a template to a chosen set of leads — now, or scheduled for a date and time (sent by the server; the app doesn't need to be open)."
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setCreating(true)}>
@@ -570,6 +765,12 @@ export default function CampaignsPage() {
       </div>
 
       {creating && <NewCampaignModal onClose={() => setCreating(false)} />}
+      {rescheduling && (
+        <RescheduleModal
+          campaign={rescheduling}
+          onClose={() => setRescheduling(null)}
+        />
+      )}
       {viewing && (
         <CampaignDetailModal
           campaign={viewing}

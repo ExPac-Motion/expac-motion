@@ -7,6 +7,7 @@ import {
 import * as db from "./db";
 import { supabase } from "./supabase";
 import type {
+  MailCampaignPatch,
   Client,
   CompanySettingsPatch,
   Contact,
@@ -1251,6 +1252,94 @@ export function useWebFormSubmissions(formId: string | undefined) {
     queryKey: ["web_form_submissions", formId],
     queryFn: () => db.listWebFormSubmissions(formId as string),
     enabled: !!formId,
+  });
+}
+
+interface ScheduleCampaignInput {
+  templateId: string | null;
+  name: string;
+  subject: string;
+  body: string;
+  recipients: Array<{ leadId: string; email: string; name: string; company: string }>;
+  /** ISO timestamp the server should send at. */
+  scheduledAt: string;
+}
+
+/** Schedules a campaign for server-side sending (migration 0116): renders
+ *  every recipient's final subject / HTML / text now (merge fields,
+ *  signature, unsubscribe link), stores them, then marks the campaign
+ *  'scheduled' -- pg_cron delivers it at scheduledAt, no tab needs to stay
+ *  open. */
+export function useScheduleCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ScheduleCampaignInput) => {
+      const { templateId, name, subject, body, recipients, scheduledAt } = input;
+      const settings = await db.getCompanySettings().catch(() => null);
+      const bodyWithSig =
+        settings && settings.mail_signature_html.trim()
+          ? `${body}<br><br>${settings.mail_signature_html}`
+          : body;
+      // Draft first, so the cron job can't pick it up half-rendered.
+      const campaign = await db.createMailCampaign({
+        template_id: templateId,
+        name,
+        subject,
+        body,
+        status: "draft",
+        recipient_filter: {},
+        scheduled_at: scheduledAt,
+        from_name: settings?.mail_sender_name || null,
+        reply_to: settings?.mail_reply_to || null,
+      });
+      try {
+        const rows = await db.createMailCampaignRecipients(
+          recipients.map((r) => ({
+            campaign_id: campaign.id,
+            lead_id: r.leadId,
+            email: r.email,
+          })),
+        );
+        await db.saveRenderedCampaignRecipients(
+          rows.map((row) => {
+            const recipient = recipients.find((r) => r.leadId === row.lead_id);
+            const mergeCtx = {
+              name: recipient?.name || "",
+              company: recipient?.company || "",
+              unsubscribeUrl: `${PUBLIC_APP_URL}/unsubscribe?r=${row.id}`,
+            };
+            const html = linkifyHtml(resolveMergeFields(bodyWithSig, mergeCtx));
+            return {
+              id: row.id,
+              campaign_id: campaign.id,
+              email: row.email,
+              subject: resolveMergeFields(subject, mergeCtx),
+              html,
+              body_text: htmlToText(html),
+            };
+          }),
+        );
+        await db.updateMailCampaign(campaign.id, { status: "scheduled" });
+      } catch (e) {
+        await db.deleteMailCampaign(campaign.id).catch(() => undefined);
+        throw e;
+      }
+      return campaign;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mail_campaigns"] });
+      qc.invalidateQueries({ queryKey: ["mail_campaign_recipients"] });
+    },
+  });
+}
+
+/** Reschedule / send-now / cancel a scheduled campaign. */
+export function useUpdateMailCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: MailCampaignPatch }) =>
+      db.updateMailCampaign(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mail_campaigns"] }),
   });
 }
 

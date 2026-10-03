@@ -531,7 +531,13 @@ export interface MediaFolder {
 
 /* ---------- Sales CRM: Mail Campaigns ---------- */
 
-export type MailCampaignStatus = "draft" | "sending" | "sent" | "failed";
+export type MailCampaignStatus =
+  | "draft"
+  | "scheduled"
+  | "sending"
+  | "sent"
+  | "failed"
+  | "cancelled";
 export type MailRecipientStatus =
   | "pending"
   | "sent"
@@ -552,6 +558,10 @@ export interface MailCampaign {
   created_by: string | null;
   created_at: string;
   sent_at: string | null;
+  /** Set for a scheduled (server-sent) campaign -- migration 0116. */
+  scheduled_at: string | null;
+  from_name: string | null;
+  reply_to: string | null;
 }
 export type MailCampaignPatch = Partial<
   Omit<MailCampaign, "id" | "created_by" | "created_at">

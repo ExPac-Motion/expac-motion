@@ -1801,6 +1801,27 @@ export async function updateMailCampaignRecipient(
   );
 }
 
+/** Store each recipient's fully rendered message for a scheduled campaign
+ *  (the server-side sender only delivers what's stored -- 0116). */
+export async function saveRenderedCampaignRecipients(
+  rows: Array<{
+    id: string;
+    campaign_id: string;
+    email: string;
+    subject: string;
+    html: string;
+    body_text: string;
+  }>,
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += 200) {
+    unwrap(
+      await supabase
+        .from("mail_campaign_recipients")
+        .upsert(rows.slice(i, i + 200), { onConflict: "id" }),
+    );
+  }
+}
+
 /** Public unsubscribe page -- callable with no session (anon role). */
 export async function unsubscribeLead(recipientId: string): Promise<boolean> {
   return unwrap<boolean>(
