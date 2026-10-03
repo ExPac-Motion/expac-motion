@@ -10,6 +10,7 @@ import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
 import { ErrorNote, Loading, PageHeader, PageTools } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import { catalogItem } from "../../lib/chargeCatalog";
 import {
   useAgents,
   useClearingAgents,
@@ -22,9 +23,13 @@ import {
   useTransporters,
 } from "../../lib/hooks";
 import {
+  INCOTERMS_ANY_MODE,
+  INCOTERMS_SEA,
   QUOTE_MODES,
   RATE_TIERS,
   rateTier,
+  type ChargeCategory,
+  type QuoteMode,
   type Contact,
   type PartnerKind,
   type PartnerRateSheet,
@@ -48,6 +53,7 @@ import {
   partnerRate,
   sheetIdKey,
   tierLine,
+  sectionsForIncoterm,
   worksheetGroups,
   type PartnerSheets,
 } from "../../lib/tariff";
@@ -311,6 +317,9 @@ function SheetEditor({
   const { toast, error } = useToast();
   const [d, setDraft] = useState<TariffSheetDraft>(() => toDraft(sheet));
   const [isDirty, setIsDirty] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  // View filter: which charge sections this incoterm quotes (EXW = all).
+  const [incoterm, setIncoterm] = useState("EXW");
   const setD = (next: TariffSheetDraft) => {
     setDraft(next);
     setIsDirty(true);
@@ -407,26 +416,100 @@ function SheetEditor({
     }
   }
 
-  const groups = worksheetGroups(d.mode);
+  const sections = sectionsForIncoterm(incoterm);
+  const groups = worksheetGroups(d.mode).filter((g) => sections.includes(g.category));
   const t = rateTier(d.tier);
+  const sea = d.mode.startsWith("Sea");
+
+  /** The sheet's own codes in a section, in catalog order. */
+  const codesIn = (category: ChargeCategory) =>
+    worksheetGroups(d.mode)
+      .find((g) => g.category === category)
+      ?.items.filter((i) => i.code in d.lines) ?? [];
+  function removeCode(code: string) {
+    const lines = { ...d.lines };
+    delete lines[code];
+    setD({ ...d, lines });
+  }
+  function changeCode(from: string, to: string) {
+    if (from === to) return;
+    const item = catalogItem(to, d.mode as QuoteMode);
+    if (!item) return;
+    const lines: Record<string, TariffSheetLine> = {};
+    // The line keeps its own margin; buy source / buy / sell start fresh.
+    for (const [code, l] of Object.entries(d.lines))
+      lines[code === from ? to : code] =
+        code === from ? { ...defaultTierLine(item), margin: l.margin } : l;
+    setD({ ...d, lines });
+  }
+  function addCode(category: ChargeCategory) {
+    const next = worksheetGroups(d.mode)
+      .find((g) => g.category === category)
+      ?.items.find((i) => !(i.code in d.lines));
+    if (next) setD({ ...d, lines: { ...d.lines, [next.code]: defaultTierLine(next) } });
+  }
 
   return (
     <>
       <div className="grid4" style={{ marginBottom: 14 }}>
         <div className="field">
           <label>Trade route</label>
-          <select value={sheet.id} onChange={(e) => onPick(e.target.value)}>
-            {routes.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.route}
-              </option>
-            ))}
-          </select>
+          {renaming ? (
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                autoFocus
+                value={d.route}
+                onChange={(e) => setD({ ...d, route: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && setRenaming(false)}
+              />
+              <button type="button" className="btn small outline" onClick={() => setRenaming(false)}>
+                Done
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <select value={sheet.id} onChange={(e) => onPick(e.target.value)}>
+                {routes.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.id === sheet.id ? d.route : r.route}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn small outline"
+                onClick={() => setRenaming(true)}
+                title="Rename this trade route"
+              >
+                Rename
+              </button>
+            </div>
+          )}
           <span className="hint">Each trade route has its own sheet on every tier.</span>
         </div>
         <div className="field">
-          <label>Route name</label>
-          <input value={d.route} onChange={(e) => setD({ ...d, route: e.target.value })} />
+          <label>Incoterms</label>
+          <select value={incoterm} onChange={(e) => setIncoterm(e.target.value)}>
+            <optgroup label="Any mode (incl. air)">
+              {INCOTERMS_ANY_MODE.map((i) => (
+                <option key={i.code} value={i.code}>
+                  {i.code} — {i.name}
+                </option>
+              ))}
+            </optgroup>
+            {sea && (
+              <optgroup label="Sea / inland waterway">
+                {INCOTERMS_SEA.map((i) => (
+                  <option key={i.code} value={i.code}>
+                    {i.code} — {i.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          <span className="hint">
+            Shows the charges quoted under this incoterm — a quote loads the same sections.
+          </span>
         </div>
         <div className="field">
           <label>Origin</label>
@@ -538,159 +621,217 @@ function SheetEditor({
         })}
       </div>
 
-      {groups.map((g) => (
-        <div className="charge-group" key={g.category}>
-          <div className="charge-group-head">
-            <h3>{g.category.toUpperCase()}</h3>
+      {groups.map((g) => {
+        const items = codesIn(g.category);
+        const canAdd = g.items.some((i) => !(i.code in d.lines));
+        return (
+          <div className="charge-group" key={g.category}>
+            <div className="charge-group-head">
+              <h3>{g.category.toUpperCase()}</h3>
+              <button
+                type="button"
+                className="btn small outline"
+                disabled={!canAdd}
+                title={canAdd ? undefined : "Every code for this section is already on the sheet"}
+                onClick={() => addCode(g.category)}
+              >
+                + Add line
+              </button>
+            </div>
+            {items.length === 0 ? (
+              <p className="hint" style={{ padding: "4px 0 10px" }}>
+                No charges in this section.
+              </p>
+            ) : (
+              <div className="table-wrap">
+                <table className="charge-table tier-table">
+                  <colgroup>
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "23.5%" }} />
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "10.5%" }} />
+                    <col style={{ width: "3%" }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Description</th>
+                      <th>Cur</th>
+                      <th>Unit</th>
+                      <th>Buy From</th>
+                      <th className="num">Buy</th>
+                      <th className="num">Margin (%)</th>
+                      <th className="num">Sell</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.flatMap((item) => {
+                      const fallback = defaultTierLine(item);
+                      const l = line(item.code, fallback);
+                      const r = tierLine(d, item, linked, 0);
+                      const partnerSheet =
+                        l.source !== "manual" ? linked[l.source as PartnerKind] : null;
+                      const pLine = partnerSheet?.lines[item.code];
+                      const breaks = (pLine?.breaks ?? []).filter((b) => b.rate != null);
+                      const missingTitle =
+                        l.source === "manual"
+                          ? undefined
+                          : !d[partnerIdKey(l.source as PartnerKind)]
+                            ? `Pick a ${PARTNER_LABEL[l.source as PartnerKind].toLowerCase()} above`
+                            : !partnerSheet
+                              ? "Pick the partner's rate sheet above"
+                              : "No rate for this code on the partner's sheet";
+                      const rows = [
+                        <tr key={item.code}>
+                          <td>
+                            <select
+                              value={item.code}
+                              onChange={(e) => changeCode(item.code, e.target.value)}
+                              title={item.description}
+                            >
+                              {g.items
+                                .filter((c) => c.code === item.code || !(c.code in d.lines))
+                                .map((c) => (
+                                  <option key={c.code} value={c.code}>
+                                    {c.code}
+                                  </option>
+                                ))}
+                            </select>
+                          </td>
+                          <td title={item.description}>{item.description}</td>
+                          <td>{r.cur}</td>
+                          <td>{item.unit || "—"}</td>
+                          <td>
+                            {r.sellOnly ? (
+                              <span className="hint">Sell only (R)</span>
+                            ) : (
+                              <select
+                                value={l.source}
+                                onChange={(e) =>
+                                  setLine(item.code, fallback, {
+                                    source: e.target.value as TariffBuySource,
+                                  })
+                                }
+                              >
+                                {PARTNER_KINDS.map((k) => (
+                                  <option key={k} value={k}>
+                                    {PARTNER_LABEL[k]}
+                                  </option>
+                                ))}
+                                <option value="manual">Manual</option>
+                              </select>
+                            )}
+                          </td>
+                          <td className="num">
+                            {r.sellOnly ? (
+                              "—"
+                            ) : l.source === "manual" ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={l.buy ?? ""}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  setLine(item.code, fallback, {
+                                    buy: e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                              />
+                            ) : breaks.length > 0 ? (
+                              <span className="hint">By weight ↓</span>
+                            ) : r.buy != null ? (
+                              <span title={`Live from ${partnerSheet?.route ?? "partner"}`}>
+                                {fmt(r.buy)}
+                              </span>
+                            ) : (
+                              <span className="hint" title={missingTitle}>
+                                —
+                              </span>
+                            )}
+                          </td>
+                          <td className="num">
+                            {r.sellOnly ? (
+                              "—"
+                            ) : (
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={r.margin}
+                                title={l.margin == null ? "Tier margin" : "Changed on this line"}
+                                onChange={(e) => {
+                                  const v = e.target.value === "" ? null : Number(e.target.value);
+                                  setLine(item.code, fallback, {
+                                    margin: v == null || v === d.margin ? null : v,
+                                  });
+                                }}
+                              />
+                            )}
+                          </td>
+                          <td className="num">
+                            {r.sellOnly ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={l.sell ?? ""}
+                                placeholder="—"
+                                onChange={(e) =>
+                                  setLine(item.code, fallback, {
+                                    sell: e.target.value === "" ? null : Number(e.target.value),
+                                  })
+                                }
+                              />
+                            ) : breaks.length > 0 ? (
+                              ""
+                            ) : r.sell != null ? (
+                              fmt(r.sell)
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="row-icon-btn"
+                              title="Remove this line from the sheet"
+                              onClick={() => removeCode(item.code)}
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>,
+                      ];
+                      breaks.forEach((b, i) => {
+                        const buy = partnerRate({ ...pLine!, breaks: [b] }, 0)!.buy;
+                        rows.push(
+                          <tr key={`${item.code}-${i}`}>
+                            <td />
+                            <td className="hint">↳ {b.label}</td>
+                            <td>{r.cur}</td>
+                            <td>{item.unit || "—"}</td>
+                            <td className="hint" title={partnerSheet?.route}>
+                              {partnerSheet?.route}
+                            </td>
+                            <td className="num">{fmt(buy)}</td>
+                            <td className="num">{r.margin}</td>
+                            <td className="num">{fmt(buy * (1 + r.margin / 100))}</td>
+                            <td />
+                          </tr>,
+                        );
+                      });
+                      return rows;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          <div className="table-wrap">
-            <table className="charge-table">
-              <thead>
-                <tr>
-                  <th className="c-code">Code</th>
-                  <th>Description</th>
-                  <th className="c-cur">Cur</th>
-                  <th className="c-unit">Unit</th>
-                  <th>Buy from</th>
-                  <th className="num">Buy</th>
-                  <th className="num">Margin (%)</th>
-                  <th className="num">Sell</th>
-                </tr>
-              </thead>
-              <tbody>
-                {g.items.flatMap((item) => {
-                  const fallback = defaultTierLine(item);
-                  const l = line(item.code, fallback);
-                  const r = tierLine(d, item, linked, 0);
-                  const partnerSheet =
-                    l.source !== "manual" ? linked[l.source as PartnerKind] : null;
-                  const pLine = partnerSheet?.lines[item.code];
-                  const breaks = (pLine?.breaks ?? []).filter((b) => b.rate != null);
-                  const missingTitle =
-                    l.source === "manual"
-                      ? undefined
-                      : !d[partnerIdKey(l.source as PartnerKind)]
-                        ? `Pick a ${PARTNER_LABEL[l.source as PartnerKind].toLowerCase()} above`
-                        : !partnerSheet
-                          ? "Pick the partner's rate sheet above"
-                          : "No rate for this code on the partner's sheet";
-                  const rows = [
-                    <tr key={item.code}>
-                      <td className="c-code">{item.code}</td>
-                      <td>{item.description}</td>
-                      <td className="c-cur">{r.cur}</td>
-                      <td className="c-unit">{item.unit || "—"}</td>
-                      <td>
-                        {r.sellOnly ? (
-                          <span className="hint">Sell only (R)</span>
-                        ) : (
-                          <select
-                            value={l.source}
-                            onChange={(e) =>
-                              setLine(item.code, fallback, {
-                                source: e.target.value as TariffBuySource,
-                              })
-                            }
-                          >
-                            {PARTNER_KINDS.map((k) => (
-                              <option key={k} value={k}>
-                                {PARTNER_LABEL[k]}
-                              </option>
-                            ))}
-                            <option value="manual">Manual</option>
-                          </select>
-                        )}
-                      </td>
-                      <td className="num">
-                        {r.sellOnly ? (
-                          "—"
-                        ) : l.source === "manual" ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={l.buy ?? ""}
-                            placeholder="—"
-                            onChange={(e) =>
-                              setLine(item.code, fallback, {
-                                buy: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                          />
-                        ) : breaks.length > 0 ? (
-                          <span className="hint">By weight ↓</span>
-                        ) : r.buy != null ? (
-                          <span title={`Live from ${partnerSheet?.route ?? "partner"}`}>
-                            {fmt(r.buy)}
-                          </span>
-                        ) : (
-                          <span className="hint" title={missingTitle}>
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td className="num">
-                        {r.sellOnly ? (
-                          "—"
-                        ) : (
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={r.margin}
-                            title={l.margin == null ? "Tier margin" : "Changed on this line"}
-                            onChange={(e) => {
-                              const v = e.target.value === "" ? null : Number(e.target.value);
-                              setLine(item.code, fallback, {
-                                margin: v == null || v === d.margin ? null : v,
-                              });
-                            }}
-                          />
-                        )}
-                      </td>
-                      <td className="num">
-                        {r.sellOnly ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={l.sell ?? ""}
-                            placeholder="—"
-                            onChange={(e) =>
-                              setLine(item.code, fallback, {
-                                sell: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                          />
-                        ) : breaks.length > 0 ? (
-                          ""
-                        ) : r.sell != null ? (
-                          fmt(r.sell)
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>,
-                  ];
-                  breaks.forEach((b, i) => {
-                    const buy = partnerRate({ ...pLine!, breaks: [b] }, 0)!.buy;
-                    rows.push(
-                      <tr key={`${item.code}-${i}`}>
-                        <td />
-                        <td className="hint">↳ {b.label}</td>
-                        <td className="c-cur">{r.cur}</td>
-                        <td className="c-unit">{item.unit || "—"}</td>
-                        <td className="hint">{partnerSheet?.route}</td>
-                        <td className="num">{fmt(buy)}</td>
-                        <td className="num">{r.margin}</td>
-                        <td className="num">{fmt(buy * (1 + r.margin / 100))}</td>
-                      </tr>,
-                    );
-                  });
-                  return rows;
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <p className="hint">
         Buy rates from a partner are read-only here and follow that partner's rate sheet as it
         changes. Set a line to Manual to type your own buy. Margin uses the tier margin unless you

@@ -40,6 +40,30 @@ export const CATEGORY_SOURCE: Record<ChargeCategory, PartnerKind> = {
   "Customs Clearance, VAT and Duty Charges": "clearing_agent",
 };
 
+/**
+ * Which charge sections ExPac quotes under each incoterm (importer side):
+ * EXW = everything from pick-up; F-terms (seller delivers to the carrier /
+ * port) drop the Ex-Works charges; C-terms (seller also pays the main
+ * freight) drop international freight too; DAP / DPU leave only clearance;
+ * DDP = ExPac's all-in door-to-door duty-paid service. Blank = every section.
+ */
+export const INCOTERM_SECTIONS: Record<string, ChargeCategory[]> = {
+  EXW: [...CHARGE_CATEGORIES],
+  FCA: ["International Freight Charges", "Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  FAS: ["International Freight Charges", "Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  FOB: ["International Freight Charges", "Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  CPT: ["Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  CFR: ["Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  CIP: ["Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  CIF: ["Destination Handling and Delivery Charges", "Customs Clearance, VAT and Duty Charges"],
+  DAP: ["Customs Clearance, VAT and Duty Charges"],
+  DPU: ["Customs Clearance, VAT and Duty Charges"],
+  DDP: [...CHARGE_CATEGORIES],
+};
+export function sectionsForIncoterm(incoterm: string | null | undefined): ChargeCategory[] {
+  return INCOTERM_SECTIONS[(incoterm ?? "").trim().toUpperCase()] ?? [...CHARGE_CATEGORIES];
+}
+
 /** The Quote Builder's code worksheet for a mode, in its four sections. */
 export function worksheetGroups(
   mode: string,

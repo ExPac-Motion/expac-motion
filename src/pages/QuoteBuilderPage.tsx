@@ -51,6 +51,7 @@ import { getPartnerRateSheets, listPartnerRateSheets } from "../lib/db";
 import {
   PARTNER_KINDS,
   partnerIdKey,
+  sectionsForIncoterm,
   sheetIdKey,
   tierLine,
   worksheetGroups,
@@ -668,8 +669,12 @@ export default function QuoteBuilderPage() {
       const kg = packTotals.chargeable;
       const fxRates = fxOfDraft(draft);
       const lines: QuoteLine[] = [];
+      // Only the sections the quote's incoterm covers (EXW / blank = all),
+      // and only the codes on the sheet.
+      const sections = sectionsForIncoterm(draft.incoterms);
       for (const g of worksheetGroups(sheet.mode))
         for (const item of g.items) {
+          if (!sections.includes(g.category) || !(item.code in sheet.lines)) continue;
           const r = tierLine(sheet, item, partners, kg);
           if (r.sellOnly ? !(r.sell != null && r.sell > 0) : r.buy == null) continue;
           const base = {
@@ -709,7 +714,7 @@ export default function QuoteBuilderPage() {
           : d,
       );
       toast(
-        `Loaded ${lines.length} line${lines.length === 1 ? "" : "s"} from ${rateTier(sheet.tier).label} · ${sheet.route}` +
+        `Loaded ${lines.length} line${lines.length === 1 ? "" : "s"} from ${rateTier(sheet.tier).label} · ${sheet.route}${draft.incoterms ? ` (${draft.incoterms})` : ""}` +
           (kg > 0 ? "" : " — add the packing list, then load again to pick the right weight break"),
       );
     } catch (e) {

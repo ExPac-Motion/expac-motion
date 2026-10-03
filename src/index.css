@@ -1917,6 +1917,32 @@ select.badge-select.lost {
 .charge-table .c-code {
   width: 84px;
 }
+/* Rates & Tariff tier sheets: one fixed grid for every section (the
+   <colgroup> sets equal data-column widths, Description double) so each
+   section's columns line up with the next. */
+.charge-table.tier-table {
+  width: 100%;
+  min-width: 900px;
+  table-layout: fixed;
+}
+.charge-table.tier-table th,
+.charge-table.tier-table td {
+  width: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.charge-table.tier-table td:nth-child(2) {
+  white-space: nowrap;
+  min-width: 0;
+}
+.charge-table.tier-table .num {
+  text-align: right;
+}
+.charge-table.tier-table .row-icon-btn {
+  width: 22px;
+  height: 22px;
+}
 /* Drag-to-reorder handle column (Quote Builder charges) — it shifts the
    Description column to 3rd, so move the wide/wrapping rule with it. */
 .charge-table.has-drag td:nth-child(2) {
