@@ -1893,6 +1893,38 @@ select.badge-select.lost {
 .charge-table .c-code {
   width: 84px;
 }
+/* Drag-to-reorder handle column (Quote Builder charges) — it shifts the
+   Description column to 3rd, so move the wide/wrapping rule with it. */
+.charge-table.has-drag td:nth-child(2) {
+  white-space: nowrap;
+  min-width: 0;
+}
+.charge-table.has-drag td:nth-child(3) {
+  white-space: normal;
+  min-width: 200px;
+}
+.charge-table .c-drag {
+  width: 18px;
+  padding-left: 2px;
+  padding-right: 0;
+  color: #b9bbb4;
+  font-size: 15px;
+  text-align: center;
+  cursor: grab;
+  user-select: none;
+}
+.charge-table td.c-drag:hover {
+  color: var(--teal-ink);
+}
+.charge-table tr.is-dragging {
+  opacity: 0.45;
+}
+.charge-table tr.drop-before td {
+  box-shadow: inset 0 2px 0 var(--teal);
+}
+.charge-table tr.drop-after td {
+  box-shadow: inset 0 -2px 0 var(--teal);
+}
 .charge-table .c-cur {
   width: 74px;
 }

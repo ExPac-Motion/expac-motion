@@ -309,6 +309,9 @@ export default function QuoteBuilderPage() {
   const [fxAsOf, setFxAsOf] = useState("");
   const [ratePickerFor, setRatePickerFor] = useState<ChargeCategory | null>(null);
   const [addingShipper, setAddingShipper] = useState(false);
+  // Charge-line drag-reorder: the line being dragged and where it would land.
+  const [dragLine, setDragLine] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<{ index: number; after: boolean } | null>(null);
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
   if (isEdit && existingQ.data && loadedFor !== existingQ.data.id) {
@@ -596,6 +599,21 @@ export default function QuoteBuilderPage() {
         sell: 0,
       };
       return { ...d, lines: [...d.lines, line] };
+    });
+  }
+
+  /** Drag-reorder a charge line: drop `from` before/after `to`. The saved
+      position follows the array order, so this is all it takes to persist. */
+  function moveLine(from: number, to: number, after: boolean) {
+    if (from === to) return;
+    setDraft((d) => {
+      if (!d) return d;
+      const lines = [...d.lines];
+      const [moved] = lines.splice(from, 1);
+      let at = to > from ? to - 1 : to;
+      if (after) at += 1;
+      lines.splice(at, 0, moved);
+      return { ...d, lines };
     });
   }
 
@@ -1466,9 +1484,10 @@ export default function QuoteBuilderPage() {
               </p>
             ) : (
               <div className="table-wrap">
-                <table className="charge-table">
+                <table className="charge-table has-drag">
                   <thead>
                     <tr>
+                      <th className="c-drag" />
                       <th className="c-code">Code</th>
                       <th>Description</th>
                       <th className="c-cur">Cur</th>
@@ -1501,7 +1520,58 @@ export default function QuoteBuilderPage() {
                         code === CUSTOMS_DUTY_CODE;
                       const isCustomsDuty = code === CUSTOMS_DUTY_CODE;
                       return (
-                      <tr key={i}>
+                      <tr
+                        key={i}
+                        className={
+                          dragLine === i
+                            ? "is-dragging"
+                            : dropAt?.index === i
+                              ? dropAt.after
+                                ? "drop-after"
+                                : "drop-before"
+                              : undefined
+                        }
+                        onDragOver={(e) => {
+                          // Only within the same section — a line's category
+                          // decides which group it prints under.
+                          if (
+                            dragLine == null ||
+                            draft.lines[dragLine]?.category !== l.category
+                          )
+                            return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          const r = e.currentTarget.getBoundingClientRect();
+                          const after = e.clientY > r.top + r.height / 2;
+                          if (dropAt?.index !== i || dropAt.after !== after)
+                            setDropAt({ index: i, after });
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragLine != null && dropAt)
+                            moveLine(dragLine, dropAt.index, dropAt.after);
+                          setDragLine(null);
+                          setDropAt(null);
+                        }}
+                      >
+                        <td
+                          className="c-drag"
+                          draggable
+                          title="Drag to move this line up or down"
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData("text/plain", String(i));
+                            const row = e.currentTarget.parentElement;
+                            if (row) e.dataTransfer.setDragImage(row, 12, 16);
+                            setDragLine(i);
+                          }}
+                          onDragEnd={() => {
+                            setDragLine(null);
+                            setDropAt(null);
+                          }}
+                        >
+                          ⠿
+                        </td>
                         <td className="c-code">
                           <select
                             value={String(l.code ?? "")}
