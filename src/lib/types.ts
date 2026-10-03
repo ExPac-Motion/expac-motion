@@ -1051,6 +1051,9 @@ export interface PartnerRateSheet {
   valid_from: string | null;
   valid_until: string | null;
   notes: string | null;
+  /** The basis the partner quotes on (EXW, FOB …) — decides which of their
+   *  sections the sheet prices (0125). */
+  incoterm: string | null;
   lines: Record<string, PartnerSheetLine>;
   created_at: string;
   updated_at: string;

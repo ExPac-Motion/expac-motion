@@ -619,6 +619,7 @@ function SheetEditor({
                   {list.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.route}
+                      {s.incoterm ? ` · ${s.incoterm}` : ""}
                     </option>
                   ))}
                 </select>

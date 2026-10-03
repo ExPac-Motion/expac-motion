@@ -16,6 +16,8 @@ import {
 import { formatDateTime } from "../../lib/format";
 import {
   CHARGE_UNITS,
+  INCOTERMS_ANY_MODE,
+  INCOTERMS_SEA,
   LINE_CURRENCIES,
   QUOTE_MODES,
   type LineCurrency,
@@ -29,6 +31,7 @@ import {
   CATEGORY_SOURCE,
   ddmmyyyy,
   PARTNER_LABEL,
+  sectionsForIncoterm,
   worksheetGroups,
 } from "../../lib/tariff";
 
@@ -49,6 +52,7 @@ function emptySheet(kind: PartnerKind, partnerId: string, mode: string): Partner
     valid_from: null,
     valid_until: null,
     notes: null,
+    incoterm: "EXW",
     lines: {},
   };
 }
@@ -215,6 +219,7 @@ function SheetCard({
                 {s.origin || "Any"} → {s.destination || "Any"}
               </span>
             )}
+            {s.incoterm && <span>{s.incoterm}</span>}
             {s.valid_from && <span>From {ddmmyyyy(s.valid_from)}</span>}
             {s.valid_until && (
               <span className={expired ? "rs-expired" : undefined}>
@@ -401,6 +406,10 @@ export function PartnerSheetEditor({
   const groupsFor = (mode: string) =>
     worksheetGroups(mode, { sellOnly: false }).filter((g) => CATEGORY_SOURCE[g.category] === kind);
   const groups = groupsFor(d.mode);
+  // The sheet's incoterm decides which of those sections it prices (an
+  // agent's FOB rates have no Ex-Works charges).
+  const shown = groups.filter((g) => sectionsForIncoterm(d.incoterm).includes(g.category));
+  const shownCodes = new Set(shown.flatMap((g) => g.items.map((i) => i.code)));
   const allCodes = (mode: string) => groupsFor(mode).flatMap((g) => g.items.map((i) => i.code));
   // The sheet's lines, like a quote: a new sheet starts with every code, an
   // existing one with the codes it has; + Add line / ✕ change that.
@@ -448,6 +457,7 @@ export function PartnerSheetEditor({
     // Only the sheet's lines, and only real rates (blank codes / breaks dropped).
     const lines: Record<string, PartnerSheetLine> = {};
     for (const code of rows) {
+      if (!shownCodes.has(code)) continue;
       const l = d.lines[code];
       if (!l) continue;
       const breaks = (l.breaks ?? []).filter((b) => b.label.trim() && b.rate != null);
@@ -509,7 +519,29 @@ export function PartnerSheetEditor({
               onChange={(v) => setD({ ...d, valid_until: v || null })}
             />
           </div>
-          <div className="field" style={{ gridColumn: "span 2" }}>
+          <div className="field">
+            <label>Incoterms</label>
+            <select
+              value={d.incoterm ?? "EXW"}
+              onChange={(e) => setD({ ...d, incoterm: e.target.value })}
+            >
+              <optgroup label="Any mode (incl. air)">
+                {INCOTERMS_ANY_MODE.map((i) => (
+                  <option key={i.code} value={i.code}>
+                    {i.code} — {i.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Sea / inland waterway">
+                {INCOTERMS_SEA.map((i) => (
+                  <option key={i.code} value={i.code}>
+                    {i.code} — {i.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+          <div className="field">
             <label>Notes</label>
             <input
               value={d.notes ?? ""}
@@ -518,10 +550,10 @@ export function PartnerSheetEditor({
           </div>
         </div>
 
-        {groups.length === 0 && (
+        {shown.length === 0 && (
           <p className="hint">ExPac has no {PARTNER_LABEL[kind].toLowerCase()} charges for {d.mode}.</p>
         )}
-        {groups.map((g) => {
+        {shown.map((g) => {
           const codes = g.items.filter((i) => rows.includes(i.code));
           const canAdd = g.items.some((i) => !rows.includes(i.code));
           return (

@@ -39,11 +39,11 @@ export function isSellOnlyCode(code: string): boolean {
 }
 
 /** The charge sections each partner type quotes (their rate sheets show only
- *  these): shipping agents = freight, ex-works and FOB (+ origin warehousing
+ *  these): shipping agents = freight and ex-works (+ origin warehousing
  *  codes); destination agents = destination handling; transporters =
  *  cartage & road freight (+ local warehousing codes); clearing = customs. */
 export const PARTNER_SECTIONS: Record<PartnerKind, ChargeCategory[]> = {
-  agent: ["International Freight Charges", "Ex-Works Charges", "FOB Charges"],
+  agent: ["International Freight Charges", "Ex-Works Charges"],
   destination_agent: ["Destination Handling and Delivery Charges"],
   transporter: ["Cartage and Road Freight Charges"],
   clearing_agent: ["Customs Clearance, VAT and Duty Charges"],
@@ -52,7 +52,7 @@ export const PARTNER_SECTIONS: Record<PartnerKind, ChargeCategory[]> = {
 /** Which partner a section's buy rates come from by default. */
 export const CATEGORY_SOURCE = Object.fromEntries(
   PARTNER_KINDS.flatMap((k) => PARTNER_SECTIONS[k].map((c) => [c, k])),
-) as Record<ChargeCategory, PartnerKind>;
+) as Partial<Record<ChargeCategory, PartnerKind>>;
 
 const ORIGIN_ON: ChargeCategory[] = [
   "International Freight Charges",
@@ -246,7 +246,8 @@ export function tierLine(
 export function defaultTierLine(item: CatalogItem, section?: ChargeCategory): TariffSheetLine {
   const category = section ?? item.category;
   return {
-    source: isSellOnlyCode(item.code) ? "manual" : CATEGORY_SOURCE[category],
+    // FOB Charges are ExPac's own (no partner) — a manual buy.
+    source: isSellOnlyCode(item.code) ? "manual" : (CATEGORY_SOURCE[category] ?? "manual"),
     buy: null,
     margin: null,
     sell: null,
