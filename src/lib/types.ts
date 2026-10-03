@@ -926,6 +926,8 @@ export interface Contact {
   countries?: string[] | null;
   ports?: string[] | null;
   coverage_notes?: string | null;
+  /** Customer price tier (clients only, migration 0119) — Silver by default. */
+  rate_tier?: RateTierId | null;
   created_at: string;
   /** Joined for display (clients only). */
   sales_person?: Pick<Profile, "id" | "full_name"> | null;
@@ -996,6 +998,88 @@ export type PartnerRateStructureDraft = Omit<
   PartnerRateStructure,
   "id" | "created_at" | "updated_at"
 >;
+
+/* ---------- Tier + partner rate sheets (migration 0119) ---------- */
+
+export type RateTierId = "platinum" | "gold" | "silver";
+export const RATE_TIERS: {
+  id: RateTierId;
+  label: string;
+  /** Default margin % on every buy price. */
+  margin: number;
+  note: string;
+}[] = [
+  { id: "platinum", label: "Platinum", margin: 10, note: "Highest-volume customers" },
+  { id: "gold", label: "Gold", margin: 15, note: "Regular, consistent volume" },
+  { id: "silver", label: "Silver", margin: 18, note: "Standard rates, default for every customer" },
+];
+export const DEFAULT_RATE_TIER: RateTierId = "silver";
+export function rateTier(id: string | null | undefined) {
+  return RATE_TIERS.find((t) => t.id === id) ?? RATE_TIERS[2];
+}
+
+/** A rate picked by the quote's chargeable weight, e.g. "0-45KG". */
+export interface WeightBreak {
+  label: string;
+  rate: number | null;
+}
+/** One code on a partner rate sheet. */
+export interface PartnerSheetLine {
+  buy: number | null;
+  cur: LineCurrency;
+  /** When set, the rate comes from the break matching the chargeable weight. */
+  breaks?: WeightBreak[];
+}
+export interface PartnerRateSheet {
+  id: string;
+  partner_kind: PartnerKind;
+  partner_id: string;
+  mode: string;
+  route: string;
+  origin: string | null;
+  destination: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  notes: string | null;
+  lines: Record<string, PartnerSheetLine>;
+  created_at: string;
+  updated_at: string;
+}
+export type PartnerRateSheetDraft = Omit<PartnerRateSheet, "id" | "created_at" | "updated_at">;
+
+export type TariffBuySource = PartnerKind | "manual";
+/** One code on a tier rate sheet. */
+export interface TariffSheetLine {
+  source: TariffBuySource;
+  /** Manual buy (source "manual"); otherwise the partner's rate is used live. */
+  buy: number | null;
+  /** null = the sheet's tier margin. */
+  margin: number | null;
+  /** Sell (R) for sell-only codes (FW-01 / IN-01 / DIS-01 / CU-05 ...). */
+  sell: number | null;
+}
+export interface TariffSheet {
+  id: string;
+  tier: RateTierId;
+  mode: string;
+  route: string;
+  origin: string | null;
+  destination: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  margin: number;
+  agent_id: string | null;
+  agent_sheet_id: string | null;
+  transporter_id: string | null;
+  transporter_sheet_id: string | null;
+  clearing_agent_id: string | null;
+  clearing_agent_sheet_id: string | null;
+  notes: string | null;
+  lines: Record<string, TariffSheetLine>;
+  created_at: string;
+  updated_at: string;
+}
+export type TariffSheetDraft = Omit<TariffSheet, "id" | "created_at" | "updated_at">;
 
 export type Client = Contact;
 export type Supplier = Contact;
@@ -1083,6 +1167,9 @@ export interface Quote {
   vessel_name: string | null;
   /** Sea Freight voyage number (migration 0107) — printed on shipment docs. */
   voyage_no?: string | null;
+  /** Rate tier + tier sheet the quote was priced from (migration 0119). */
+  rate_tier?: RateTierId | null;
+  tariff_sheet_id?: string | null;
   /** Air Freight routing / transit time (migration 0108) — printed on shipment docs. */
   routing?: string | null;
   transit_time?: string | null;
@@ -1608,6 +1695,8 @@ export interface QuoteDraft {
   insurance_amount: string;
   vessel_name: string;
   voyage_no: string;
+  rate_tier: RateTierId;
+  tariff_sheet_id: string;
   routing: string;
   transit_time: string;
   mbl_no: string;

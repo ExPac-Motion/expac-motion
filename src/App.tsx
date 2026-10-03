@@ -25,7 +25,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import AgentsPage from "./pages/AgentsPage";
 import TransportersPage from "./pages/TransportersPage";
 import RateStructureDemoPage from "./pages/partners/RateStructureDemoPage";
-import TariffTiersDemoPage from "./pages/rates/TariffTiersDemoPage";
+import TierSheetsPage from "./pages/rates/TierSheetsPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ShipmentDocPrintPage from "./pages/ShipmentDocPrintPage";
@@ -226,8 +226,8 @@ function AppRoutes() {
             <Route path="jobs/completed" element={<CompletedJobsPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="crm" element={<CrmPage />} />
-            <Route path="rates" element={<RatesPage />} />
-            <Route path="rates/tiers-mockup" element={<TariffTiersDemoPage />} />
+            <Route path="rates" element={<TierSheetsPage />} />
+            <Route path="rates/list" element={<RatesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="transporters" element={<TransportersPage />} />

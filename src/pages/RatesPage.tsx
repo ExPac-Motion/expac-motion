@@ -170,7 +170,7 @@ export default function RatesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Standard buy/sell rates" title="Rates & Tariff Sheet" />
+      <PageHeader eyebrow="Rates & Tariff" title="Rate list" />
       <PageTools
         search={
           <SearchInput
@@ -194,12 +194,12 @@ export default function RatesPage() {
           </select>
         }
         count={isLoading ? undefined : `${rows.length} rate${rows.length === 1 ? "" : "s"}`}
-        hint="Pulled into the Quote Builder instead of typing from memory/Excel."
+        hint="The earlier flat rate list — new rates go on the tier rate sheets."
         onToolsSlot={setToolsSlot}
         primary={
-          <button className="btn" onClick={() => setEditing("new")}>
-            + Add rate
-          </button>
+          <Link className="btn" to="/rates">
+            Tier rate sheets
+          </Link>
         }
       >
         <button
@@ -214,9 +214,6 @@ export default function RatesPage() {
         >
           Bulk Edit{sel.count ? ` (${sel.count})` : ""}
         </button>
-        <Link className="btn outline" to="/rates/tiers-mockup">
-          Tier sheets (mockup)
-        </Link>
       </PageTools>
 
       <div className="panel">

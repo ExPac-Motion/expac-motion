@@ -1753,6 +1753,47 @@ export function useSavePartnerRateStructure() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_structures"] }),
   });
 }
+/* ---------- Partner rate sheets + tier rate sheets (0119) ---------- */
+
+export function usePartnerRateSheets(kind: PartnerKind, partnerId: string | null) {
+  return useQuery({
+    queryKey: ["partner_rate_sheets", kind, partnerId],
+    queryFn: () => db.listPartnerRateSheets(kind, partnerId as string),
+    enabled: !!partnerId,
+  });
+}
+export function useSavePartnerRateSheet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.savePartnerRateSheet,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_sheets"] }),
+  });
+}
+export function useDeletePartnerRateSheet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deletePartnerRateSheet,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_sheets"] }),
+  });
+}
+export function useTariffSheets() {
+  return useQuery({ queryKey: ["tariff_sheets"], queryFn: db.listTariffSheets });
+}
+export function useSaveTariffSheet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.saveTariffSheet,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tariff_sheets"] }),
+  });
+}
+export function useDeleteTariffSheet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteTariffSheet,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tariff_sheets"] }),
+  });
+}
+
 export function useDeletePartnerRateStructure() {
   const qc = useQueryClient();
   return useMutation({

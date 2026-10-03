@@ -10,6 +10,11 @@ import type {
   PartnerKind,
   PartnerRateStructure,
   PartnerRateStructureDraft,
+  PartnerRateSheet,
+  PartnerRateSheetDraft,
+  RateTierId,
+  TariffSheet,
+  TariffSheetDraft,
   Client,
   CompanySettings,
   CompanySettingsPatch,
@@ -466,6 +471,17 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     .eq("id", id);
   if (routingErr && routingErr.code !== "PGRST204" && routingErr.code !== "42703") {
     throw routingErr;
+  }
+  // Rate tier + tier sheet (0119): same separate, tolerant update.
+  const { error: tierErr } = await supabase
+    .from("quotes")
+    .update({
+      rate_tier: draft.rate_tier || null,
+      tariff_sheet_id: draft.tariff_sheet_id || null,
+    })
+    .eq("id", id);
+  if (tierErr && tierErr.code !== "PGRST204" && tierErr.code !== "42703") {
+    throw tierErr;
   }
   return id;
 }
@@ -2345,4 +2361,71 @@ export async function savePartnerRateStructure(input: {
 }
 export async function deletePartnerRateStructure(id: string): Promise<void> {
   unwrap(await supabase.from("partner_rate_structures").delete().eq("id", id));
+}
+
+/* ---------- Partner rate sheets + tier rate sheets (migration 0119) ---------- */
+
+export async function listPartnerRateSheets(
+  kind: PartnerKind,
+  partnerId: string,
+): Promise<PartnerRateSheet[]> {
+  return unwrap(
+    await supabase
+      .from("partner_rate_sheets")
+      .select("*")
+      .eq("partner_kind", kind)
+      .eq("partner_id", partnerId)
+      .order("mode")
+      .order("route"),
+  );
+}
+export async function getPartnerRateSheets(ids: string[]): Promise<PartnerRateSheet[]> {
+  if (ids.length === 0) return [];
+  return unwrap(await supabase.from("partner_rate_sheets").select("*").in("id", ids));
+}
+export async function savePartnerRateSheet(input: {
+  id?: string;
+  values: PartnerRateSheetDraft;
+}): Promise<PartnerRateSheet> {
+  const row = { ...input.values, updated_at: new Date().toISOString() };
+  return unwrap(
+    input.id
+      ? await supabase
+          .from("partner_rate_sheets")
+          .update(row)
+          .eq("id", input.id)
+          .select("*")
+          .single()
+      : await supabase.from("partner_rate_sheets").insert(row).select("*").single(),
+  );
+}
+export async function deletePartnerRateSheet(id: string): Promise<void> {
+  unwrap(await supabase.from("partner_rate_sheets").delete().eq("id", id));
+}
+
+export async function listTariffSheets(): Promise<TariffSheet[]> {
+  return unwrap(
+    await supabase.from("tariff_sheets").select("*").order("mode").order("route"),
+  );
+}
+export async function saveTariffSheet(input: {
+  id?: string;
+  values: TariffSheetDraft;
+}): Promise<TariffSheet> {
+  const row = { ...input.values, updated_at: new Date().toISOString() };
+  return unwrap(
+    input.id
+      ? await supabase.from("tariff_sheets").update(row).eq("id", input.id).select("*").single()
+      : await supabase.from("tariff_sheets").insert(row).select("*").single(),
+  );
+}
+export async function deleteTariffSheet(id: string): Promise<void> {
+  unwrap(await supabase.from("tariff_sheets").delete().eq("id", id));
+}
+
+/** Customer rate tier — saved on its own so a not-yet-applied 0119 never
+ *  blocks saving the rest of the customer. */
+export async function setClientRateTier(id: string, tier: RateTierId): Promise<void> {
+  const { error } = await supabase.from("clients").update({ rate_tier: tier }).eq("id", id);
+  if (error && error.code !== "PGRST204" && error.code !== "42703") throw error;
 }

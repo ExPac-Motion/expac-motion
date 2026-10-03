@@ -12,8 +12,8 @@ import {
   useLeads,
   useProfiles,
   useQuote,
-  usePartnerRateStructures,
   useRateSheet,
+  useTariffSheets,
   useSaveQuote,
   useFinalizeCopiedQuote,
   useSaveSupplier,
@@ -45,11 +45,17 @@ import {
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
 import { carrierLabel, usesSeaLayout } from "../lib/docTemplates";
-import PartnerRatePicker, {
-  type PickedLine,
-  type QuotePartnerRates,
-} from "./quotes/PartnerRatePicker";
 import { fetchZarRates } from "../lib/fx";
+import { getPartnerRateSheets, listPartnerRateSheets } from "../lib/db";
+import {
+  PARTNER_KINDS,
+  partnerIdKey,
+  sheetIdKey,
+  tierLine,
+  worksheetGroups,
+  type PartnerSheets,
+} from "../lib/tariff";
+import { TierDot } from "./rates/TierSheetsPage";
 import {
   AUTO_REFERENCE,
   money,
@@ -68,6 +74,8 @@ import {
   INCOTERMS_SEA,
   LINE_CURRENCIES,
   QUOTE_MODES,
+  RATE_TIERS,
+  rateTier,
   STATUS_LABEL,
   STATUS_ORDER,
   WON_QUOTE_STATUSES,
@@ -79,6 +87,7 @@ import {
   type QuoteDraft,
   type QuoteLine,
   type RateSheetItem,
+  type RateTierId,
 } from "../lib/types";
 
 function newPackingItem(position: number): PackingItem {
@@ -159,6 +168,8 @@ function blankDraft(): QuoteDraft {
     fx_gbp_zar: "0",
     sell_currency: "",
     value_currency: "ZAR",
+    rate_tier: "silver",
+    tariff_sheet_id: "",
     packing: [newPackingItem(0)],
     lines: [newLine("International Freight Charges", 0)],
   };
@@ -211,6 +222,8 @@ function draftFromQuote(q: Quote): QuoteDraft {
     fx_gbp_zar: q.fx_gbp_zar != null ? String(q.fx_gbp_zar) : "0",
     sell_currency: q.sell_currency ?? "",
     value_currency: q.value_currency ?? "ZAR",
+    rate_tier: q.rate_tier ?? "silver",
+    tariff_sheet_id: q.tariff_sheet_id ?? "",
     packing: (q.packing_list_items ?? []).map((p, i) => ({
       position: i,
       length_cm: p.length_cm ?? 0,
@@ -317,11 +330,9 @@ export default function QuoteBuilderPage() {
   // Charge-line drag-reorder: the line being dragged and where it would land.
   const [dragLine, setDragLine] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<{ index: number; after: boolean } | null>(null);
-  // Rate structures of the partners picked on this quote, for the
-  // "From Rate Sheet" picker (migration 0114).
-  const agentRatesQ = usePartnerRateStructures("agent", draft?.agent_id || null);
-  const transporterRatesQ = usePartnerRateStructures("transporter", draft?.transporter_id || null);
-  const clearingRatesQ = usePartnerRateStructures("clearing_agent", draft?.clearing_agent_id || null);
+  // Tier rate sheets (migration 0119) for the "Rate tier" / "Trade route" pick.
+  const tariffQ = useTariffSheets();
+  const [tierLoading, setTierLoading] = useState(false);
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
   if (isEdit && existingQ.data && loadedFor !== existingQ.data.id) {
@@ -612,17 +623,98 @@ export default function QuoteBuilderPage() {
     });
   }
 
-  function addPickedLines(picked: PickedLine[]) {
-    setDraft((d) => {
-      if (!d) return d;
-      const fx = fxOfDraft(d);
-      const added: QuoteLine[] = picked.map((p, i) => ({
-        ...newLine(p.category, d.lines.length + i),
-        ...p,
-        sell: sellFromBuy(p.buy, p.margin, p.cur, fx),
-      }));
-      return { ...d, lines: [...d.lines, ...added] };
-    });
+  /** Replace the charge lines with the picked tier rate sheet (0119): each
+   *  code's buy follows the linked partner rate sheet (weight breaks picked
+   *  by the chargeable weight) plus the tier margin; sell-only codes take the
+   *  sheet's Sell (R). A partner already picked on the quote wins over the
+   *  sheet's — their rate sheet for the same mode + route is used. */
+  async function loadTierRates() {
+    if (!draft) return;
+    const sheet = (tariffQ.data ?? []).find((s) => s.id === draft.tariff_sheet_id);
+    if (!sheet) return;
+    const hasLines = draft.lines.some((l) => l.code || String(l.description ?? "").trim());
+    if (
+      hasLines &&
+      !window.confirm(
+        `Replace the current charge lines with the ${rateTier(sheet.tier).label} "${sheet.route}" rates?`,
+      )
+    )
+      return;
+    setTierLoading(true);
+    try {
+      const partnerIds = Object.fromEntries(
+        PARTNER_KINDS.map((k) => [k, draft[partnerIdKey(k)] || sheet[partnerIdKey(k)] || ""]),
+      ) as Record<(typeof PARTNER_KINDS)[number], string>;
+      const own = PARTNER_KINDS.filter(
+        (k) => partnerIds[k] && partnerIds[k] === sheet[partnerIdKey(k)] && sheet[sheetIdKey(k)],
+      );
+      const fetched = await getPartnerRateSheets(own.map((k) => sheet[sheetIdKey(k)] as string));
+      const partners: PartnerSheets = {};
+      for (const k of PARTNER_KINDS) {
+        const pid = partnerIds[k];
+        if (!pid) continue;
+        if (own.includes(k)) {
+          partners[k] = fetched.find((s) => s.id === sheet[sheetIdKey(k)]) ?? null;
+          continue;
+        }
+        const theirs = (await listPartnerRateSheets(k, pid)).filter((s) => s.mode === sheet.mode);
+        partners[k] =
+          theirs.find((s) => s.route.toLowerCase() === sheet.route.toLowerCase()) ??
+          theirs[0] ??
+          null;
+      }
+      const kg = packTotals.chargeable;
+      const fxRates = fxOfDraft(draft);
+      const lines: QuoteLine[] = [];
+      for (const g of worksheetGroups(sheet.mode))
+        for (const item of g.items) {
+          const r = tierLine(sheet, item, partners, kg);
+          if (r.sellOnly ? !(r.sell != null && r.sell > 0) : r.buy == null) continue;
+          const base = {
+            ...newLine(item.category, lines.length),
+            code: item.code,
+            description: item.description,
+            unit: item.unit,
+            qty: 1,
+            vat_pct: item.vat_pct ?? 0,
+          };
+          lines.push(
+            r.sellOnly
+              ? { ...base, cur: item.cur, buy: 0, margin: 0, sell: r.sell as number }
+              : {
+                  ...base,
+                  cur: r.cur,
+                  buy: r.buy as number,
+                  margin: r.margin,
+                  sell: sellFromBuy(r.buy as number, r.margin, r.cur, fxRates),
+                },
+          );
+        }
+      if (lines.length === 0) {
+        error("That tier sheet has no rates yet — fill it in on Rates & Tariff.");
+        return;
+      }
+      setDraft((d) =>
+        d
+          ? {
+              ...d,
+              lines,
+              rate_tier: sheet.tier,
+              agent_id: partnerIds.agent,
+              transporter_id: partnerIds.transporter,
+              clearing_agent_id: partnerIds.clearing_agent,
+            }
+          : d,
+      );
+      toast(
+        `Loaded ${lines.length} line${lines.length === 1 ? "" : "s"} from ${rateTier(sheet.tier).label} · ${sheet.route}` +
+          (kg > 0 ? "" : " — add the packing list, then load again to pick the right weight break"),
+      );
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not load the tier rates");
+    } finally {
+      setTierLoading(false);
+    }
   }
 
   /** Drag-reorder a charge line: drop `from` before/after `to`. The saved
@@ -668,6 +760,9 @@ export default function QuoteBuilderPage() {
   }
 
   const clients = clientsQ.data ?? [];
+  const tierRoutes = (tariffQ.data ?? []).filter(
+    (s) => s.tier === draft.rate_tier && s.mode === draft.mode,
+  );
   const unpromotedLeads = (leadsQ.data ?? []).filter((l) => !l.promoted_client_id);
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
@@ -786,6 +881,9 @@ export default function QuoteBuilderPage() {
               onChange={(e) => {
                 const [kind, id] = e.target.value.split(":");
                 const pickedLead = kind === "l" ? unpromotedLeads.find((l) => l.id === id) : null;
+                // The customer's rate tier (Silver for leads / by default).
+                const tier: RateTierId =
+                  (kind === "c" ? clients.find((c) => c.id === id)?.rate_tier : null) ?? "silver";
                 setDraft((d) =>
                   d
                     ? {
@@ -793,6 +891,8 @@ export default function QuoteBuilderPage() {
                         client_id: kind === "c" ? id : "",
                         lead_id: kind === "l" ? id : "",
                         sales_person_id: pickedLead?.sales_person_id || d.sales_person_id,
+                        rate_tier: tier,
+                        tariff_sheet_id: tier === d.rate_tier ? d.tariff_sheet_id : "",
                       }
                     : d,
                 );
@@ -1131,6 +1231,60 @@ export default function QuoteBuilderPage() {
             </div>
             </>
           )}
+
+          {/* Tier rate sheets (0119) */}
+          <div className="field">
+            <label>
+              <TierDot tier={draft.rate_tier} />
+              Rate tier
+            </label>
+            <select
+              value={draft.rate_tier}
+              onChange={(e) =>
+                setDraft((d) =>
+                  d
+                    ? { ...d, rate_tier: e.target.value as RateTierId, tariff_sheet_id: "" }
+                    : d,
+                )
+              }
+            >
+              {RATE_TIERS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} ({t.margin}%)
+                </option>
+              ))}
+            </select>
+            <span className="hint">From the customer — change it for this quote if needed.</span>
+          </div>
+          <div className="field">
+            <label>Trade route</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <select
+                value={draft.tariff_sheet_id}
+                onChange={(e) => set("tariff_sheet_id", e.target.value)}
+              >
+                <option value="">
+                  {tierRoutes.length
+                    ? "— pick a trade route —"
+                    : `No ${rateTier(draft.rate_tier).label} ${draft.mode} sheets yet`}
+                </option>
+                {tierRoutes.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.route}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn outline"
+                disabled={!tierRoutes.some((s) => s.id === draft.tariff_sheet_id) || tierLoading}
+                onClick={loadTierRates}
+              >
+                {tierLoading ? "Loading…" : "Load rates"}
+              </button>
+            </div>
+            <span className="hint">Fills the charge lines from the tier rate sheet.</span>
+          </div>
 
           {/* Internal only / every mode */}
           <div className="field">
@@ -1937,44 +2091,9 @@ export default function QuoteBuilderPage() {
           category={ratePickerFor}
           mode={draft.mode}
           rates={ratesQ.data ?? []}
-          chargeableKg={packTotals.chargeable}
-          partners={[
-            {
-              kind: "agent" as const,
-              role: "Agent",
-              id: draft.agent_id,
-              list: agentsQ.data,
-              structures: agentRatesQ.data,
-            },
-            {
-              kind: "transporter" as const,
-              role: "Transporter",
-              id: draft.transporter_id,
-              list: transportersQ.data,
-              structures: transporterRatesQ.data,
-            },
-            {
-              kind: "clearing_agent" as const,
-              role: "Clearing Agent",
-              id: draft.clearing_agent_id,
-              list: clearingAgentsQ.data,
-              structures: clearingRatesQ.data,
-            },
-          ]
-            .filter((p) => p.id)
-            .map((p) => ({
-              kind: p.kind,
-              role: p.role,
-              company: p.list?.find((c) => c.id === p.id)?.company ?? p.role,
-              structures: p.structures ?? [],
-            }))}
           onPick={(rate) => {
             addLineFromRate(rate);
             setRatePickerFor(null);
-          }}
-          onAddLines={(lines) => {
-            addPickedLines(lines);
-            toast(`Added ${lines.length} line${lines.length === 1 ? "" : "s"}`);
           }}
           onClose={() => setRatePickerFor(null)}
         />
@@ -2006,58 +2125,26 @@ function RatePickerModal({
   category,
   mode,
   rates,
-  chargeableKg,
-  partners,
   onPick,
-  onAddLines,
   onClose,
 }: {
   category: ChargeCategory;
   mode: QuoteDraft["mode"];
   rates: RateSheetItem[];
-  chargeableKg: number;
-  partners: QuotePartnerRates[];
   onPick: (rate: RateSheetItem) => void;
-  onAddLines: (lines: PickedLine[]) => void;
   onClose: () => void;
 }) {
   const matches = rates.filter(
     (r) => r.category === category && r.mode === mode,
   );
-  const hasPartnerRates = partners.some((p) => p.structures.length > 0);
-  const [tab, setTab] = useState<"partners" | "sheet">(
-    hasPartnerRates ? "partners" : "sheet",
-  );
   return (
-    <Modal title={`${category} — Rates`} onClose={onClose} wide>
-      <div className="wf-tabs" style={{ marginBottom: 12 }}>
-        <button
-          type="button"
-          className={`wf-tab${tab === "partners" ? " active" : ""}`}
-          onClick={() => setTab("partners")}
-        >
-          Partner rates
-        </button>
-        <button
-          type="button"
-          className={`wf-tab${tab === "sheet" ? " active" : ""}`}
-          onClick={() => setTab("sheet")}
-        >
-          Rate Sheet ({matches.length})
-        </button>
-      </div>
-      {tab === "partners" ? (
-        <PartnerRatePicker
-          category={category}
-          mode={mode}
-          chargeableKg={chargeableKg}
-          partners={partners}
-          onAdd={onAddLines}
-        />
-      ) : matches.length === 0 ? (
+    <Modal title={`${category} — Rate list`} onClose={onClose} wide>
+      <p className="hint" style={{ marginBottom: 10 }}>
+        To price the whole quote from a tier, use Rate tier / Trade route → Load rates above.
+      </p>
+      {matches.length === 0 ? (
         <p className="muted">
-          No {mode} rates saved for this category yet. Add them under Rates &
-          Tariff in the nav.
+          No {mode} rates in the rate list for this category.
         </p>
       ) : (
         <div className="stack-sm">

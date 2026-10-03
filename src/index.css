@@ -5954,68 +5954,6 @@ table.dt .task-title {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Quote Builder > From Rates > Partner rates (PartnerRatePicker) */
-.prp-bar {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-}
-.prp-margin {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-.prp-margin input {
-  width: 64px;
-  padding: 5px 8px;
-  text-align: right;
-}
-.prp-partner + .prp-partner {
-  margin-top: 16px;
-}
-.prp-partner-head {
-  font-size: 0.86rem;
-  margin-bottom: 8px;
-  color: var(--teal-ink);
-}
-.prp-structure {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-}
-.prp-structure-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 6px;
-}
-.prp-block + .prp-block {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
-}
-.prp-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-}
-.prp-group-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--muted);
-  min-width: 96px;
-}
 /* Campaigns: schedule controls */
 .camp-when {
   display: flex;

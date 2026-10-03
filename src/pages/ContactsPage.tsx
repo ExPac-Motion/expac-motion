@@ -27,15 +27,24 @@ import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   useCreateClientInvite,
   useLeadSources,
+  usePartnerRateStructures,
   useProfiles,
   useReplaceClientContacts,
 } from "../lib/hooks";
-import { listClientContacts } from "../lib/db";
+import { listClientContacts, setClientRateTier } from "../lib/db";
 import { normalizeWebsite } from "../lib/format";
 import { PORTAL_SIGNUP_ENABLED } from "../lib/flags";
 import ClientActivity from "./ClientActivity";
 import TaskEditModal from "./ops/TaskEditModal";
-import type { Contact, LeadContactDraft, PartnerKind } from "../lib/types";
+import {
+  DEFAULT_RATE_TIER,
+  RATE_TIERS,
+  rateTier,
+  type Contact,
+  type LeadContactDraft,
+  type PartnerKind,
+  type RateTierId,
+} from "../lib/types";
 import {
   ChipRow,
   CoverageEditor,
@@ -44,6 +53,7 @@ import {
   type Coverage,
 } from "./partners/PartnerCoverage";
 import RateStructures from "./partners/RateStructures";
+import PartnerRateSheets from "./partners/PartnerRateSheets";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
@@ -277,6 +287,10 @@ export default function ContactsPage({
         values,
       });
       if (isClient) {
+        await setClientRateTier(
+          saved.id,
+          (String(fd.get("rate_tier") || "") || DEFAULT_RATE_TIER) as RateTierId,
+        );
         await replaceClientContacts.mutateAsync({
           clientId: saved.id,
           contacts: extraContacts,
@@ -450,6 +464,17 @@ export default function ContactsPage({
         sortValue: (r) => r.phone ?? "",
         render: (r) => r.phone || "—",
       },
+      ...(kind === "client"
+        ? ([
+            {
+              key: "rate_tier",
+              header: "Rate Tier",
+              width: 110,
+              sortValue: (r) => RATE_TIERS.findIndex((t) => t.id === rateTier(r.rate_tier).id),
+              render: (r) => rateTier(r.rate_tier).label,
+            },
+          ] as DataColumn<Contact>[])
+        : []),
       ...(isPartner
         ? ([
             {
@@ -647,6 +672,9 @@ export default function ContactsPage({
                 value={viewing.sales_person?.full_name || "—"}
               />
             )}
+            {isClient && (
+              <ViewField label="Rate Tier" value={rateTier(viewing.rate_tier).label} />
+            )}
           </div>
           {isClient && (
             <ViewField label="Description" value={viewing.description || "—"} />
@@ -659,7 +687,12 @@ export default function ContactsPage({
           {isPartner && (
             <>
               <CoverageView value={coverageOf(viewing)} />
-              <RateStructures
+              <PartnerRateSheets
+                kind={kind as PartnerKind}
+                partnerId={viewing.id}
+                partnerName={viewing.company}
+              />
+              <LegacyRateStructures
                 kind={kind as PartnerKind}
                 partnerId={viewing.id}
                 partnerName={viewing.company}
@@ -875,6 +908,22 @@ export default function ContactsPage({
                   </select>
                 </div>
                 <div className="field">
+                  <label>Rate Tier</label>
+                  <select
+                    name="rate_tier"
+                    defaultValue={current?.rate_tier ?? DEFAULT_RATE_TIER}
+                  >
+                    {RATE_TIERS.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label} ({t.margin}%) — {t.note}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="hint">
+                    Picks the tier rate sheet on this customer's quotes.
+                  </span>
+                </div>
+                <div className="field">
                   <label>Notes</label>
                   <textarea
                     name="notes"
@@ -982,6 +1031,17 @@ export default function ContactsPage({
               });
             if (kind === "client")
               f.push({
+                key: "rate_tier",
+                label: "Rate Tier",
+                type: "select",
+                allowClear: false,
+                options: RATE_TIERS.map((t) => ({
+                  value: t.id,
+                  label: `${t.label} (${t.margin}%)`,
+                })),
+              });
+            if (kind === "client")
+              f.push({
                 key: "also_shipper",
                 label: "Is also Shipper/Exporter",
                 type: "toggle",
@@ -1047,5 +1107,28 @@ function ViewField({
       </div>
       <strong>{children ?? value}</strong>
     </div>
+  );
+}
+
+/** Old-format rate structures (0114), shown under the code-based rate
+ *  sheets only while a partner still has any — read and copy across. */
+function LegacyRateStructures({
+  kind,
+  partnerId,
+  partnerName,
+}: {
+  kind: PartnerKind;
+  partnerId: string;
+  partnerName: string;
+}) {
+  const q = usePartnerRateStructures(kind, partnerId);
+  if (!q.data?.length) return null;
+  return (
+    <details className="rs-wrap">
+      <summary className="hint">
+        Earlier rate structures (old format, {q.data.length}) — copy these into a rate sheet above
+      </summary>
+      <RateStructures kind={kind} partnerId={partnerId} partnerName={partnerName} />
+    </details>
   );
 }
