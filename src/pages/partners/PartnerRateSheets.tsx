@@ -10,14 +10,17 @@ import { useToast } from "../../components/Toast";
 import {
   useDeletePartnerRateSheet,
   usePartnerRateSheets,
+  usePartnerSheetHistory,
   useSavePartnerRateSheet,
 } from "../../lib/hooks";
+import { formatDateTime } from "../../lib/format";
 import {
   LINE_CURRENCIES,
   QUOTE_MODES,
   type LineCurrency,
   type PartnerKind,
   type PartnerRateSheet,
+  type PartnerRateSheetChange,
   type PartnerRateSheetDraft,
   type PartnerSheetLine,
 } from "../../lib/types";
@@ -60,10 +63,16 @@ export default function PartnerRateSheets({
   kind,
   partnerId,
   partnerName,
+  canDelete = true,
+  showHistory = false,
 }: {
   kind: PartnerKind;
   partnerId: string;
   partnerName: string;
+  /** Partner-portal logins can add and edit, never delete (0121). */
+  canDelete?: boolean;
+  /** Admin: each sheet's change history (partner_rate_sheet_history). */
+  showHistory?: boolean;
 }) {
   const q = usePartnerRateSheets(kind, partnerId);
   const save = useSavePartnerRateSheet();
@@ -146,7 +155,8 @@ export default function PartnerRateSheets({
               void _u;
               setEditing({ draft: { ...draft, route: `${s.route} (Copy)` } });
             }}
-            onDelete={() => onDelete(s)}
+            onDelete={canDelete ? () => onDelete(s) : undefined}
+            showHistory={showHistory}
           />
         ))
       )}
@@ -179,12 +189,15 @@ function SheetCard({
   onEdit,
   onDuplicate,
   onDelete,
+  showHistory,
 }: {
   s: PartnerRateSheet;
   onEdit: () => void;
   onDuplicate: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
+  showHistory?: boolean;
 }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
   const codes = new Set(filledCodes(s));
   const expired = !!s.valid_until && s.valid_until < new Date().toISOString().slice(0, 10);
   const groups = worksheetGroups(s.mode, { sellOnly: false })
@@ -217,11 +230,23 @@ function SheetCard({
           <button type="button" className="btn small outline" onClick={onDuplicate}>
             Duplicate
           </button>
-          <button type="button" className="btn small outline" onClick={onDelete}>
-            Delete
-          </button>
+          {showHistory && (
+            <button
+              type="button"
+              className="btn small outline"
+              onClick={() => setHistoryOpen((v) => !v)}
+            >
+              {historyOpen ? "Hide history" : "History"}
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" className="btn small outline" onClick={onDelete}>
+              Delete
+            </button>
+          )}
         </div>
       </div>
+      {historyOpen && <SheetHistory sheetId={s.id} />}
       {groups.length === 0 ? (
         <p className="hint">No rates filled in yet.</p>
       ) : (
@@ -272,6 +297,71 @@ function SheetCard({
         </div>
       )}
       {s.notes && <p className="rs-notes">{s.notes}</p>}
+    </div>
+  );
+}
+
+/** Readable list of what one saved change did to a sheet's rates. */
+function describeChange(c: PartnerRateSheetChange): string[] {
+  if (c.action === "insert") return ["Sheet created"];
+  if (c.action === "delete") return ["Sheet deleted"];
+  const o = c.old_row;
+  const n = c.new_row;
+  if (!o || !n) return [];
+  const out: string[] = [];
+  const v = (x: number | null | undefined) => (x == null ? "—" : fmt(Number(x)));
+  for (const code of new Set([...Object.keys(o.lines ?? {}), ...Object.keys(n.lines ?? {})])) {
+    const a = o.lines?.[code];
+    const b = n.lines?.[code];
+    const labels = new Set([
+      ...(a?.breaks ?? []).map((x) => x.label),
+      ...(b?.breaks ?? []).map((x) => x.label),
+    ]);
+    if (labels.size > 0) {
+      for (const label of labels) {
+        const ra = a?.breaks?.find((x) => x.label === label)?.rate;
+        const rb = b?.breaks?.find((x) => x.label === label)?.rate;
+        if (ra !== rb) out.push(`${code} ${label}: ${v(ra)} → ${v(rb)}`);
+      }
+    } else if ((a?.buy ?? null) !== (b?.buy ?? null)) {
+      out.push(`${code}: ${v(a?.buy)} → ${v(b?.buy)}`);
+    }
+    if (a && b && a.cur !== b.cur) out.push(`${code} currency: ${a.cur} → ${b.cur}`);
+  }
+  if (o.route !== n.route) out.push(`Route: ${o.route} → ${n.route}`);
+  if (o.valid_until !== n.valid_until)
+    out.push(`Valid until: ${ddmmyyyy(o.valid_until) || "—"} → ${ddmmyyyy(n.valid_until) || "—"}`);
+  if (o.valid_from !== n.valid_from)
+    out.push(`Valid from: ${ddmmyyyy(o.valid_from) || "—"} → ${ddmmyyyy(n.valid_from) || "—"}`);
+  return out.length ? out : ["Saved — no rate changes"];
+}
+
+function SheetHistory({ sheetId }: { sheetId: string }) {
+  const q = usePartnerSheetHistory(sheetId);
+  if (q.isLoading) return <p className="hint">Loading history…</p>;
+  if (q.isError) return <p className="hint">History needs migration 0121.</p>;
+  const rows = q.data ?? [];
+  if (rows.length === 0) return <p className="hint">No changes recorded yet.</p>;
+  return (
+    <div className="table-wrap" style={{ marginBottom: 10 }}>
+      <table className="charge-table">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>By</th>
+            <th>Changes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((c) => (
+            <tr key={c.id}>
+              <td>{formatDateTime(c.changed_at)}</td>
+              <td>{c.changed_by_email || "—"}</td>
+              <td style={{ whiteSpace: "normal" }}>{describeChange(c).join(" · ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -11,7 +11,11 @@ import type {
   PartnerRateStructure,
   PartnerRateStructureDraft,
   PartnerRateSheet,
+  PartnerRateSheetChange,
   PartnerRateSheetDraft,
+  PartnerInvite,
+  PartnerUser,
+  MyPartner,
   RateTierId,
   TariffSheet,
   TariffSheetDraft,
@@ -2421,6 +2425,81 @@ export async function saveTariffSheet(input: {
 }
 export async function deleteTariffSheet(id: string): Promise<void> {
   unwrap(await supabase.from("tariff_sheets").delete().eq("id", id));
+}
+
+/* ---------- Partner portal (migration 0121) ---------- */
+
+/** The signed-in partner login's own agent / transporter / clearing agent. */
+export async function getMyPartner(): Promise<MyPartner | null> {
+  const rows = unwrap<MyPartner[]>(await supabase.rpc("my_partner"));
+  return rows[0] ?? null;
+}
+export async function listPartnerInvites(
+  kind: PartnerKind,
+  partnerId: string,
+): Promise<PartnerInvite[]> {
+  return unwrap(
+    await supabase
+      .from("partner_invites")
+      .select("*")
+      .eq("partner_kind", kind)
+      .eq("partner_id", partnerId)
+      .order("created_at", { ascending: false }),
+  );
+}
+export async function createPartnerInvite(input: {
+  kind: PartnerKind;
+  partnerId: string;
+  email: string;
+}): Promise<PartnerInvite> {
+  return unwrap(
+    await supabase
+      .from("partner_invites")
+      .insert({
+        partner_kind: input.kind,
+        partner_id: input.partnerId,
+        email: input.email.trim().toLowerCase(),
+      })
+      .select("*")
+      .single(),
+  );
+}
+export async function deletePartnerInvite(token: string): Promise<void> {
+  unwrap(await supabase.from("partner_invites").delete().eq("token", token));
+}
+export async function getPartnerInvite(
+  token: string,
+): Promise<{ email: string; company: string | null; partner_kind: PartnerKind } | null> {
+  const rows = unwrap<{ email: string; company: string | null; partner_kind: PartnerKind }[]>(
+    await supabase.rpc("get_partner_invite", { p_token: token }),
+  );
+  return rows[0] ?? null;
+}
+export async function claimPartnerInvite(token: string): Promise<void> {
+  unwrap(await supabase.rpc("claim_partner_invite", { p_token: token }));
+}
+export async function listPartnerUsers(
+  kind: PartnerKind,
+  partnerId: string,
+): Promise<PartnerUser[]> {
+  return unwrap(
+    await supabase.rpc("list_partner_users", { p_kind: kind, p_partner_id: partnerId }),
+  );
+}
+export async function setPartnerAccess(profileId: string, enabled: boolean): Promise<void> {
+  unwrap(
+    await supabase.rpc("set_partner_access", { p_profile_id: profileId, p_enabled: enabled }),
+  );
+}
+export async function listPartnerSheetHistory(sheetId: string): Promise<PartnerRateSheetChange[]> {
+  return unwrap(
+    await supabase
+      .from("partner_rate_sheet_history")
+      .select("id, sheet_id, action, changed_by_email, changed_at, old_row, new_row")
+      .eq("sheet_id", sheetId)
+      .order("changed_at", { ascending: false })
+      .limit(50),
+  );
 }
 
 /** Customer rate tier — saved on its own so a not-yet-applied 0119 never

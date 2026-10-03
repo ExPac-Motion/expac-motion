@@ -63,16 +63,40 @@ function withDefaultFont(html) {
 }
 
 async function verifyUser(env, authHeader) {
-  if (!authHeader || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return false;
+  if (!authHeader || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null;
   try {
     const r = await fetch(env.SUPABASE_URL + "/auth/v1/user", {
       headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader },
     });
-    return r.ok;
+    if (!r.ok) return null;
+    const u = await r.json();
+    return u && u.id ? { id: u.id } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Staff = profiles.role admin / user — mirrors public.is_staff(), including
+ *  treating a not-yet-created profile row as staff. Read with the caller's own
+ *  token, so RLS lets them see only their own profile. */
+async function isStaffUser(env, authHeader, userId) {
+  try {
+    const r = await fetch(
+      env.SUPABASE_URL + "/rest/v1/profiles?select=role&id=eq." + encodeURIComponent(userId),
+      { headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader } },
+    );
+    if (!r.ok) return false;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) return true;
+    return rows[0].role === "admin" || rows[0].role === "user";
   } catch {
     return false;
   }
 }
+
+// Customer-portal and partner-portal logins may only email ExPac itself
+// (e.g. the "new portal signup" notice) — never send as ExPac to anyone else.
+const INTERNAL_DOMAIN = "@expac.co.za";
 
 export async function onRequestPost(context) {
   const env = context.env || {};
@@ -82,9 +106,12 @@ export async function onRequestPost(context) {
 
   const cronKey = context.request.headers.get("x-cron-key");
   const viaCron = !!cronKey && !!env.CRON_SECRET && cronKey === env.CRON_SECRET;
+  let internalOnly = false;
   if (!viaCron) {
-    const ok = await verifyUser(env, context.request.headers.get("authorization"));
-    if (!ok) return json({ error: "Not authenticated." }, 401);
+    const authHeader = context.request.headers.get("authorization");
+    const user = await verifyUser(env, authHeader);
+    if (!user) return json({ error: "Not authenticated." }, 401);
+    internalOnly = !(await isStaffUser(env, authHeader, user.id));
   }
 
   let body;
@@ -101,6 +128,12 @@ export async function onRequestPost(context) {
   const visible = new Set([...to, ...cc].map((a) => String(a).toLowerCase()));
   const bcc = bccIn.filter((a) => !visible.has(String(a).toLowerCase()));
   if (to.length === 0) return json({ error: "No recipients." }, 400);
+  if (
+    internalOnly &&
+    ![...to, ...cc, ...bcc].every((a) => String(a).trim().toLowerCase().endsWith(INTERNAL_DOMAIN))
+  ) {
+    return json({ error: "Not allowed to send email." }, 403);
+  }
   if (!body.subject || (!body.html && !body.text)) {
     return json({ error: "subject and html/text are required." }, 400);
   }

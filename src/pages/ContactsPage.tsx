@@ -56,6 +56,7 @@ import {
 import RateStructures from "./partners/RateStructures";
 import PartnerRateSheets from "./partners/PartnerRateSheets";
 import PartnerMailModal from "./partners/PartnerMailModal";
+import PartnerLoginAccess from "./partners/PartnerLoginAccess";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
@@ -700,6 +701,13 @@ export default function ContactsPage({
                     kind={kind as PartnerKind}
                     partnerId={viewing.id}
                     partnerName={viewing.company}
+                    showHistory
+                  />
+                  <PartnerLoginAccess
+                    kind={kind as PartnerKind}
+                    partnerId={viewing.id}
+                    company={viewing.company}
+                    email={viewing.email}
                   />
                   <LegacyRateStructures
                     kind={kind as PartnerKind}

@@ -1766,7 +1766,10 @@ export function useSavePartnerRateSheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: db.savePartnerRateSheet,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_sheets"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["partner_rate_sheets"] });
+      qc.invalidateQueries({ queryKey: ["partner_sheet_history"] });
+    },
   });
 }
 export function useDeletePartnerRateSheet() {
@@ -1776,6 +1779,53 @@ export function useDeletePartnerRateSheet() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_rate_sheets"] }),
   });
 }
+/* ---------- Partner portal (0121) ---------- */
+
+export function useMyPartner(enabled = true) {
+  return useQuery({ queryKey: ["my_partner"], queryFn: db.getMyPartner, enabled });
+}
+export function usePartnerInvites(kind: PartnerKind, partnerId: string) {
+  return useQuery({
+    queryKey: ["partner_invites", kind, partnerId],
+    queryFn: () => db.listPartnerInvites(kind, partnerId),
+  });
+}
+export function useCreatePartnerInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.createPartnerInvite,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_invites"] }),
+  });
+}
+export function useDeletePartnerInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deletePartnerInvite,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_invites"] }),
+  });
+}
+export function usePartnerUsers(kind: PartnerKind, partnerId: string) {
+  return useQuery({
+    queryKey: ["partner_users", kind, partnerId],
+    queryFn: () => db.listPartnerUsers(kind, partnerId),
+  });
+}
+export function useSetPartnerAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { profileId: string; enabled: boolean }) =>
+      db.setPartnerAccess(input.profileId, input.enabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partner_users"] }),
+  });
+}
+export function usePartnerSheetHistory(sheetId: string | null) {
+  return useQuery({
+    queryKey: ["partner_sheet_history", sheetId],
+    queryFn: () => db.listPartnerSheetHistory(sheetId as string),
+    enabled: !!sheetId,
+  });
+}
+
 export function useTariffSheets() {
   return useQuery({ queryKey: ["tariff_sheets"], queryFn: db.listTariffSheets });
 }

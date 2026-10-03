@@ -41,6 +41,8 @@ import PortalQuotesPage from "./pages/portal/PortalQuotesPage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
 import PortalRatesPage from "./pages/portal/PortalRatesPage";
+import PartnerPortalPage from "./pages/partner/PartnerPortalPage";
+import PartnerSignupPage from "./pages/partner/PartnerSignupPage";
 import RestrictedAccountPage from "./pages/RestrictedAccountPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import FormPublicPage from "./pages/FormPublicPage";
@@ -65,7 +67,21 @@ function Protected() {
   if (!session) return <Navigate to="/login" replace />;
   if (profileQ.data?.role === "restricted") return <RestrictedAccountPage />;
   if (profileQ.data?.role === "client") return <Navigate to="/portal" replace />;
+  if (profileQ.data?.role === "partner") return <Navigate to="/partner" replace />;
   return <Layout />;
+}
+
+/** Partner portal (0121) — agent / transporter / clearing agent logins only. */
+function PartnerProtected() {
+  const { session, loading } = useAuth();
+  const profileQ = useMyProfile();
+  if (loading || (session && profileQ.isLoading)) {
+    return <div className="center-note">Loading…</div>;
+  }
+  if (!session) return <Navigate to="/login" replace />;
+  if (profileQ.data?.role === "restricted") return <RestrictedAccountPage />;
+  if (profileQ.data?.role !== "partner") return <Navigate to="/" replace />;
+  return <PartnerPortalPage />;
 }
 
 /** Admin-only pages (Rates & Tariff — buy rates, margins, partner rates).
@@ -167,6 +183,8 @@ function AppRoutes() {
           <Route path="/forms/:id" element={<FormPublicPage />} />
           <Route path="/track" element={<PublicTrackPage />} />
           <Route path="/portal/signup" element={<PortalSignupPage />} />
+          <Route path="/partner/signup" element={<PartnerSignupPage />} />
+          <Route path="/partner" element={<PartnerProtected />} />
           <Route element={<PortalProtected />}>
             <Route path="portal" element={<PortalDashboardPage />} />
             <Route

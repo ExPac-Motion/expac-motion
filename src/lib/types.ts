@@ -42,7 +42,7 @@ export const PIPE_STAGE_COLORS: string[] = [
 
 /* ---------- Settings ---------- */
 
-export type UserRole = "admin" | "user" | "client" | "restricted";
+export type UserRole = "admin" | "user" | "client" | "restricted" | "partner";
 
 export interface Profile {
   id: string;
@@ -68,6 +68,10 @@ export interface Profile {
   /** Free-text company name typed on the self-serve signup form, to help
    *  staff match a pending request to an existing client. */
   requested_company: string | null;
+  /** role='partner' (0121): the agent / transporter / clearing agent this
+   *  partner-portal login belongs to. */
+  partner_kind?: PartnerKind | null;
+  partner_id?: string | null;
   /** @deprecated flat currency targets superseded by sales_target (incl.
    *  VAT) + the company-wide Cost of Sales Ratio target — kept for existing
    *  data; no longer surfaced in the Sales Person UI. */
@@ -1082,6 +1086,39 @@ export interface TariffSheet {
   updated_at: string;
 }
 export type TariffSheetDraft = Omit<TariffSheet, "id" | "created_at" | "updated_at">;
+
+/* ---------- Partner portal (migration 0121) ---------- */
+
+export interface PartnerInvite {
+  token: string;
+  partner_kind: PartnerKind;
+  partner_id: string;
+  email: string;
+  created_at: string;
+  claimed_at: string | null;
+}
+export interface PartnerUser {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: UserRole;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+export interface MyPartner {
+  partner_kind: PartnerKind;
+  partner_id: string;
+  company: string | null;
+}
+export interface PartnerRateSheetChange {
+  id: string;
+  sheet_id: string;
+  action: "insert" | "update" | "delete";
+  changed_by_email: string | null;
+  changed_at: string;
+  old_row: PartnerRateSheet | null;
+  new_row: PartnerRateSheet | null;
+}
 
 export type Client = Contact;
 export type Supplier = Contact;
