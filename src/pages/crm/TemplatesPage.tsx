@@ -16,6 +16,7 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -197,6 +198,8 @@ export default function TemplatesPage() {
         t.name.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q),
     );
   }, [data, search]);
+  const sel = useRowSelection(data ?? [], rows);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const current = editing === "new" ? null : editing;
 
@@ -245,10 +248,18 @@ export default function TemplatesPage() {
       {
         key: "actions",
         fixed: true,
-        width: 180,
-        header: <RowActionsHead />,
+        width: 200,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
         render: (t) => (
           <RowActions
+            selected={sel.isSelected(t.id)}
+            onSelectToggle={() => sel.toggle(t.id)}
             onView={() => setViewing(t)}
             onEdit={() => setEditing(t)}
             onDelete={() => onDelete(t)}
@@ -280,10 +291,25 @@ export default function TemplatesPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [sel],
   );
 
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+
+  async function onBulkDelete() {
+    const n = sel.count;
+    if (!window.confirm(`Delete ${n} template${n === 1 ? "" : "s"}? Campaigns already sent keep their copy.`)) return;
+    setBulkBusy(true);
+    try {
+      for (const id of sel.ids) await remove.mutateAsync(id);
+      toast(`Deleted ${n} template${n === 1 ? "" : "s"}`);
+      sel.clear();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not delete");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   return (
     <>
@@ -307,7 +333,16 @@ export default function TemplatesPage() {
             + New Template
           </button>
         }
-      />
+      >
+        <button
+          className="btn danger"
+          onClick={onBulkDelete}
+          disabled={sel.count === 0 || bulkBusy}
+          title={sel.count === 0 ? "Tick rows in the Actions column to delete" : undefined}
+        >
+          Delete{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
       <div className="panel">
 
@@ -361,7 +396,7 @@ export default function TemplatesPage() {
                 border: "1px solid var(--line)",
                 borderRadius: 8,
                 padding: 12,
-                background: "#faf9f5",
+                background: "var(--paper)",
               }}
               dangerouslySetInnerHTML={{ __html: previewMerge(viewing.body) }}
             />

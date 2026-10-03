@@ -601,7 +601,7 @@ export default function ContactsPage({
               style={{
                 marginBottom: 14,
                 padding: 10,
-                background: "#f5f4ef",
+                background: "var(--paper)",
                 borderRadius: 8,
                 wordBreak: "break-all",
               }}

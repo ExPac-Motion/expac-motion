@@ -77,7 +77,7 @@ export default function ClientActivity({ clientId }: { clientId: string }) {
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
-    <div style={{ marginTop: 18, borderTop: "1px solid #e8e7e0", paddingTop: 14 }}>
+    <div style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
       <div className="grid2" style={{ marginBottom: 18 }}>
         <div>
           <h4 style={{ margin: "0 0 8px" }}>Deal Pipeline</h4>
@@ -88,7 +88,7 @@ export default function ClientActivity({ clientId }: { clientId: string }) {
                 display: "flex",
                 justifyContent: "space-between",
                 padding: "6px 0",
-                borderBottom: "1px solid #f0efe8",
+                borderBottom: "1px solid var(--line)",
               }}
             >
               <span>{STATUS_LABEL[p.st]}</span>
@@ -129,7 +129,7 @@ export default function ClientActivity({ clientId }: { clientId: string }) {
                 display: "flex",
                 justifyContent: "space-between",
                 padding: "6px 0",
-                borderBottom: "1px solid #f5f4ef",
+                borderBottom: "1px solid var(--line)",
               }}
             >
               <span>

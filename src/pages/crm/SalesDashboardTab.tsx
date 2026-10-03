@@ -40,8 +40,9 @@ import {
 } from "../../lib/types";
 
 /** Targets for the quote KPI widgets (fixed for now). */
-const WIN_RATE_TARGET = 50; // %, higher is better
-const TURNAROUND_TARGET_HRS = 4; // hours, lower is better
+/** Defaults until migration 0118 adds the editable settings. */
+const DEFAULT_WIN_RATE_TARGET = 50; // %, higher is better
+const DEFAULT_TURNAROUND_TARGET_HRS = 4; // hours, lower is better
 
 /** Green when the value meets its target, orange when not, plain when n/a. */
 function kpiTone(v: number | null, good: (v: number) => boolean): string | undefined {
@@ -566,6 +567,9 @@ export default function SalesDashboardTab() {
   }
 
   const settings = settingsQ.data;
+  const winRateTarget = settings.win_rate_target ?? DEFAULT_WIN_RATE_TARGET;
+  const turnaroundTarget =
+    settings.quote_turnaround_target_hrs ?? DEFAULT_TURNAROUND_TARGET_HRS;
   const w = (v: number, max: number) => (grown ? `${(v / max) * 100}%` : "0%");
 
   return (
@@ -717,14 +721,14 @@ export default function SalesDashboardTab() {
           </div>
           <div
             className="kpi-value"
-            style={{ color: kpiTone(quoteKpis.winRate, (v) => v >= WIN_RATE_TARGET) }}
+            style={{ color: kpiTone(quoteKpis.winRate, (v) => v >= winRateTarget) }}
           >
             {quoteKpis.winRate === null ? "—" : `${quoteKpis.winRate.toFixed(0)}%`}
           </div>
           <div className="kpi-foot">
             <span>
               {quoteKpis.wonCount} of {quoteKpis.decided} decided quotes · target ≥{" "}
-              {WIN_RATE_TARGET}%
+              {winRateTarget}%
             </span>
           </div>
         </div>
@@ -759,7 +763,7 @@ export default function SalesDashboardTab() {
           <div
             className="kpi-value"
             style={{
-              color: kpiTone(quoteKpis.turnaroundHrs, (v) => v < TURNAROUND_TARGET_HRS),
+              color: kpiTone(quoteKpis.turnaroundHrs, (v) => v < turnaroundTarget),
             }}
           >
             {quoteKpis.turnaroundHrs === null ? "—" : duration(quoteKpis.turnaroundHrs)}
@@ -767,7 +771,7 @@ export default function SalesDashboardTab() {
           <div className="kpi-foot">
             <span>
               {quoteKpis.sentCount
-                ? `Median, ${inMonthWord} · target < ${TURNAROUND_TARGET_HRS} hrs`
+                ? `Median, ${inMonthWord} · target < ${turnaroundTarget} hrs`
                 : `No quotes sent ${inMonthWord}`}
             </span>
           </div>
@@ -1100,9 +1104,13 @@ function TargetsModal({
     cost_of_sales_target: number;
     opportunities_pipeline_target: number;
     quotes_pipeline_target: number;
+    win_rate_target?: number;
+    quote_turnaround_target_hrs?: number;
   };
   onClose: () => void;
 }) {
+  // Only offered once migration 0118 has added the columns.
+  const hasQuoteKpiTargets = settings.win_rate_target !== undefined;
   const update = useUpdateCompanySettings();
   const { toast, error: toastError } = useToast();
 
@@ -1116,6 +1124,11 @@ function TargetsModal({
       opportunities_pipeline_target:
         Number(fd.get("opportunities_pipeline_target")) || 0,
     };
+    if (hasQuoteKpiTargets) {
+      patch.win_rate_target = Number(fd.get("win_rate_target")) || 0;
+      patch.quote_turnaround_target_hrs =
+        Number(fd.get("quote_turnaround_target_hrs")) || 0;
+    }
     try {
       await update.mutateAsync(patch);
       toast("Targets saved");
@@ -1146,6 +1159,28 @@ function TargetsModal({
             defaultValue={settings.cost_of_sales_target}
           />
         </div>
+        {hasQuoteKpiTargets && (
+          <div className="grid2">
+            <div className="field">
+              <label>Quote Win Rate Target (%)</label>
+              <input
+                name="win_rate_target"
+                type="number"
+                step="1"
+                defaultValue={settings.win_rate_target}
+              />
+            </div>
+            <div className="field">
+              <label>Quote Turnaround Target (hrs)</label>
+              <input
+                name="quote_turnaround_target_hrs"
+                type="number"
+                step="0.5"
+                defaultValue={settings.quote_turnaround_target_hrs}
+              />
+            </div>
+          </div>
+        )}
         <div className="field">
           <label>New Leads Target</label>
           <input

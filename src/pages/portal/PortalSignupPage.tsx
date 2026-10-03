@@ -104,7 +104,7 @@ export default function PortalSignupPage() {
             <div className="brand-mark">E</div>
             <div>
               <div className="brand-name">ExPac</div>
-              <div className="brand-sub" style={{ color: "#9aa39a" }}>
+              <div className="brand-sub" style={{ color: "var(--muted)" }}>
                 CUSTOMER PORTAL
               </div>
             </div>
@@ -154,7 +154,7 @@ export default function PortalSignupPage() {
           </div>
           <div>
             <div className="brand-name">EXPAC</div>
-            <div className="brand-sub" style={{ color: "#9aa39a" }}>
+            <div className="brand-sub" style={{ color: "var(--muted)" }}>
               CUSTOMER PORTAL
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function PortalSignupPage() {
         {notice && (
           <div
             className="auth-error"
-            style={{ background: "#e5f3d9", color: "#4a6b1f" }}
+            style={{ background: "var(--green-tint)", color: "var(--green-dark)" }}
           >
             {notice}
           </div>
@@ -301,7 +301,7 @@ function SelfServeSignup() {
           </div>
           <div>
             <div className="brand-name">EXPAC</div>
-            <div className="brand-sub" style={{ color: "#9aa39a" }}>
+            <div className="brand-sub" style={{ color: "var(--muted)" }}>
               CUSTOMER PORTAL
             </div>
           </div>
@@ -316,7 +316,7 @@ function SelfServeSignup() {
         {notice && (
           <div
             className="auth-error"
-            style={{ background: "#e5f3d9", color: "#4a6b1f" }}
+            style={{ background: "var(--green-tint)", color: "var(--green-dark)" }}
           >
             {notice}
           </div>

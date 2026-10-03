@@ -368,17 +368,17 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
         }}
       >
         <div>
-          <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>
+          <div style={{ fontSize: ".75rem", color: "var(--muted)" }}>
             Total quotation (incl. VAT)
           </div>
-          <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>
+          <div style={{ fontSize: ".75rem", color: "var(--muted)" }}>
             Excl. VAT: {money(t.sell)} · VAT: {money(t.vat)}
           </div>
-          <div style={{ fontSize: ".75rem", color: "#b8beb8" }}>
+          <div style={{ fontSize: ".75rem", color: "var(--muted)" }}>
             Cost (ZAR): {money(t.cost)} · GP: {money(t.gp)} · Margin:{" "}
             {t.margin.toFixed(1)}%
           </div>
-          <div style={{ fontSize: ".7rem", color: "#8a918a" }}>
+          <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>
             FX: USD {Number(q.fx_usd_zar).toFixed(2)} · CNY{" "}
             {Number(q.fx_cny_zar).toFixed(2)}
           </div>

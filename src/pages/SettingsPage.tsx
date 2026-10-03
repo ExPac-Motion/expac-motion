@@ -452,7 +452,7 @@ function EmailTab() {
         <label>Active provider</label>
         <div
           style={{
-            border: "1px solid #e0e1dc",
+            border: "1px solid var(--line)",
             borderRadius: 10,
             padding: 12,
           }}

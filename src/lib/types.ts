@@ -139,6 +139,10 @@ export interface CompanySettings {
   sales_new_leads_target: number;
   /** Cost of Sales Ratio target (%) — at or below this, margin is healthy. */
   cost_of_sales_target: number;
+  /** Quote Win Rate target (%), higher is better — migration 0118. */
+  win_rate_target?: number;
+  /** Median quote turnaround target (hours), lower is better — 0118. */
+  quote_turnaround_target_hrs?: number;
   /** Overall target for the Opportunities Pipeline chart's total value —
    *  each stage's bar is scaled against this instead of the pipeline's own
    *  current total. 0 = no target set, falls back to the current total. */

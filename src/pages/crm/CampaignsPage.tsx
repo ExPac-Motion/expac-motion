@@ -14,6 +14,7 @@ import {
   RowActions,
   RowActionsHead,
   useDeepLinkReturn,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -562,6 +563,7 @@ export default function CampaignsPage() {
   const [creating, setCreating] = useState(false);
   const [rescheduling, setRescheduling] = useState<MailCampaign | null>(null);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // While anything is scheduled / going out, refresh every 30s so the
   // status and tracking columns follow the server-side sender.
@@ -601,7 +603,8 @@ export default function CampaignsPage() {
   }
   const [viewing, setViewing] = useState<MailCampaign | null>(null);
 
-  const rows = data ?? [];
+  const rows = useMemo(() => data ?? [], [data]);
+  const sel = useRowSelection(rows);
   const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from a Notification: navigate here with
@@ -636,6 +639,26 @@ export default function CampaignsPage() {
     return out;
   }, [recipientsQ.data]);
 
+  async function onBulkDelete() {
+    const n = sel.count;
+    if (
+      !window.confirm(
+        `Delete ${n} campaign${n === 1 ? "" : "s"}? This only removes the records here — mail already delivered stays delivered, and any scheduled ones won't go out.`,
+      )
+    )
+      return;
+    setBulkBusy(true);
+    try {
+      for (const id of sel.ids) await remove.mutateAsync(id);
+      toast(`Deleted ${n} campaign${n === 1 ? "" : "s"}`);
+      sel.clear();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not delete");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function onDelete(row: MailCampaign) {
     if (
       !window.confirm(
@@ -656,10 +679,21 @@ export default function CampaignsPage() {
       {
         key: "actions",
         fixed: true,
-        width: 108,
-        header: <RowActionsHead />,
+        width: 130,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
         render: (c) => (
-          <RowActions onView={() => setViewing(c)} onDelete={() => onDelete(c)} />
+          <RowActions
+            selected={sel.isSelected(c.id)}
+            onSelectToggle={() => sel.toggle(c.id)}
+            onView={() => setViewing(c)}
+            onDelete={() => onDelete(c)}
+          />
         ),
       },
       {
@@ -729,7 +763,7 @@ export default function CampaignsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [trackingByCampaign],
+    [trackingByCampaign, sel],
   );
 
   return (
@@ -743,7 +777,16 @@ export default function CampaignsPage() {
             + New Campaign
           </button>
         }
-      />
+      >
+        <button
+          className="btn danger"
+          onClick={onBulkDelete}
+          disabled={sel.count === 0 || bulkBusy}
+          title={sel.count === 0 ? "Tick rows in the Actions column to delete" : undefined}
+        >
+          Delete{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
       <div className="panel">
 

@@ -31,7 +31,7 @@ export default function UnsubscribePage() {
           </div>
           <div>
             <div className="brand-name">EXPAC</div>
-            <div className="brand-sub" style={{ color: "#9aa39a" }}>
+            <div className="brand-sub" style={{ color: "var(--muted)" }}>
               FORWARDING
             </div>
           </div>

@@ -553,7 +553,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
       {
         key: "shipping_line",
-        header: modeTab === "Sea" ? "Shipping Line" : "Carrier",
+        header: modeTab === "Sea" ? "Shipping Line" : modeTab === "All" ? "Carrier / Shipping Line" : "Carrier",
         width: 150,
         sortValue: (j) => j.shipping_line ?? "",
         render: (j) => j.shipping_line || "—",
@@ -830,7 +830,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             },
             {
               key: "shipping_line",
-              label: modeTab === "Sea" ? "Shipping Line" : "Carrier",
+              label: modeTab === "Sea" ? "Shipping Line" : modeTab === "All" ? "Carrier / Shipping Line" : "Carrier",
               type: "text",
             },
             { key: "carrier_name", label: "Agent/Airline", type: "text" },
@@ -1031,7 +1031,7 @@ function DocumentsSection({ job }: { job: Job }) {
   }
 
   return (
-    <div style={{ marginTop: 18, borderTop: "1px solid #e8e7e0", paddingTop: 14 }}>
+    <div style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
       <div
         style={{
           display: "flex",

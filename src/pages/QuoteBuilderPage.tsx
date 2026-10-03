@@ -721,7 +721,7 @@ export default function QuoteBuilderPage() {
               value={draft.reference}
               readOnly
               title="System-generated shipment number — set by the transport mode"
-              style={{ background: "#f0efe9", cursor: "not-allowed" }}
+              style={{ background: "var(--paper)", cursor: "not-allowed" }}
             />
           </div>
           <div className="field">

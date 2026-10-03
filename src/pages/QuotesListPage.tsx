@@ -510,7 +510,7 @@ export default function QuotesListPage() {
       },
       {
         key: "shipping_line",
-        header: "Carrier",
+        header: "Carrier / Shipping Line",
         width: 150,
         defaultHidden: true,
         sortValue: (q) => q.shipping_line ?? "",

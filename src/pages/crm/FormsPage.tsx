@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import Modal from "../../components/Modal";
 import {
+  BulkEditModal,
   EmptyState,
   ErrorNote,
   Loading,
   PageTools,
   RowActions,
   RowActionsHead,
+  useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -596,6 +598,9 @@ export default function FormsPage() {
   const [submissionsFor, setSubmissionsFor] = useState<WebForm | null>(null);
 
   const forms = useMemo(() => data ?? [], [data]);
+  const sel = useRowSelection(forms);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const editing = useMemo(
     () => forms.find((f) => f.id === editingId) ?? null,
     [forms, editingId],
@@ -653,10 +658,18 @@ export default function FormsPage() {
       {
         key: "actions",
         fixed: true,
-        width: 150,
-        header: <RowActionsHead />,
+        width: 170,
+        header: (
+          <RowActionsHead
+            checked={sel.allChecked}
+            indeterminate={sel.someChecked}
+            onToggle={sel.toggleAll}
+          />
+        ),
         render: (f) => (
           <RowActions
+            selected={sel.isSelected(f.id)}
+            onSelectToggle={() => sel.toggle(f.id)}
             onEdit={() => setEditingId(f.id)}
             onDelete={() => onDelete(f)}
             onDuplicate={() => onDuplicate(f)}
@@ -704,7 +717,7 @@ export default function FormsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [sel],
   );
 
   if (editing) {
@@ -722,7 +735,46 @@ export default function FormsPage() {
             + New Form
           </button>
         }
-      />
+      >
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={sel.count === 0 ? "Tick rows in the Actions column to bulk edit" : undefined}
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
+
+      {bulkOpen && (
+        <BulkEditModal
+          title={`Bulk edit ${sel.count} form${sel.count === 1 ? "" : "s"}`}
+          count={sel.count}
+          noun="form"
+          busy={bulkBusy}
+          fields={[
+            { key: "active", label: "Active", type: "toggle", onLabel: "On", offLabel: "Off" },
+            { key: "notify_email", label: "Notify email", type: "text" },
+            { key: "submit_label", label: "Submit button label", type: "text", allowClear: false },
+          ]}
+          onApply={async (patch) => {
+            setBulkBusy(true);
+            try {
+              for (const id of sel.ids) {
+                await save.mutateAsync({ id, patch: patch as WebFormPatch });
+              }
+              toast(`Updated ${sel.count} form${sel.count === 1 ? "" : "s"}`);
+              sel.clear();
+              setBulkOpen(false);
+            } catch (e) {
+              toastError(e instanceof Error ? e.message : "Bulk edit failed");
+            } finally {
+              setBulkBusy(false);
+            }
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
+      )}
 
       <div className="panel">
 

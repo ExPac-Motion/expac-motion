@@ -229,7 +229,7 @@ export default function PortalShipmentPage() {
                 key={m.id}
                 style={{
                   padding: "8px 0",
-                  borderBottom: "1px solid #f0efe8",
+                  borderBottom: "1px solid var(--line)",
                 }}
               >
                 <div className="muted small">
