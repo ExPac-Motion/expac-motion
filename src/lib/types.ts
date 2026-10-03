@@ -818,12 +818,16 @@ export const COMMODITIES: Commodity[] = [
 export type ChargeCategory =
   | "International Freight Charges"
   | "Ex-Works Charges"
+  | "FOB Charges"
   | "Destination Handling and Delivery Charges"
+  | "Cartage and Road Freight Charges"
   | "Customs Clearance, VAT and Duty Charges";
 export const CHARGE_CATEGORIES: ChargeCategory[] = [
   "International Freight Charges",
   "Ex-Works Charges",
+  "FOB Charges",
   "Destination Handling and Delivery Charges",
+  "Cartage and Road Freight Charges",
   "Customs Clearance, VAT and Duty Charges",
 ];
 
@@ -948,7 +952,7 @@ export interface ClientContact {
   created_at: string;
 }
 /** Partner books that carry coverage + rate structures (migration 0114). */
-export type PartnerKind = "agent" | "transporter" | "clearing_agent";
+export type PartnerKind = "agent" | "transporter" | "clearing_agent" | "destination_agent";
 
 export interface RateBreak {
   /** e.g. "0-45KG", "Min 100 KGS (Consol Run)". */
@@ -1064,6 +1068,8 @@ export interface TariffSheetLine {
   /** Overrides of the code's default description / unit (as on a quote). */
   description?: string;
   unit?: string;
+  /** Section, when not the code's own (warehousing codes on Cartage). */
+  category?: ChargeCategory;
   /** null = the sheet's tier margin. */
   margin: number | null;
   /** Sell (R) for sell-only codes (FW-01 / IN-01 / DIS-01 / CU-05 ...). */
@@ -1085,6 +1091,8 @@ export interface TariffSheet {
   transporter_sheet_id: string | null;
   clearing_agent_id: string | null;
   clearing_agent_sheet_id: string | null;
+  destination_agent_id: string | null;
+  destination_agent_sheet_id: string | null;
   notes: string | null;
   lines: Record<string, TariffSheetLine>;
   created_at: string;
@@ -1191,6 +1199,8 @@ export interface Quote {
   agent_id: string | null;
   transporter_id: string | null;
   clearing_agent_id: string | null;
+  /** Destination handling agent (0124) — internal only. */
+  destination_agent_id?: string | null;
   mode: QuoteMode;
   commodity: string | null;
   origin: string | null;
@@ -1728,6 +1738,7 @@ export interface QuoteDraft {
   agent_id: string;
   transporter_id: string;
   clearing_agent_id: string;
+  destination_agent_id: string;
   mode: QuoteMode;
   commodity: string;
   origin: string;

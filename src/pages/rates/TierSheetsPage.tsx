@@ -15,6 +15,7 @@ import {
   useAgents,
   useClearingAgents,
   useDeleteTariffSheet,
+  useDestinationAgents,
   useJobs,
   usePartnerRateSheets,
   useQuotes,
@@ -56,6 +57,7 @@ import {
   partnerRate,
   sheetIdKey,
   tierLine,
+  lineSection,
   sectionsForIncoterm,
   worksheetGroups,
   type PartnerSheets,
@@ -332,21 +334,28 @@ function SheetEditor({
   const agents = useAgents().data ?? [];
   const transporters = useTransporters().data ?? [];
   const clearingAgents = useClearingAgents().data ?? [];
+  const destinationAgents = useDestinationAgents().data ?? [];
   const partnerList: Record<PartnerKind, Contact[]> = {
     agent: agents,
+    destination_agent: destinationAgents,
     transporter: transporters,
     clearing_agent: clearingAgents,
   };
   const agentSheets = usePartnerRateSheets("agent", d.agent_id).data ?? [];
+  const destinationSheets =
+    usePartnerRateSheets("destination_agent", d.destination_agent_id ?? null).data ?? [];
   const transporterSheets = usePartnerRateSheets("transporter", d.transporter_id).data ?? [];
   const clearingSheets = usePartnerRateSheets("clearing_agent", d.clearing_agent_id).data ?? [];
   const sheetsOf: Record<PartnerKind, PartnerRateSheet[]> = {
     agent: agentSheets,
+    destination_agent: destinationSheets,
     transporter: transporterSheets,
     clearing_agent: clearingSheets,
   };
   const linked: PartnerSheets = {
     agent: agentSheets.find((s) => s.id === d.agent_sheet_id) ?? null,
+    destination_agent:
+      destinationSheets.find((s) => s.id === d.destination_agent_sheet_id) ?? null,
     transporter: transporterSheets.find((s) => s.id === d.transporter_sheet_id) ?? null,
     clearing_agent: clearingSheets.find((s) => s.id === d.clearing_agent_sheet_id) ?? null,
   };
@@ -423,17 +432,19 @@ function SheetEditor({
   const groups = worksheetGroups(d.mode).filter((g) => sections.includes(g.category));
   const t = rateTier(d.tier);
 
-  /** The sheet's own codes in a section, in catalog order. */
+  /** The sheet's own codes in a section, in catalog order (a warehousing
+   *  code shows in whichever section its line sits in). */
   const codesIn = (category: ChargeCategory) =>
     worksheetGroups(d.mode)
       .find((g) => g.category === category)
-      ?.items.filter((i) => i.code in d.lines) ?? [];
+      ?.items.filter((i) => i.code in d.lines && lineSection(i, d.lines[i.code]) === category) ??
+    [];
   function removeCode(code: string) {
     const lines = { ...d.lines };
     delete lines[code];
     setD({ ...d, lines });
   }
-  function changeCode(from: string, to: string) {
+  function changeCode(from: string, to: string, category: ChargeCategory) {
     if (from === to) return;
     const item = catalogItem(to, d.mode as QuoteMode);
     if (!item) return;
@@ -441,14 +452,15 @@ function SheetEditor({
     // The line keeps its own margin; buy source / buy / sell start fresh.
     for (const [code, l] of Object.entries(d.lines))
       lines[code === from ? to : code] =
-        code === from ? { ...defaultTierLine(item), margin: l.margin } : l;
+        code === from ? { ...defaultTierLine(item, category), margin: l.margin } : l;
     setD({ ...d, lines });
   }
   function addCode(category: ChargeCategory) {
     const next = worksheetGroups(d.mode)
       .find((g) => g.category === category)
       ?.items.find((i) => !(i.code in d.lines));
-    if (next) setD({ ...d, lines: { ...d.lines, [next.code]: defaultTierLine(next) } });
+    if (next)
+      setD({ ...d, lines: { ...d.lines, [next.code]: defaultTierLine(next, category) } });
   }
 
   return (
@@ -580,7 +592,7 @@ function SheetEditor({
       </div>
 
       <h3 style={{ margin: "4px 0 8px" }}>LINKED PARTNERS</h3>
-      <div className="grid3" style={{ marginBottom: 18 }}>
+      <div className="grid4" style={{ marginBottom: 18 }}>
         {PARTNER_KINDS.map((kind) => {
           const pid = d[partnerIdKey(kind)] ?? "";
           const list = sheetsOf[kind].filter((s) => s.mode === d.mode);
@@ -671,7 +683,7 @@ function SheetEditor({
                   </thead>
                   <tbody>
                     {items.flatMap((item) => {
-                      const fallback = defaultTierLine(item);
+                      const fallback = defaultTierLine(item, g.category);
                       const l = line(item.code, fallback);
                       const r = tierLine(d, item, linked, 0);
                       const partnerSheet =
@@ -691,7 +703,7 @@ function SheetEditor({
                           <td>
                             <select
                               value={item.code}
-                              onChange={(e) => changeCode(item.code, e.target.value)}
+                              onChange={(e) => changeCode(item.code, e.target.value, g.category)}
                               title={item.description}
                             >
                               {g.items.map((c) => {
@@ -1097,6 +1109,7 @@ function ImportRoutesModal({
             agent_id: q?.agent_id ?? null,
             transporter_id: q?.transporter_id ?? null,
             clearing_agent_id: q?.clearing_agent_id ?? null,
+            destination_agent_id: q?.destination_agent_id ?? null,
             lines: q ? tariffLinesFromQuote(q) : emptyTariffSheet(t.id, f.mode).lines,
             notes: q ? `Seeded from quotation ${q.reference}` : null,
           },

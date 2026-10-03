@@ -8,6 +8,8 @@ export interface CatalogItem {
   unit: string;
   /** Modes this code applies to. Omitted = all modes. */
   modes?: QuoteMode[];
+  /** Other sections this code can also be used in (e.g. warehousing). */
+  alsoIn?: ChargeCategory[];
   /** Default VAT % applied to the line when this code is picked. Omitted = 0. */
   vat_pct?: number;
 }
@@ -39,15 +41,27 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "Ex-Works Charges", code: "OR-05", description: "CFS, AMS, VGM and Handling Charges", cur: "USD", unit: "", modes: SEA },
   { category: "Ex-Works Charges", code: "OR-06", description: "Hazardous Surcharge", cur: "USD", unit: "", modes: SEA },
   { category: "Ex-Works Charges", code: "OR-07", description: "Packaging & Labelling Fee", cur: "USD", unit: "", modes: SEA },
+  // Warehousing (codes only, no section of their own): origin warehousing on a
+  // shipping agent's Ex-Works lines, local warehousing on a transporter's
+  // Cartage & Road Freight lines.
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-01", description: "Storage", cur: "ZAR", unit: "CBM" },
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-02", description: "Handling In/Out", cur: "ZAR", unit: "CBM" },
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-03", description: "Palletising", cur: "ZAR", unit: "" },
+
+  // ---- FOB Charges ----
+  { category: "FOB Charges", code: "FB-01", description: "Release Fee", cur: "USD", unit: "B/L" },
+  { category: "FOB Charges", code: "FB-02", description: "Bill of Lading Fee", cur: "USD", unit: "B/L" },
 
   // ---- Destination Handling and Delivery Charges ----
   { category: "Destination Handling and Delivery Charges", code: "AF-03", description: "Destination Airline Handling", cur: "ZAR", unit: "AWB", modes: AIR },
-  { category: "Destination Handling and Delivery Charges", code: "TR-01", description: "Transfer & Cartage Fee", cur: "ZAR", unit: "AWB" },
-  { category: "Destination Handling and Delivery Charges", code: "TR-02", description: "Fuel Surcharge", cur: "ZAR", unit: "AWB" },
   { category: "Destination Handling and Delivery Charges", code: "OF-03", description: "Dest. De-Grouping Fee", cur: "ZAR", unit: "", modes: SEA },
   { category: "Destination Handling and Delivery Charges", code: "OF-04", description: "LCL Loading (In/Out) Fee", cur: "ZAR", unit: "", modes: SEA },
   { category: "Destination Handling and Delivery Charges", code: "OF-05", description: "Container Import Charges", cur: "ZAR", unit: "", modes: SEA },
   { category: "Destination Handling and Delivery Charges", code: "OF-07", description: "Cargo Dues", cur: "ZAR", unit: "P/CTNR", modes: SEA, vat_pct: 15 },
+
+  // ---- Cartage and Road Freight Charges ----
+  { category: "Cartage and Road Freight Charges", code: "TR-01", description: "Transfer & Cartage Fee", cur: "ZAR", unit: "AWB" },
+  { category: "Cartage and Road Freight Charges", code: "TR-02", description: "Fuel Surcharge", cur: "ZAR", unit: "AWB" },
 
   // ---- Customs Clearance, VAT and Duty Charges ----
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-02", description: "Customs VAT", cur: "ZAR", unit: "AWB", vat_pct: 100 },
@@ -66,7 +80,9 @@ export function catalogForCategory(
   mode?: QuoteMode,
 ): CatalogItem[] {
   return CHARGE_CATALOG.filter(
-    (c) => c.category === category && appliesToMode(c, mode),
+    (c) =>
+      (c.category === category || (c.alsoIn ?? []).includes(category)) &&
+      appliesToMode(c, mode),
   );
 }
 

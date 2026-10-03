@@ -78,6 +78,7 @@ const NAV: NavModule[] = [
       { to: "/agents", label: "Agents" },
       { to: "/transporters", label: "Transporters" },
       { to: "/clearing-agents", label: "Clearing Agents" },
+      { to: "/destination-agents", label: "Destination Agents" },
     ],
   },
   {

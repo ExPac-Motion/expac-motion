@@ -8,6 +8,7 @@ import {
   useAgents,
   useClearingAgents,
   useClients,
+  useDestinationAgents,
   useCompanySettings,
   useLeads,
   useProfiles,
@@ -52,6 +53,7 @@ import { getPartnerRateSheets, listPartnerRateSheets } from "../lib/db";
 import {
   PARTNER_KINDS,
   partnerIdKey,
+  lineSection,
   sectionsForIncoterm,
   sheetIdKey,
   tierLine,
@@ -138,6 +140,7 @@ function blankDraft(): QuoteDraft {
     agent_id: "",
     transporter_id: "",
     clearing_agent_id: "",
+    destination_agent_id: "",
     mode,
     commodity: "General Cargo",
     origin: "",
@@ -192,6 +195,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
     clearing_agent_id: q.clearing_agent_id ?? "",
+    destination_agent_id: q.destination_agent_id ?? "",
     mode: q.mode,
     commodity: q.commodity ?? "",
     origin: q.origin ?? "",
@@ -317,6 +321,7 @@ export default function QuoteBuilderPage() {
   const suppliersQ = useSuppliers();
   const agentsQ = useAgents();
   const transportersQ = useTransporters();
+  const destinationAgentsQ = useDestinationAgents();
   const clearingAgentsQ = useClearingAgents();
   const existingQ = useQuote(id);
   const saveQuote = useSaveQuote();
@@ -676,11 +681,16 @@ export default function QuoteBuilderPage() {
       const sections = sectionsForIncoterm(draft.incoterms);
       for (const g of worksheetGroups(sheet.mode))
         for (const item of g.items) {
-          if (!sections.includes(g.category) || !(item.code in sheet.lines)) continue;
+          if (
+            !sections.includes(g.category) ||
+            !(item.code in sheet.lines) ||
+            lineSection(item, sheet.lines[item.code]) !== g.category
+          )
+            continue;
           const r = tierLine(sheet, item, partners, kg);
           if (r.sellOnly ? !(r.sell != null && r.sell > 0) : r.buy == null) continue;
           const base = {
-            ...newLine(item.category, lines.length),
+            ...newLine(g.category, lines.length),
             code: item.code,
             description: sheet.lines[item.code]?.description ?? item.description,
             unit: sheet.lines[item.code]?.unit ?? item.unit,
@@ -712,6 +722,7 @@ export default function QuoteBuilderPage() {
               agent_id: partnerIds.agent,
               transporter_id: partnerIds.transporter,
               clearing_agent_id: partnerIds.clearing_agent,
+              destination_agent_id: partnerIds.destination_agent,
             }
           : d,
       );
@@ -780,6 +791,7 @@ export default function QuoteBuilderPage() {
   const agents = agentsQ.data ?? [];
   const transporters = transportersQ.data ?? [];
   const clearingAgents = clearingAgentsQ.data ?? [];
+  const destinationAgents = destinationAgentsQ.data ?? [];
 
   return (
     <>
@@ -1338,6 +1350,21 @@ export default function QuoteBuilderPage() {
             >
               <option value="">Select transporter</option>
               {transporters.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.company}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Not shown on the customer quotation.</span>
+          </div>
+          <div className="field">
+            <label>Destination Agent (internal only)</label>
+            <select
+              value={draft.destination_agent_id}
+              onChange={(e) => set("destination_agent_id", e.target.value)}
+            >
+              <option value="">Select destination agent</option>
+              {destinationAgents.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.company}
                 </option>

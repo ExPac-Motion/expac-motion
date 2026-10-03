@@ -61,7 +61,13 @@ import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
 
-type Kind = "client" | "supplier" | "agent" | "transporter" | "clearing_agent";
+type Kind =
+  | "client"
+  | "supplier"
+  | "agent"
+  | "transporter"
+  | "clearing_agent"
+  | "destination_agent";
 
 const COPY: Record<Kind, { label: string; title: string; eyebrow: string }> = {
   client: {
@@ -88,6 +94,11 @@ const COPY: Record<Kind, { label: string; title: string; eyebrow: string }> = {
     label: "clearing agent",
     title: "Clearing Agents",
     eyebrow: "Customs clearing agents",
+  },
+  destination_agent: {
+    label: "destination agent",
+    title: "Destination Agents",
+    eyebrow: "Destination handling agents",
   },
 };
 
@@ -123,7 +134,10 @@ export default function ContactsPage({
   // Agents / transporters / clearing agents carry coverage (modes, countries,
   // ports) and rate structures.
   const isPartner =
-    kind === "agent" || kind === "transporter" || kind === "clearing_agent";
+    kind === "agent" ||
+    kind === "transporter" ||
+    kind === "clearing_agent" ||
+    kind === "destination_agent";
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
@@ -416,7 +430,7 @@ export default function ContactsPage({
               onSelectToggle={() => sel.toggle(r.id)}
               onMail={isPartner ? () => setMailingRow(r) : undefined}
               mailTitle={`Email this ${label}`}
-              onTask={() => setTaskingRow(r)}
+              onTask={kind === "destination_agent" ? undefined : () => setTaskingRow(r)}
               taskTitle={`Create a task for this ${label}`}
               onView={() => setViewing(r)}
               onEdit={() => setEditing(r)}

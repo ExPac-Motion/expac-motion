@@ -22,6 +22,7 @@ import {
   useClearingAgents,
   useDeleteTariffSheet,
   useDeleteTariffSheetsBulk,
+  useDestinationAgents,
   useTariffSheets,
   useTransporters,
   useUpdateTariffSheetsBulk,
@@ -45,8 +46,12 @@ function manualCount(s: TariffSheet): number {
   ).length;
 }
 function linkedCount(s: TariffSheet): number {
-  return [s.agent_sheet_id, s.transporter_sheet_id, s.clearing_agent_sheet_id].filter(Boolean)
-    .length;
+  return [
+    s.agent_sheet_id,
+    s.destination_agent_sheet_id,
+    s.transporter_sheet_id,
+    s.clearing_agent_sheet_id,
+  ].filter(Boolean).length;
 }
 
 export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
@@ -54,6 +59,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
   const agents = useAgents().data ?? [];
   const transporters = useTransporters().data ?? [];
   const clearingAgents = useClearingAgents().data ?? [];
+  const destinationAgents = useDestinationAgents().data ?? [];
   const bulkUpdate = useUpdateTariffSheetsBulk();
   const bulkDelete = useDeleteTariffSheetsBulk();
   const del = useDeleteTariffSheet();
@@ -85,11 +91,12 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         name(agents, s.agent_id),
         name(transporters, s.transporter_id),
         name(clearingAgents, s.clearing_agent_id),
+        name(destinationAgents, s.destination_agent_id),
       ].some((v) => (v ?? "").toLowerCase().includes(needle));
     });
     // name() reads the partner lists
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, search, tierFilter, modeFilter, agents, transporters, clearingAgents]);
+  }, [all, search, tierFilter, modeFilter, agents, transporters, clearingAgents, destinationAgents]);
 
   const sel = useRowSelection(all, rows);
   const open = (s: TariffSheet) => navigate(`/rates?sheet=${s.id}`);
@@ -205,12 +212,19 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         render: (s) => name(clearingAgents, s.clearing_agent_id) || "—",
       },
       {
+        key: "destination",
+        header: "Destination Agent",
+        width: 170,
+        sortValue: (s) => name(destinationAgents, s.destination_agent_id),
+        render: (s) => name(destinationAgents, s.destination_agent_id) || "—",
+      },
+      {
         key: "linked",
         header: "Partner Sheets",
         label: "Partner sheets linked",
         width: 120,
         sortValue: linkedCount,
-        render: (s) => `${linkedCount(s)} / 3`,
+        render: (s) => `${linkedCount(s)} / 4`,
       },
       {
         key: "manual",
@@ -250,7 +264,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, agents, transporters, clearingAgents, today],
+    [sel, agents, transporters, clearingAgents, destinationAgents, today],
   );
 
   const partnerOptions = (list: Contact[]) =>
@@ -368,6 +382,12 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
               type: "select",
               options: partnerOptions(clearingAgents),
             },
+            {
+              key: "destination_agent_id",
+              label: "Destination Agent",
+              type: "select",
+              options: partnerOptions(destinationAgents),
+            },
           ]}
           onApply={async (raw) => {
             const patch = { ...raw } as Partial<TariffSheetDraft>;
@@ -375,6 +395,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
             if ("agent_id" in raw) patch.agent_sheet_id = null;
             if ("transporter_id" in raw) patch.transporter_sheet_id = null;
             if ("clearing_agent_id" in raw) patch.clearing_agent_sheet_id = null;
+            if ("destination_agent_id" in raw) patch.destination_agent_sheet_id = null;
             const n = sel.count;
             try {
               await bulkUpdate.mutateAsync({ ids: sel.ids, patch });

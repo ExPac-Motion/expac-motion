@@ -186,7 +186,8 @@ export type ContactTable =
   | "suppliers"
   | "agents"
   | "transporters"
-  | "clearing_agents";
+  | "clearing_agents"
+  | "destination_agents";
 
 /** Apply one patch to every listed contact (Bulk Edit on a contact book). */
 export async function updateContactsBulk(
@@ -279,6 +280,29 @@ export async function updateTransporter(
 }
 export async function deleteTransporter(id: string): Promise<void> {
   unwrap(await supabase.from("transporters").delete().eq("id", id));
+}
+
+/* ---------- Destination handling agents (0124) ---------- */
+export async function listDestinationAgents(): Promise<Contact[]> {
+  return unwrap(
+    await supabase.from("destination_agents").select("*").order("company", { ascending: true }),
+  );
+}
+export async function createDestinationAgent(
+  input: Omit<Contact, "id" | "created_at">,
+): Promise<Contact> {
+  return unwrap(await supabase.from("destination_agents").insert(input).select("*").single());
+}
+export async function updateDestinationAgent(
+  id: string,
+  input: Partial<Omit<Contact, "id" | "created_at">>,
+): Promise<Contact> {
+  return unwrap(
+    await supabase.from("destination_agents").update(input).eq("id", id).select("*").single(),
+  );
+}
+export async function deleteDestinationAgent(id: string): Promise<void> {
+  unwrap(await supabase.from("destination_agents").delete().eq("id", id));
 }
 
 /* ---------- Clearing agents ---------- */
@@ -486,6 +510,14 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
     .eq("id", id);
   if (tierErr && tierErr.code !== "PGRST204" && tierErr.code !== "42703") {
     throw tierErr;
+  }
+  // Destination handling agent (0124): same separate, tolerant update.
+  const { error: destErr } = await supabase
+    .from("quotes")
+    .update({ destination_agent_id: draft.destination_agent_id || null })
+    .eq("id", id);
+  if (destErr && destErr.code !== "PGRST204" && destErr.code !== "42703") {
+    throw destErr;
   }
   return id;
 }

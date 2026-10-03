@@ -110,6 +110,7 @@ const CONTACT_TABLE_BY_KIND = {
   agent: "agents",
   transporter: "transporters",
   clearing_agent: "clearing_agents",
+  destination_agent: "destination_agents",
 } as const;
 
 /** Bulk Edit for any of the contact books (Customers / Shippers / Agents / …). */
@@ -217,6 +218,28 @@ export function useDeleteTransporter() {
   return useMutation({
     mutationFn: db.deleteTransporter,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["transporters"] }),
+  });
+}
+
+/* ---------- Destination handling agents (0124) ---------- */
+export function useDestinationAgents() {
+  return useQuery({ queryKey: ["destination_agents"], queryFn: db.listDestinationAgents });
+}
+export function useSaveDestinationAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; values: Omit<Contact, "id" | "created_at"> }) =>
+      input.id
+        ? db.updateDestinationAgent(input.id, input.values)
+        : db.createDestinationAgent(input.values),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["destination_agents"] }),
+  });
+}
+export function useDeleteDestinationAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteDestinationAgent,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["destination_agents"] }),
   });
 }
 

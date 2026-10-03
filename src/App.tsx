@@ -27,6 +27,7 @@ import TransportersPage from "./pages/TransportersPage";
 import RateStructureDemoPage from "./pages/partners/RateStructureDemoPage";
 import TierSheetsPage from "./pages/rates/TierSheetsPage";
 import ClearingAgentsPage from "./pages/ClearingAgentsPage";
+import DestinationAgentsPage from "./pages/DestinationAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ShipmentDocPrintPage from "./pages/ShipmentDocPrintPage";
 import CrmPage from "./pages/CrmPage";
@@ -260,6 +261,7 @@ function AppRoutes() {
             <Route path="agents" element={<AgentsPage />} />
             <Route path="transporters" element={<TransportersPage />} />
             <Route path="clearing-agents" element={<ClearingAgentsPage />} />
+            <Route path="destination-agents" element={<DestinationAgentsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
