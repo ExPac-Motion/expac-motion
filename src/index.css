@@ -828,12 +828,6 @@ table.dt th.dt-sortable {
 .jobs-table td:nth-child(9) input {
   min-width: 96px;
 }
-/* POL / POD hold just a 5-char code */
-.jobs-table td:nth-child(12) input,
-.jobs-table td:nth-child(13) input {
-  min-width: 64px;
-  text-transform: uppercase;
-}
 
 /* status "pill" select, tinted by workflow stage */
 .job-status {

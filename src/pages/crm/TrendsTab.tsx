@@ -64,6 +64,14 @@ type DrillKind = "sales" | "revenue" | "gp" | "ratio" | "won" | "lost" | "leadsC
 function monthKeyOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+// Month bucket for a stored value in local time (SAST), not UTC -- a
+// timestamp just after midnight on the 1st belongs to the new month.
+// Date-only values (e.g. close_date "2026-09-30") are taken as-is.
+function monthKeyOfIso(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso.slice(0, 7);
+  return monthKeyOf(new Date(iso));
+}
 function addMonths(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
@@ -164,7 +172,7 @@ export default function TrendsTab() {
 
     for (const q of quotes) {
       const t = chargeTotals(q.quote_lines, fxOf(q));
-      const createdKey = q.created_at?.slice(0, 7);
+      const createdKey = monthKeyOfIso(q.created_at);
       if (createdKey) {
         const bucket = map.get(createdKey);
         if (bucket) {
@@ -173,8 +181,8 @@ export default function TrendsTab() {
         }
       }
       if (WON_QUOTE_STATUSES.includes(q.status) && q.accepted_at) {
-        const acceptedKey = q.accepted_at.slice(0, 7);
-        const bucket = map.get(acceptedKey);
+        const acceptedKey = monthKeyOfIso(q.accepted_at);
+        const bucket = (acceptedKey ? map.get(acceptedKey) : undefined);
         if (bucket) {
           bucket.revenueTotal += t.sell;
           bucket.costTotal += t.cost;
@@ -184,7 +192,7 @@ export default function TrendsTab() {
         }
       }
       if (q.status === "lost") {
-        const lostKey = (q.lost_at ?? q.updated_at)?.slice(0, 7);
+        const lostKey = monthKeyOfIso(q.lost_at ?? q.updated_at);
         const bucket = lostKey ? map.get(lostKey) : undefined;
         if (bucket) {
           bucket.lostCount += 1;
@@ -200,7 +208,7 @@ export default function TrendsTab() {
     // month with only this kind of revenue would misreport as 0% cost.
     for (const o of opps) {
       if (o.status !== "job_completed" || o.quote_id) continue;
-      const key = (o.close_date ?? o.updated_at)?.slice(0, 7);
+      const key = monthKeyOfIso(o.close_date ?? o.updated_at);
       if (!key) continue;
       const bucket = map.get(key);
       if (bucket) {
@@ -211,7 +219,7 @@ export default function TrendsTab() {
     }
 
     for (const l of leads) {
-      const createdKey = l.created_at?.slice(0, 7);
+      const createdKey = monthKeyOfIso(l.created_at);
       if (createdKey) {
         const bucket = map.get(createdKey);
         if (bucket) {
@@ -220,8 +228,8 @@ export default function TrendsTab() {
         }
       }
       if (l.promoted_at) {
-        const promotedKey = l.promoted_at.slice(0, 7);
-        const bucket = map.get(promotedKey);
+        const promotedKey = monthKeyOfIso(l.promoted_at);
+        const bucket = (promotedKey ? map.get(promotedKey) : undefined);
         if (bucket) {
           bucket.leadsConverted += 1;
           bucket.convertedLeads.push(l);
