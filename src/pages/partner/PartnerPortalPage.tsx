@@ -5,7 +5,7 @@
 // quotes or shipments are reachable from this login.
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import { Loading } from "../../components/common";
+import { ErrorNote, Loading } from "../../components/common";
 import { useMyPartner } from "../../lib/hooks";
 import { PARTNER_LABEL } from "../../lib/tariff";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
@@ -36,6 +36,12 @@ export default function PartnerPortalPage() {
       <main className="main">
         {q.isLoading ? (
           <Loading />
+        ) : q.isError ? (
+          <div className="panel">
+            <h2 style={{ marginTop: 0 }}>Couldn't open your partner portal</h2>
+            <ErrorNote error={q.error} />
+            <p className="hint">Send this message to ExPac.</p>
+          </div>
         ) : !me ? (
           <div className="panel">
             <h2 style={{ marginTop: 0 }}>Your login isn't linked yet</h2>
