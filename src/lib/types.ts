@@ -1033,6 +1033,8 @@ export interface PartnerSheetLine {
   cur: LineCurrency;
   /** When set, the rate comes from the break matching the chargeable weight. */
   breaks?: WeightBreak[];
+  /** The partner's unit for this rate, when not the code's default. */
+  unit?: string;
 }
 export interface PartnerRateSheet {
   id: string;

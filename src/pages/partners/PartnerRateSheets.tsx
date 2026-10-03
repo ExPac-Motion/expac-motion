@@ -15,6 +15,7 @@ import {
 } from "../../lib/hooks";
 import { formatDateTime } from "../../lib/format";
 import {
+  CHARGE_UNITS,
   LINE_CURRENCIES,
   QUOTE_MODES,
   type LineCurrency,
@@ -251,14 +252,21 @@ function SheetCard({
         <p className="hint">No rates filled in yet.</p>
       ) : (
         <div className="table-wrap">
-          <table className="charge-table">
+          <table className="charge-table tier-table">
+            <colgroup>
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "40%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "15%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th className="c-code">Code</th>
                 <th>Description</th>
                 <th className="c-cur">Cur</th>
                 <th className="c-unit">Unit</th>
-                <th className="num">Buy</th>
+                <th className="num">Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -271,7 +279,7 @@ function SheetCard({
                       <td className="c-code">{item.code}</td>
                       <td>{item.description}</td>
                       <td className="c-cur">{l.cur}</td>
-                      <td className="c-unit">{item.unit || "—"}</td>
+                      <td className="c-unit">{l.unit || item.unit || "—"}</td>
                       <td className="num">
                         {breaks.length > 0 ? (
                           <span className="hint">By weight ↓</span>
@@ -285,7 +293,7 @@ function SheetCard({
                         <td />
                         <td className="hint">↳ {b.label}</td>
                         <td className="c-cur">{l.cur}</td>
-                        <td className="c-unit">{item.unit || "—"}</td>
+                        <td className="c-unit">{l.unit || item.unit || "—"}</td>
                         <td className="num">{fmt(Number(b.rate))}</td>
                       </tr>
                     )),
@@ -388,30 +396,64 @@ export function PartnerSheetEditor({
   onSave: (values: PartnerRateSheetDraft) => void;
 }) {
   const [d, setD] = useState<PartnerRateSheetDraft>(initial);
-  const [allSections, setAllSections] = useState(false);
-  const groups = worksheetGroups(d.mode, { sellOnly: false });
-  const filled = new Set(filledCodes(d));
-  const shownGroups = allSections
-    ? groups
-    : groups.filter(
-        (g) =>
-          CATEGORY_SOURCE[g.category] === kind || g.items.some((i) => filled.has(i.code)),
-      );
+  // Only this partner's own sections (agent: freight + ex-works, transporter:
+  // destination, clearing agent: customs), ExPac's codes for the mode.
+  const groupsFor = (mode: string) =>
+    worksheetGroups(mode, { sellOnly: false }).filter((g) => CATEGORY_SOURCE[g.category] === kind);
+  const groups = groupsFor(d.mode);
+  const allCodes = (mode: string) => groupsFor(mode).flatMap((g) => g.items.map((i) => i.code));
+  // The sheet's lines, like a quote: a new sheet starts with every code, an
+  // existing one with the codes it has; + Add line / ✕ change that.
+  const [rows, setRows] = useState<string[]>(() => {
+    const valid = allCodes(initial.mode);
+    const have = valid.filter((c) => c in initial.lines);
+    return isNew || have.length === 0 ? valid : have;
+  });
 
   const line = (code: string, cur: LineCurrency): PartnerSheetLine =>
     d.lines[code] ?? { buy: null, cur };
   const setLine = (code: string, cur: LineCurrency, p: Partial<PartnerSheetLine>) =>
     setD((x) => ({ ...x, lines: { ...x.lines, [code]: { ...line(code, cur), ...p } } }));
 
+  function changeMode(mode: string) {
+    setD({ ...d, mode });
+    const valid = allCodes(mode);
+    const keep = rows.filter((c) => valid.includes(c));
+    setRows(keep.length ? keep : valid);
+  }
+  function addRow(category: string) {
+    const next = groups.find((g) => g.category === category)?.items.find((i) => !rows.includes(i.code));
+    if (next) setRows([...rows, next.code]);
+  }
+  function changeRow(from: string, to: string) {
+    setRows(rows.map((c) => (c === from ? to : c)));
+    setD((x) => {
+      const lines = { ...x.lines };
+      delete lines[from];
+      return { ...x, lines };
+    });
+  }
+  function removeRow(code: string) {
+    setRows(rows.filter((c) => c !== code));
+    setD((x) => {
+      const lines = { ...x.lines };
+      delete lines[code];
+      return { ...x, lines };
+    });
+  }
+
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!d.route.trim()) return;
-    // Drop empty codes / breaks so the sheet only stores real rates.
+    // Only the sheet's lines, and only real rates (blank codes / breaks dropped).
     const lines: Record<string, PartnerSheetLine> = {};
-    for (const [code, l] of Object.entries(d.lines)) {
+    for (const code of rows) {
+      const l = d.lines[code];
+      if (!l) continue;
       const breaks = (l.breaks ?? []).filter((b) => b.label.trim() && b.rate != null);
-      if (breaks.length > 0) lines[code] = { buy: null, cur: l.cur, breaks };
-      else if (l.buy != null) lines[code] = { buy: l.buy, cur: l.cur };
+      const unit = l.unit ? { unit: l.unit } : {};
+      if (breaks.length > 0) lines[code] = { buy: null, cur: l.cur, breaks, ...unit };
+      else if (l.buy != null) lines[code] = { buy: l.buy, cur: l.cur, ...unit };
     }
     onSave({ ...d, route: d.route.trim(), lines });
   }
@@ -426,7 +468,7 @@ export function PartnerSheetEditor({
         <div className="grid4">
           <div className="field">
             <label>Mode</label>
-            <select value={d.mode} onChange={(e) => setD({ ...d, mode: e.target.value })}>
+            <select value={d.mode} onChange={(e) => changeMode(e.target.value)}>
               {QUOTE_MODES.map((m) => (
                 <option key={m}>{m}</option>
               ))}
@@ -476,173 +518,243 @@ export function PartnerSheetEditor({
           </div>
         </div>
 
-        <label className="check small" style={{ margin: "12px 0 4px" }}>
-          <input
-            type="checkbox"
-            checked={allSections}
-            onChange={(e) => setAllSections(e.target.checked)}
-          />
-          Show every section (not just {PARTNER_LABEL[kind].toLowerCase()} charges)
-        </label>
-
-        {shownGroups.map((g) => (
-          <div className="charge-group" key={g.category}>
-            <div className="charge-group-head">
-              <h3>{g.category.toUpperCase()}</h3>
-            </div>
-            <div className="table-wrap">
-              <table className="charge-table">
-                <thead>
-                  <tr>
-                    <th className="c-code">Code</th>
-                    <th>Description</th>
-                    <th className="c-cur">Cur</th>
-                    <th className="c-unit">Unit</th>
-                    <th className="num">Buy</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {g.items.flatMap((item) => {
-                    const l = line(item.code, item.cur);
-                    const breaks = l.breaks;
-                    const rows = [
-                      <tr key={item.code}>
-                        <td className="c-code">{item.code}</td>
-                        <td>{item.description}</td>
-                        <td className="c-cur">
-                          <select
-                            value={l.cur}
-                            onChange={(e) =>
-                              setLine(item.code, item.cur, { cur: e.target.value as LineCurrency })
-                            }
-                          >
-                            {LINE_CURRENCIES.map((c) => (
-                              <option key={c}>{c}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="c-unit">{item.unit || "—"}</td>
-                        <td className="num">
-                          {breaks ? (
-                            <span className="hint">By weight ↓</span>
-                          ) : (
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={l.buy ?? ""}
-                              placeholder="—"
-                              onChange={(e) =>
-                                setLine(item.code, item.cur, { buy: numOrNull(e.target.value) })
-                              }
-                            />
-                          )}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="btn small ghost"
-                            title={
-                              breaks
-                                ? "Back to one flat rate"
-                                : "Rates by chargeable weight (e.g. 0-45KG, 0-100KG)"
-                            }
-                            onClick={() =>
-                              setLine(item.code, item.cur, {
-                                breaks: breaks
-                                  ? undefined
-                                  : (item.unit === "KGS" ? AIR_BREAKS : TIER_BREAKS).map(
-                                      (label) => ({ label, rate: null }),
-                                    ),
-                              })
-                            }
-                          >
-                            {breaks ? "Flat rate" : "Weight breaks"}
-                          </button>
-                        </td>
-                      </tr>,
-                    ];
-                    if (breaks) {
-                      breaks.forEach((b, i) =>
-                        rows.push(
-                          <tr key={`${item.code}-${i}`}>
-                            <td />
+        {groups.length === 0 && (
+          <p className="hint">ExPac has no {PARTNER_LABEL[kind].toLowerCase()} charges for {d.mode}.</p>
+        )}
+        {groups.map((g) => {
+          const codes = g.items.filter((i) => rows.includes(i.code));
+          const canAdd = g.items.some((i) => !rows.includes(i.code));
+          return (
+            <div className="charge-group" key={g.category}>
+              <div className="charge-group-head">
+                <h3>{g.category.toUpperCase()}</h3>
+                <button
+                  type="button"
+                  className="btn small outline"
+                  disabled={!canAdd}
+                  title={canAdd ? undefined : "Every code for this section is already on the sheet"}
+                  onClick={() => addRow(g.category)}
+                >
+                  + Add line
+                </button>
+              </div>
+              {codes.length === 0 ? (
+                <p className="hint" style={{ padding: "4px 0 10px" }}>
+                  No charges in this section.
+                </p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="charge-table tier-table">
+                    <colgroup>
+                      <col style={{ width: "13.7%" }} />
+                      <col style={{ width: "27.4%" }} />
+                      <col style={{ width: "13.7%" }} />
+                      <col style={{ width: "13.7%" }} />
+                      <col style={{ width: "13.7%" }} />
+                      <col style={{ width: "13.8%" }} />
+                      <col style={{ width: "4%" }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>Code</th>
+                        <th>Description</th>
+                        <th>Cur</th>
+                        <th>Unit</th>
+                        <th className="num">Rate</th>
+                        <th />
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {codes.flatMap((item) => {
+                        const l = line(item.code, item.cur);
+                        const breaks = l.breaks;
+                        const unit = l.unit ?? item.unit;
+                        const out = [
+                          <tr key={item.code}>
                             <td>
-                              <input
-                                value={b.label}
-                                placeholder="e.g. 0-45KG"
-                                onChange={(e) =>
-                                  setLine(item.code, item.cur, {
-                                    breaks: breaks.map((x, j) =>
-                                      j === i ? { ...x, label: e.target.value } : x,
-                                    ),
-                                  })
-                                }
-                              />
+                              <select
+                                value={item.code}
+                                onChange={(e) => changeRow(item.code, e.target.value)}
+                                title={item.description}
+                              >
+                                {g.items.map((c) => {
+                                  const taken = c.code !== item.code && rows.includes(c.code);
+                                  return (
+                                    <option key={c.code} value={c.code} disabled={taken}>
+                                      {c.code}
+                                      {taken ? " · on sheet" : ""}
+                                    </option>
+                                  );
+                                })}
+                              </select>
                             </td>
-                            <td className="c-cur">{l.cur}</td>
-                            <td className="c-unit">{item.unit || "—"}</td>
-                            <td className="num">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={b.rate ?? ""}
-                                placeholder="—"
+                            <td title={item.description}>{item.description}</td>
+                            <td>
+                              <select
+                                value={l.cur}
                                 onChange={(e) =>
                                   setLine(item.code, item.cur, {
-                                    breaks: breaks.map((x, j) =>
-                                      j === i ? { ...x, rate: numOrNull(e.target.value) } : x,
-                                    ),
+                                    cur: e.target.value as LineCurrency,
                                   })
                                 }
-                              />
+                              >
+                                {LINE_CURRENCIES.map((c) => (
+                                  <option key={c}>{c}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select
+                                value={unit}
+                                onChange={(e) =>
+                                  setLine(item.code, item.cur, {
+                                    unit: e.target.value === item.unit ? undefined : e.target.value,
+                                  })
+                                }
+                              >
+                                <option value="">— unit —</option>
+                                {CHARGE_UNITS.map((u) => (
+                                  <option key={u} value={u}>
+                                    {u}
+                                  </option>
+                                ))}
+                                {unit && !CHARGE_UNITS.includes(unit) && (
+                                  <option value={unit}>{unit}</option>
+                                )}
+                              </select>
+                            </td>
+                            <td className="num">
+                              {breaks ? (
+                                <span className="hint">By weight ↓</span>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={l.buy ?? ""}
+                                  placeholder="—"
+                                  onChange={(e) =>
+                                    setLine(item.code, item.cur, {
+                                      buy: numOrNull(e.target.value),
+                                    })
+                                  }
+                                />
+                              )}
                             </td>
                             <td>
                               <button
                                 type="button"
                                 className="btn small ghost"
-                                title="Remove this break"
+                                title={
+                                  breaks
+                                    ? "Back to one flat rate"
+                                    : "Rates by chargeable weight (e.g. 0-45KG, 0-100KG)"
+                                }
                                 onClick={() =>
                                   setLine(item.code, item.cur, {
-                                    breaks: breaks.filter((_, j) => j !== i),
+                                    breaks: breaks
+                                      ? undefined
+                                      : (unit === "KGS" ? AIR_BREAKS : TIER_BREAKS).map(
+                                          (label) => ({ label, rate: null }),
+                                        ),
                                   })
                                 }
+                              >
+                                {breaks ? "Flat rate" : "Weight breaks"}
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="row-icon-btn"
+                                title="Remove this line"
+                                onClick={() => removeRow(item.code)}
                               >
                                 ✕
                               </button>
                             </td>
                           </tr>,
-                        ),
-                      );
-                      rows.push(
-                        <tr key={`${item.code}-add`}>
-                          <td />
-                          <td colSpan={5}>
-                            <button
-                              type="button"
-                              className="btn small ghost"
-                              onClick={() =>
-                                setLine(item.code, item.cur, {
-                                  breaks: [...breaks, { label: "", rate: null }],
-                                })
-                              }
-                            >
-                              + Add break
-                            </button>
-                          </td>
-                        </tr>,
-                      );
-                    }
-                    return rows;
-                  })}
-                </tbody>
-              </table>
+                        ];
+                        if (breaks) {
+                          breaks.forEach((b, i) =>
+                            out.push(
+                              <tr key={`${item.code}-${i}`}>
+                                <td />
+                                <td>
+                                  <input
+                                    value={b.label}
+                                    placeholder="e.g. 0-45KG"
+                                    onChange={(e) =>
+                                      setLine(item.code, item.cur, {
+                                        breaks: breaks.map((x, j) =>
+                                          j === i ? { ...x, label: e.target.value } : x,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                </td>
+                                <td>{l.cur}</td>
+                                <td>{unit || "—"}</td>
+                                <td className="num">
+                                  <input
+                                    type="number"
+                                    step="0.001"
+                                    value={b.rate ?? ""}
+                                    placeholder="—"
+                                    onChange={(e) =>
+                                      setLine(item.code, item.cur, {
+                                        breaks: breaks.map((x, j) =>
+                                          j === i ? { ...x, rate: numOrNull(e.target.value) } : x,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                </td>
+                                <td>
+                                  {i === breaks.length - 1 && (
+                                    <button
+                                      type="button"
+                                      className="btn small ghost"
+                                      onClick={() =>
+                                        setLine(item.code, item.cur, {
+                                          breaks: [...breaks, { label: "", rate: null }],
+                                        })
+                                      }
+                                    >
+                                      + Add break
+                                    </button>
+                                  )}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="row-icon-btn"
+                                    title="Remove this break"
+                                    onClick={() =>
+                                      setLine(item.code, item.cur, {
+                                        breaks: breaks.filter((_, j) => j !== i),
+                                      })
+                                    }
+                                  >
+                                    ✕
+                                  </button>
+                                </td>
+                              </tr>,
+                            ),
+                          );
+                        }
+                        return out;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         <p className="hint">
-          Leave a code blank if this partner doesn't charge it. Weight breaks are picked by the
-          quote's chargeable weight — 35 kg uses 0-45KG.
+          Only ExPac's charge codes for your services are listed — add the lines you charge, ✕ the ones
+          you don't. Weight breaks are picked by the quote's chargeable weight — 35 kg uses 0-45KG.
         </p>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
