@@ -12,6 +12,7 @@ import {
   useLeads,
   useProfiles,
   useQuote,
+  usePartnerRateStructures,
   useRateSheet,
   useSaveQuote,
   useFinalizeCopiedQuote,
@@ -44,6 +45,10 @@ import {
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
 import { carrierLabel, usesSeaLayout } from "../lib/docTemplates";
+import PartnerRatePicker, {
+  type PickedLine,
+  type QuotePartnerRates,
+} from "./quotes/PartnerRatePicker";
 import { fetchZarRates } from "../lib/fx";
 import {
   AUTO_REFERENCE,
@@ -312,6 +317,11 @@ export default function QuoteBuilderPage() {
   // Charge-line drag-reorder: the line being dragged and where it would land.
   const [dragLine, setDragLine] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<{ index: number; after: boolean } | null>(null);
+  // Rate structures of the partners picked on this quote, for the
+  // "From Rate Sheet" picker (migration 0114).
+  const agentRatesQ = usePartnerRateStructures("agent", draft?.agent_id || null);
+  const transporterRatesQ = usePartnerRateStructures("transporter", draft?.transporter_id || null);
+  const clearingRatesQ = usePartnerRateStructures("clearing_agent", draft?.clearing_agent_id || null);
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
   if (isEdit && existingQ.data && loadedFor !== existingQ.data.id) {
@@ -599,6 +609,19 @@ export default function QuoteBuilderPage() {
         sell: 0,
       };
       return { ...d, lines: [...d.lines, line] };
+    });
+  }
+
+  function addPickedLines(picked: PickedLine[]) {
+    setDraft((d) => {
+      if (!d) return d;
+      const fx = fxOfDraft(d);
+      const added: QuoteLine[] = picked.map((p, i) => ({
+        ...newLine(p.category, d.lines.length + i),
+        ...p,
+        sell: sellFromBuy(p.buy, p.margin, p.cur, fx),
+      }));
+      return { ...d, lines: [...d.lines, ...added] };
     });
   }
 
@@ -1467,7 +1490,7 @@ export default function QuoteBuilderPage() {
                   className="btn small outline"
                   onClick={() => setRatePickerFor(g.category)}
                 >
-                  From Rate Sheet
+                  From Rates
                 </button>
                 <button
                   className="btn small outline"
@@ -1914,9 +1937,44 @@ export default function QuoteBuilderPage() {
           category={ratePickerFor}
           mode={draft.mode}
           rates={ratesQ.data ?? []}
+          chargeableKg={packTotals.chargeable}
+          partners={[
+            {
+              kind: "agent" as const,
+              role: "Agent",
+              id: draft.agent_id,
+              list: agentsQ.data,
+              structures: agentRatesQ.data,
+            },
+            {
+              kind: "transporter" as const,
+              role: "Transporter",
+              id: draft.transporter_id,
+              list: transportersQ.data,
+              structures: transporterRatesQ.data,
+            },
+            {
+              kind: "clearing_agent" as const,
+              role: "Clearing Agent",
+              id: draft.clearing_agent_id,
+              list: clearingAgentsQ.data,
+              structures: clearingRatesQ.data,
+            },
+          ]
+            .filter((p) => p.id)
+            .map((p) => ({
+              kind: p.kind,
+              role: p.role,
+              company: p.list?.find((c) => c.id === p.id)?.company ?? p.role,
+              structures: p.structures ?? [],
+            }))}
           onPick={(rate) => {
             addLineFromRate(rate);
             setRatePickerFor(null);
+          }}
+          onAddLines={(lines) => {
+            addPickedLines(lines);
+            toast(`Added ${lines.length} line${lines.length === 1 ? "" : "s"}`);
           }}
           onClose={() => setRatePickerFor(null)}
         />
@@ -1948,21 +2006,55 @@ function RatePickerModal({
   category,
   mode,
   rates,
+  chargeableKg,
+  partners,
   onPick,
+  onAddLines,
   onClose,
 }: {
   category: ChargeCategory;
   mode: QuoteDraft["mode"];
   rates: RateSheetItem[];
+  chargeableKg: number;
+  partners: QuotePartnerRates[];
   onPick: (rate: RateSheetItem) => void;
+  onAddLines: (lines: PickedLine[]) => void;
   onClose: () => void;
 }) {
   const matches = rates.filter(
     (r) => r.category === category && r.mode === mode,
   );
+  const hasPartnerRates = partners.some((p) => p.structures.length > 0);
+  const [tab, setTab] = useState<"partners" | "sheet">(
+    hasPartnerRates ? "partners" : "sheet",
+  );
   return (
-    <Modal title={`${category} — Rate Sheet`} onClose={onClose}>
-      {matches.length === 0 ? (
+    <Modal title={`${category} — Rates`} onClose={onClose} wide>
+      <div className="wf-tabs" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className={`wf-tab${tab === "partners" ? " active" : ""}`}
+          onClick={() => setTab("partners")}
+        >
+          Partner rates
+        </button>
+        <button
+          type="button"
+          className={`wf-tab${tab === "sheet" ? " active" : ""}`}
+          onClick={() => setTab("sheet")}
+        >
+          Rate Sheet ({matches.length})
+        </button>
+      </div>
+      {tab === "partners" ? (
+        <PartnerRatePicker
+          category={category}
+          mode={mode}
+          chargeableKg={chargeableKg}
+          partners={partners}
+          onAdd={onAddLines}
+        />
+      ) : matches.length === 0 ? (
         <p className="muted">
           No {mode} rates saved for this category yet. Add them under Rates &
           Tariff in the nav.
