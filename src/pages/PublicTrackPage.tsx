@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import TrackingMap from "../components/TrackingMap";
 import { trackShipment } from "../lib/db";
+import { carrierLabel } from "../lib/docTemplates";
 import { formatDate, formatDateTime, portCode } from "../lib/format";
 import type { TrackedShipment } from "../lib/types";
 
@@ -97,7 +98,7 @@ export default function PublicTrackPage() {
                 <Field label="Shipper Name" value={result.shipper || "—"} />
                 <Field label="Mode" value={result.mode} />
                 <Field label="Status" value={result.status || "—"} />
-                <Field label="Carrier" value={result.carrier || "—"} />
+                <Field label={carrierLabel(result.mode)} value={result.carrier || "—"} />
                 {result.vessel_name && (
                   <Field label="Vessel" value={result.vessel_name} />
                 )}

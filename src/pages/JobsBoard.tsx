@@ -42,7 +42,7 @@ import {
   useUploadShipmentDocument,
 } from "../lib/hooks";
 import { getShipmentDocumentUrl } from "../lib/db";
-import { DOCUMENT_TYPES_LIST } from "../lib/docTemplates";
+import { DOCUMENT_TYPES_LIST, carrierLabel } from "../lib/docTemplates";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import { trackableRef } from "../lib/tracking";
@@ -551,7 +551,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
       {
         key: "shipping_line",
-        header: "Carrier",
+        header: modeTab === "Sea" ? "Shipping Line" : "Carrier",
         width: 150,
         sortValue: (j) => j.shipping_line ?? "",
         render: (j) => j.shipping_line || "—",
@@ -670,7 +670,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, mode, unreadJobIds, openTaskJobIds],
+    [sel, mode, modeTab, unreadJobIds, openTaskJobIds],
   );
 
   return (
@@ -834,7 +834,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               allowClear: false,
               options: SHIPMENT_STATUSES.map((s) => ({ value: s, label: s })),
             },
-            { key: "shipping_line", label: "Carrier", type: "text" },
+            {
+              key: "shipping_line",
+              label: modeTab === "Sea" ? "Shipping Line" : "Carrier",
+              type: "text",
+            },
             { key: "carrier_name", label: "Agent/Airline", type: "text" },
           ]}
           onApply={async (patch) => {
@@ -938,7 +942,7 @@ function JobViewModal({
         <ViewField label="Reference" value={job.po_no || "—"} />
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
-        <ViewField label="Carrier" value={job.shipping_line || "—"} />
+        <ViewField label={carrierLabel(job.mode)} value={job.shipping_line || "—"} />
         <ViewField label="Agent/Airline" value={job.carrier_name || "—"} />
         <ViewField label="POL" value={codeOf(job.origin) || "—"} />
         <ViewField label="POD" value={codeOf(job.destination) || "—"} />
@@ -1241,7 +1245,7 @@ function JobEditModal({
         </div>
         <div className="grid2">
           <div className="field">
-            <label>Carrier</label>
+            <label>{carrierLabel(job.mode)}</label>
             <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
           </div>
           <div className="field">

@@ -43,7 +43,7 @@ import {
   type FxRates,
 } from "../lib/calc";
 import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
-import { usesSeaLayout } from "../lib/docTemplates";
+import { carrierLabel, usesSeaLayout } from "../lib/docTemplates";
 import { fetchZarRates } from "../lib/fx";
 import {
   AUTO_REFERENCE,
@@ -1002,7 +1002,7 @@ export default function QuoteBuilderPage() {
           {usesSeaLayout(draft.mode) ? (
             <>
             <div className="field">
-              <label>Carrier</label>
+              <label>{carrierLabel(draft.mode)}</label>
               <input
                 value={draft.shipping_line}
                 onChange={(e) => set("shipping_line", e.target.value)}

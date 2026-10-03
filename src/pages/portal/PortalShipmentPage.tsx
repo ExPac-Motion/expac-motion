@@ -11,6 +11,7 @@ import {
   useSendMyMessage,
 } from "../../lib/hooks";
 import { getMyDocumentUrl } from "../../lib/db";
+import { carrierLabel } from "../../lib/docTemplates";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import TrackingMap from "../../components/TrackingMap";
 
@@ -76,7 +77,7 @@ export default function PortalShipmentPage() {
           />
           <Field label="Shipper" value={job.supplier_company ?? "—"} />
           <Field
-            label="Carrier"
+            label={carrierLabel(job.mode)}
             value={tracking?.carrier || job.carrier_name || "—"}
           />
           <Field

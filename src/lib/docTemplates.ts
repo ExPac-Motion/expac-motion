@@ -56,6 +56,12 @@ export function usesSeaLayout(mode: string | null | undefined): boolean {
   return m.startsWith("Sea Freight") || m.startsWith("Road Freight");
 }
 
+/** Label for the `shipping_line` field: "Shipping Line" on Sea Freight,
+ *  "Carrier" on every other mode. */
+export function carrierLabel(mode: string | null | undefined): string {
+  return (mode ?? "").startsWith("Sea") ? "Shipping Line" : "Carrier";
+}
+
 /** Top row of Shipment Information: Shipper / Exporter then Customer /
  *  Consignee, printed on their own two-column row above the main grid. */
 export function shipmentPartyRows(job: Job): [string, string][] {
