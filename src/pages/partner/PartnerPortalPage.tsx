@@ -57,9 +57,9 @@ export default function PartnerPortalPage() {
             </p>
             <h1 style={{ margin: "0 0 6px" }}>{me.company || "Your company"}</h1>
             <p className="hint" style={{ margin: "0 0 14px" }}>
-              Keep your buy rates to ExPac up to date — one rate sheet per mode and trade route,
-              using ExPac's charge codes. Update them whenever your rates change (at least weekly);
-              ExPac sees each change.
+              Keep your air and sea freight rates to ExPac Forwarding up to date — one rate sheet
+              per mode and trade route, using ExPac's charge codes. Update them whenever your rates
+              change (at least weekly); ExPac sees each change.
             </p>
             <div className="panel">
               <PartnerRateSheets
