@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import Modal from "../components/Modal";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import {
@@ -213,6 +214,9 @@ export default function RatesPage() {
         >
           Bulk Edit{sel.count ? ` (${sel.count})` : ""}
         </button>
+        <Link className="btn outline" to="/rates/tiers-mockup">
+          Tier sheets (mockup)
+        </Link>
       </PageTools>
 
       <div className="panel">
