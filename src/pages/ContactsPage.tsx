@@ -54,6 +54,7 @@ import {
 } from "./partners/PartnerCoverage";
 import RateStructures from "./partners/RateStructures";
 import PartnerRateSheets from "./partners/PartnerRateSheets";
+import PartnerMailModal from "./partners/PartnerMailModal";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
@@ -124,6 +125,7 @@ export default function ContactsPage({
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
   const [taskingRow, setTaskingRow] = useState<Contact | null>(null);
+  const [mailingRow, setMailingRow] = useState<Contact | null>(null);
   const createInvite = useCreateClientInvite();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -408,6 +410,8 @@ export default function ContactsPage({
             <RowActions
               selected={sel.isSelected(r.id)}
               onSelectToggle={() => sel.toggle(r.id)}
+              onMail={isPartner ? () => setMailingRow(r) : undefined}
+              mailTitle={`Email this ${label}`}
               onTask={() => setTaskingRow(r)}
               taskTitle={`Create a task for this ${label}`}
               onView={() => setViewing(r)}
@@ -1069,6 +1073,15 @@ export default function ContactsPage({
             }
           }}
           onClose={() => setBulkOpen(false)}
+        />
+      )}
+
+      {mailingRow && isPartner && (
+        <PartnerMailModal
+          key={mailingRow.id}
+          kind={kind as PartnerKind}
+          partner={mailingRow}
+          onClose={() => setMailingRow(null)}
         />
       )}
 

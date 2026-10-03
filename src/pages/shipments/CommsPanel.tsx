@@ -22,14 +22,17 @@ function statusTone(s: MessageStatus): string {
   return "start";
 }
 
-interface Recipient {
+export interface Recipient {
   label: string;
   email: string;
 }
 
 /** The activity/comms body for one shipment — compose + full message thread.
- *  Hosted by CommsRail (docked panel) on the Shipments board. */
-export default function CommsPanel({ job }: { job: Job }) {
+ *  Hosted by CommsRail (docked panel) on the Shipments board, and by the
+ *  partner email dialog — there `to` replaces the customer / shipper
+ *  recipients with the agent / transporter / clearing agent, and the message
+ *  still lands on the shipment's thread. */
+export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) {
   const { toast, error } = useToast();
   const msgsQ = useMessages(job.id);
   const send = useSendMessage();
@@ -62,6 +65,7 @@ export default function CommsPanel({ job }: { job: Job }) {
   // Customer (primary + every extra contact with an email) then the shipper,
   // de-duplicated by address.
   const recipients = useMemo<Recipient[]>(() => {
+    if (to) return to.filter((r) => r.email.trim());
     const out: Recipient[] = [];
     const seen = new Set<string>();
     const add = (label: string, email: string | null | undefined) => {
@@ -79,7 +83,7 @@ export default function CommsPanel({ job }: { job: Job }) {
     }
     add("Shipper", job.supplier?.email);
     return out;
-  }, [job.client?.email, job.supplier?.email, contactsQ.data]);
+  }, [to, job.client?.email, job.supplier?.email, contactsQ.data]);
 
   const customerEmails = useMemo(
     () => recipients.filter((r) => r.label.startsWith("Customer")).map((r) => r.email),
@@ -87,7 +91,10 @@ export default function CommsPanel({ job }: { job: Job }) {
   );
 
   const [checked, setChecked] = useState<Set<string>>(
-    () => new Set(job.client?.email ? [job.client.email] : []),
+    () =>
+      new Set(
+        to ? to.map((r) => r.email).filter(Boolean) : job.client?.email ? [job.client.email] : [],
+      ),
   );
   function toggle(email: string) {
     setChecked((prev) => {
@@ -161,7 +168,7 @@ export default function CommsPanel({ job }: { job: Job }) {
           className={`chip${tab === "email" ? " on" : ""}`}
           onClick={() => setTab("email")}
         >
-          ✉ Customer Message
+          {to ? `✉ ${to[0]?.label ?? "Partner"} Message` : "✉ Customer Message"}
         </button>
         <button
           className={`chip${tab === "note" ? " on" : ""}`}
@@ -176,7 +183,9 @@ export default function CommsPanel({ job }: { job: Job }) {
           <div className="comms-recipients">
             {recipients.length === 0 && (
               <span className="hint">
-                No email on the customer or shipper record.
+                {to
+                  ? "No email on this partner's record — add one first."
+                  : "No email on the customer or shipper record."}
               </span>
             )}
             {customerEmails.length > 1 && (
