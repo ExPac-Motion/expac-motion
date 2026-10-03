@@ -6,6 +6,7 @@ import {
   ErrorNote,
   Loading,
   PageHeader,
+  PageTools,
   RowActions,
   RowActionsHead,
   useRowSelection,
@@ -102,36 +103,9 @@ export default function RatesPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Standard buy/sell rates"
-        title="Rates & Tariff Sheet"
-        actions={
-          <>
-            <button
-              className="btn outline"
-              onClick={() => setBulkOpen(true)}
-              disabled={sel.count === 0}
-              title={
-                sel.count === 0
-                  ? "Tick rows in the Actions column to bulk edit"
-                  : undefined
-              }
-            >
-              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-            </button>
-            <button className="btn" onClick={() => setEditing("new")}>
-              + Add rate
-            </button>
-          </>
-        }
-      />
-
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>{rows.length} rate{rows.length === 1 ? "" : "s"}</h2>
-            <p>Pulled into the Quote Builder instead of typing from memory/Excel.</p>
-          </div>
+      <PageHeader eyebrow="Standard buy/sell rates" title="Rates & Tariff Sheet" />
+      <PageTools
+        filters={
           <select
             value={modeFilter}
             onChange={(e) => setModeFilter(e.target.value as QuoteMode | "All")}
@@ -144,7 +118,30 @@ export default function RatesPage() {
               </option>
             ))}
           </select>
-        </div>
+        }
+        count={isLoading ? undefined : `${rows.length} rate${rows.length === 1 ? "" : "s"}`}
+        hint="Pulled into the Quote Builder instead of typing from memory/Excel."
+        primary={
+          <button className="btn" onClick={() => setEditing("new")}>
+            + Add rate
+          </button>
+        }
+      >
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
+
+      <div className="panel">
 
         {isLoading ? (
           <Loading />

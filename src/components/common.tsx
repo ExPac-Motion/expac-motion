@@ -8,6 +8,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
 import Modal from "./Modal";
@@ -569,23 +570,123 @@ export function PageHeader({
   // notification's deep link) without showing one when there's nowhere to
   // go back to.
   const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+  const leadRef = useCallback((el: HTMLDivElement | null) => {
+    setHeaderSlot("lead", el);
+  }, []);
+  const actionsRef = useCallback((el: HTMLDivElement | null) => {
+    setHeaderSlot("actions", el);
+  }, []);
   return (
     <div className="topbar">
-      <div>
-        {canGoBack && (
-          <button
-            type="button"
-            className="link-btn page-back-btn"
-            onClick={() => navigate(-1)}
-          >
-            ← Back
-          </button>
-        )}
-        <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
+      <div className="topbar-left">
+        <div>
+          {canGoBack && (
+            <button
+              type="button"
+              className="link-btn page-back-btn"
+              onClick={() => navigate(-1)}
+            >
+              ← Back
+            </button>
+          )}
+          <div className="eyebrow">{eyebrow}</div>
+          <h1>{title}</h1>
+        </div>
+        {/* PageTools: search box, record count, filters */}
+        <div className="topbar-lead" ref={leadRef} />
       </div>
-      {actions && <div className="row-actions">{actions}</div>}
+      <div className="row-actions">
+        {/* PageTools: table settings + page buttons, then the page's own */}
+        <div className="dt-tools-slot" ref={actionsRef} />
+        {actions}
+      </div>
     </div>
+  );
+}
+
+/* ---------- Page-header tool slots ----------
+   The band above the page break (PageHeader) holds every list page's
+   search, record count, filters, table settings and CTAs -- the grid
+   starts right under it. PageHeader registers its two slots here; any
+   component below it (including a tab's content, e.g. CRM > Leads) renders
+   <PageTools> to portal its controls up into them. */
+type HeaderSlotName = "lead" | "actions";
+const headerSlots: Record<HeaderSlotName, HTMLElement | null> = {
+  lead: null,
+  actions: null,
+};
+const headerSlotListeners = new Set<() => void>();
+function setHeaderSlot(name: HeaderSlotName, el: HTMLElement | null) {
+  if (headerSlots[name] === el) return;
+  headerSlots[name] = el;
+  headerSlotListeners.forEach((fn) => fn());
+}
+function useHeaderSlot(name: HeaderSlotName): HTMLElement | null {
+  const [el, setEl] = useState(headerSlots[name]);
+  useEffect(() => {
+    const sync = () => setEl(headerSlots[name]);
+    sync();
+    headerSlotListeners.add(sync);
+    return () => {
+      headerSlotListeners.delete(sync);
+    };
+  }, [name]);
+  return el;
+}
+
+/** Puts a list page's controls in the page header band (above the page
+ *  break): `search` + `filters` + `count` sit beside the title; on the right
+ *  `children` (Bulk Edit, Import…), then the grid's own tools, then the
+ *  `primary` CTA ("+ Add …") last. `onToolsSlot` hands back an element to
+ *  pass to DataTable's `toolsPortal` so Save Grid / Reset columns / Table
+ *  settings line up with the buttons. */
+export function PageTools({
+  search,
+  count,
+  filters,
+  children,
+  primary,
+  hint,
+  onToolsSlot,
+}: {
+  search?: ReactNode;
+  count?: ReactNode;
+  filters?: ReactNode;
+  children?: ReactNode;
+  primary?: ReactNode;
+  /** One-line page explanation, shown as a hover tooltip on an ⓘ icon. */
+  hint?: string;
+  onToolsSlot?: (el: HTMLDivElement | null) => void;
+}) {
+  const lead = useHeaderSlot("lead");
+  const actions = useHeaderSlot("actions");
+  return (
+    <>
+      {lead &&
+        (search || count != null || filters || hint) &&
+        createPortal(
+          <>
+            {search}
+            {filters}
+            {count != null && <span className="topbar-count">{count}</span>}
+            {hint && (
+              <span className="topbar-hint" title={hint} aria-label={hint}>
+                ⓘ
+              </span>
+            )}
+          </>,
+          lead,
+        )}
+      {actions &&
+        createPortal(
+          <>
+            {children}
+            {onToolsSlot && <div className="dt-tools-slot" ref={onToolsSlot} />}
+            {primary}
+          </>,
+          actions,
+        )}
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import {
   ErrorNote,
   Loading,
   PageHeader,
+  PageTools,
   SearchInput,
 } from "../../components/common";
 import { useMyRateSheet } from "../../lib/hooks";
@@ -31,16 +32,21 @@ export default function PortalRatesPage() {
   return (
     <>
       <PageHeader eyebrow="Your account" title="Tariff Sheet" />
+      <PageTools
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search lane, carrier, description…"
+          />
+        }
+        count={
+          ratesQ.isLoading
+            ? undefined
+            : `${filtered.length}${filtered.length !== rates.length ? ` of ${rates.length}` : ""} rate${rates.length === 1 ? "" : "s"}`
+        }
+      />
       <div className="panel">
-        {rates.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search lane, carrier, description…"
-            />
-          </div>
-        )}
         {ratesQ.isLoading ? (
           <Loading />
         ) : ratesQ.isError ? (

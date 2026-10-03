@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
   useDeepLinkReturn,
@@ -537,20 +538,18 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>{rows.length} campaign{rows.length === 1 ? "" : "s"}</h2>
-            <p>
-              Send a template to a chosen set of leads. Sends run immediately from
-              this browser tab — there's no scheduler yet, so "on specific days"
-              still means opening this page and clicking Send that day.
-            </p>
-          </div>
+      <PageTools
+        count={isLoading ? undefined : `${rows.length} campaign${rows.length === 1 ? "" : "s"}`}
+        hint={'Send a template to a chosen set of leads. Sends run immediately from this browser tab — there\'s no scheduler yet, so "on specific days" still means opening this page and clicking Send that day.'}
+        onToolsSlot={setToolsSlot}
+        primary={
           <button className="btn" onClick={() => setCreating(true)}>
             + New Campaign
           </button>
-        </div>
+        }
+      />
+
+      <div className="panel">
 
         {isLoading ? (
           <Loading />
@@ -562,7 +561,7 @@ export default function CampaignsPage() {
           <DataTable
             tableKey="mail-campaigns"
             className="table--compact"
-            headerTools="row"
+            toolsPortal={toolsSlot}
             columns={columns}
             rows={rows}
             rowKey={(c) => c.id}
@@ -580,3 +579,5 @@ export default function CampaignsPage() {
     </>
   );
 }
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+

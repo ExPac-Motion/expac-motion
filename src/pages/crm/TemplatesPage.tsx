@@ -12,6 +12,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
   SearchInput,
@@ -282,29 +283,33 @@ export default function TemplatesPage() {
     [],
   );
 
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+
   return (
     <>
+      <PageTools
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search templates…"
+          />
+        }
+        count={
+          isLoading
+            ? undefined
+            : `${rows.length}${rows.length !== (data ?? []).length ? ` of ${(data ?? []).length}` : ""} template${rows.length === 1 ? "" : "s"}`
+        }
+        hint="Use {{ contact.name }} and {{ contact.company }} anywhere in the body — they're filled in per recipient wherever a template is used to send mail."
+        onToolsSlot={setToolsSlot}
+        primary={
+          <button className="btn" onClick={() => setEditing("new")}>
+            + New Template
+          </button>
+        }
+      />
+
       <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>{rows.length} template{rows.length === 1 ? "" : "s"}</h2>
-            <p>
-              Use {"{{ contact.name }}"} and {"{{ contact.company }}"} anywhere in
-              the body — they're filled in per recipient wherever a template is
-              used to send mail.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search templates…"
-            />
-            <button className="btn" onClick={() => setEditing("new")}>
-              + New Template
-            </button>
-          </div>
-        </div>
 
         {isLoading ? (
           <Loading />
@@ -320,7 +325,7 @@ export default function TemplatesPage() {
           <DataTable
             tableKey="mail-templates"
             className="table--compact"
-            headerTools="row"
+            toolsPortal={toolsSlot}
             columns={columns}
             rows={rows}
             rowKey={(t) => t.id}

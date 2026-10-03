@@ -5,6 +5,8 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
+  SearchInput,
   useDeepLinkReturn,
   useRowSelection,
 } from "../../components/common";
@@ -251,7 +253,73 @@ export default function TasksNotes({ focus }: { focus?: string }) {
 
   return (
     <>
-      <div className="panel">
+      <PageTools
+        search={
+          <SearchInput value={search} onChange={setSearch} placeholder="Search tasks & notes…" />
+        }
+        filters={
+          <>
+            <div className="chips">
+              {(["list", "board"] as View[]).map((v) => (
+                <button
+                  key={v}
+                  className={`chip${view === v ? " on" : ""}`}
+                  onClick={() => {
+                    setView(v);
+                    if (v === "board") setStatusF("all");
+                  }}
+                >
+                  {v === "list" ? "List" : "Board"}
+                </button>
+              ))}
+            </div>
+            <div className="chips">
+              {view === "list" &&
+                (["all", "open", "doing", "done"] as StatusFilter[]).map((s) => (
+                  <button
+                    key={s}
+                    className={`chip${statusF === s ? " on" : ""}`}
+                    onClick={() => setStatusF(s)}
+                  >
+                    {s === "all" ? "All" : s[0].toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+            </div>
+            <div className="chips">
+              {(["all", "linked", "standalone"] as ScopeFilter[]).map((s) => (
+                <button
+                  key={s}
+                  className={`chip${scopeF === s ? " on" : ""}`}
+                  onClick={() => setScopeF(s)}
+                >
+                  {s === "all" ? "Any link" : s[0].toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+            {focus && (
+              <span className="topbar-filter">
+                Filtered to <strong>{focus}</strong> ·{" "}
+                <button className="link-btn" onClick={() => navigate("/ops?tab=tasks")}>
+                  clear
+                </button>
+              </span>
+            )}
+          </>
+        }
+        count={
+          <>
+            {counts.open} open · {counts.dueToday} due today ·{" "}
+            <span style={{ color: counts.overdue ? "var(--orange-ink)" : undefined }}>
+              {counts.overdue} overdue
+            </span>
+          </>
+        }
+        primary={
+          <button className="btn" onClick={() => setCreating(true)}>
+            + New Task / Note
+          </button>
+        }
+      >
         <div className="ct-quickadd">
           <select
             value={quickKind}
@@ -264,111 +332,41 @@ export default function TasksNotes({ focus }: { focus?: string }) {
             value={quick}
             onChange={(e) => setQuick(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addQuick()}
-            placeholder={`Add a ${quickKind}… (Enter)`}
+            placeholder={`Quick add a ${quickKind}… (Enter)`}
           />
-          <button className="btn" onClick={addQuick} disabled={save.isPending}>
+          <button className="btn outline" onClick={addQuick} disabled={save.isPending}>
             Add
           </button>
-          <button className="btn outline" onClick={() => setCreating(true)}>
-            Detailed…
-          </button>
-          {view === "list" && (
-            <>
-              <button
-                className="btn outline"
-                onClick={() => setBulkOpen(true)}
-                disabled={sel.count === 0}
-                title={
-                  sel.count === 0
-                    ? "Tick rows in the list to bulk edit"
-                    : undefined
-                }
-              >
-                Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-              </button>
-              <button
-                className="btn danger"
-                onClick={bulkDeleteSelected}
-                disabled={sel.count === 0 || bulkDelete.isPending}
-                title={
-                  sel.count === 0
-                    ? "Tick rows in the list to delete"
-                    : undefined
-                }
-              >
-                Delete{sel.count ? ` (${sel.count})` : ""}
-              </button>
-            </>
-          )}
         </div>
-
-        <div className="ct-taskbar">
-          <div className="mini-stats">
-            <div>
-              <div className="k">Open</div>
-              <div className="v">{counts.open}</div>
-            </div>
-            <div>
-              <div className="k">Due today</div>
-              <div className="v">{counts.dueToday}</div>
-            </div>
-            <div>
-              <div className="k">Overdue</div>
-              <div className="v" style={{ color: counts.overdue ? "var(--orange-ink)" : undefined }}>
-                {counts.overdue}
-              </div>
-            </div>
-          </div>
-          <div className="chips">
-            {(["list", "board"] as View[]).map((v) => (
-              <button
-                key={v}
-                className={`chip${view === v ? " on" : ""}`}
-                onClick={() => {
-                  setView(v);
-                  if (v === "board") setStatusF("all");
-                }}
-              >
-                {v === "list" ? "List" : "Board"}
-              </button>
-            ))}
-            {view === "list" &&
-              (["all", "open", "doing", "done"] as StatusFilter[]).map((s) => (
-                <button
-                  key={s}
-                  className={`chip${statusF === s ? " on" : ""}`}
-                  onClick={() => setStatusF(s)}
-                >
-                  {s === "all" ? "All" : s[0].toUpperCase() + s.slice(1)}
-                </button>
-              ))}
-            {(["all", "linked", "standalone"] as ScopeFilter[]).map((s) => (
-              <button
-                key={s}
-                className={`chip${scopeF === s ? " on" : ""}`}
-                onClick={() => setScopeF(s)}
-              >
-                {s === "all" ? "Any link" : s[0].toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-            <input
-              className="ct-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search…"
-            />
-          </div>
-        </div>
-
-        {focus && (
-          <p className="hint" style={{ marginTop: 8 }}>
-            Filtered to <strong>{focus}</strong> ·{" "}
-            <button className="link-btn" onClick={() => navigate("/ops?tab=tasks")}>
-              clear
+        {view === "list" && (
+          <>
+            <button
+              className="btn outline"
+              onClick={() => setBulkOpen(true)}
+              disabled={sel.count === 0}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the list to bulk edit"
+                  : undefined
+              }
+            >
+              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
             </button>
-          </p>
+            <button
+              className="btn danger"
+              onClick={bulkDeleteSelected}
+              disabled={sel.count === 0 || bulkDelete.isPending}
+              title={
+                sel.count === 0
+                  ? "Tick rows in the list to delete"
+                  : undefined
+              }
+            >
+              Delete{sel.count ? ` (${sel.count})` : ""}
+            </button>
+          </>
         )}
-      </div>
+      </PageTools>
 
       {tasksQ.isLoading ? (
         <div className="panel">

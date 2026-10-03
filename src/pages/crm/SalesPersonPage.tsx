@@ -5,6 +5,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
   useRowSelection,
@@ -219,17 +220,29 @@ export default function SalesPersonPage() {
     [sel, stats, leadStats, costOfSalesTarget],
   );
 
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+
   return (
+    <>
+    <PageTools
+      count={isLoading ? undefined : `${people.length} sales person${people.length === 1 ? "" : "s"}`}
+      hint="This calendar month's revenue & gross profit, attributed to the salesperson on each accepted quote."
+      onToolsSlot={setToolsSlot}
+    >
+      <button
+        className="btn outline"
+        onClick={() => setBulkOpen(true)}
+        disabled={sel.count === 0}
+        title={
+          sel.count === 0
+            ? "Tick rows in the Actions column to bulk edit"
+            : undefined
+        }
+      >
+        Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+      </button>
+    </PageTools>
     <div className="panel">
-      <div className="panel-head">
-        <div>
-          <h2>Sales Person</h2>
-          <p>
-            This calendar month's revenue &amp; gross profit, attributed to the
-            salesperson on each accepted quote.
-          </p>
-        </div>
-      </div>
 
       {isLoading ? (
         <Loading />
@@ -246,20 +259,7 @@ export default function SalesPersonPage() {
           columns={columns}
           rows={people}
           rowKey={(p) => p.id}
-          toolbar={
-            <button
-              className="btn outline btn-sm"
-              onClick={() => setBulkOpen(true)}
-              disabled={sel.count === 0}
-              title={
-                sel.count === 0
-                  ? "Tick rows in the Actions column to bulk edit"
-                  : undefined
-              }
-            >
-              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-            </button>
-          }
+          toolsPortal={toolsSlot}
         />
       )}
 
@@ -338,6 +338,7 @@ export default function SalesPersonPage() {
         />
       )}
     </div>
+    </>
   );
 }
 

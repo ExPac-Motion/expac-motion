@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import DataTable, { type DataColumn } from "../../components/DataTable";
-import { EmptyState, ErrorNote, Loading, PageHeader, StatusBadge } from "../../components/common";
+import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, StatusBadge } from "../../components/common";
 import { useMyQuotes } from "../../lib/hooks";
 import { formatDate, portCode } from "../../lib/format";
 import type { ClientQuote } from "../../lib/types";
@@ -58,9 +58,12 @@ export default function PortalQuotesPage() {
     [],
   );
 
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+
   return (
     <>
       <PageHeader eyebrow="Your account" title="Quotations" />
+      <PageTools count={quotesQ.isLoading ? undefined : `${quotes.length} quotation${quotes.length === 1 ? "" : "s"}`} onToolsSlot={setToolsSlot} />
       <div className="panel">
         {quotesQ.isLoading ? (
           <Loading />
@@ -71,6 +74,7 @@ export default function PortalQuotesPage() {
         ) : (
           <DataTable
             tableKey="portal-quotes"
+            toolsPortal={toolsSlot}
             className="table--compact"
             columns={columns}
             rows={quotes}

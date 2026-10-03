@@ -4,6 +4,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
 } from "../../components/common";
@@ -49,19 +50,17 @@ export default function LeadStatusesPage() {
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Lead Statuses</h2>
-            <p>
-              Setting a lead to a status flagged "promotes to customer" automatically
-              creates a real customer record.
-            </p>
-          </div>
+      <PageTools
+        count={isLoading ? undefined : `${rows.length} status${rows.length === 1 ? "" : "es"}`}
+        hint={'Setting a lead to a status flagged "promotes to customer" automatically creates a real customer record.'}
+        primary={
           <button className="btn" onClick={() => setEditing("new")}>
             + Add Status
           </button>
-        </div>
+        }
+      />
+
+      <div className="panel">
 
         {isLoading ? (
           <Loading />

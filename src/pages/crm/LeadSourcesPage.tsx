@@ -4,6 +4,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
 } from "../../components/common";
@@ -66,16 +67,17 @@ export default function LeadSourcesPage() {
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Lead Sources</h2>
-            <p>Options for the "Source" dropdown on Leads and Customers.</p>
-          </div>
+      <PageTools
+        count={isLoading ? undefined : `${rows.length} source${rows.length === 1 ? "" : "s"}`}
+        hint={'Options for the "Source" dropdown on Leads and Customers.'}
+        primary={
           <button className="btn" onClick={() => setEditing("new")}>
             + Add Source
           </button>
-        </div>
+        }
+      />
+
+      <div className="panel">
 
         {isLoading ? (
           <Loading />

@@ -6,6 +6,7 @@ import {
   ErrorNote,
   Loading,
   PageHeader,
+  PageTools,
   RowActions,
   RowActionsHead,
   useRowSelection,
@@ -191,6 +192,7 @@ export default function QuotesListPage() {
   // Quick search: quote/shipment no., customer or lead, shipper, customer
   // reference, commodity, ports, vessel, container.
   const [search, setSearch] = useState("");
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const rows = useMemo(() => {
     const list = quotes ?? [];
     const byStatus = filter === "all" ? list : list.filter((q) => q.status === filter);
@@ -565,50 +567,42 @@ export default function QuotesListPage() {
   return (
     <>
       <div className={railOpen ? "board-shift" : ""}>
-      <PageHeader
-        eyebrow="Pricing & costing"
-        title="Quotations"
-        actions={
-          <>
-            <button
-              className="btn outline"
-              onClick={() => setBulkOpen(true)}
-              disabled={sel.count === 0}
-              title={
-                sel.count === 0
-                  ? "Tick rows in the Actions column to bulk edit"
-                  : undefined
-              }
-            >
-              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-            </button>
-            <button className="btn" onClick={() => navigate("/quotes/new")}>
-              New Quotation
-            </button>
-          </>
-        }
-      />
-
-      <div className="panel">
-        <div className="panel-head">
-          {/* Search sits right beside the heading, on the same line as the
-              pulled-up table tools -- adds no height above the grid. */}
-          <div className="panel-head-search">
-          <div>
-            <h2>{filter === "all" ? "All Quotes" : `${STATUS_LABEL[filter]} Quotes`}</h2>
-            <p>
-              {rows.length} total
-              {search.trim() ? ` · matching "${search.trim()}"` : ""}
-            </p>
-          </div>
+      <PageHeader eyebrow="Pricing & costing" title="Quotations" />
+      <PageTools
+        search={
           <SearchInput
             value={search}
             onChange={setSearch}
             placeholder="Search quote no., customer, shipper, reference…"
           />
-          </div>
-        </div>
+        }
+        count={
+          isLoading
+            ? undefined
+            : `${rows.length} ${filter === "all" ? "" : `${STATUS_LABEL[filter].toLowerCase()} `}quote${rows.length === 1 ? "" : "s"}`
+        }
+        onToolsSlot={setToolsSlot}
+        primary={
+          <button className="btn" onClick={() => navigate("/quotes/new")}>
+            New Quotation
+          </button>
+        }
+      >
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
+      <div className="panel">
         {isLoading ? (
           <Loading />
         ) : isError ? (
@@ -629,6 +623,7 @@ export default function QuotesListPage() {
             rows={rows}
             rowKey={(q) => q.id}
             onRowClick={(q) => setOpenId(q.id)}
+            toolsPortal={toolsSlot}
           />
         )}
       </div>

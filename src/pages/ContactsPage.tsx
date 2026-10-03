@@ -14,6 +14,7 @@ import {
   Loading,
   MailLink,
   PageHeader,
+  PageTools,
   RowActions,
   RowActionsHead,
   SearchInput,
@@ -505,41 +506,42 @@ export default function ContactsPage({
 
   return (
     <>
-      <PageHeader
-        eyebrow={eyebrow}
-        title={title}
-        actions={
-          <>
-            <button
-              className="btn outline"
-              onClick={() => setBulkOpen(true)}
-              disabled={sel.count === 0}
-              title={
-                sel.count === 0
-                  ? "Tick rows in the Actions column to bulk edit"
-                  : undefined
-              }
-            >
-              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-            </button>
-            <div className="dt-tools-slot" ref={setToolsSlot} />
-            <button className="btn" onClick={() => setEditing("new")}>
-              + Add {label}
-            </button>
-          </>
+      <PageHeader eyebrow={eyebrow} title={title} />
+      <PageTools
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={`Search ${label} or contact…`}
+          />
         }
-      />
+        count={
+          query.isLoading
+            ? undefined
+            : `${filtered.length}${filtered.length !== rows.length ? ` of ${rows.length}` : ""} ${label}${rows.length === 1 ? "" : "s"}`
+        }
+        onToolsSlot={setToolsSlot}
+        primary={
+          <button className="btn" onClick={() => setEditing("new")}>
+            + Add {label}
+          </button>
+        }
+      >
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
       <div className="panel">
-        {rows.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={`Search ${label} or contact…`}
-            />
-          </div>
-        )}
         {query.isLoading ? (
           <Loading />
         ) : query.isError ? (

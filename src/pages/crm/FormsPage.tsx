@@ -4,6 +4,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
 } from "../../components/common";
@@ -711,19 +712,18 @@ export default function FormsPage() {
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>{forms.length} form{forms.length === 1 ? "" : "s"}</h2>
-            <p>
-              Build a contact form, embed it on your website. A submission
-              creates a Lead and raises a task so the team sees the new sign-up.
-            </p>
-          </div>
+      <PageTools
+        count={isLoading ? undefined : `${forms.length} form${forms.length === 1 ? "" : "s"}`}
+        hint="Build a contact form, embed it on your website. A submission creates a Lead and raises a task so the team sees the new sign-up."
+        onToolsSlot={setToolsSlot}
+        primary={
           <button className="btn" onClick={onNew} disabled={save.isPending}>
             + New Form
           </button>
-        </div>
+        }
+      />
+
+      <div className="panel">
 
         {isLoading ? (
           <Loading />
@@ -735,7 +735,7 @@ export default function FormsPage() {
           <DataTable
             tableKey="web-forms"
             className="table--compact"
-            headerTools="row"
+            toolsPortal={toolsSlot}
             columns={columns}
             rows={forms}
             rowKey={(f) => f.id}
@@ -752,3 +752,5 @@ export default function FormsPage() {
     </>
   );
 }
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+

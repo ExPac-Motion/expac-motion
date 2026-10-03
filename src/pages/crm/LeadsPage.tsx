@@ -18,6 +18,7 @@ import {
   ErrorNote,
   Loading,
   MailLink,
+  PageTools,
   Popover,
   RowActions,
   RowActionsHead,
@@ -532,59 +533,15 @@ export default function LeadsPage() {
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>
-              {displayed.length}
-              {displayed.length !== rows.length ? ` of ${rows.length}` : ""} lead
-              {rows.length === 1 ? "" : "s"}
-            </h2>
-            <p>Prospects not yet promoted to a customer.</p>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn ghost small" onClick={downloadSampleCsv}>
-              Sample .csv
-            </button>
-            <button
-              className="btn outline"
-              onClick={() => fileInput.current?.click()}
-              disabled={bulkCreate.isPending}
-            >
-              {bulkCreate.isPending ? "Importing…" : "Import CSV"}
-            </button>
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".csv,text/csv"
-              style={{ display: "none" }}
-              onChange={onImportFile}
-            />
-            <button
-              className="btn outline"
-              onClick={() => setBulkOpen(true)}
-              disabled={sel.count === 0}
-              title={
-                sel.count === 0
-                  ? "Tick rows in the Actions column to bulk edit"
-                  : undefined
-              }
-            >
-              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-            </button>
-            <div className="dt-tools-slot" ref={setToolsSlot} />
-            <button className="btn" onClick={() => setEditing("new")}>
-              + Add Lead
-            </button>
-          </div>
-        </div>
-
-        <div className="lead-toolbar">
+      <PageTools
+        search={
           <SearchInput
             value={search}
             onChange={setSearch}
             placeholder="Search company or contact…"
           />
+        }
+        filters={
           <Popover label="+ Add Filter" badge={activeFilterCount}>
             {() => (
               <>
@@ -657,8 +614,51 @@ export default function LeadsPage() {
               </>
             )}
           </Popover>
-        </div>
+        }
+        count={
+          isLoading
+            ? undefined
+            : `${displayed.length}${displayed.length !== rows.length ? ` of ${rows.length}` : ""} lead${rows.length === 1 ? "" : "s"}`
+        }
+        onToolsSlot={setToolsSlot}
+        primary={
+          <button className="btn" onClick={() => setEditing("new")}>
+            + Add Lead
+          </button>
+        }
+      >
+        <button className="btn ghost small" onClick={downloadSampleCsv}>
+          Sample .csv
+        </button>
+        <button
+          className="btn outline"
+          onClick={() => fileInput.current?.click()}
+          disabled={bulkCreate.isPending}
+        >
+          {bulkCreate.isPending ? "Importing…" : "Import CSV"}
+        </button>
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
+      <input
+        ref={fileInput}
+        type="file"
+        accept=".csv,text/csv"
+        style={{ display: "none" }}
+        onChange={onImportFile}
+      />
 
+      <div className="panel">
         {isLoading ? (
           <Loading />
         ) : isError ? (

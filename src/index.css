@@ -356,6 +356,37 @@ input[type="number"] {
 .has-subnav .topbar {
   top: 104px;
 }
+/* Title block + the page's search / filters / record count (PageTools),
+   bottom-aligned with the title, like the CTAs on the right. */
+.topbar-left {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 28px;
+  min-width: 0;
+}
+.topbar-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.topbar-lead:empty {
+  display: none;
+}
+.topbar-lead .search-box {
+  width: 300px;
+  background: var(--white);
+}
+.topbar-count {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.topbar > .row-actions {
+  align-items: center;
+}
 @media (max-width: 900px) {
   .topbar {
     top: 54px;
@@ -1366,13 +1397,6 @@ select.badge-select.lost {
 }
 
 /* Leads master-view toolbar */
-.lead-toolbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin: 4px 0 14px;
-}
 .ui-pop {
   position: relative;
   display: inline-flex;
@@ -5890,15 +5914,26 @@ select.badge-select.lost {
 }
 
 /* Shipments / Quotations: search box inline beside the panel heading. */
-.panel-head-search {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  /* The pulled-up table tools (.dt-tools) are a full-width strip lifted
-     over this row; keep the search box above it so it stays clickable. */
-  position: relative;
-  z-index: 2;
+
+/* PageTools: active-filter note + ⓘ page explanation in the header band */
+.topbar-filter {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
-.panel-head-search .search-box {
-  width: 300px;
+.topbar-hint {
+  color: var(--muted);
+  font-size: 0.95rem;
+  cursor: help;
+  line-height: 1;
+}
+.topbar-hint:hover {
+  color: var(--teal-ink);
+}
+/* Tasks & Notes quick-add, sitting in the header band */
+.topbar .ct-quickadd {
+  margin: 0;
+  flex-wrap: nowrap;
+}
+.topbar .ct-quickadd input {
+  min-width: 220px;
 }

@@ -5,6 +5,7 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
+  PageTools,
   RowActions,
   RowActionsHead,
   useRowSelection,
@@ -187,42 +188,37 @@ export default function FollowUpsPage() {
 
   return (
     <>
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>{rules.length} rule{rules.length === 1 ? "" : "s"}</h2>
-            <p>
-              A background job checks these hourly and emails the chosen template
-              once per matching quote / lead / recipient / shipment. Run it by
-              hand any time with the button.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="btn outline"
-              onClick={onRunNow}
-              disabled={runNow.isPending}
-            >
-              {runNow.isPending ? "Running…" : "Run due follow-ups now"}
-            </button>
-            <button
-              className="btn outline"
-              onClick={() => setBulkOpen(true)}
-              disabled={sel.count === 0}
-              title={
-                sel.count === 0
-                  ? "Tick rows in the Actions column to bulk edit"
-                  : undefined
-              }
-            >
-              Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-            </button>
-            <button className="btn" onClick={() => setEditing("new")}>
-              + New Rule
-            </button>
-          </div>
-        </div>
+      <PageTools
+        count={rulesQ.isLoading ? undefined : `${rules.length} rule${rules.length === 1 ? "" : "s"}`}
+        hint="A background job checks these hourly and emails the chosen template once per matching quote / lead / recipient / shipment. Run it by hand any time with the button."
+        primary={
+          <button className="btn" onClick={() => setEditing("new")}>
+            + New Rule
+          </button>
+        }
+      >
+        <button
+          className="btn outline"
+          onClick={onRunNow}
+          disabled={runNow.isPending}
+        >
+          {runNow.isPending ? "Running…" : "Run due follow-ups now"}
+        </button>
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
+      <div className="panel">
         {rulesQ.isLoading ? (
           <Loading />
         ) : rulesQ.isError ? (

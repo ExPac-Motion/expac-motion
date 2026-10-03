@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import { EmptyState, ErrorNote, Loading, PageTools } from "../../components/common";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
@@ -16,6 +16,7 @@ import TrackingMap from "../../components/TrackingMap";
 import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
 
 export default function LiveTracking() {
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const { error } = useToast();
   const jobsQ = useJobs();
   const trackQ = useJobTracking();
@@ -209,34 +210,19 @@ export default function LiveTracking() {
 
   return (
     <>
-      <div className="panel">
-        <div className="mini-stats">
-          <div>
-            <div className="k">Trackable shipments</div>
-            <div className="v">{trackable.length}</div>
-          </div>
-          <div>
-            <div className="k">On track</div>
-            <div className="v">{summary.onTrack}</div>
-          </div>
-          <div>
-            <div className="k">Exceptions</div>
-            <div className="v" style={{ color: summary.exceptions ? "var(--orange-ink)" : undefined }}>
-              {summary.exceptions}
-            </div>
-          </div>
-          <div>
-            <div className="k">Arriving ≤ 7 days</div>
-            <div className="v">{summary.arriving}</div>
-          </div>
-        </div>
-        <p className="hint" style={{ marginTop: 8 }}>
-          ShipsGo pushes updates automatically once a shipment is registered —
-          this board and the customer portal refresh live as they arrive.
-          <strong> Refresh</strong> registers a new number / forces a re-sync
-          (runs on the deployed site). Click a row for the live map.
-        </p>
-      </div>
+      <PageTools
+        count={
+          <>
+            {trackable.length} trackable · {summary.onTrack} on track ·{" "}
+            <span style={{ color: summary.exceptions ? "var(--orange-ink)" : undefined }}>
+              {summary.exceptions} exception{summary.exceptions === 1 ? "" : "s"}
+            </span>{" "}
+            · {summary.arriving} arriving ≤ 7 days
+          </>
+        }
+        hint="ShipsGo pushes updates automatically once a shipment is registered — this board and the customer portal refresh live as they arrive. Refresh registers a new number / forces a re-sync (runs on the deployed site). Click a row for the live map."
+        onToolsSlot={setToolsSlot}
+      />
 
       <div className="panel">
         {trackable.length === 0 ? (
@@ -247,7 +233,7 @@ export default function LiveTracking() {
           <DataTable
             tableKey="live-tracking"
             className="trk-table"
-            headerTools="row"
+            toolsPortal={toolsSlot}
             columns={trkCols}
             rows={trackable}
             rowKey={(j) => j.id}

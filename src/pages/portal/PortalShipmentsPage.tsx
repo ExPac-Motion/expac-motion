@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import DataTable, { type DataColumn } from "../../components/DataTable";
-import { EmptyState, ErrorNote, Loading, PageHeader } from "../../components/common";
+import { EmptyState, ErrorNote, Loading, PageHeader, PageTools } from "../../components/common";
 import { useMyJobs } from "../../lib/hooks";
 import { formatDate, portCode } from "../../lib/format";
 import type { ClientJob } from "../../lib/types";
@@ -70,9 +70,12 @@ export default function PortalShipmentsPage() {
     [],
   );
 
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+
   return (
     <>
       <PageHeader eyebrow="Your account" title="Shipments" />
+      <PageTools count={jobsQ.isLoading ? undefined : `${jobs.length} shipment${jobs.length === 1 ? "" : "s"}`} onToolsSlot={setToolsSlot} />
       <div className="panel">
         {jobsQ.isLoading ? (
           <Loading />
@@ -83,6 +86,7 @@ export default function PortalShipmentsPage() {
         ) : (
           <DataTable
             tableKey="portal-shipments"
+            toolsPortal={toolsSlot}
             className="table--compact"
             columns={columns}
             rows={jobs}

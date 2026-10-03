@@ -6,6 +6,7 @@ import {
   EmptyState,
   Loading,
   MailLink,
+  PageTools,
   Popover,
   useDeepLinkReturn,
 } from "../../components/common";
@@ -302,20 +303,15 @@ export default function OpportunitiesTab() {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 14,
-          flexWrap: "wrap",
-        }}
+      <PageTools
+        count={`${opps.length} opportunit${opps.length === 1 ? "y" : "ies"}`}
+        hint="Move a card to a new stage with its status dropdown."
+        primary={
+          <button className="btn" onClick={() => setCreating(true)}>
+            + New Opportunity
+          </button>
+        }
       >
-        <p className="muted" style={{ margin: 0 }}>
-          Move a card to a new stage with its status dropdown.
-        </p>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Popover label="Options" size="md">
             {() => (
               <>
@@ -384,11 +380,7 @@ export default function OpportunitiesTab() {
               </>
             )}
           </Popover>
-          <button className="btn" onClick={() => setCreating(true)}>
-            + New Opportunity
-          </button>
-        </div>
-      </div>
+      </PageTools>
 
       {opps.length === 0 ? (
         <div className="panel">

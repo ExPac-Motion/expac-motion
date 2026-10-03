@@ -17,6 +17,7 @@ import {
   ErrorNote,
   Loading,
   PageHeader,
+  PageTools,
   RowActions,
   RowActionsHead,
   useDeepLinkReturn,
@@ -249,6 +250,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
   const [search, setSearch] = useState("");
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const [recordFilter, setRecordFilter] = useState<
     "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null
   >(null);
@@ -678,48 +680,67 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       <div className={railOpen ? "board-shift" : ""}>
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
 
-      <div className="panel jobs-panel">
-        <div className="panel-head">
-          {/* Search sits right beside the heading, on the same line as the
-              pulled-up table tools -- adds no height above the grid. */}
-          <div className="panel-head-search">
-          <div>
-            <h2>{copy.heading}</h2>
-            <p>
-              {copy.sub(rows.length)}
-              {q ? ` · matching "${search.trim()}"` : ""}
-              {modeTab !== "All" ? ` · ${modeLabel} only` : ""}
-            </p>
-            {recordFilter && (
-              <p className="hint" style={{ marginTop: 4 }}>
-                Filtered to{" "}
-                <strong>
-                  {recordFilter === "nostatus"
-                    ? "shipments without status"
-                    : recordFilter === "uninvoiced"
-                      ? "shipments not yet invoiced"
-                      : recordFilter === "atrisk"
-                      ? "at-risk shipments (ETA ≤5 days, work outstanding)"
-                      : "shipments without a tracking no."}
-                </strong>{" "}
-                ·{" "}
-                <button
-                  className="link-btn"
-                  onClick={() => setRecordFilter(null)}
-                >
-                  clear
-                </button>
-              </p>
-            )}
-          </div>
+      <PageTools
+        search={
           <SearchInput
             value={search}
             onChange={setSearch}
             placeholder="Search shipment no., customer, shipper, PO…"
           />
-          </div>
-        </div>
+        }
+        filters={
+          recordFilter && (
+            <span className="topbar-filter">
+              Filtered to{" "}
+              <strong>
+                {recordFilter === "nostatus"
+                  ? "shipments without status"
+                  : recordFilter === "uninvoiced"
+                    ? "shipments not yet invoiced"
+                    : recordFilter === "atrisk"
+                      ? "at-risk shipments (ETA ≤5 days, work outstanding)"
+                      : "shipments without a tracking no."}
+              </strong>{" "}
+              ·{" "}
+              <button className="link-btn" onClick={() => setRecordFilter(null)}>
+                clear
+              </button>
+            </span>
+          )
+        }
+        count={
+          isLoading
+            ? undefined
+            : `${copy.sub(rows.length).split(" · ")[0]}${modeTab !== "All" ? ` · ${modeLabel}` : ""}`
+        }
+        onToolsSlot={setToolsSlot}
+      >
+        {mode === "active" && (
+          <button
+            className={`btn ${recordFilter === "atrisk" ? "at-risk-on" : "outline"}`}
+            onClick={() =>
+              setRecordFilter(recordFilter === "atrisk" ? null : "atrisk")
+            }
+            title="ETA within 5 days (or passed) with an open task or not yet cleared"
+          >
+            At risk ({atRiskCount})
+          </button>
+        )}
+        <button
+          className="btn outline"
+          onClick={() => setBulkOpen(true)}
+          disabled={sel.count === 0}
+          title={
+            sel.count === 0
+              ? "Tick rows in the Actions column to bulk edit"
+              : undefined
+          }
+        >
+          Bulk Edit{sel.count ? ` (${sel.count})` : ""}
+        </button>
+      </PageTools>
 
+      <div className="panel jobs-panel">
         {isLoading ? (
           <Loading />
         ) : isError ? (
@@ -741,34 +762,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             columns={jobCols}
             rows={rows}
             rowKey={(j) => j.id}
-            headerTools={recordFilter ? "row" : "pull"}
-            toolbar={
-              <>
-              {mode === "active" && (
-                <button
-                  className={`btn btn-sm ${recordFilter === "atrisk" ? "at-risk-on" : "outline"}`}
-                  onClick={() =>
-                    setRecordFilter(recordFilter === "atrisk" ? null : "atrisk")
-                  }
-                  title="ETA within 5 days (or passed) with an open task or not yet cleared"
-                >
-                  At risk ({atRiskCount})
-                </button>
-              )}
-              <button
-                className="btn outline btn-sm"
-                onClick={() => setBulkOpen(true)}
-                disabled={sel.count === 0}
-                title={
-                  sel.count === 0
-                    ? "Tick rows in the Actions column to bulk edit"
-                    : undefined
-                }
-              >
-                Bulk Edit{sel.count ? ` (${sel.count})` : ""}
-              </button>
-              </>
-            }
+            toolsPortal={toolsSlot}
           />
         )}
       </div>

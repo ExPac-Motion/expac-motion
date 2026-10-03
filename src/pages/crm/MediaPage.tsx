@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Modal from "../../components/Modal";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import { EmptyState, ErrorNote, Loading, PageTools } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
   useCreateMediaFolder,
@@ -246,6 +246,50 @@ export default function MediaPage() {
 
   return (
     <div className="media-wrap">
+      <PageTools
+        count={
+          isLoading
+            ? undefined
+            : `${shown.length} image${shown.length === 1 ? "" : "s"} · ${folder === ALL ? "All media" : folder}`
+        }
+        hint={`Reusable images for campaigns and templates. Uploads land in ${uploadFolder}.`}
+        primary={
+          <button
+            className="btn"
+            onClick={() => fileRef.current?.click()}
+            disabled={upload.isPending}
+          >
+            {upload.isPending ? "Uploading…" : "Upload"}
+          </button>
+        }
+      >
+        <div className="media-viewtoggle" role="group" aria-label="View">
+          <button
+            type="button"
+            className={`chip${view === "grid" ? " on" : ""}`}
+            onClick={() => pickView("grid")}
+            title="Grid view"
+          >
+            Grid
+          </button>
+          <button
+            type="button"
+            className={`chip${view === "list" ? " on" : ""}`}
+            onClick={() => pickView("list")}
+            title="List view"
+          >
+            List
+          </button>
+        </div>
+      </PageTools>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={onFiles}
+      />
       <aside className="media-rail panel">
         <div className="media-rail-head">Folders</div>
         <button
@@ -299,50 +343,6 @@ export default function MediaPage() {
       </aside>
 
       <section className="media-main panel">
-        <div className="panel-head">
-          <div>
-            <h2>{folder === ALL ? "All media" : folder}</h2>
-            <p>
-              Reusable images for campaigns and templates. Uploads land in{" "}
-              <strong>{uploadFolder}</strong>.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <div className="media-viewtoggle" role="group" aria-label="View">
-              <button
-                type="button"
-                className={`chip${view === "grid" ? " on" : ""}`}
-                onClick={() => pickView("grid")}
-                title="Grid view"
-              >
-                Grid
-              </button>
-              <button
-                type="button"
-                className={`chip${view === "list" ? " on" : ""}`}
-                onClick={() => pickView("list")}
-                title="List view"
-              >
-                List
-              </button>
-            </div>
-            <button
-              className="btn"
-              onClick={() => fileRef.current?.click()}
-              disabled={upload.isPending}
-            >
-              {upload.isPending ? "Uploading…" : "Upload"}
-            </button>
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            hidden
-            onChange={onFiles}
-          />
-        </div>
 
         {isLoading ? (
           <Loading />
