@@ -32,6 +32,7 @@ import {
   CUSTOMS_DUTY_CODE,
   CUSTOMS_VAT_CODE,
   SERVICE_FEE_CODES,
+  isLegacyClearanceFee,
   serviceFeePrefillZar,
   lineTotal,
   lineBuyTotal,
@@ -258,11 +259,12 @@ function draftFromQuote(q: Quote): QuoteDraft {
         storedUnit && !CHARGE_UNITS.includes(storedUnit) && catUnit
           ? catUnit
           : storedUnit;
-      // Sell-only service fees (IN-01 / FW-01 / DIS-01 / CU-05): the stored
+      // Sell-only service fees (IN-01 / FW-01 / DIS-01, and a CU-05 saved
+      // while it was still sell-only — no buy, a typed sell): the stored
       // sell (R) is the source of truth. Buy / margin open at 0 (the cells stay
       // editable) — never reconstructed from the sell, and any stray legacy
       // Buy value on the row is dropped.
-      if (SERVICE_FEE_CODES.includes(l.code ?? "")) {
+      if (SERVICE_FEE_CODES.includes(l.code ?? "") || isLegacyClearanceFee(l)) {
         return {
           position: i,
           category: (l.category as ChargeCategory) ?? CHARGE_CATEGORIES[0],
@@ -680,8 +682,8 @@ export default function QuoteBuilderPage() {
           const base = {
             ...newLine(item.category, lines.length),
             code: item.code,
-            description: item.description,
-            unit: item.unit,
+            description: sheet.lines[item.code]?.description ?? item.description,
+            unit: sheet.lines[item.code]?.unit ?? item.unit,
             qty: 1,
             vat_pct: item.vat_pct ?? 0,
           };
@@ -1700,12 +1702,14 @@ export default function QuoteBuilderPage() {
                       const qtyDerived = autoQ != null && !l.qty_override;
                       // Sell-only lines — the figure is typed straight into
                       // Sell (R), with Buy / Margin / Sell / Total Buy
-                      // dashed: service fees (IN-01 / FW-01 / DIS-01 / CU-05),
+                      // dashed: service fees (IN-01 / FW-01 / DIS-01, and an
+                      // older sell-only CU-05),
                       // Customs VAT (CU-02, whole amount is VAT) and Customs
                       // Duty (CU-03, a pass-through disbursement, zero-rated).
                       const code = String(l.code ?? "");
                       const isSellOnly =
                         SERVICE_FEE_CODES.includes(code) ||
+                        isLegacyClearanceFee(l) ||
                         code === CUSTOMS_VAT_CODE ||
                         code === CUSTOMS_DUTY_CODE;
                       const isCustomsDuty = code === CUSTOMS_DUTY_CODE;

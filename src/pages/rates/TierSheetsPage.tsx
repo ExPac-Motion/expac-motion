@@ -23,14 +23,17 @@ import {
   useTransporters,
 } from "../../lib/hooks";
 import {
+  CHARGE_UNITS,
   INCOTERMS_ANY_MODE,
   INCOTERMS_SEA,
+  LINE_CURRENCIES,
   QUOTE_MODES,
   RATE_TIERS,
   rateTier,
   type ChargeCategory,
   type QuoteMode,
   type Contact,
+  type LineCurrency,
   type PartnerKind,
   type PartnerRateSheet,
   type Quote,
@@ -419,7 +422,6 @@ function SheetEditor({
   const sections = sectionsForIncoterm(incoterm);
   const groups = worksheetGroups(d.mode).filter((g) => sections.includes(g.category));
   const t = rateTier(d.tier);
-  const sea = d.mode.startsWith("Sea");
 
   /** The sheet's own codes in a section, in catalog order. */
   const codesIn = (category: ChargeCategory) =>
@@ -497,7 +499,6 @@ function SheetEditor({
                 </option>
               ))}
             </optgroup>
-            {sea && (
               <optgroup label="Sea / inland waterway">
                 {INCOTERMS_SEA.map((i) => (
                   <option key={i.code} value={i.code}>
@@ -505,7 +506,6 @@ function SheetEditor({
                   </option>
                 ))}
               </optgroup>
-            )}
           </select>
           <span className="hint">
             Shows the charges quoted under this incoterm — a quote loads the same sections.
@@ -694,18 +694,73 @@ function SheetEditor({
                               onChange={(e) => changeCode(item.code, e.target.value)}
                               title={item.description}
                             >
-                              {g.items
-                                .filter((c) => c.code === item.code || !(c.code in d.lines))
-                                .map((c) => (
-                                  <option key={c.code} value={c.code}>
+                              {g.items.map((c) => {
+                                const taken = c.code !== item.code && c.code in d.lines;
+                                return (
+                                  <option
+                                    key={c.code}
+                                    value={c.code}
+                                    disabled={taken}
+                                    title={taken ? "Already on this sheet" : c.description}
+                                  >
                                     {c.code}
+                                    {taken ? " · on sheet" : ""}
                                   </option>
-                                ))}
+                                );
+                              })}
                             </select>
                           </td>
-                          <td title={item.description}>{item.description}</td>
-                          <td>{r.cur}</td>
-                          <td>{item.unit || "—"}</td>
+                          <td>
+                            <input
+                              value={l.description ?? item.description}
+                              title={l.description ?? item.description}
+                              onChange={(e) =>
+                                setLine(item.code, fallback, {
+                                  description:
+                                    e.target.value === item.description ? undefined : e.target.value,
+                                })
+                              }
+                            />
+                          </td>
+                          <td>
+                            <select
+                              value={r.cur}
+                              disabled={!r.sellOnly && l.source !== "manual"}
+                              title={
+                                !r.sellOnly && l.source !== "manual"
+                                  ? "The partner's currency (from their rate sheet)"
+                                  : undefined
+                              }
+                              onChange={(e) =>
+                                setLine(item.code, fallback, { cur: e.target.value as LineCurrency })
+                              }
+                            >
+                              {LINE_CURRENCIES.map((c) => (
+                                <option key={c}>{c}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              value={l.unit ?? item.unit}
+                              onChange={(e) =>
+                                setLine(item.code, fallback, {
+                                  unit: e.target.value === item.unit ? undefined : e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">— unit —</option>
+                              {CHARGE_UNITS.map((u) => (
+                                <option key={u} value={u}>
+                                  {u}
+                                </option>
+                              ))}
+                              {(l.unit ?? item.unit) &&
+                                !CHARGE_UNITS.includes(l.unit ?? item.unit) && (
+                                  <option value={l.unit ?? item.unit}>{l.unit ?? item.unit}</option>
+                                )}
+                            </select>
+                          </td>
                           <td>
                             {r.sellOnly ? (
                               <span className="hint">Sell only (R)</span>

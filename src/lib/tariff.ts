@@ -166,7 +166,7 @@ export function tierLine(
       sellOnly,
       source: "manual",
       buy: null,
-      cur: item.cur,
+      cur: line.cur ?? item.cur,
       margin: 0,
       sell: line.sell ?? null,
       hasBreaks: false,

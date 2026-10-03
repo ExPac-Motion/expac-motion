@@ -1059,6 +1059,9 @@ export interface TariffSheetLine {
   buy: number | null;
   /** Currency of a manual buy — defaults to the code's currency. */
   cur?: LineCurrency;
+  /** Overrides of the code's default description / unit (as on a quote). */
+  description?: string;
+  unit?: string;
   /** null = the sheet's tier margin. */
   margin: number | null;
   /** Sell (R) for sell-only codes (FW-01 / IN-01 / DIS-01 / CU-05 ...). */

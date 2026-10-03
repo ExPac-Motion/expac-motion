@@ -238,13 +238,21 @@ export function effectiveQty(
 export const INSURANCE_CODE = "IN-01";
 export const FORWARDING_CODE = "FW-01";
 export const DISBURSEMENT_CODE = "DIS-01";
+/** Customs Clearance Fee — a normal buy / sell line (the clearing agent's
+ *  fee + margin) since 2026-10-03; it was sell-only before, so an older
+ *  CU-05 line with no buy keeps its stored sell (see resolveLine). */
 export const CUSTOMS_CLEARANCE_CODE = "CU-05";
 export const SERVICE_FEE_CODES: readonly string[] = [
   INSURANCE_CODE,
   FORWARDING_CODE,
   DISBURSEMENT_CODE,
-  CUSTOMS_CLEARANCE_CODE,
 ];
+/** A CU-05 line saved while it was sell-only: no buy, a typed sell. */
+export function isLegacyClearanceFee(
+  l: Pick<QuoteLine, "code" | "buy" | "sell">,
+): boolean {
+  return l.code === CUSTOMS_CLEARANCE_CODE && !(Number(l.buy) > 0) && Number(l.sell) > 0;
+}
 /** Default suggested rates (decimal) for the pre-fill. */
 export const FORWARDING_RATE = 0.01;
 export const DISBURSEMENT_RATE = 0.025;
@@ -330,12 +338,17 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
   const auto = autoQty(line, ctx.mode, ctx.pack);
   if (auto != null) qty = auto;
 
-  // Sell-only codes (IN-01 / FW-01 / DIS-01 / CU-05): there is no buy cost and
+  // Sell-only codes (IN-01 / FW-01 / DIS-01): there is no buy cost and
   // no markup — the whole amount is a selling rate, held only in sell (R)
   // (pre-filled on pick, see serviceFeePrefillZar). buy / margin are pinned to
   // 0 everywhere (builder, quote detail, print, list totals) so nothing that
   // was ever stored on the row leaks back into a Buy figure.
   if (SERVICE_FEE_CODES.includes(line.code)) {
+    return { ...line, qty, buy: 0, margin: 0, sell: Number(line.sell) || 0 };
+  }
+  // CU-05 saved while it was sell-only (no buy, a typed sell): keep that
+  // sell so older quotes / prints don't change. With a buy it's a normal line.
+  if (isLegacyClearanceFee({ ...line, buy })) {
     return { ...line, qty, buy: 0, margin: 0, sell: Number(line.sell) || 0 };
   }
 
