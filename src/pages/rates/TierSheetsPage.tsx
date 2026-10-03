@@ -4,7 +4,7 @@
 // Clearing Agent rate sheet (live — the partner's rate for the same code) or
 // a manual buy, plus the tier margin unless a line overrides it. The Quote
 // Builder loads a sheet by the customer's tier.
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
@@ -110,11 +110,13 @@ export default function TierSheetsPage() {
 
   const all = useMemo(() => q.data ?? [], [q.data]);
 
-  // ?sheet=<id> (from the Rate list's Trade routes grid) opens that sheet —
-  // once, when the sheets arrive (set-state-in-render, guarded).
+  // ?sheet=<id> (from the Rate list's Trade routes grid) opens that sheet
+  // once the sheets arrive. In an effect: changing the URL during render
+  // crashed the page.
   const [params, setParams] = useSearchParams();
   const wanted = params.get("sheet");
-  if (wanted && q.data) {
+  useEffect(() => {
+    if (!wanted || !q.data) return;
     const s = q.data.find((x) => x.id === wanted);
     if (s) {
       setTier(s.tier);
@@ -124,7 +126,7 @@ export default function TierSheetsPage() {
     const next = new URLSearchParams(params);
     next.delete("sheet");
     setParams(next, { replace: true });
-  }
+  }, [wanted, q.data, params, setParams]);
 
   const routes = all.filter((s) => s.tier === tier && s.mode === mode);
   const sheet = routes.find((s) => s.id === pickedId) ?? routes[0] ?? null;

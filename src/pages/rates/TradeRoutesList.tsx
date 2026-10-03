@@ -32,11 +32,12 @@ import {
   RATE_TIERS,
   rateTier,
   type Contact,
+  type PartnerKind,
   type RateTierId,
   type TariffSheet,
   type TariffSheetDraft,
 } from "../../lib/types";
-import { ddmmyyyy, isSellOnlyCode } from "../../lib/tariff";
+import { ddmmyyyy, isSellOnlyCode, partnerIdKey, sheetIdKey } from "../../lib/tariff";
 import { TierDot } from "./TierSheetsPage";
 
 /** Codes on the sheet with a price of their own (manual buy or Sell (R)). */
@@ -126,6 +127,37 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
     }
   }
 
+  /** Inline partner pick on a row — saves straight away; the partner's own
+   *  rate sheet is linked when the tier sheet is next opened. */
+  function partnerSelect(s: TariffSheet, kind: PartnerKind, list: Contact[]) {
+    const idKey = partnerIdKey(kind);
+    return (
+      <select
+        value={s[idKey] ?? ""}
+        style={{ width: "100%", padding: "4px 6px" }}
+        onClick={(e) => e.stopPropagation()}
+        onChange={async (e) => {
+          try {
+            await bulkUpdate.mutateAsync({
+              ids: [s.id],
+              patch: { [idKey]: e.target.value || null, [sheetIdKey(kind)]: null },
+            });
+            toast("Saved");
+          } catch (err) {
+            error(err instanceof Error ? err.message : "Could not save");
+          }
+        }}
+      >
+        <option value="">—</option>
+        {list.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.company}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   const columns = useMemo<DataColumn<TariffSheet>[]>(
     () => [
       {
@@ -195,28 +227,28 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         header: "Agent",
         width: 180,
         sortValue: (s) => name(agents, s.agent_id),
-        render: (s) => name(agents, s.agent_id) || "—",
+        render: (s) => partnerSelect(s, "agent", agents),
       },
       {
         key: "transporter",
         header: "Transporter",
         width: 170,
         sortValue: (s) => name(transporters, s.transporter_id),
-        render: (s) => name(transporters, s.transporter_id) || "—",
+        render: (s) => partnerSelect(s, "transporter", transporters),
       },
       {
         key: "clearing",
         header: "Clearing Agent",
         width: 170,
         sortValue: (s) => name(clearingAgents, s.clearing_agent_id),
-        render: (s) => name(clearingAgents, s.clearing_agent_id) || "—",
+        render: (s) => partnerSelect(s, "clearing_agent", clearingAgents),
       },
       {
-        key: "destination",
+        key: "destination_agent",
         header: "Destination Agent",
         width: 170,
         sortValue: (s) => name(destinationAgents, s.destination_agent_id),
-        render: (s) => name(destinationAgents, s.destination_agent_id) || "—",
+        render: (s) => partnerSelect(s, "destination_agent", destinationAgents),
       },
       {
         key: "linked",
