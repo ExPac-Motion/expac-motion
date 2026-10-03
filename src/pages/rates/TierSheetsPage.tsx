@@ -14,7 +14,9 @@ import {
   useAgents,
   useClearingAgents,
   useDeleteTariffSheet,
+  useJobs,
   usePartnerRateSheets,
+  useQuotes,
   useSaveTariffSheet,
   useTariffSheets,
   useTransporters,
@@ -26,6 +28,7 @@ import {
   type Contact,
   type PartnerKind,
   type PartnerRateSheet,
+  type Quote,
   type RateTierId,
   type TariffBuySource,
   type TariffSheet,
@@ -33,8 +36,12 @@ import {
   type TariffSheetLine,
 } from "../../lib/types";
 import {
+  ddmmyyyy,
   defaultTierLine,
   emptyTariffSheet,
+  placeShort,
+  routeName,
+  tariffLinesFromQuote,
   partnerIdKey,
   PARTNER_KINDS,
   PARTNER_LABEL,
@@ -86,6 +93,8 @@ export default function TierSheetsPage() {
   const [mode, setMode] = useState<string>(QUOTE_MODES[0]);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [duplicating, setDuplicating] = useState<TariffSheetDraft | null>(null);
+  const [importing, setImporting] = useState(false);
   const dirty = useRef(false);
 
   const all = useMemo(() => q.data ?? [], [q.data]);
@@ -113,12 +122,12 @@ export default function TierSheetsPage() {
     });
   }
 
-  async function createRoute(v: {
-    route: string;
-    origin: string;
-    destination: string;
-    allTiers: boolean;
-  }) {
+  /** Create a trade route on one or all tiers — blank, or copied from a
+   *  sheet (Duplicate). Each tier gets its own default margin. */
+  async function createRoute(
+    v: { route: string; origin: string; destination: string; allTiers: boolean },
+    from?: TariffSheetDraft,
+  ) {
     try {
       const tiers = v.allTiers ? RATE_TIERS.map((t) => t.id) : [tier];
       let openId: string | null = null;
@@ -127,9 +136,11 @@ export default function TierSheetsPage() {
           (s) => s.tier === t && s.mode === mode && s.route.toLowerCase() === v.route.toLowerCase(),
         );
         if (exists) continue;
+        const base = from ? { ...from, tier: t } : emptyTariffSheet(t, mode);
         const saved = await save.mutateAsync({
           values: {
-            ...emptyTariffSheet(t, mode),
+            ...base,
+            margin: from && t === from.tier ? from.margin : rateTier(t).margin,
             route: v.route,
             origin: v.origin || null,
             destination: v.destination || null,
@@ -138,8 +149,9 @@ export default function TierSheetsPage() {
         if (t === tier) openId = saved.id;
       }
       setCreating(false);
+      setDuplicating(null);
       if (openId) setPickedId(openId);
-      toast("Trade route added");
+      toast(from ? "Trade route duplicated" : "Trade route added");
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not add the trade route");
     }
@@ -157,6 +169,13 @@ export default function TierSheetsPage() {
           </button>
         }
       >
+        <button
+          className="btn outline"
+          onClick={() => guard(() => setImporting(true))}
+          title="Create tier sheets for the trade routes on your quotes and shipments"
+        >
+          Import routes
+        </button>
         <Link className="btn outline" to="/rates/list">
           Rate list
         </Link>
@@ -213,6 +232,7 @@ export default function TierSheetsPage() {
             routes={routes}
             onPick={(id) => guard(() => setPickedId(id))}
             onDirty={(v) => (dirty.current = v)}
+            onDuplicate={(draft) => guard(() => setDuplicating(draft))}
           />
         )}
       </div>
@@ -223,7 +243,31 @@ export default function TierSheetsPage() {
           mode={mode}
           busy={save.isPending}
           onClose={() => setCreating(false)}
-          onSave={createRoute}
+          onSave={(v) => createRoute(v)}
+        />
+      )}
+      {duplicating && (
+        <NewRouteModal
+          tier={tier}
+          mode={mode}
+          duplicateOf={duplicating}
+          busy={save.isPending}
+          onClose={() => setDuplicating(null)}
+          onSave={(v) => createRoute(v, duplicating)}
+        />
+      )}
+      {importing && (
+        <ImportRoutesModal
+          existing={all}
+          onClose={() => setImporting(false)}
+          onDone={(n, firstMode) => {
+            setImporting(false);
+            if (firstMode) {
+              setMode(firstMode);
+              setPickedId(null);
+            }
+            toast(`Created ${n} tier sheet${n === 1 ? "" : "s"}`);
+          }}
         />
       )}
     </>
@@ -236,12 +280,14 @@ function SheetEditor({
   routes,
   onPick,
   onDirty,
+  onDuplicate,
 }: {
   sheet: TariffSheet;
   all: TariffSheet[];
   routes: TariffSheet[];
   onPick: (id: string) => void;
   onDirty: (dirty: boolean) => void;
+  onDuplicate: (draft: TariffSheetDraft) => void;
 }) {
   const save = useSaveTariffSheet();
   const del = useDeleteTariffSheet();
@@ -403,6 +449,14 @@ function SheetEditor({
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button type="button" className="btn outline" onClick={onDelete}>
               Delete
+            </button>
+            <button
+              type="button"
+              className="btn outline"
+              onClick={() => onDuplicate(d)}
+              title="Copy this sheet to a new trade route"
+            >
+              Duplicate
             </button>
             <button
               type="button"
@@ -633,19 +687,22 @@ function SheetEditor({
 function NewRouteModal({
   tier,
   mode,
+  duplicateOf,
   busy,
   onClose,
   onSave,
 }: {
   tier: RateTierId;
   mode: string;
+  /** Duplicate: copy this sheet's partners + lines onto the new route. */
+  duplicateOf?: TariffSheetDraft;
   busy: boolean;
   onClose: () => void;
   onSave: (v: { route: string; origin: string; destination: string; allTiers: boolean }) => void;
 }) {
-  const [route, setRoute] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [route, setRoute] = useState(duplicateOf ? `${duplicateOf.route} (Copy)` : "");
+  const [origin, setOrigin] = useState(duplicateOf?.origin ?? "");
+  const [destination, setDestination] = useState(duplicateOf?.destination ?? "");
   const [allTiers, setAllTiers] = useState(true);
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -653,8 +710,17 @@ function NewRouteModal({
     onSave({ route: route.trim(), origin: origin.trim(), destination: destination.trim(), allTiers });
   }
   return (
-    <Modal title={`New ${mode} trade route`} onClose={onClose}>
+    <Modal
+      title={duplicateOf ? `Duplicate "${duplicateOf.route}"` : `New ${mode} trade route`}
+      onClose={onClose}
+    >
       <form onSubmit={submit}>
+        {duplicateOf && (
+          <p className="hint" style={{ marginTop: 0 }}>
+            Copies the linked partners and every line's buy source, buy, margin and sell onto a
+            new trade route.
+          </p>
+        )}
         <div className="field">
           <label>Trade route</label>
           <input
@@ -687,10 +753,242 @@ function NewRouteModal({
             Cancel
           </button>
           <button type="submit" className="btn" disabled={busy || !route.trim()}>
-            {busy ? "Creating…" : "Create"}
+            {busy ? "Creating…" : duplicateOf ? "Duplicate" : "Create"}
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+interface FoundRoute {
+  key: string;
+  mode: string;
+  route: string;
+  origin: string;
+  destination: string;
+  quotes: number;
+  shipments: number;
+  last: string;
+  /** Most recent quotation on the route with buy rates — seeds the sheet. */
+  latest: Quote | null;
+  /** Tiers that already have this route. */
+  have: RateTierId[];
+}
+
+/** Every mode + origin → destination on the quotations and shipments, to
+ *  create tier sheets for in one go (all three tiers). Each new sheet takes
+ *  the latest quote's agent / transporter / clearing agent and its coded
+ *  buy rates as manual buys — switch lines to a partner once their rate
+ *  sheets are in. */
+function ImportRoutesModal({
+  existing,
+  onClose,
+  onDone,
+}: {
+  existing: TariffSheet[];
+  onClose: () => void;
+  onDone: (created: number, firstMode: string | null) => void;
+}) {
+  const quotesQ = useQuotes();
+  const jobsQ = useJobs();
+  const save = useSaveTariffSheet();
+  const { error } = useToast();
+  const [progress, setProgress] = useState<string | null>(null);
+
+  const found = useMemo<FoundRoute[]>(() => {
+    const map = new Map<string, FoundRoute>();
+    const quotesById = new Map((quotesQ.data ?? []).map((q) => [q.id, q]));
+    const touch = (
+      mode: string,
+      origin: string | null,
+      destination: string | null,
+      when: string,
+    ): FoundRoute | null => {
+      if (!placeShort(origin) && !placeShort(destination)) return null;
+      const route = routeName(origin, destination);
+      const key = `${mode}|${route.toLowerCase()}`;
+      let f = map.get(key);
+      if (!f) {
+        f = {
+          key,
+          mode,
+          route,
+          origin: origin ?? "",
+          destination: destination ?? "",
+          quotes: 0,
+          shipments: 0,
+          last: when,
+          latest: null,
+          have: RATE_TIERS.filter((t) =>
+            existing.some(
+              (s) =>
+                s.tier === t.id && s.mode === mode && s.route.toLowerCase() === route.toLowerCase(),
+            ),
+          ).map((t) => t.id),
+        };
+        map.set(key, f);
+      }
+      if (when > f.last) f.last = when;
+      return f;
+    };
+    // Newest first, so the first quote with rates on a route is its latest.
+    for (const q of quotesQ.data ?? []) {
+      const f = touch(q.mode, q.origin, q.destination, q.created_at);
+      if (!f) continue;
+      f.quotes += 1;
+      if (!f.latest && (q.quote_lines ?? []).some((l) => Number(l.buy) > 0)) f.latest = q;
+    }
+    for (const j of jobsQ.data ?? []) {
+      const q = j.quote_id ? quotesById.get(j.quote_id) : undefined;
+      const f = touch(
+        j.mode,
+        j.origin ?? q?.origin ?? null,
+        j.destination ?? q?.destination ?? null,
+        j.created_at,
+      );
+      if (f) f.shipments += 1;
+    }
+    return [...map.values()].sort(
+      (a, b) =>
+        b.shipments + b.quotes - (a.shipments + a.quotes) || a.route.localeCompare(b.route),
+    );
+  }, [quotesQ.data, jobsQ.data, existing]);
+
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const selectable = found.filter((f) => f.have.length < RATE_TIERS.length);
+  const sel = picked ?? new Set(selectable.map((f) => f.key));
+  const chosen = selectable.filter((f) => sel.has(f.key));
+  const toggle = (key: string) => {
+    const next = new Set(sel);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setPicked(next);
+  };
+
+  async function run() {
+    const todo = chosen.flatMap((f) =>
+      RATE_TIERS.filter((t) => !f.have.includes(t.id)).map((t) => ({ f, t })),
+    );
+    let n = 0;
+    try {
+      for (const { f, t } of todo) {
+        setProgress(`Creating ${n + 1} of ${todo.length}…`);
+        const q = f.latest;
+        await save.mutateAsync({
+          values: {
+            ...emptyTariffSheet(t.id, f.mode),
+            route: f.route,
+            origin: f.origin || null,
+            destination: f.destination || null,
+            agent_id: q?.agent_id ?? null,
+            transporter_id: q?.transporter_id ?? null,
+            clearing_agent_id: q?.clearing_agent_id ?? null,
+            lines: q ? tariffLinesFromQuote(q) : emptyTariffSheet(t.id, f.mode).lines,
+            notes: q ? `Seeded from quotation ${q.reference}` : null,
+          },
+        });
+        n += 1;
+      }
+      onDone(n, chosen[0]?.mode ?? null);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not create the tier sheets");
+      setProgress(null);
+    }
+  }
+
+  const loading = quotesQ.isLoading || jobsQ.isLoading;
+  return (
+    <Modal title="Import trade routes from quotes & shipments" onClose={onClose} wide>
+      <p className="hint" style={{ marginTop: 0 }}>
+        Every mode + origin → destination on your quotations and shipments. Ticked routes get a
+        sheet on all three tiers (Platinum 10%, Gold 15%, Silver 18%), pre-filled from the route's
+        latest quotation: its agent, transporter and clearing agent, and its buy rates as manual
+        buys.
+      </p>
+      {loading ? (
+        <Loading />
+      ) : found.length === 0 ? (
+        <p className="hint">No quotes or shipments with an origin / destination yet.</p>
+      ) : (
+        <div className="table-wrap" style={{ maxHeight: "55vh", overflow: "auto" }}>
+          <table className="charge-table">
+            <thead>
+              <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectable.length > 0 && chosen.length === selectable.length}
+                    onChange={(e) =>
+                      setPicked(new Set(e.target.checked ? selectable.map((f) => f.key) : []))
+                    }
+                    title="Select all"
+                  />
+                </th>
+                <th>Mode</th>
+                <th>Trade route</th>
+                <th className="num">Quotes</th>
+                <th className="num">Shipments</th>
+                <th>Last</th>
+                <th>Seeded from</th>
+              </tr>
+            </thead>
+            <tbody>
+              {found.map((f) => {
+                const done = f.have.length === RATE_TIERS.length;
+                return (
+                  <tr key={f.key}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        disabled={done}
+                        checked={!done && sel.has(f.key)}
+                        onChange={() => toggle(f.key)}
+                      />
+                    </td>
+                    <td>{f.mode}</td>
+                    <td>
+                      <strong>{f.route}</strong>
+                      {done && <span className="hint"> · already set up</span>}
+                      {!done && f.have.length > 0 && (
+                        <span className="hint"> · adds the missing tiers</span>
+                      )}
+                    </td>
+                    <td className="num">{f.quotes}</td>
+                    <td className="num">{f.shipments}</td>
+                    <td>{ddmmyyyy(f.last)}</td>
+                    <td>
+                      {f.latest ? f.latest.reference : <span className="hint">blank sheet</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 12,
+        }}
+      >
+        {progress && <span className="hint">{progress}</span>}
+        <button type="button" className="btn outline" onClick={onClose} disabled={!!progress}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={run}
+          disabled={!!progress || loading || chosen.length === 0}
+        >
+          Create tier sheets ({chosen.length} route{chosen.length === 1 ? "" : "s"})
+        </button>
+      </div>
     </Modal>
   );
 }

@@ -1053,6 +1053,8 @@ export interface TariffSheetLine {
   source: TariffBuySource;
   /** Manual buy (source "manual"); otherwise the partner's rate is used live. */
   buy: number | null;
+  /** Currency of a manual buy — defaults to the code's currency. */
+  cur?: LineCurrency;
   /** null = the sheet's tier margin. */
   margin: number | null;
   /** Sell (R) for sell-only codes (FW-01 / IN-01 / DIS-01 / CU-05 ...). */

@@ -11,6 +11,7 @@ import {
   type PartnerKind,
   type PartnerRateSheet,
   type PartnerSheetLine,
+  type Quote,
   type RateTierId,
   type TariffSheet,
   type TariffSheetDraft,
@@ -154,7 +155,7 @@ export function tierLine(
       sellOnly,
       source: "manual",
       buy,
-      cur: item.cur,
+      cur: line.cur ?? item.cur,
       margin,
       sell: buy == null ? null : buy * (1 + margin / 100),
       hasBreaks: false,
@@ -213,6 +214,37 @@ export function sheetIdKey(kind: PartnerKind) {
 }
 export function partnerIdKey(kind: PartnerKind) {
   return `${kind}_id` as const;
+}
+
+/* ---------- trade routes from quotes / shipments ---------- */
+
+/** "CNSZX — Shenzhen, China" -> "CNSZX"; free text stays as typed. */
+export function placeShort(s: string | null | undefined): string {
+  const t = (s ?? "").trim();
+  const m = t.match(/^([A-Z]{2}[A-Z0-9]{3})\b/);
+  return m ? m[1] : t;
+}
+export function routeName(origin: string | null | undefined, destination: string | null | undefined) {
+  return `${placeShort(origin) || "Any"} → ${placeShort(destination) || "Any"}`;
+}
+
+/** A tier sheet's lines seeded from a quotation: each coded charge's buy
+ *  (as a manual buy, in the quote line's currency) and the service fees'
+ *  Sell (R). Customs VAT / Duty are per-shipment, so they're left out. */
+export function tariffLinesFromQuote(q: Quote): Record<string, TariffSheetLine> {
+  const lines = emptyTariffSheet("silver", q.mode).lines;
+  for (const l of q.quote_lines ?? []) {
+    const code = String(l.code ?? "");
+    if (!(code in lines) || code === CUSTOMS_VAT_CODE || code === CUSTOMS_DUTY_CODE) continue;
+    if (isSellOnlyCode(code)) {
+      const sell = Number(l.sell) || 0;
+      if (sell > 0) lines[code] = { ...lines[code], sell };
+    } else {
+      const buy = Number(l.buy) || 0;
+      if (buy > 0) lines[code] = { source: "manual", buy, cur: l.cur, margin: null, sell: null };
+    }
+  }
+  return lines;
 }
 
 /** dd/mm/yyyy for an ISO date. */
