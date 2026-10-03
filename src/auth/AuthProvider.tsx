@@ -66,7 +66,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { full_name: fullName.trim(), ...extraMeta } },
+          options: {
+            data: { full_name: fullName.trim(), ...extraMeta },
+            // The confirmation link comes back to this site (not Supabase's
+            // default Site URL). Partner signups land on their portal, which
+            // links the login to its invite (claim_my_partner_invite, 0122).
+            emailRedirectTo:
+              window.location.origin +
+              (extraMeta?.signup_kind === "partner"
+                ? "/partner"
+                : extraMeta?.signup_kind === "portal"
+                  ? "/portal"
+                  : "/"),
+          },
         });
         if (error) throw error;
       },

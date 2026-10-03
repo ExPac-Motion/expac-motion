@@ -2447,7 +2447,13 @@ export async function deleteTariffSheetsBulk(ids: string[]): Promise<void> {
 /** The signed-in partner login's own agent / transporter / clearing agent. */
 export async function getMyPartner(): Promise<MyPartner | null> {
   const rows = unwrap<MyPartner[]>(await supabase.rpc("my_partner"));
-  return rows[0] ?? null;
+  if (rows[0]) return rows[0];
+  // Not linked yet (confirmed from the email link instead of clicking
+  // Continue on the signup page): link to the open invite for this email.
+  const { data: linked, error } = await supabase.rpc("claim_my_partner_invite");
+  if (error || !linked) return null;
+  const again = unwrap<MyPartner[]>(await supabase.rpc("my_partner"));
+  return again[0] ?? null;
 }
 export async function listPartnerInvites(
   kind: PartnerKind,
