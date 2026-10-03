@@ -3,7 +3,8 @@
  * via the Anthropic Messages API.
  *
  * Holds ANTHROPIC_API_KEY (Cloudflare Pages env). Verifies the caller is a
- * signed-in Supabase user (same as functions/api/send-mail.ts), then asks
+ * signed-in staff login (profiles.role admin / user — same checks as
+ * functions/api/send-mail.ts; portal logins get 403), then asks
  * Claude Haiku to rewrite an HTML fragment per a fixed action and returns
  * the rewritten HTML. Merge-field tokens ({{ contact.name }} etc.) and
  * <a> hrefs are preserved by the system prompt.
@@ -31,7 +32,27 @@ async function verifyUser(env, authHeader) {
     const r = await fetch(env.SUPABASE_URL + "/auth/v1/user", {
       headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader },
     });
-    return r.ok;
+    if (!r.ok) return null;
+    const u = await r.json();
+    return u && u.id ? { id: u.id } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Staff = profiles.role admin / user — mirrors public.is_staff(), including
+ *  treating a not-yet-created profile row as staff. Read with the caller's own
+ *  token, so RLS lets them see only their own profile. */
+async function isStaffUser(env, authHeader, userId) {
+  try {
+    const r = await fetch(
+      env.SUPABASE_URL + "/rest/v1/profiles?select=role&id=eq." + encodeURIComponent(userId),
+      { headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader } },
+    );
+    if (!r.ok) return false;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) return true;
+    return rows[0].role === "admin" || rows[0].role === "user";
   } catch {
     return false;
   }
@@ -67,8 +88,12 @@ export async function onRequestPost(context) {
     );
   }
 
-  const ok = await verifyUser(env, context.request.headers.get("authorization"));
-  if (!ok) return json({ error: "Not authenticated." }, 401);
+  const authHeader = context.request.headers.get("authorization");
+  const user = await verifyUser(env, authHeader);
+  if (!user) return json({ error: "Not authenticated." }, 401);
+  if (!(await isStaffUser(env, authHeader, user.id))) {
+    return json({ error: "Not permitted." }, 403);
+  }
 
   let body;
   try {

@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 import type { Job, JobTracking, TrackingMovement } from "./types";
 
 /* ------------------------------------------------------------------ *
@@ -271,9 +272,17 @@ export async function fetchTracking(
         body: { [numberField]: ref.value },
       };
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const res = await fetch("/api/track", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(session?.access_token
+        ? { authorization: `Bearer ${session.access_token}` }
+        : {}),
+    },
     body: JSON.stringify(body),
   });
 

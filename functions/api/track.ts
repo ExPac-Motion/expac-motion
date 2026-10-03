@@ -12,7 +12,11 @@
  *
  * Request (POST /api/track):
  *   { "path": "/ocean/shipments", "method": "POST", "query": {...}, "body": {...} }
- * Only GET/POST and paths under /ocean/ or /air/ are allowed.
+ * Only GET/POST and paths under /ocean/ or /air/ are allowed. The caller must
+ * be a signed-in staff login (Supabase bearer token, profiles.role admin /
+ * user — same checks as functions/api/send-mail.ts).
+ *
+ * Env: SHIPSGO_TOKEN, SUPABASE_URL, SUPABASE_ANON_KEY
  *
  * Local `npm run dev` (Vite) does not run this — the UI falls back to the cached
  * job_tracking row and tells the user live refresh runs on the deployed site.
@@ -30,10 +34,50 @@ function json(data, status) {
   });
 }
 
+async function verifyUser(env, authHeader) {
+  if (!authHeader || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null;
+  try {
+    const r = await fetch(env.SUPABASE_URL + "/auth/v1/user", {
+      headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader },
+    });
+    if (!r.ok) return null;
+    const u = await r.json();
+    return u && u.id ? { id: u.id } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Staff = profiles.role admin / user — mirrors public.is_staff(), including
+ *  treating a not-yet-created profile row as staff. Read with the caller's own
+ *  token, so RLS lets them see only their own profile. */
+async function isStaffUser(env, authHeader, userId) {
+  try {
+    const r = await fetch(
+      env.SUPABASE_URL + "/rest/v1/profiles?select=role&id=eq." + encodeURIComponent(userId),
+      { headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader } },
+    );
+    if (!r.ok) return false;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) return true;
+    return rows[0].role === "admin" || rows[0].role === "user";
+  } catch {
+    return false;
+  }
+}
+
 export async function onRequestPost(context) {
-  const token = context.env && context.env.SHIPSGO_TOKEN;
+  const env = context.env || {};
+  const token = env.SHIPSGO_TOKEN;
   if (!token) {
     return json({ error: "SHIPSGO_TOKEN is not configured on this deployment." }, 500);
+  }
+
+  const authHeader = context.request.headers.get("authorization");
+  const user = await verifyUser(env, authHeader);
+  if (!user) return json({ error: "Not authenticated." }, 401);
+  if (!(await isStaffUser(env, authHeader, user.id))) {
+    return json({ error: "Not permitted." }, 403);
   }
 
   let req;
