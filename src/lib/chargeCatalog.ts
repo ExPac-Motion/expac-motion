@@ -47,9 +47,9 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   // Warehousing (codes only, no section of their own): origin warehousing (USD) on a
   // shipping agent's Ex-Works lines, local warehousing on a transporter's
   // Cartage & Road Freight lines (ZAR).
-  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-01", description: "Storage", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "CBM" },
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-01", description: "Warehousing and Storage", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "CBM" },
   { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-02", description: "Handling In/Out", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "CBM" },
-  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-03", description: "Palletising", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "" },
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-03", description: "Packaging and Palletizing", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "PKGS" },
 
   // ---- FOB Charges ----
   { category: "FOB Charges", code: "FB-01", description: "Release Fee", cur: "USD", unit: "B/L" },

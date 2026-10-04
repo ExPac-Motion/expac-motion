@@ -190,6 +190,8 @@ export function lineTotalIncl(l: QuoteLine): number {
 export const WEIGHT_UNITS = ["KGS", "THC"];
 /** Units whose qty is the packing-list chargeable volume (CBM). Any mode. */
 export const VOLUME_UNITS = ["CBM", "W/M", "R/T"];
+/** Units whose qty is the packing-list package count. Any mode. */
+export const PACKAGE_UNITS = ["PKGS"];
 
 /** Ocean Freight (LCL-DDP): qty billed per freight ton (W/M), min 0.50. */
 export const OCEAN_LCL_DDP_CODE = "OF-06";
@@ -219,6 +221,9 @@ export function autoQty(
   }
   if (VOLUME_UNITS.includes(unit)) {
     return pack.totalCbm;
+  }
+  if (PACKAGE_UNITS.includes(unit)) {
+    return pack.qty;
   }
   return null;
 }

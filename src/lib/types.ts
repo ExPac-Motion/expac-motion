@@ -863,6 +863,7 @@ export const INCOTERM_CODES: string[] = [
 
 export const CHARGE_UNITS: string[] = [
   "KGS",
+  "PKGS",
   "AWB",
   "INV",
   "DOC",
