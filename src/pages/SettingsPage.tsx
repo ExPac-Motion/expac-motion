@@ -1,8 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
-import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
+import { EmptyState, ErrorNote, Loading, PageHeader, Popover } from "../components/common";
 import MergeCodeMenu from "../components/MergeCodeMenu";
-import Modal from "../components/Modal";
 import RichTextEditor from "../components/RichTextEditor";
 import { useToast } from "../components/Toast";
 import {
@@ -13,6 +12,7 @@ import {
   useQuotes,
   useUpdateCompanySettings,
   useUpdateProfile,
+  useSetPortalPermissions,
   useUploadMailAsset,
 } from "../lib/hooks";
 import { SHIPMENT_MERGE_CODES } from "../lib/mailMerge";
@@ -47,7 +47,7 @@ import {
   CLIENT_PERMS,
   PARTNER_PERMS,
   STAFF_PERMS,
-  accessSummary,
+  ADMIN_ONLY_LABEL,
   rolePermissions,
   type PermDef,
   type PermKey,
@@ -314,8 +314,6 @@ function TeamTab() {
   const update = useUpdateProfile();
   const { toast, error: toastError } = useToast();
   const [editingName, setEditingName] = useState<string | null>(null);
-  const [permsFor, setPermsFor] = useState<Profile | null>(null);
-  const settingsQ = useCompanySettings();
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
@@ -353,7 +351,7 @@ function TeamTab() {
         access, Restricted blocks it entirely. Partner Portal and Customer Portal logins are managed on
         the partner / customer record.
       </p>
-      <div className="table-wrap">
+      <div className="table-wrap team-wrap">
         <table>
           <thead>
             <tr>
@@ -402,28 +400,8 @@ function TeamTab() {
                     <span className="tag">{roleLabel(p)}</span>
                   )}
                 </td>
-                <td style={{ whiteSpace: "normal" }}>
-                  <div className="access-chips">
-                    {accessSummary(p, settingsQ.data?.role_permissions).map((a) => (
-                      <span key={a.label} className={`access-chip${a.on ? " on" : ""}`}>
-                        {a.on ? "✓" : "✕"} {a.label}
-                      </span>
-                    ))}
-                  </div>
-                  {isAdmin && (p.role === "user" || (p.role === "partner" && p.partner_id)) ? (
-                    <button
-                      type="button"
-                      className="btn small outline"
-                      style={{ marginTop: 6 }}
-                      onClick={() => setPermsFor(p)}
-                    >
-                      {Object.keys(p.permissions ?? {}).length ? "Custom — edit" : "Role default — edit"}
-                    </button>
-                  ) : p.role === "client" ? (
-                    <span className="muted" style={{ fontSize: "0.75rem" }}>
-                      Edit on Customers › Portal Access
-                    </span>
-                  ) : null}
+                <td>
+                  <AccessChecklist profile={p} canEdit={isAdmin} />
                 </td>
                 <td className="nowrap">{formatDate(p.created_at)}</td>
               </tr>
@@ -431,7 +409,6 @@ function TeamTab() {
           </tbody>
         </table>
       </div>
-      {permsFor && <PermOverrideModal profile={permsFor} onClose={() => setPermsFor(null)} />}
     </>
   );
 }
@@ -547,75 +524,113 @@ function RolesTab() {
   );
 }
 
-/** Team › Permissions: one login's overrides (Default = the role's setting). */
-function PermOverrideModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
+/** Settings › Team › Access: every function a login can use, as a
+ *  dropdown checklist. Ticking / unticking saves straight away as that
+ *  login's own setting (Standard User / Partner Portal User — Role default
+ *  follows Settings › Roles & Permissions) or its portal sections
+ *  (Customer Portal). Admin always has everything. */
+function AccessChecklist({ profile: p, canEdit }: { profile: Profile; canEdit: boolean }) {
   const settingsQ = useCompanySettings();
   const update = useUpdateProfile();
+  const setPortal = useSetPortalPermissions();
   const qc = useQueryClient();
   const { toast, error: toastError } = useToast();
-  const roleKey = profile.role === "partner" ? "partner" : "user";
-  const defs: PermDef<PermKey>[] = roleKey === "partner" ? PARTNER_PERMS : STAFF_PERMS;
-  const roleVals = rolePermissions(settingsQ.data?.role_permissions)[roleKey] as Record<string, boolean>;
-  const [over, setOver] = useState<Partial<Record<PermKey, boolean>>>(profile.permissions ?? {});
+  const roles = rolePermissions(settingsQ.data?.role_permissions);
+  const roleKey = p.role === "user" ? "user" : p.role === "partner" && p.partner_id ? "partner" : null;
+  const busy = update.isPending || setPortal.isPending;
 
-  async function onSave() {
+  type Row = { key: string; label: string; hint?: string; on: boolean; fixed?: boolean; custom?: boolean };
+  let rows: Row[];
+  if (p.role === "admin") {
+    rows = [
+      ...STAFF_PERMS.map((d) => ({ key: d.key, label: d.label, hint: d.hint, on: true, fixed: true })),
+      { key: "admin", label: ADMIN_ONLY_LABEL, on: true, fixed: true },
+    ];
+  } else if (roleKey) {
+    const defs: PermDef<PermKey>[] = roleKey === "user" ? STAFF_PERMS : PARTNER_PERMS;
+    const base = roles[roleKey] as Record<string, boolean>;
+    rows = defs.map((d) => {
+      const own = p.permissions?.[d.key];
+      return { key: d.key, label: d.label, hint: d.hint, on: own ?? base[d.key] ?? false, custom: own != null };
+    });
+    rows =
+      roleKey === "user"
+        ? [...rows, { key: "admin", label: ADMIN_ONLY_LABEL, on: false, fixed: true }]
+        : [{ key: "own", label: "Own rate sheets (add / edit)", on: true, fixed: true }, ...rows];
+  } else if (p.role === "client") {
+    rows = CLIENT_PERMS.map((d) => ({ key: d.key, label: d.label, on: p.portal_permissions?.[d.key] !== false }));
+  } else {
+    rows = [{ key: "none", label: "No access (switched off)", on: false, fixed: true }];
+  }
+  const editable = rows.filter((r) => !r.fixed);
+  const onCount = rows.filter((r) => r.on).length;
+  const hasCustom = rows.some((r) => r.custom);
+
+  async function saveOverrides(next: Partial<Record<PermKey, boolean>>) {
+    await update.mutateAsync({ id: p.id, patch: { permissions: Object.keys(next).length ? next : null } });
+    qc.invalidateQueries({ queryKey: ["my_permissions"] });
+  }
+  async function toggle(r: Row) {
     try {
-      const permissions = Object.keys(over).length ? over : null;
-      await update.mutateAsync({ id: profile.id, patch: { permissions } });
-      qc.invalidateQueries({ queryKey: ["my_permissions"] });
-      toast("Permissions saved");
-      onClose();
+      if (p.role === "client") {
+        const next = { ...p.portal_permissions, [r.key]: !r.on } as Profile["portal_permissions"];
+        await setPortal.mutateAsync({ profileId: p.id, permissions: next });
+      } else if (roleKey) {
+        const base = (roles[roleKey] as Record<string, boolean>)[r.key] ?? false;
+        const next = { ...(p.permissions ?? {}) } as Partial<Record<PermKey, boolean>>;
+        // Back to the role's setting = no override.
+        if (!r.on === base) delete next[r.key as PermKey];
+        else next[r.key as PermKey] = !r.on;
+        await saveOverrides(next);
+      }
+      toast(`${r.label}: ${r.on ? "removed" : "allowed"}`);
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Could not save — is migration 0131 applied?");
+      toastError(e instanceof Error ? e.message : "Could not change access");
     }
   }
 
   return (
-    <Modal title={`Permissions — ${profile.full_name || profile.email || "login"}`} onClose={onClose}>
-      <p className="muted" style={{ marginTop: 0 }}>
-        {roleLabel(profile)}. <strong>Role default</strong> follows Settings › Roles & Permissions.
-      </p>
-      <div className="table-wrap">
-        <table>
-          <tbody>
-            {defs.map((d) => {
-              const val = over[d.key];
-              return (
-                <tr key={d.key}>
-                  <td>
-                    <strong>{d.label}</strong>
-                    <div className="muted" style={{ fontSize: "0.78rem" }}>{d.hint}</div>
-                  </td>
-                  <td style={{ width: 210 }}>
-                    <select
-                      value={val == null ? "" : val ? "on" : "off"}
-                      onChange={(e) => {
-                        const next = { ...over };
-                        if (e.target.value === "") delete next[d.key];
-                        else next[d.key] = e.target.value === "on";
-                        setOver(next);
-                      }}
-                    >
-                      <option value="">Role default ({roleVals[d.key] ? "allowed" : "blocked"})</option>
-                      <option value="on">Allow</option>
-                      <option value="off">Block</option>
-                    </select>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-        <button type="button" className="btn outline" onClick={onClose}>
-          Cancel
-        </button>
-        <button type="button" className="btn" disabled={update.isPending} onClick={onSave}>
-          {update.isPending ? "Saving…" : "Save"}
-        </button>
-      </div>
-    </Modal>
+    <Popover
+      label={p.role === "admin" ? "Everything" : `${onCount} of ${rows.length}${hasCustom ? " · custom" : ""}`}
+    >
+      {() => (
+        <div className="access-menu">
+          {rows.map((r) => (
+            <label key={r.key} className={`access-row${r.fixed || !canEdit ? " fixed" : ""}`}>
+              <input
+                type="checkbox"
+                checked={r.on}
+                disabled={r.fixed || !canEdit || busy}
+                onChange={() => toggle(r)}
+              />
+              <span>
+                <strong>{r.label}</strong>
+                {r.custom && <em className="access-custom"> custom</em>}
+                {r.hint && <span className="access-hint">{r.hint}</span>}
+              </span>
+            </label>
+          ))}
+          {canEdit && roleKey && hasCustom && (
+            <button
+              type="button"
+              className="btn ghost small"
+              disabled={busy}
+              onClick={async () => {
+                try {
+                  await saveOverrides({});
+                  toast("Back to the role default");
+                } catch (e) {
+                  toastError(e instanceof Error ? e.message : "Could not reset");
+                }
+              }}
+            >
+              Reset to role default
+            </button>
+          )}
+          {editable.length > 0 && !canEdit && <p className="hint">Only Admin can change access.</p>}
+        </div>
+      )}
+    </Popover>
   );
 }
 

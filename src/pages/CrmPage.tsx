@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useCan } from "../lib/hooks";
 import { PageHeader } from "../components/common";
 import CampaignsPage from "./crm/CampaignsPage";
@@ -52,8 +52,17 @@ export default function CrmPage() {
   const [params] = useSearchParams();
   const can = useCan();
   const asked = (params.get("tab") as Tab) || "dashboard";
-  // Dashboard / Trends (sales performance, financials) need "crm" (0131).
-  const tab: Tab = !can("crm") && (asked === "dashboard" || asked === "trends") ? "leads" : asked;
+  // Dashboard / Trends (sales performance, financials) need "crm" (0131);
+  // every other tab needs "leads" (0133).
+  const allowed = (t: Tab) => (t === "dashboard" || t === "trends" ? can("crm") : can("leads"));
+  const tab: Tab | null = allowed(asked)
+    ? asked
+    : can("leads")
+      ? "leads"
+      : can("crm")
+        ? "dashboard"
+        : null;
+  if (!tab) return <Navigate to="/" replace />;
   const copy = COPY[tab] ?? COPY.dashboard;
 
   return (

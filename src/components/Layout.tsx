@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
 import { useCan, useMyProfile } from "../lib/hooks";
+import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
 
@@ -172,17 +173,26 @@ export default function Layout() {
   // Role permissions (0131): Rates & Tariff needs "rates" (the tables are
   // locked to admin / rates permission in the database); the CRM Dashboard
   // and Trends (sales performance, financials) need "crm".
-  if (!can("rates")) nav = nav.filter((m) => m.to !== "/rates");
-  if (!can("crm"))
-    nav = nav.map((m) =>
-      m.to === "/crm"
-        ? {
-            ...m,
-            to: "/crm?tab=leads",
-            children: m.children?.filter((c) => c.to !== "/crm" && !c.to.includes("tab=trends")),
-          }
-        : m,
-    );
+  // Each Motion area (0133) is its own permission.
+  const AREA: Record<string, PermKey> = {
+    "/ops": "ops",
+    "/jobs": "shipments",
+    "/quotes": "quotes",
+    "/import-vat-duty": "customs",
+    "/clients": "customers",
+    "/suppliers": "suppliers",
+    "/rates": "rates",
+  };
+  nav = nav.filter((m) => !AREA[m.to] || can(AREA[m.to]));
+  // Sales CRM: Dashboard / Trends need "crm", every other tab "leads".
+  const crmTab = (to: string) => to === "/crm" || to.includes("tab=trends");
+  nav = nav
+    .map((m) => {
+      if (m.to !== "/crm") return m;
+      const children = m.children?.filter((c) => (crmTab(c.to) ? can("crm") : can("leads")));
+      return { ...m, to: children?.[0]?.to ?? m.to, children };
+    })
+    .filter((m) => m.to !== "/crm" && !m.to.startsWith("/crm?") ? true : (m.children?.length ?? 0) > 0);
 
   const activeModule = nav.find((m) => isModuleActive(m, pathname));
 

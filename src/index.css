@@ -6051,3 +6051,53 @@ table.dt .task-title {
   color: var(--green-dark);
   text-decoration: none;
 }
+/* Settings > Team > Access dropdown checklist. */
+.access-menu {
+  min-width: 340px;
+  max-width: 420px;
+  display: grid;
+  gap: 2px;
+  white-space: normal;
+}
+.access-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 6px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.access-row:hover {
+  background: var(--teal-tint);
+}
+.access-row.fixed {
+  cursor: default;
+  opacity: 0.75;
+}
+.access-row input {
+  margin-top: 2px;
+}
+.access-hint {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.access-custom {
+  font-size: 0.7rem;
+  color: var(--amber-ink);
+  font-style: normal;
+}
+/* Team list: let the Access dropdown open past the table edge. */
+.table-wrap.team-wrap {
+  overflow: visible;
+  max-height: none;
+}
+.team-wrap .ui-pop-menu {
+  width: auto;
+  max-height: 70vh;
+}

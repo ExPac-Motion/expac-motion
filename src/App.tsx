@@ -250,22 +250,22 @@ function AppRoutes() {
           </Route>
           <Route element={<Protected />}>
             <Route index element={<DashboardPage />} />
-            <Route path="ops" element={<OpsControlTowerPage />} />
-            <Route path="quotes" element={<QuotesListPage />} />
-            <Route path="import-vat-duty" element={<ImportVatDutyPage />} />
-            <Route path="quotes/new" element={<QuoteBuilderPage />} />
-            <Route path="quotes/:id" element={<QuoteBuilderPage />} />
-            <Route path="jobs" element={<JobsPage />} />
-            <Route path="jobs/completed" element={<CompletedJobsPage />} />
-            <Route path="clients" element={<ClientsPage />} />
+            <Route path="ops" element={<NeedsPerm perm="ops"><OpsControlTowerPage /></NeedsPerm>} />
+            <Route path="quotes" element={<NeedsPerm perm="quotes"><QuotesListPage /></NeedsPerm>} />
+            <Route path="import-vat-duty" element={<NeedsPerm perm="customs"><ImportVatDutyPage /></NeedsPerm>} />
+            <Route path="quotes/new" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
+            <Route path="quotes/:id" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
+            <Route path="jobs" element={<NeedsPerm perm="shipments"><JobsPage /></NeedsPerm>} />
+            <Route path="jobs/completed" element={<NeedsPerm perm="shipments"><CompletedJobsPage /></NeedsPerm>} />
+            <Route path="clients" element={<NeedsPerm perm="customers"><ClientsPage /></NeedsPerm>} />
             <Route path="crm" element={<CrmPage />} />
             <Route path="rates" element={<NeedsPerm perm="rates"><TierSheetsPage /></NeedsPerm>} />
             <Route path="rates/list" element={<NeedsPerm perm="rates"><RatesPage /></NeedsPerm>} />
-            <Route path="suppliers" element={<SuppliersPage />} />
-            <Route path="agents" element={<AgentsPage />} />
-            <Route path="transporters" element={<TransportersPage />} />
-            <Route path="clearing-agents" element={<ClearingAgentsPage />} />
-            <Route path="destination-agents" element={<DestinationAgentsPage />} />
+            <Route path="suppliers" element={<NeedsPerm perm="suppliers"><SuppliersPage /></NeedsPerm>} />
+            <Route path="agents" element={<NeedsPerm perm="suppliers"><AgentsPage /></NeedsPerm>} />
+            <Route path="transporters" element={<NeedsPerm perm="suppliers"><TransportersPage /></NeedsPerm>} />
+            <Route path="clearing-agents" element={<NeedsPerm perm="suppliers"><ClearingAgentsPage /></NeedsPerm>} />
+            <Route path="destination-agents" element={<NeedsPerm perm="suppliers"><DestinationAgentsPage /></NeedsPerm>} />
             <Route path="settings" element={<NeedsPerm perm="settings"><SettingsPage /></NeedsPerm>} />
           </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
