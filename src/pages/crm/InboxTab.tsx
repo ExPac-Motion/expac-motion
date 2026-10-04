@@ -5,6 +5,7 @@
 // 5 minutes (and on Sync now); a message's raw .eml is parsed here when it's
 // opened. Replies go out through /api/send-mail, threaded under the original.
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import type React from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import { EmptyState, ErrorNote, Loading, PageTools, SearchInput } from "../../components/common";
@@ -55,7 +56,9 @@ const RECORD_ROUTE: Record<string, string> = {
   destination_agent: "/destination-agents",
   lead: "/crm?tab=leads",
 };
-const OUR_DOMAIN = "@expac.co.za";
+/** Our own mail (any expac.co.za address, incl. a sending subdomain like
+ *  send.expac.co.za) never needs a reply. */
+const isOurs = (email: string | null) => /(@|\.)expac\.co\.za$/i.test((email ?? "").trim());
 
 const isUnread = (m: InboxMessage) => m.direction === "in" && !m.seen && !m.read_at;
 const needsReply = (m: InboxMessage) =>
@@ -64,7 +67,7 @@ const needsReply = (m: InboxMessage) =>
   !m.replied_at &&
   !m.done_at &&
   !m.is_bulk &&
-  !(m.from_email ?? "").endsWith(OUR_DOMAIN);
+  !isOurs(m.from_email);
 const cat = (m: InboxMessage): InboxCategory => m.category ?? "unknown";
 
 function shortDate(iso: string) {
@@ -121,6 +124,37 @@ export default function InboxTab() {
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [compose, setCompose] = useState<{ replyTo?: InboxMessage } | null>(null);
+  // Draggable divider between the list and the reading pane (width kept per browser).
+  const [listWidth, setListWidth] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem("inbox-list-width")) || 380;
+    } catch {
+      return 380;
+    }
+  });
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = listWidth;
+    let w = startW;
+    const move = (ev: MouseEvent) => {
+      w = Math.min(1100, Math.max(260, startW + ev.clientX - startX));
+      setListWidth(w);
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.classList.remove("inbox-resizing");
+      try {
+        localStorage.setItem("inbox-list-width", String(w));
+      } catch {
+        /* storage unavailable */
+      }
+    };
+    document.body.classList.add("inbox-resizing");
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  }
 
   const all = useMemo(() => q.data ?? [], [q.data]);
   const jobs = useMemo(() => jobsQ.data ?? [], [jobsQ.data]);
@@ -211,7 +245,7 @@ export default function InboxTab() {
         <p className="hint">The inbox isn't connected yet — add the IMAP settings in Cloudflare.</p>
       )}
 
-      <div className="panel inbox">
+      <div className="panel inbox" style={{ "--inbox-list": `${listWidth}px` } as React.CSSProperties}>
         <nav className="inbox-nav">
           <div className="inbox-nav-head">Folders</div>
           {FOLDERS.map((f) => {
@@ -297,6 +331,22 @@ export default function InboxTab() {
             ))
           )}
         </div>
+
+        <div
+          className="inbox-splitter"
+          role="separator"
+          aria-orientation="vertical"
+          title="Drag to resize · double-click to reset"
+          onMouseDown={startResize}
+          onDoubleClick={() => {
+            setListWidth(380);
+            try {
+              localStorage.removeItem("inbox-list-width");
+            } catch {
+              /* storage unavailable */
+            }
+          }}
+        />
 
         <div className="inbox-reader">
           {open ? (

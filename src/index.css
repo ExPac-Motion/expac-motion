@@ -6133,7 +6133,8 @@ table.dt .task-title {
 /* ---------- Sales CRM › Inbox (0134) ---------- */
 .panel.inbox {
   display: grid;
-  grid-template-columns: 210px minmax(280px, 380px) minmax(0, 1fr);
+  /* list width set by the draggable divider (--inbox-list) */
+  grid-template-columns: 210px var(--inbox-list, 380px) 7px minmax(0, 1fr);
   gap: 0;
   padding: 0;
   min-height: 70vh;
@@ -6200,7 +6201,6 @@ table.dt .task-title {
 .inbox-dot.cat-unknown { background: #b9b9b2; }
 .inbox-dot.cat-all { background: var(--night); }
 .inbox-list {
-  border-right: 1px solid var(--line);
   overflow-y: auto;
   max-height: 78vh;
 }
@@ -6356,9 +6356,30 @@ table.dt .task-title {
   text-decoration: none;
   background: var(--white);
 }
+/* The draggable divider between the list and the reading pane. */
+.inbox-splitter {
+  cursor: col-resize;
+  background: linear-gradient(to right, transparent 3px, var(--line) 3px, var(--line) 4px, transparent 4px);
+}
+.inbox-splitter:hover,
+.inbox-resizing .inbox-splitter {
+  background: linear-gradient(to right, transparent 2px, var(--teal) 2px, var(--teal) 5px, transparent 5px);
+}
+.inbox-resizing,
+.inbox-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+/* the message iframe would swallow the drag */
+.inbox-resizing .inbox-frame {
+  pointer-events: none;
+}
 @media (max-width: 900px) {
   .panel.inbox {
     grid-template-columns: 1fr;
+  }
+  .inbox-splitter {
+    display: none;
   }
   .inbox-nav,
   .inbox-list {
