@@ -35,6 +35,23 @@ import {
   worksheetGroups,
 } from "../../lib/tariff";
 import { itemCur } from "../../lib/chargeCatalog";
+import { LOCODES, locodeLabel } from "../../lib/locodes";
+
+/** Trade routes run from the partner's countries to South Africa (for now). */
+const HOME_COUNTRY = "South Africa";
+const ARROW = " → ";
+const KNOWN_COUNTRIES = new Set(LOCODES.map((l) => l.country));
+/** "China → South Africa" -> ["China", "South Africa"] (known countries only). */
+function routeCountries(route: string): [string | null, string | null] {
+  const [from, to] = route.split("→").map((s) => s.trim());
+  return [
+    from && KNOWN_COUNTRIES.has(from) ? from : null,
+    to && KNOWN_COUNTRIES.has(to) ? to : null,
+  ];
+}
+/** Port / airport options in a country ("ZAJNB — Johannesburg (OR Tambo), South Africa"). */
+const placesIn = (country: string | null) =>
+  LOCODES.filter((l) => !country || l.country === country).map(locodeLabel);
 
 const fmt = (n: number) =>
   n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
@@ -79,6 +96,7 @@ export default function PartnerRateSheets({
   partnerId,
   partnerName,
   modes,
+  countries,
   canDelete = true,
   showHistory = false,
 }: {
@@ -87,6 +105,8 @@ export default function PartnerRateSheets({
   partnerName: string;
   /** The partner's Coverage modes handled — only these get sheets. */
   modes?: string[] | null;
+  /** The partner's Coverage countries — each is a trade route to South Africa. */
+  countries?: string[] | null;
   /** Partner-portal logins can add and edit, never delete (0121). */
   canDelete?: boolean;
   /** Admin: each sheet's change history (partner_rate_sheet_history). */
@@ -188,6 +208,12 @@ export default function PartnerRateSheets({
         <PartnerSheetEditor
           kind={kind}
           modes={sheetModes(modes, [editing.draft.mode])}
+          routes={[
+            ...(countries ?? [])
+              .filter((c) => c !== HOME_COUNTRY)
+              .map((c) => `${c}${ARROW}${HOME_COUNTRY}`),
+            ...all.map((s) => s.route),
+          ]}
           initial={editing.draft}
           isNew={!editing.id}
           saving={save.isPending}
@@ -407,6 +433,7 @@ function numOrNull(v: string): number | null {
 export function PartnerSheetEditor({
   kind,
   modes,
+  routes,
   initial,
   isNew,
   saving,
@@ -416,6 +443,9 @@ export function PartnerSheetEditor({
   kind: PartnerKind;
   /** The modes the sheet can be for (the partner's coverage). */
   modes: string[];
+  /** Trade routes to pick from (coverage countries -> South Africa, plus
+   *  the partner's existing sheets' routes). */
+  routes: string[];
   initial: PartnerRateSheetDraft;
   isNew: boolean;
   saving: boolean;
@@ -423,6 +453,12 @@ export function PartnerSheetEditor({
   onSave: (values: PartnerRateSheetDraft) => void;
 }) {
   const [d, setD] = useState<PartnerRateSheetDraft>(initial);
+  const routeOptions = [...new Set([...routes, ...(d.route ? [d.route] : [])])];
+  const [addingRoute, setAddingRoute] = useState(routeOptions.length === 0);
+  const [originCountry, destCountry] = routeCountries(d.route);
+  const originPlaces = placesIn(originCountry);
+  const destPlaces = placesIn(destCountry ?? HOME_COUNTRY);
+  const originListId = `ps-origin-${kind}`;
   // Only this partner's own sections (agent: freight + ex-works, transporter:
   // destination, clearing agent: customs), ExPac's codes for the mode.
   const groupsFor = (mode: string) =>
@@ -509,27 +545,79 @@ export function PartnerSheetEditor({
           </div>
           <div className="field">
             <label>Trade route</label>
-            <input
-              required
-              autoFocus
-              placeholder="e.g. China → JNB"
-              value={d.route}
-              onChange={(e) => setD({ ...d, route: e.target.value })}
-            />
+            {addingRoute ? (
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  required
+                  autoFocus
+                  placeholder={`e.g. China${ARROW}${HOME_COUNTRY}`}
+                  value={d.route}
+                  onChange={(e) => setD({ ...d, route: e.target.value })}
+                />
+                {routeOptions.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn small outline"
+                    onClick={() => {
+                      setAddingRoute(false);
+                      if (!routeOptions.includes(d.route)) setD({ ...d, route: "" });
+                    }}
+                  >
+                    List
+                  </button>
+                )}
+              </div>
+            ) : (
+              <select
+                required
+                value={d.route}
+                onChange={(e) => {
+                  if (e.target.value === "__add") {
+                    setAddingRoute(true);
+                    setD({ ...d, route: "" });
+                  } else setD({ ...d, route: e.target.value });
+                }}
+              >
+                <option value="">— trade route —</option>
+                {routeOptions.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+                <option value="__add">+ Add trade route</option>
+              </select>
+            )}
           </div>
           <div className="field">
             <label>Origin</label>
             <input
+              list={originListId}
+              placeholder={originCountry ? `e.g. a port / airport in ${originCountry}` : undefined}
               value={d.origin ?? ""}
               onChange={(e) => setD({ ...d, origin: e.target.value || null })}
             />
+            <datalist id={originListId}>
+              {originPlaces.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
           </div>
           <div className="field">
             <label>Destination</label>
-            <input
+            <select
               value={d.destination ?? ""}
               onChange={(e) => setD({ ...d, destination: e.target.value || null })}
-            />
+            >
+              <option value="">— port / airport —</option>
+              {d.destination && !destPlaces.includes(d.destination) && (
+                <option value={d.destination}>{d.destination}</option>
+              )}
+              {destPlaces.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Valid from</label>

@@ -67,6 +67,7 @@ export default function PartnerPortalPage() {
                 partnerId={me.partner_id}
                 partnerName={me.company || "your company"}
                 modes={me.modes}
+                countries={me.countries}
                 canDelete={false}
               />
             </div>

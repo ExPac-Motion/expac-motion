@@ -200,6 +200,9 @@ export default function ContactsPage({
   }, [editing]);
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
+  // The open record as the list has it now (a saved rate sheet adds ports /
+  // countries to a partner's coverage).
+  const viewingLive = viewing ? (rows.find((r) => r.id === viewing.id) ?? viewing) : null;
   const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from a Notification: navigate here with
@@ -708,7 +711,7 @@ export default function ContactsPage({
           {kind === "client" && <ClientActivity clientId={viewing.id} />}
           {isPartner && (
             <>
-              <CoverageView value={coverageOf(viewing)} />
+              <CoverageView value={coverageOf(viewingLive)} />
               {/* Partner buy rates are admin-only (0120). */}
               {isAdmin && (
                 <>
@@ -716,7 +719,8 @@ export default function ContactsPage({
                     kind={kind as PartnerKind}
                     partnerId={viewing.id}
                     partnerName={viewing.company}
-                    modes={viewing.modes}
+                    modes={viewingLive?.modes}
+                    countries={viewingLive?.countries}
                     showHistory
                   />
                   <PartnerLoginAccess

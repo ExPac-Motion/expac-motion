@@ -1793,6 +1793,10 @@ export function useSavePartnerRateSheet() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["partner_rate_sheets"] });
       qc.invalidateQueries({ queryKey: ["partner_sheet_history"] });
+      // Saving a sheet adds its ports / route country to the partner's
+      // coverage (trigger, 0127).
+      for (const k of ["agents", "transporters", "clearing_agents", "destination_agents", "my_partner"])
+        qc.invalidateQueries({ queryKey: [k] });
     },
   });
 }

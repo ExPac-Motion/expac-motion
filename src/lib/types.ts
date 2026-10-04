@@ -1128,6 +1128,8 @@ export interface MyPartner {
   company: string | null;
   /** Coverage modes handled (0126) — the portal's rate sheets offer only these. */
   modes?: string[] | null;
+  /** Coverage countries (0127) — each offers a "<country> → South Africa" route. */
+  countries?: string[] | null;
 }
 export interface PartnerRateSheetChange {
   id: string;
