@@ -25,7 +25,7 @@ import {
   useDeleteTariffSheet,
   useDeleteTariffSheetsBulk,
   useDestinationAgents,
-  usePartnerSheetsByRoute,
+  useAllPartnerRateSheets,
   useTariffSheets,
   useTransporters,
   useUpdateTariffSheetsBulk,
@@ -68,9 +68,26 @@ const NO_FILTERS: RouteFilters = {
   clearing_agent: "",
   destination_agent: "",
 };
+/** "CNNSA — Nansha, China" / "CNNSA" / "China" -> "China" (known countries only). */
+const ISO2_COUNTRY = new Map(LOCODES.map((l) => [l.code.slice(0, 2), l.country]));
+const COUNTRIES = new Set(LOCODES.map((l) => l.country));
+function countryOf(place: string | null | undefined): string | null {
+  const t = (place ?? "").trim();
+  if (!t) return null;
+  if (COUNTRIES.has(t)) return t;
+  const code = t.match(/^([A-Z]{2})[A-Z0-9]{3}\b/);
+  if (code) return ISO2_COUNTRY.get(code[1]) ?? null;
+  const tail = t.split(",").pop()?.trim();
+  return tail && COUNTRIES.has(tail) ? tail : null;
+}
+/** A route's origin country: its first part ("China → …", "CNNSA → …"), else its origin field. */
+const routeOrigin = (route: string, origin?: string | null) =>
+  countryOf(route.split("→")[0]) ?? countryOf(origin);
+
 const distinct = (vals: (string | null | undefined)[]) =>
   [...new Set(vals.map((v) => (v ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 import { TierDot } from "./TierSheetsPage";
+import { LOCODES } from "../../lib/locodes";
 
 /** Codes on the sheet with a price of their own (manual buy or Sell (R)). */
 function manualCount(s: TariffSheet): number {
@@ -105,7 +122,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [filters, setFilters] = useState<RouteFilters>(NO_FILTERS);
   const activeFilters = Object.values(filters).filter(Boolean).length;
-  const routeSheetsQ = usePartnerSheetsByRoute(filters.route);
+  const routeSheetsQ = useAllPartnerRateSheets(!!filters.route);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   const name = (list: Contact[], id: string | null) =>
@@ -146,6 +163,13 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
   };
   /** Every partner on the filtered trade route: linked on its tier sheets
    *  and / or with their own rate sheet for that route. */
+  // The filtered route's origin country — partner sheets from that country
+  // count as on this route even when their route is named differently.
+  const originCountry = useMemo(() => {
+    if (!filters.route) return null;
+    const own = all.find((s) => s.route.toLowerCase() === filters.route.toLowerCase());
+    return routeOrigin(filters.route, own?.origin);
+  }, [filters.route, all]);
   const routePartners = useMemo(() => {
     if (!filters.route) return [];
     return PARTNER_KINDS.map((kind) => {
@@ -160,8 +184,13 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
       }
       for (const ps of routeSheetsQ.data ?? []) {
         if (ps.partner_kind !== kind) continue;
+        // Same route name, or the same origin country (route or origin port).
+        const same = ps.route.trim().toLowerCase() === filters.route.trim().toLowerCase();
+        const byCountry =
+          !same && !!originCountry && routeOrigin(ps.route, ps.origin) === originCountry;
+        if (!same && !byCountry) continue;
         entry(ps.partner_id).sheets.push(
-          `${ps.mode}${ps.incoterm ? ` (${ps.incoterm})` : ""}${ps.valid_until ? ` · until ${ddmmyyyy(ps.valid_until)}` : ""}`,
+          `${ps.route} · ${ps.mode}${ps.incoterm ? ` (${ps.incoterm})` : ""}${ps.valid_until ? ` · until ${ddmmyyyy(ps.valid_until)}` : ""}`,
         );
       }
       return {
@@ -176,7 +205,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
     });
     // name() reads the partner lists
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.route, rows, routeSheetsQ.data, agents, transporters, clearingAgents, destinationAgents]);
+  }, [filters.route, originCountry, rows, routeSheetsQ.data, agents, transporters, clearingAgents, destinationAgents]);
 
   const sel = useRowSelection(all, rows);
   const open = (s: TariffSheet) => navigate(`/rates?sheet=${s.id}`);
@@ -525,7 +554,15 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         {filters.route && (
           <div className="route-partners">
             <div className="route-partners-head">
-              <strong>Partners on {filters.route}</strong>
+              <strong>
+                Partners on {filters.route}
+                {originCountry && (
+                  <span className="muted" style={{ fontWeight: 400 }}>
+                    {" "}
+                    · incl. partner rate sheets from {originCountry}
+                  </span>
+                )}
+              </strong>
               <button type="button" className="btn ghost small" onClick={() => setFilters({ ...filters, route: "" })}>
                 ✕ Clear route
               </button>

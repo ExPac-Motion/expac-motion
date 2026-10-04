@@ -1825,12 +1825,12 @@ export function usePartnerRateSheets(kind: PartnerKind, partnerId: string | null
     enabled: !!partnerId,
   });
 }
-/** Partner rate sheets for one trade route (empty route = off). */
-export function usePartnerSheetsByRoute(route: string) {
+/** Every partner rate sheet — loaded only when `enabled` (Rate list route filter). */
+export function useAllPartnerRateSheets(enabled: boolean) {
   return useQuery({
-    queryKey: ["partner_rate_sheets", "route", route],
-    queryFn: () => db.listPartnerSheetsByRoute(route),
-    enabled: !!route,
+    queryKey: ["partner_rate_sheets", "all"],
+    queryFn: db.listAllPartnerRateSheets,
+    enabled,
   });
 }
 export function useSavePartnerRateSheet() {
