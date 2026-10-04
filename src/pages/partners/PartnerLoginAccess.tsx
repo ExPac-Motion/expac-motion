@@ -13,11 +13,45 @@ import {
   useSetPartnerAccess,
 } from "../../lib/hooks";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
+import { supabase } from "../../lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDateTime } from "../../lib/format";
 import type { PartnerKind, PartnerInvite } from "../../lib/types";
 import { PARTNER_LABEL } from "../../lib/tariff";
 
 const inviteUrl = (i: PartnerInvite) => `${window.location.origin}/partner/signup?token=${i.token}`;
+
+/** Creates (or resets) the partner's login with a generated password via the
+ *  /api/partner-login Pages Function (service role, migration 0129). */
+async function generatePartnerLogin(input: {
+  kind: PartnerKind;
+  partnerId: string;
+  email: string;
+  company: string;
+}): Promise<{ email: string; password: string; created: boolean }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const res = await fetch("/api/partner-login", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify(input),
+  });
+  const raw = (await res.json().catch(() => ({}))) as {
+    email?: string;
+    password?: string;
+    created?: boolean;
+    error?: string;
+  };
+  if (!res.ok || !raw.password) {
+    if (res.status === 404) throw new Error("Partner logins run on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Login service returned ${res.status}`);
+  }
+  return { email: raw.email ?? input.email, password: raw.password, created: !!raw.created };
+}
 
 export default function PartnerLoginAccess({
   kind,
@@ -39,6 +73,38 @@ export default function PartnerLoginAccess({
   const { toast, error } = useToast();
   const [to, setTo] = useState(email ?? "");
   const [sending, setSending] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const [generating, setGenerating] = useState(false);
+  // Shown once, right after it's made — never stored in the app.
+  const [madeLogin, setMadeLogin] = useState<{ email: string; password: string } | null>(null);
+
+  async function onGenerate() {
+    const addr = to.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+      error("Enter the partner's email address");
+      return;
+    }
+    const has = (usersQ.data ?? []).some((u) => (u.email ?? "").toLowerCase() === addr.toLowerCase());
+    if (
+      !window.confirm(
+        has
+          ? `Set a new password for ${addr}? Their current password stops working.`
+          : `Create a partner login for ${addr} with a generated password?`,
+      )
+    )
+      return;
+    setGenerating(true);
+    try {
+      const r = await generatePartnerLogin({ kind, partnerId, email: addr, company });
+      setMadeLogin({ email: r.email, password: r.password });
+      qc.invalidateQueries({ queryKey: ["partner_users"] });
+      toast(r.created ? "Partner login created" : "New password set");
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not create the login");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   const open = (invitesQ.data ?? []).filter((i) => !i.claimed_at);
 
@@ -175,10 +241,46 @@ export default function PartnerLoginAccess({
         >
           {create.isPending ? "Creating…" : "Create invite link"}
         </button>
+        <button type="button" className="btn outline" onClick={onGenerate} disabled={generating}>
+          {generating ? "Generating…" : "Generate password"}
+        </button>
       </div>
       <span className="hint">
-        The link works once, and only for this email address.
+        The link works once, and only for this email address. Or generate a password to create the
+        login straight away (or reset it) — sign in at {window.location.origin} to add their rates.
       </span>
+      {madeLogin && (
+        <div className="rs-meta" style={{ marginTop: 8 }}>
+          <span>Login</span>
+          <strong>{madeLogin.email}</strong>
+          <span>Password</span>
+          <strong style={{ fontFamily: "monospace", fontSize: "0.95rem" }}>{madeLogin.password}</strong>
+          <button
+            type="button"
+            className="btn small outline"
+            onClick={() =>
+              navigator.clipboard
+                ?.writeText(`${window.location.origin}\nEmail: ${madeLogin.email}\nPassword: ${madeLogin.password}`)
+                .then(() => toast("Login details copied"))
+                .catch(() => error("Could not copy"))
+            }
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            className="btn small ghost"
+            onClick={() => setMadeLogin(null)}
+            title="Hide"
+          >
+            ✕
+          </button>
+          <span className="hint" style={{ flexBasis: "100%" }}>
+            Shown once only — copy it now. Sign in as the partner in a private / incognito window,
+            or you'll be signed out of ExPac here.
+          </span>
+        </div>
+      )}
     </section>
   );
 }
