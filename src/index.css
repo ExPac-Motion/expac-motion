@@ -6388,3 +6388,6 @@ table.dt .task-title {
     max-height: none;
   }
 }
+/* Inbox › Internal (ExPac's own mail, 0135). */
+.inbox-dot.cat-internal { background: var(--night); border: 2px solid var(--green); width: 10px; height: 10px; }
+.inbox-chip.cat-internal { background: var(--night); color: #fff; }

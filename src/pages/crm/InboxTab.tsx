@@ -34,6 +34,7 @@ const FOLDERS: { key: Folder; label: string }[] = [
   { key: "lead", label: "Leads" },
   { key: "partner", label: "Suppliers & Agents" },
   { key: "unknown", label: "Other / Unknown" },
+  { key: "internal", label: "Internal" },
 ];
 const VIEWS: { key: View; label: string }[] = [
   { key: "all", label: "Everything" },
@@ -46,6 +47,7 @@ const CATEGORY_LABEL: Record<InboxCategory, string> = {
   lead: "Lead",
   partner: "Supplier / Agent",
   unknown: "Unknown",
+  internal: "Internal (ExPac)",
 };
 const RECORD_ROUTE: Record<string, string> = {
   client: "/clients",
@@ -84,6 +86,8 @@ const jobLabel = (j: Job) => `${j.reference}${j.client?.company ? ` · ${j.clien
 /** A parsed .eml (postal-mime), loaded when a message is opened. */
 interface Parsed {
   html: string | null;
+  /** The html as sent (cid: images untouched) — what a forward carries. */
+  rawHtml: string | null;
   text: string | null;
   attachments: { name: string; type: string; url: string; size: number; inline: boolean }[];
 }
@@ -106,9 +110,10 @@ async function parseRaw(path: string): Promise<Parsed> {
       inline: a.disposition === "inline" && !!cid,
     };
   });
-  let html = email.html ?? null;
+  const rawHtml = email.html ?? null;
+  let html = rawHtml;
   if (html && cids.size) html = html.replace(/cid:([^"'\s)>]+)/gi, (m, id) => cids.get(id) ?? m);
-  return { html, text: email.text ?? null, attachments };
+  return { html, rawHtml, text: email.text ?? null, attachments };
 }
 
 export default function InboxTab() {
@@ -123,7 +128,10 @@ export default function InboxTab() {
   const [jobFilter, setJobFilter] = useState("");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [compose, setCompose] = useState<{ replyTo?: InboxMessage } | null>(null);
+  const [compose, setCompose] = useState<{
+    replyTo?: InboxMessage;
+    forward?: { msg: InboxMessage; parsed?: Parsed };
+  } | null>(null);
   // Draggable divider between the list and the reading pane (width kept per browser).
   const [listWidth, setListWidth] = useState<number>(() => {
     try {
@@ -356,6 +364,7 @@ export default function InboxTab() {
               thread={all.filter((m) => open.thread_key && m.thread_key === open.thread_key && m.id !== open.id)}
               jobs={jobs}
               onReply={() => setCompose({ replyTo: open })}
+              onForward={(parsed) => setCompose({ forward: { msg: open, parsed } })}
             />
           ) : (
             <EmptyState>Pick a message.</EmptyState>
@@ -363,7 +372,9 @@ export default function InboxTab() {
         </div>
       </div>
 
-      {compose && <ComposeModal replyTo={compose.replyTo} onClose={() => setCompose(null)} />}
+      {compose && (
+        <ComposeModal replyTo={compose.replyTo} forward={compose.forward} onClose={() => setCompose(null)} />
+      )}
     </>
   );
 }
@@ -373,11 +384,13 @@ function Reader({
   thread,
   jobs,
   onReply,
+  onForward,
 }: {
   msg: InboxMessage;
   thread: InboxMessage[];
   jobs: Job[];
   onReply: () => void;
+  onForward: (parsed: Parsed | undefined) => void;
 }) {
   const update = useUpdateInboxMessage();
   const saveLead = useSaveLead();
@@ -469,6 +482,15 @@ function Reader({
             Reply
           </button>
         )}
+        <button
+          type="button"
+          className="btn small outline"
+          onClick={() => onForward(parsed)}
+          disabled={!!msg.raw_path && parsedQ.isLoading}
+          title="Forward this email, with its attachments"
+        >
+          Forward
+        </button>
         {msg.direction === "in" &&
           (needsReply(msg) ? (
             <button
@@ -571,7 +593,27 @@ function Reader({
   );
 }
 
-function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: () => void }) {
+/** Blob URL -> base64 (no data: prefix), for re-attaching on a forward. */
+async function blobUrlBase64(url: string): Promise<string> {
+  const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+const FORWARD_ATTACH_LIMIT = 14 * 1024 * 1024;
+
+function ComposeModal({
+  replyTo,
+  forward,
+  onClose,
+}: {
+  replyTo?: InboxMessage;
+  forward?: { msg: InboxMessage; parsed?: Parsed };
+  onClose: () => void;
+}) {
+  const fwd = forward?.msg;
+  const fwdFiles = forward?.parsed?.attachments ?? [];
+  const [keepFiles, setKeepFiles] = useState<string[]>(() => fwdFiles.map((a) => a.url));
   const { data: settings } = useCompanySettings();
   const update = useUpdateInboxMessage();
   const qc = useQueryClient();
@@ -579,7 +621,15 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
   const [to, setTo] = useState(replyTo?.from_email ?? "");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState(
-    replyTo ? (/^re:/i.test(replyTo.subject ?? "") ? replyTo.subject ?? "" : `Re: ${replyTo.subject ?? ""}`) : "",
+    replyTo
+      ? /^re:/i.test(replyTo.subject ?? "")
+        ? replyTo.subject ?? ""
+        : `Re: ${replyTo.subject ?? ""}`
+      : fwd
+        ? /^(fw|fwd):/i.test(fwd.subject ?? "")
+          ? fwd.subject ?? ""
+          : `Fwd: ${fwd.subject ?? ""}`
+        : "",
   );
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -597,8 +647,13 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
       error("Enter at least one recipient");
       return;
     }
-    if (!body.trim()) {
+    if (!body.trim() && !fwd) {
       error("Write a message");
+      return;
+    }
+    const picked = fwdFiles.filter((a) => keepFiles.includes(a.url));
+    if (picked.reduce((n, a) => n + a.size, 0) > FORWARD_ATTACH_LIMIT) {
+      error("The attachments are too large to forward together (max about 14 MB) — untick some");
       return;
     }
     setSending(true);
@@ -610,7 +665,17 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
           replyTo.sent_at,
         )}, ${esc(replyTo.from_name || replyTo.from_email || "")} wrote:<br>${esc(replyTo.snippet ?? "").replace(/\n/g, "<br>")}…</div>`
       : "";
-    const html = `${bodyHtml}${sig}${quoted}`;
+    const forwarded = fwd
+      ? `<br><br>---------- Forwarded message ----------<br>From: ${esc(fwd.from_name || "")} &lt;${esc(
+          fwd.from_email || "",
+        )}&gt;<br>Date: ${formatDateTime(fwd.sent_at)}<br>Subject: ${esc(fwd.subject || "")}<br>To: ${esc(
+          fwd.to_emails.join(", "),
+        )}${fwd.cc_emails.length ? `<br>Cc: ${esc(fwd.cc_emails.join(", "))}` : ""}<br><br>${
+          (forward?.parsed?.rawHtml ?? fwd.body_html ?? "").replace(/<script[\s\S]*?<\/script>/gi, "") ||
+          esc(forward?.parsed?.text ?? fwd.body_text ?? fwd.snippet ?? "").replace(/\n/g, "<br>")
+        }`
+      : "";
+    const html = `${bodyHtml}${sig}${quoted}${forwarded}`;
     const references = replyTo
       ? [replyTo.refs ?? "", replyTo.message_id ?? ""].join(" ").trim()
       : undefined;
@@ -625,6 +690,9 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
         replyTo: settings?.mail_reply_to || undefined,
         inReplyTo: replyTo?.message_id ?? undefined,
         references,
+        attachments: picked.length
+          ? await Promise.all(picked.map(async (a) => ({ filename: a.name, content: await blobUrlBase64(a.url) })))
+          : undefined,
       });
       // Keep the sent message in the conversation (and on its shipment).
       await insertInboxMessage({
@@ -640,16 +708,18 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
         body_html: html,
         in_reply_to: replyTo?.message_id ?? null,
         refs: references ?? null,
-        thread_key: replyTo?.thread_key ?? null,
-        job_id: replyTo?.job_id ?? null,
-        job_linked_by: replyTo?.job_id ? replyTo.job_linked_by : null,
+        // A forward stays with the original's conversation and shipment.
+        thread_key: (replyTo ?? fwd)?.thread_key ?? null,
+        job_id: (replyTo ?? fwd)?.job_id ?? null,
+        job_linked_by: (replyTo ?? fwd)?.job_id ? (replyTo ?? fwd)?.job_linked_by ?? null : null,
+        has_attachments: picked.length > 0,
         sent_at: new Date().toISOString(),
         seen: true,
         answered: false,
       });
       if (replyTo) await update.mutateAsync({ id: replyTo.id, patch: { replied_at: new Date().toISOString() } });
       qc.invalidateQueries({ queryKey: ["inbox"] });
-      toast(replyTo ? "Reply sent" : "Email sent");
+      toast(replyTo ? "Reply sent" : fwd ? "Email forwarded" : "Email sent");
       onClose();
     } catch (err) {
       error(err instanceof Error ? err.message : "Could not send");
@@ -659,7 +729,7 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
   }
 
   return (
-    <Modal title={replyTo ? "Reply" : "New email"} onClose={onClose} wide>
+    <Modal title={replyTo ? "Reply" : fwd ? "Forward" : "New email"} onClose={onClose} wide>
       <form onSubmit={submit}>
         <div className="grid2">
           <div className="field">
@@ -680,9 +750,30 @@ function ComposeModal({ replyTo, onClose }: { replyTo?: InboxMessage; onClose: (
           <textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} autoFocus />
           <span className="hint">
             Sent from support@expac.co.za with your email signature
-            {replyTo ? ", threaded under the original message" : ""}.
+            {replyTo ? ", threaded under the original message" : ""}
+            {fwd ? ", followed by the original message" : ""}.
           </span>
         </div>
+        {fwd && fwdFiles.length > 0 && (
+          <div className="field">
+            <label>Attachments to forward</label>
+            <div className="inbox-attachments" style={{ marginTop: 0 }}>
+              {fwdFiles.map((a) => (
+                <label key={a.url} className="inbox-attachment" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={keepFiles.includes(a.url)}
+                    onChange={() =>
+                      setKeepFiles((k) => (k.includes(a.url) ? k.filter((u) => u !== a.url) : [...k, a.url]))
+                    }
+                  />{" "}
+                  {a.name}
+                  <span className="muted"> {Math.max(1, Math.round(a.size / 1024))} KB</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
           <button type="button" className="btn outline" onClick={onClose}>
             Cancel

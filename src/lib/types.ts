@@ -1901,8 +1901,9 @@ export interface UiTableLayout {
 
 /* ---------- Admin Inbox (migration 0134) ---------- */
 
-/** Who the sender is, from the CRM: customer, supplier / agent, lead or unknown. */
-export type InboxCategory = "customer" | "partner" | "lead" | "unknown";
+/** Who the sender is, from the CRM: customer, supplier / agent, lead, ExPac
+ *  itself (internal, 0135) or unknown. */
+export type InboxCategory = "customer" | "partner" | "lead" | "unknown" | "internal";
 
 /** inbox_messages_v — a support@ message (in) or a reply sent from the app (out). */
 export interface InboxMessage {
