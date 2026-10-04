@@ -6461,3 +6461,15 @@ table.dt .task-title {
   font-size: 0.72rem;
   color: var(--muted);
 }
+/* Inbox: remote images held back on unknown / spam mail. */
+.inbox-images-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}

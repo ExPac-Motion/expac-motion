@@ -17,6 +17,11 @@ import {
   useCompanySettings,
   useCreateOpportunity,
   useDestinationAgents,
+  useSaveAgent,
+  useSaveClearingAgent,
+  useSaveDestinationAgent,
+  useSaveSupplier,
+  useSaveTransporter,
   useInbox,
   useLeads,
   useSentMail,
@@ -96,6 +101,16 @@ function shortDate(iso: string) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   return d.getFullYear() === now.getFullYear() ? `${dd}/${mm}` : `${dd}/${mm}/${d.getFullYear()}`;
+}
+/** Remote <img> src / srcset -> data-held-* (repeat: an img can carry both). */
+function holdRemoteImages(html: string): string {
+  let out = html;
+  for (let i = 0; i < 4; i++) {
+    const next = out.replace(/(<img\b[^>]*?\s)(src|srcset)=("|')(https?:[^"']*)\3/gi, "$1data-held-$2=$3$4$3");
+    if (next === out) break;
+    out = next;
+  }
+  return out;
 }
 const jobLabel = (j: Job) => `${j.reference}${j.client?.company ? ` · ${j.client.company}` : ""}`;
 
@@ -646,6 +661,10 @@ function Reader({
     staleTime: Infinity,
   });
   const parsed = parsedQ.data;
+  // Remote images: shown for known senders; held back on Unknown / Spam mail
+  // (tracking pixels, spam) until "Show images".
+  const [showImages, setShowImages] = useState(false);
+  const [addingAs, setAddingAs] = useState(false);
 
   // First open: keep a snippet + text so search and shipment linking can use it.
   useEffect(() => {
@@ -656,7 +675,10 @@ function Reader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed, msg.id]);
 
-  const html = parsed?.html ?? msg.body_html;
+  const holdImages = (cat(msg) === "unknown" || msg.spam) && !showImages;
+  const rawBody = parsed?.html ?? msg.body_html;
+  const html = rawBody && holdImages ? holdRemoteImages(rawBody) : rawBody;
+  const imagesHeld = !!rawBody && holdImages && /<img\b[^>]*\ssrc=("|')https?:/i.test(rawBody);
   const text = parsed?.text ?? msg.body_text;
   const c = cat(msg);
 
@@ -815,6 +837,16 @@ function Reader({
             </button>
           ))}
         {c === "unknown" && msg.direction === "in" && msg.from_email && (
+          <button
+            type="button"
+            className="btn small outline"
+            onClick={() => setAddingAs(true)}
+            title="Add the sender as a shipper, agent, transporter, clearing or destination agent"
+          >
+            + Add as…
+          </button>
+        )}
+        {c === "unknown" && msg.direction === "in" && msg.from_email && (
           <button type="button" className="btn small outline" onClick={makeLead} disabled={saveLead.isPending}>
             + Make a lead
           </button>
@@ -888,6 +920,17 @@ function Reader({
         </details>
       )}
 
+      {imagesHeld && (
+        <div className="inbox-images-bar">
+          Images from this unknown sender are hidden.
+          <button type="button" className="btn small outline" onClick={() => setShowImages(true)}>
+            Show images
+          </button>
+        </div>
+      )}
+      {addingAs && (
+        <AddPartnerModal msg={msg} text={parsed?.text ?? msg.body_text ?? ""} onClose={() => setAddingAs(false)} />
+      )}
       <div className="inbox-body">
         {parsedQ.isLoading ? (
           <Loading />
@@ -920,6 +963,143 @@ function Reader({
         </div>
       )}
     </div>
+  );
+}
+
+type PartnerType = "supplier" | "agent" | "transporter" | "clearing_agent" | "destination_agent";
+const PARTNER_TYPES: { key: PartnerType; label: string }[] = [
+  { key: "supplier", label: "Shipper" },
+  { key: "agent", label: "Agent" },
+  { key: "transporter", label: "Transporter" },
+  { key: "clearing_agent", label: "Clearing Agent" },
+  { key: "destination_agent", label: "Destination Agent" },
+];
+const FREE_MAIL = /^(gmail|googlemail|outlook|hotmail|live|msn|yahoo|icloud|me|aol|proton|protonmail|mweb|telkomsa|webmail|vodamail|iafrica|qq|163|126|gmx|zoho|yandex)\./i;
+
+/** "Add as…": the sender as one or more supplier / partner records, filled
+ *  from the email (company from the domain, contact, email, a phone number
+ *  found in the message) — all editable before saving. */
+function AddPartnerModal({ msg, text, onClose }: { msg: InboxMessage; text: string; onClose: () => void }) {
+  const saves: Record<PartnerType, ReturnType<typeof useSaveAgent>> = {
+    supplier: useSaveSupplier() as unknown as ReturnType<typeof useSaveAgent>,
+    agent: useSaveAgent(),
+    transporter: useSaveTransporter() as unknown as ReturnType<typeof useSaveAgent>,
+    clearing_agent: useSaveClearingAgent() as unknown as ReturnType<typeof useSaveAgent>,
+    destination_agent: useSaveDestinationAgent() as unknown as ReturnType<typeof useSaveAgent>,
+  };
+  const qc = useQueryClient();
+  const { toast, error } = useToast();
+  const email = (msg.from_email ?? "").toLowerCase();
+  const domain = email.split("@")[1] ?? "";
+  const fromDomain = domain && !FREE_MAIL.test(domain)
+    ? domain.split(".")[0].replace(/[-_]+/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())
+    : "";
+  // A phone number from the signature (prefer lines that say tel / cell / contact).
+  const phone = (() => {
+    const lines = text.split(/\n/);
+    const rx = /(\+?\d[\d ()-]{7,}\d)/;
+    const labelled = lines.find((l) => /(tel|phone|cell|mobile|mob|contact|whatsapp)/i.test(l) && rx.test(l));
+    return ((labelled ?? lines.find((l) => rx.test(l)) ?? "").match(rx)?.[1] ?? "").trim();
+  })();
+  const [company, setCompany] = useState(fromDomain || msg.from_name || "");
+  const [contact, setContact] = useState(msg.from_name && msg.from_name !== company ? msg.from_name : "");
+  const [mail, setMail] = useState(email);
+  const [tel, setTel] = useState(phone);
+  const [address, setAddress] = useState("");
+  const [types, setTypes] = useState<PartnerType[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!company.trim()) {
+      error("Enter the company name");
+      return;
+    }
+    if (types.length === 0) {
+      error("Tick at least one: shipper, agent, transporter, clearing or destination agent");
+      return;
+    }
+    setSaving(true);
+    try {
+      for (const t of types) {
+        await saves[t].mutateAsync({
+          values: {
+            company: company.trim(),
+            contact: contact.trim() || null,
+            email: mail.trim() || null,
+            phone: tel.trim() || null,
+            address: address.trim() || null,
+          },
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      toast(
+        `${company.trim()} added as ${types
+          .map((t) => PARTNER_TYPES.find((p) => p.key === t)?.label)
+          .join(" and ")} — this email now sits under Suppliers & Agents`,
+      );
+      onClose();
+    } catch (err) {
+      error(err instanceof Error ? err.message : "Could not add the record");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Add the sender as…" onClose={onClose}>
+      <form onSubmit={submit}>
+        <div className="field">
+          <label>Type (tick all that apply)</label>
+          <div className="chips">
+            {PARTNER_TYPES.map((p) => {
+              const on = types.includes(p.key);
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  className={`chip${on ? " on" : ""}`}
+                  onClick={() => setTypes(on ? types.filter((x) => x !== p.key) : [...types, p.key])}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="field">
+            <label>Company name</label>
+            <input value={company} onChange={(e) => setCompany(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Contact person</label>
+            <input value={contact} onChange={(e) => setContact(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Email</label>
+            <input value={mail} onChange={(e) => setMail(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Phone</label>
+            <input value={tel} onChange={(e) => setTel(e.target.value)} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Address</label>
+          <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} />
+        </div>
+        <span className="hint">Filled from the email — check and correct before saving. Coverage can be added on the record.</span>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+          <button type="button" className="btn outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn" disabled={saving}>
+            {saving ? "Saving…" : "Add"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
