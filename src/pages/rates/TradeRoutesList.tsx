@@ -11,6 +11,7 @@ import {
   ErrorNote,
   Loading,
   PageTools,
+  Popover,
   RowActions,
   RowActionsHead,
   SearchInput,
@@ -24,6 +25,7 @@ import {
   useDeleteTariffSheet,
   useDeleteTariffSheetsBulk,
   useDestinationAgents,
+  usePartnerSheetsByRoute,
   useTariffSheets,
   useTransporters,
   useUpdateTariffSheetsBulk,
@@ -38,7 +40,36 @@ import {
   type TariffSheet,
   type TariffSheetDraft,
 } from "../../lib/types";
-import { ddmmyyyy, isSellOnlyCode, partnerIdKey, sheetIdKey } from "../../lib/tariff";
+import {
+  ddmmyyyy,
+  isSellOnlyCode,
+  PARTNER_KINDS,
+  PARTNER_LABEL,
+  partnerIdKey,
+  sheetIdKey,
+} from "../../lib/tariff";
+
+/** The "+ Add Filter" choices (empty = any). */
+interface RouteFilters {
+  route: string;
+  origin: string;
+  destination: string;
+  agent: string;
+  transporter: string;
+  clearing_agent: string;
+  destination_agent: string;
+}
+const NO_FILTERS: RouteFilters = {
+  route: "",
+  origin: "",
+  destination: "",
+  agent: "",
+  transporter: "",
+  clearing_agent: "",
+  destination_agent: "",
+};
+const distinct = (vals: (string | null | undefined)[]) =>
+  [...new Set(vals.map((v) => (v ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 import { TierDot } from "./TierSheetsPage";
 
 /** Codes on the sheet with a price of their own (manual buy or Sell (R)). */
@@ -72,6 +103,9 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
   const [tierFilter, setTierFilter] = useState<RateTierId | "All">("All");
   const [modeFilter, setModeFilter] = useState<string>("All");
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [filters, setFilters] = useState<RouteFilters>(NO_FILTERS);
+  const activeFilters = Object.values(filters).filter(Boolean).length;
+  const routeSheetsQ = usePartnerSheetsByRoute(filters.route);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   const name = (list: Contact[], id: string | null) =>
@@ -83,6 +117,10 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
     return all.filter((s) => {
       if (tierFilter !== "All" && s.tier !== tierFilter) return false;
       if (modeFilter !== "All" && s.mode !== modeFilter) return false;
+      if (filters.route && s.route.toLowerCase() !== filters.route.toLowerCase()) return false;
+      if (filters.origin && (s.origin ?? "").trim() !== filters.origin) return false;
+      if (filters.destination && (s.destination ?? "").trim() !== filters.destination) return false;
+      for (const k of PARTNER_KINDS) if (filters[k] && s[partnerIdKey(k)] !== filters[k]) return false;
       if (!needle) return true;
       return [
         s.route,
@@ -98,7 +136,47 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
     });
     // name() reads the partner lists
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, search, tierFilter, modeFilter, agents, transporters, clearingAgents, destinationAgents]);
+  }, [all, search, tierFilter, modeFilter, filters, agents, transporters, clearingAgents, destinationAgents]);
+
+  const partnerList: Record<PartnerKind, Contact[]> = {
+    agent: agents,
+    transporter: transporters,
+    clearing_agent: clearingAgents,
+    destination_agent: destinationAgents,
+  };
+  /** Every partner on the filtered trade route: linked on its tier sheets
+   *  and / or with their own rate sheet for that route. */
+  const routePartners = useMemo(() => {
+    if (!filters.route) return [];
+    return PARTNER_KINDS.map((kind) => {
+      const byId = new Map<string, { tiers: Set<string>; sheets: string[] }>();
+      const entry = (id: string) => {
+        if (!byId.has(id)) byId.set(id, { tiers: new Set(), sheets: [] });
+        return byId.get(id)!;
+      };
+      for (const s of rows) {
+        const id = s[partnerIdKey(kind)];
+        if (id) entry(id).tiers.add(`${rateTier(s.tier).label} · ${s.mode}`);
+      }
+      for (const ps of routeSheetsQ.data ?? []) {
+        if (ps.partner_kind !== kind) continue;
+        entry(ps.partner_id).sheets.push(
+          `${ps.mode}${ps.incoterm ? ` (${ps.incoterm})` : ""}${ps.valid_until ? ` · until ${ddmmyyyy(ps.valid_until)}` : ""}`,
+        );
+      }
+      return {
+        kind,
+        partners: [...byId.entries()].map(([id, v]) => ({
+          id,
+          name: name(partnerList[kind], id) || "Unknown partner",
+          tiers: [...v.tiers],
+          sheets: v.sheets,
+        })),
+      };
+    });
+    // name() reads the partner lists
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.route, rows, routeSheetsQ.data, agents, transporters, clearingAgents, destinationAgents]);
 
   const sel = useRowSelection(all, rows);
   const open = (s: TariffSheet) => navigate(`/rates?sheet=${s.id}`);
@@ -339,6 +417,79 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
                 </option>
               ))}
             </select>
+            <Popover label="+ Add Filter" badge={activeFilters}>
+              {() => (
+                <>
+                  <label className="ui-pop-row">
+                    <span>Trade route</span>
+                    <select
+                      value={filters.route}
+                      onChange={(e) => setFilters({ ...filters, route: e.target.value })}
+                    >
+                      <option value="">Any</option>
+                      {distinct(all.map((s) => s.route)).map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="ui-pop-row">
+                    <span>Origin</span>
+                    <select
+                      value={filters.origin}
+                      onChange={(e) => setFilters({ ...filters, origin: e.target.value })}
+                    >
+                      <option value="">Any</option>
+                      {distinct(all.map((s) => s.origin)).map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="ui-pop-row">
+                    <span>Destination</span>
+                    <select
+                      value={filters.destination}
+                      onChange={(e) => setFilters({ ...filters, destination: e.target.value })}
+                    >
+                      <option value="">Any</option>
+                      {distinct(all.map((s) => s.destination)).map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {PARTNER_KINDS.map((k) => (
+                    <label className="ui-pop-row" key={k}>
+                      <span>{PARTNER_LABEL[k]}</span>
+                      <select
+                        value={filters[k]}
+                        onChange={(e) => setFilters({ ...filters, [k]: e.target.value })}
+                      >
+                        <option value="">Any</option>
+                        {partnerList[k].map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.company}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                  {activeFilters > 0 && (
+                    <button
+                      type="button"
+                      className="btn ghost small"
+                      onClick={() => setFilters(NO_FILTERS)}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </>
+              )}
+            </Popover>
           </>
         }
         count={q.isLoading ? undefined : `${rows.length} trade route sheet${rows.length === 1 ? "" : "s"}`}
@@ -371,6 +522,34 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
 
       <div className="panel">
         {tabs}
+        {filters.route && (
+          <div className="route-partners">
+            <div className="route-partners-head">
+              <strong>Partners on {filters.route}</strong>
+              <button type="button" className="btn ghost small" onClick={() => setFilters({ ...filters, route: "" })}>
+                ✕ Clear route
+              </button>
+            </div>
+            <div className="route-partners-grid">
+              {routePartners.map((g) => (
+                <div key={g.kind}>
+                  <div className="hint">{PARTNER_LABEL[g.kind]}s</div>
+                  {g.partners.length === 0 ? (
+                    <span className="muted">—</span>
+                  ) : (
+                    g.partners.map((p) => (
+                      <div key={p.id} className="route-partner">
+                        <strong>{p.name}</strong>
+                        {p.tiers.length > 0 && <span>Tier sheets: {p.tiers.join(", ")}</span>}
+                        {p.sheets.length > 0 && <span>Own rate sheet: {p.sheets.join(", ")}</span>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {q.isLoading ? (
           <Loading />
         ) : q.isError ? (

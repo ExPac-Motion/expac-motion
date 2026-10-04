@@ -2408,6 +2408,17 @@ export async function deletePartnerRateStructure(id: string): Promise<void> {
 
 /* ---------- Partner rate sheets + tier rate sheets (migration 0119) ---------- */
 
+/** Every partner's own rate sheets for one trade route (Rate list filter). */
+export async function listPartnerSheetsByRoute(route: string): Promise<PartnerRateSheet[]> {
+  return unwrap(
+    await supabase
+      .from("partner_rate_sheets")
+      .select("*")
+      .ilike("route", route.replace(/[\\%_]/g, (c) => `\\${c}`))
+      .order("partner_kind")
+      .order("mode"),
+  );
+}
 export async function listPartnerRateSheets(
   kind: PartnerKind,
   partnerId: string,
