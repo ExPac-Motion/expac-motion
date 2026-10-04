@@ -838,10 +838,12 @@ export interface Incoterm {
   code: string;
   name: string;
 }
-/** Incoterms 2020 usable with any transport mode (incl. air). */
+/** Incoterms usable with any transport mode (incl. air) — FOB is used on
+ *  air freight too, not only sea (ExPac practice). */
 export const INCOTERMS_ANY_MODE: Incoterm[] = [
   { code: "EXW", name: "Ex Works" },
   { code: "FCA", name: "Free Carrier" },
+  { code: "FOB", name: "Free on Board" },
   { code: "CPT", name: "Carriage Paid To" },
   { code: "CIP", name: "Carriage and Insurance Paid To" },
   { code: "DAP", name: "Delivered at Place" },
@@ -851,7 +853,6 @@ export const INCOTERMS_ANY_MODE: Incoterm[] = [
 /** Incoterms 2020 for sea and inland waterway transport only. */
 export const INCOTERMS_SEA: Incoterm[] = [
   { code: "FAS", name: "Free Alongside Ship" },
-  { code: "FOB", name: "Free on Board" },
   { code: "CFR", name: "Cost and Freight" },
   { code: "CIF", name: "Cost, Insurance and Freight" },
 ];
@@ -1125,6 +1126,8 @@ export interface MyPartner {
   partner_kind: PartnerKind;
   partner_id: string;
   company: string | null;
+  /** Coverage modes handled (0126) — the portal's rate sheets offer only these. */
+  modes?: string[] | null;
 }
 export interface PartnerRateSheetChange {
   id: string;

@@ -66,6 +66,7 @@ export default function PartnerPortalPage() {
                 kind={me.partner_kind}
                 partnerId={me.partner_id}
                 partnerName={me.company || "your company"}
+                modes={me.modes}
                 canDelete={false}
               />
             </div>

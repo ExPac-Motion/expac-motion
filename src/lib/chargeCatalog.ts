@@ -10,6 +10,9 @@ export interface CatalogItem {
   modes?: QuoteMode[];
   /** Other sections this code can also be used in (e.g. warehousing). */
   alsoIn?: ChargeCategory[];
+  /** Currency in another section, when it differs (warehousing: USD at
+   *  origin on Ex-Works, ZAR locally on Cartage). */
+  curIn?: Partial<Record<ChargeCategory, LineCurrency>>;
   /** Default VAT % applied to the line when this code is picked. Omitted = 0. */
   vat_pct?: number;
 }
@@ -26,7 +29,7 @@ const SEA: QuoteMode[] = ["Sea Freight (FCL)", "Sea Freight (LCL)"];
 export const CHARGE_CATALOG: CatalogItem[] = [
   // ---- International Freight Charges ----
   { category: "International Freight Charges", code: "AF-01", description: "Air Freight Fee", cur: "USD", unit: "KGS", modes: AIR },
-  { category: "International Freight Charges", code: "AF-02", description: "Terminal Handling Fee", cur: "USD", unit: "", modes: AIR },
+  { category: "International Freight Charges", code: "AF-02", description: "Terminal Handling Fee", cur: "USD", unit: "KGS", modes: AIR },
   { category: "International Freight Charges", code: "FW-01", description: "Forwarding Fee", cur: "USD", unit: "B/L" },
   { category: "International Freight Charges", code: "OF-01", description: "Ocean Freight", cur: "USD", unit: "", modes: SEA },
   { category: "International Freight Charges", code: "OF-02", description: "Release Fee", cur: "USD", unit: "", modes: SEA },
@@ -41,12 +44,12 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "Ex-Works Charges", code: "OR-05", description: "CFS, AMS, VGM and Handling Charges", cur: "USD", unit: "", modes: SEA },
   { category: "Ex-Works Charges", code: "OR-06", description: "Hazardous Surcharge", cur: "USD", unit: "", modes: SEA },
   { category: "Ex-Works Charges", code: "OR-07", description: "Packaging & Labelling Fee", cur: "USD", unit: "", modes: SEA },
-  // Warehousing (codes only, no section of their own): origin warehousing on a
+  // Warehousing (codes only, no section of their own): origin warehousing (USD) on a
   // shipping agent's Ex-Works lines, local warehousing on a transporter's
-  // Cartage & Road Freight lines.
-  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-01", description: "Storage", cur: "ZAR", unit: "CBM" },
-  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-02", description: "Handling In/Out", cur: "ZAR", unit: "CBM" },
-  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-03", description: "Palletising", cur: "ZAR", unit: "" },
+  // Cartage & Road Freight lines (ZAR).
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-01", description: "Storage", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "CBM" },
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-02", description: "Handling In/Out", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "CBM" },
+  { category: "Ex-Works Charges", alsoIn: ["Cartage and Road Freight Charges"], code: "WH-03", description: "Palletising", cur: "USD", curIn: { "Cartage and Road Freight Charges": "ZAR" }, unit: "" },
 
   // ---- FOB Charges ----
   { category: "FOB Charges", code: "FB-01", description: "Release Fee", cur: "USD", unit: "B/L" },
@@ -69,6 +72,11 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "Customs Clearance, VAT and Duty Charges", code: "DIS-01", description: "Disbursement Fee", cur: "ZAR", unit: "DIS", vat_pct: 15 },
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-05", description: "Customs Clearance Fee", cur: "ZAR", unit: "AWB", vat_pct: 15 },
 ];
+
+/** A code's default currency in a section (see curIn). */
+export function itemCur(item: CatalogItem, category?: ChargeCategory | null): LineCurrency {
+  return (category && item.curIn?.[category]) || item.cur;
+}
 
 function appliesToMode(item: CatalogItem, mode?: QuoteMode): boolean {
   if (!mode || !item.modes) return true;

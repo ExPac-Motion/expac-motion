@@ -1,7 +1,7 @@
 // Tier rate sheets + partner rate sheets (migration 0119): the shared code
 // worksheet, weight-break matching and live price resolution used by Rates &
 // Tariff, the partner records and the Quote Builder.
-import { CHARGE_CATALOG, catalogItem, type CatalogItem } from "./chargeCatalog";
+import { CHARGE_CATALOG, catalogItem, itemCur, type CatalogItem } from "./chargeCatalog";
 import { CUSTOMS_DUTY_CODE, CUSTOMS_VAT_CODE, SERVICE_FEE_CODES } from "./calc";
 import {
   CHARGE_CATEGORIES,
@@ -39,11 +39,12 @@ export function isSellOnlyCode(code: string): boolean {
 }
 
 /** The charge sections each partner type quotes (their rate sheets show only
- *  these): shipping agents = freight and ex-works (+ origin warehousing
- *  codes); destination agents = destination handling; transporters =
- *  cartage & road freight (+ local warehousing codes); clearing = customs. */
+ *  these): shipping agents = freight, ex-works (+ origin warehousing codes)
+ *  and FOB charges (on their FOB sheets); destination agents = destination
+ *  handling; transporters = cartage & road freight (+ local warehousing
+ *  codes); clearing = customs. */
 export const PARTNER_SECTIONS: Record<PartnerKind, ChargeCategory[]> = {
-  agent: ["International Freight Charges", "Ex-Works Charges"],
+  agent: ["International Freight Charges", "Ex-Works Charges", "FOB Charges"],
   destination_agent: ["Destination Handling and Delivery Charges"],
   transporter: ["Cartage and Road Freight Charges"],
   clearing_agent: ["Customs Clearance, VAT and Duty Charges"],
@@ -61,12 +62,6 @@ const ORIGIN_ON: ChargeCategory[] = [
   "Cartage and Road Freight Charges",
   "Customs Clearance, VAT and Duty Charges",
 ];
-const F_TERMS_SELLER_LOADS: ChargeCategory[] = [
-  "International Freight Charges",
-  "Destination Handling and Delivery Charges",
-  "Cartage and Road Freight Charges",
-  "Customs Clearance, VAT and Duty Charges",
-];
 const C_TERMS: ChargeCategory[] = [
   "Destination Handling and Delivery Charges",
   "Cartage and Road Freight Charges",
@@ -75,17 +70,18 @@ const C_TERMS: ChargeCategory[] = [
 
 /**
  * Which charge sections ExPac quotes under each incoterm (importer side):
- * EXW = everything from pick-up; FCA / FAS drop the Ex-Works charges; FOB
- * also drops the FOB charges (the seller loads); C-terms (seller also pays
- * the main freight) leave destination, cartage and clearance; DAP / DPU
- * leave only clearance; DDP = ExPac's all-in door-to-door duty-paid service.
+ * EXW = everything from pick-up; FCA / FAS / FOB drop the Ex-Works charges
+ * and keep the FOB charges (the agent's release / B/L fees); C-terms (seller
+ * also pays the main freight) leave destination, cartage and clearance;
+ * DAP / DPU leave only clearance; DDP = ExPac's all-in door-to-door
+ * duty-paid service.
  * Blank = every section.
  */
 export const INCOTERM_SECTIONS: Record<string, ChargeCategory[]> = {
   EXW: [...CHARGE_CATEGORIES],
   FCA: ORIGIN_ON,
   FAS: ORIGIN_ON,
-  FOB: F_TERMS_SELLER_LOADS,
+  FOB: ORIGIN_ON,
   CPT: C_TERMS,
   CFR: C_TERMS,
   CIP: C_TERMS,
@@ -96,6 +92,19 @@ export const INCOTERM_SECTIONS: Record<string, ChargeCategory[]> = {
 };
 export function sectionsForIncoterm(incoterm: string | null | undefined): ChargeCategory[] {
   return INCOTERM_SECTIONS[(incoterm ?? "").trim().toUpperCase()] ?? [...CHARGE_CATEGORIES];
+}
+
+/** The sections a partner's rate sheet prices under its incoterm: its own
+ *  sections the incoterm covers — an agent's FOB Charges only on an FOB
+ *  sheet (EXW = freight + ex-works, FOB = freight + FOB charges). */
+export function partnerSectionsForIncoterm(
+  kind: PartnerKind,
+  incoterm: string | null | undefined,
+): ChargeCategory[] {
+  const term = (incoterm ?? "").trim().toUpperCase();
+  return PARTNER_SECTIONS[kind].filter(
+    (c) => sectionsForIncoterm(term).includes(c) && (c !== "FOB Charges" || term === "FOB"),
+  );
 }
 
 /** The Quote Builder's code worksheet for a mode, section by section. A
@@ -209,7 +218,7 @@ export function tierLine(
       sellOnly,
       source: "manual",
       buy: null,
-      cur: line.cur ?? item.cur,
+      cur: line.cur ?? itemCur(item, lineSection(item, line)),
       margin: 0,
       sell: line.sell ?? null,
       hasBreaks: false,
@@ -222,7 +231,7 @@ export function tierLine(
       sellOnly,
       source: "manual",
       buy,
-      cur: line.cur ?? item.cur,
+      cur: line.cur ?? itemCur(item, lineSection(item, line)),
       margin,
       sell: buy == null ? null : buy * (1 + margin / 100),
       hasBreaks: false,
@@ -235,7 +244,7 @@ export function tierLine(
     sellOnly,
     source: line.source,
     buy: r?.buy ?? null,
-    cur: r?.cur ?? item.cur,
+    cur: r?.cur ?? itemCur(item, lineSection(item, line)),
     margin,
     sell: r ? r.buy * (1 + margin / 100) : null,
     breakLabel: r?.breakLabel,
@@ -246,7 +255,6 @@ export function tierLine(
 export function defaultTierLine(item: CatalogItem, section?: ChargeCategory): TariffSheetLine {
   const category = section ?? item.category;
   return {
-    // FOB Charges are ExPac's own (no partner) — a manual buy.
     source: isSellOnlyCode(item.code) ? "manual" : (CATEGORY_SOURCE[category] ?? "manual"),
     buy: null,
     margin: null,

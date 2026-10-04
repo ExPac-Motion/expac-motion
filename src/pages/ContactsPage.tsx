@@ -716,6 +716,7 @@ export default function ContactsPage({
                     kind={kind as PartnerKind}
                     partnerId={viewing.id}
                     partnerName={viewing.company}
+                    modes={viewing.modes}
                     showHistory
                   />
                   <PartnerLoginAccess

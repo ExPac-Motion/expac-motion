@@ -46,7 +46,7 @@ import {
   volumetricFactor,
   type FxRates,
 } from "../lib/calc";
-import { catalogForCategory, catalogItem } from "../lib/chargeCatalog";
+import { catalogForCategory, catalogItem, itemCur } from "../lib/chargeCatalog";
 import { carrierLabel, usesSeaLayout } from "../lib/docTemplates";
 import { fetchZarRates } from "../lib/fx";
 import { getPartnerRateSheets, listPartnerRateSheets } from "../lib/db";
@@ -575,7 +575,8 @@ export default function QuoteBuilderPage() {
       ? {
           code,
           description: item.description,
-          cur: item.cur,
+          // Warehousing: USD on Ex-Works (origin), ZAR on Cartage (local).
+          cur: itemCur(item, draft?.lines[index]?.category as ChargeCategory | undefined),
           unit: item.unit,
           qty_override: false,
         }

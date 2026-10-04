@@ -31,9 +31,10 @@ import {
   CATEGORY_SOURCE,
   ddmmyyyy,
   PARTNER_LABEL,
-  sectionsForIncoterm,
+  partnerSectionsForIncoterm,
   worksheetGroups,
 } from "../../lib/tariff";
+import { itemCur } from "../../lib/chargeCatalog";
 
 const fmt = (n: number) =>
   n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
@@ -57,6 +58,15 @@ function emptySheet(kind: PartnerKind, partnerId: string, mode: string): Partner
   };
 }
 
+/** The modes a partner's sheets can use: the modes ticked under its
+ *  Coverage (every mode when none are), plus any mode it already has
+ *  sheets for. */
+function sheetModes(modes: string[] | null | undefined, have: string[] = []): string[] {
+  const handled = QUOTE_MODES.filter((m) => (modes ?? []).includes(m));
+  const base: string[] = handled.length > 0 ? handled : [...QUOTE_MODES];
+  return QUOTE_MODES.filter((m) => base.includes(m) || have.includes(m));
+}
+
 /** Codes that carry a rate on the sheet. */
 function filledCodes(s: Pick<PartnerRateSheet, "lines">): string[] {
   return Object.entries(s.lines)
@@ -68,12 +78,15 @@ export default function PartnerRateSheets({
   kind,
   partnerId,
   partnerName,
+  modes,
   canDelete = true,
   showHistory = false,
 }: {
   kind: PartnerKind;
   partnerId: string;
   partnerName: string;
+  /** The partner's Coverage modes handled — only these get sheets. */
+  modes?: string[] | null;
   /** Partner-portal logins can add and edit, never delete (0121). */
   canDelete?: boolean;
   /** Admin: each sheet's change history (partner_rate_sheet_history). */
@@ -84,7 +97,12 @@ export default function PartnerRateSheets({
   const del = useDeletePartnerRateSheet();
   const { toast, error } = useToast();
   const all = q.data ?? [];
-  const [tab, setTab] = useState<string>(QUOTE_MODES[0]);
+  const tabs = sheetModes(
+    modes,
+    all.map((s) => s.mode),
+  );
+  const [picked, setTab] = useState<string>("");
+  const tab = tabs.includes(picked) ? picked : tabs[0];
   const shown = all.filter((s) => s.mode === tab);
   const [editing, setEditing] = useState<{ id?: string; draft: PartnerRateSheetDraft } | null>(
     null,
@@ -118,7 +136,7 @@ export default function PartnerRateSheets({
         </button>
       </div>
       <div className="rs-tabs" role="tablist">
-        {QUOTE_MODES.map((m) => {
+        {tabs.map((m) => {
           const n = all.filter((s) => s.mode === m).length;
           return (
             <button
@@ -169,6 +187,7 @@ export default function PartnerRateSheets({
       {editing && (
         <PartnerSheetEditor
           kind={kind}
+          modes={sheetModes(modes, [editing.draft.mode])}
           initial={editing.draft}
           isNew={!editing.id}
           saving={save.isPending}
@@ -387,6 +406,7 @@ function numOrNull(v: string): number | null {
 
 export function PartnerSheetEditor({
   kind,
+  modes,
   initial,
   isNew,
   saving,
@@ -394,6 +414,8 @@ export function PartnerSheetEditor({
   onSave,
 }: {
   kind: PartnerKind;
+  /** The modes the sheet can be for (the partner's coverage). */
+  modes: string[];
   initial: PartnerRateSheetDraft;
   isNew: boolean;
   saving: boolean;
@@ -407,8 +429,9 @@ export function PartnerSheetEditor({
     worksheetGroups(mode, { sellOnly: false }).filter((g) => CATEGORY_SOURCE[g.category] === kind);
   const groups = groupsFor(d.mode);
   // The sheet's incoterm decides which of those sections it prices (an
-  // agent's FOB rates have no Ex-Works charges).
-  const shown = groups.filter((g) => sectionsForIncoterm(d.incoterm).includes(g.category));
+  // agent's EXW sheet = freight + ex-works, FOB = freight + FOB charges).
+  const sections = partnerSectionsForIncoterm(kind, d.incoterm);
+  const shown = groups.filter((g) => sections.includes(g.category));
   const shownCodes = new Set(shown.flatMap((g) => g.items.map((i) => i.code)));
   const allCodes = (mode: string) => groupsFor(mode).flatMap((g) => g.items.map((i) => i.code));
   // The sheet's lines, like a quote: a new sheet starts with every code, an
@@ -479,7 +502,7 @@ export function PartnerSheetEditor({
           <div className="field">
             <label>Mode</label>
             <select value={d.mode} onChange={(e) => changeMode(e.target.value)}>
-              {QUOTE_MODES.map((m) => (
+              {modes.map((m) => (
                 <option key={m}>{m}</option>
               ))}
             </select>
@@ -599,7 +622,8 @@ export function PartnerSheetEditor({
                     </thead>
                     <tbody>
                       {codes.flatMap((item) => {
-                        const l = line(item.code, item.cur);
+                        const cur = itemCur(item, g.category);
+                        const l = line(item.code, cur);
                         const breaks = l.breaks;
                         const unit = l.unit ?? item.unit;
                         const out = [
@@ -626,7 +650,7 @@ export function PartnerSheetEditor({
                               <select
                                 value={l.cur}
                                 onChange={(e) =>
-                                  setLine(item.code, item.cur, {
+                                  setLine(item.code, cur, {
                                     cur: e.target.value as LineCurrency,
                                   })
                                 }
@@ -640,7 +664,7 @@ export function PartnerSheetEditor({
                               <select
                                 value={unit}
                                 onChange={(e) =>
-                                  setLine(item.code, item.cur, {
+                                  setLine(item.code, cur, {
                                     unit: e.target.value === item.unit ? undefined : e.target.value,
                                   })
                                 }
@@ -666,7 +690,7 @@ export function PartnerSheetEditor({
                                   value={l.buy ?? ""}
                                   placeholder="—"
                                   onChange={(e) =>
-                                    setLine(item.code, item.cur, {
+                                    setLine(item.code, cur, {
                                       buy: numOrNull(e.target.value),
                                     })
                                   }
@@ -683,7 +707,7 @@ export function PartnerSheetEditor({
                                     : "Rates by chargeable weight (e.g. 0-45KG, 0-100KG)"
                                 }
                                 onClick={() =>
-                                  setLine(item.code, item.cur, {
+                                  setLine(item.code, cur, {
                                     breaks: breaks
                                       ? undefined
                                       : (unit === "KGS" ? AIR_BREAKS : TIER_BREAKS).map(
@@ -717,7 +741,7 @@ export function PartnerSheetEditor({
                                     value={b.label}
                                     placeholder="e.g. 0-45KG"
                                     onChange={(e) =>
-                                      setLine(item.code, item.cur, {
+                                      setLine(item.code, cur, {
                                         breaks: breaks.map((x, j) =>
                                           j === i ? { ...x, label: e.target.value } : x,
                                         ),
@@ -734,7 +758,7 @@ export function PartnerSheetEditor({
                                     value={b.rate ?? ""}
                                     placeholder="—"
                                     onChange={(e) =>
-                                      setLine(item.code, item.cur, {
+                                      setLine(item.code, cur, {
                                         breaks: breaks.map((x, j) =>
                                           j === i ? { ...x, rate: numOrNull(e.target.value) } : x,
                                         ),
@@ -748,7 +772,7 @@ export function PartnerSheetEditor({
                                       type="button"
                                       className="btn small ghost"
                                       onClick={() =>
-                                        setLine(item.code, item.cur, {
+                                        setLine(item.code, cur, {
                                           breaks: [...breaks, { label: "", rate: null }],
                                         })
                                       }
@@ -763,7 +787,7 @@ export function PartnerSheetEditor({
                                     className="row-icon-btn"
                                     title="Remove this break"
                                     onClick={() =>
-                                      setLine(item.code, item.cur, {
+                                      setLine(item.code, cur, {
                                         breaks: breaks.filter((_, j) => j !== i),
                                       })
                                     }
