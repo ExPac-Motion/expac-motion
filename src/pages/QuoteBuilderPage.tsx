@@ -58,6 +58,7 @@ import {
   isSellOnlyCode,
   partnerIdKey,
   partnerRate,
+  partnerSectionsForIncoterm,
   lineSection,
   sectionsForIncoterm,
   sheetIdKey,
@@ -787,8 +788,11 @@ export default function QuoteBuilderPage() {
     if (!draft) return;
     const sheet = partnerSheet(kind);
     if (!sheet) return;
-    const sections = PARTNER_SECTIONS[kind].filter((c) =>
-      sectionsForIncoterm(draft.incoterms).includes(c),
+    // The sections the quote's incoterm covers AND the sheet prices (an
+    // agent's EXW sheet leaves the quote's FOB charges alone).
+    const sheetSections = partnerSectionsForIncoterm(kind, sheet.incoterm);
+    const sections = PARTNER_SECTIONS[kind].filter(
+      (c) => sectionsForIncoterm(draft.incoterms).includes(c) && sheetSections.includes(c),
     );
     const kg = packTotals.chargeable;
     const fxRates = fxOfDraft(draft);
