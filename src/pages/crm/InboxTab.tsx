@@ -447,6 +447,18 @@ function Reader({
       error(e instanceof Error ? e.message : "Could not create the lead");
     }
   }
+  /** The Quote Builder, started on the customer / lead this email is from
+   *  (an unknown sender becomes a lead first). */
+  async function createQuotation() {
+    try {
+      let leadId = msg.record_kind === "lead" ? msg.record_id : null;
+      const clientId = msg.record_kind === "client" ? msg.record_id : null;
+      if (!leadId && !clientId) leadId = (await createLeadFromSender()).id;
+      navigate("/quotes/new", { state: { prefill: clientId ? { clientId } : { leadId } } });
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not start the quotation");
+    }
+  }
   /** A pipeline opportunity from this email — on the customer or lead it
    *  came from (an unknown sender becomes a lead first). */
   async function addOpportunity() {
@@ -547,6 +559,21 @@ function Reader({
         {c === "unknown" && msg.direction === "in" && msg.from_email && (
           <button type="button" className="btn small outline" onClick={makeLead} disabled={saveLead.isPending}>
             + Make a lead
+          </button>
+        )}
+        {msg.direction === "in" && msg.from_email && (c === "unknown" || c === "lead" || c === "customer") && (
+          <button
+            type="button"
+            className="btn small outline"
+            onClick={createQuotation}
+            disabled={saveLead.isPending}
+            title={
+              c === "unknown"
+                ? "Makes the sender a lead, then opens the Quote Builder for them"
+                : "Opens the Quote Builder for this customer / lead"
+            }
+          >
+            Create quotation
           </button>
         )}
         {msg.direction === "in" && msg.from_email && (c === "unknown" || c === "lead" || c === "customer") && (

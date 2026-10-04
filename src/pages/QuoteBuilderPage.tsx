@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import DateInput from "../components/DateInput";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import { ErrorNote, Loading, PageHeader } from "../components/common";
 import { useToast } from "../components/Toast";
@@ -378,6 +378,35 @@ export default function QuoteBuilderPage() {
 
   // Seed a brand-new quote's FX rates / incoterm from Settings > Quote Defaults,
   // once, as soon as they load — never touches an existing (edit) quote.
+  // A new quote opened with { state: { prefill: { clientId | leadId } } }
+  // (Inbox › Create quotation) starts on that customer / lead — same as
+  // picking it: its rate tier and (lead) sales person come along. Once.
+  const location = useLocation();
+  const prefill = (location.state as { prefill?: { clientId?: string; leadId?: string } } | null)?.prefill;
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (isEdit || prefillApplied.current || !prefill || !clientsQ.data || !leadsQ.data) return;
+    const client = prefill.clientId ? clientsQ.data.find((c) => c.id === prefill.clientId) : null;
+    const lead = prefill.leadId ? leadsQ.data.find((l) => l.id === prefill.leadId) : null;
+    // A lead made a moment ago may not be in the cached list yet — wait for the refetch.
+    if (!client && !lead && (clientsQ.isFetching || leadsQ.isFetching)) return;
+    prefillApplied.current = true;
+    if (!client && !lead) return;
+    const tier: RateTierId = client?.rate_tier ?? "silver";
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            client_id: client?.id ?? "",
+            lead_id: client ? "" : (lead?.id ?? ""),
+            sales_person_id: lead?.sales_person_id || d.sales_person_id,
+            rate_tier: tier,
+            tariff_sheet_id: tier === d.rate_tier ? d.tariff_sheet_id : "",
+          }
+        : d,
+    );
+  }, [isEdit, prefill, clientsQ.data, leadsQ.data, clientsQ.isFetching, leadsQ.isFetching]);
+
   const defaultsApplied = useRef(false);
   useEffect(() => {
     if (isEdit || defaultsApplied.current || !settingsQ.data) return;
