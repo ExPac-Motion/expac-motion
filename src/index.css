@@ -6031,3 +6031,23 @@ table.dt .task-title {
   align-items: center;
   gap: 10px;
 }
+
+/* Settings > Team: what each login can do (0131 / 0132). */
+.access-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.access-chip {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--night-tint);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.access-chip.on {
+  background: var(--green-tint);
+  color: var(--green-dark);
+  text-decoration: none;
+}

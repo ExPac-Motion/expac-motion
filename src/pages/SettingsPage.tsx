@@ -47,6 +47,7 @@ import {
   CLIENT_PERMS,
   PARTNER_PERMS,
   STAFF_PERMS,
+  accessSummary,
   rolePermissions,
   type PermDef,
   type PermKey,
@@ -314,6 +315,7 @@ function TeamTab() {
   const { toast, error: toastError } = useToast();
   const [editingName, setEditingName] = useState<string | null>(null);
   const [permsFor, setPermsFor] = useState<Profile | null>(null);
+  const settingsQ = useCompanySettings();
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
@@ -358,7 +360,7 @@ function TeamTab() {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Permissions</th>
+              <th>Access</th>
               <th>Joined</th>
             </tr>
           </thead>
@@ -400,18 +402,28 @@ function TeamTab() {
                     <span className="tag">{roleLabel(p)}</span>
                   )}
                 </td>
-                <td>
-                  {p.role === "admin" ? (
-                    <span className="muted">Everything</span>
-                  ) : isAdmin && (p.role === "user" || (p.role === "partner" && p.partner_id)) ? (
-                    <button type="button" className="btn small outline" onClick={() => setPermsFor(p)}>
-                      {Object.keys(p.permissions ?? {}).length ? "Custom ✎" : "Role default ✎"}
+                <td style={{ whiteSpace: "normal" }}>
+                  <div className="access-chips">
+                    {accessSummary(p, settingsQ.data?.role_permissions).map((a) => (
+                      <span key={a.label} className={`access-chip${a.on ? " on" : ""}`}>
+                        {a.on ? "✓" : "✕"} {a.label}
+                      </span>
+                    ))}
+                  </div>
+                  {isAdmin && (p.role === "user" || (p.role === "partner" && p.partner_id)) ? (
+                    <button
+                      type="button"
+                      className="btn small outline"
+                      style={{ marginTop: 6 }}
+                      onClick={() => setPermsFor(p)}
+                    >
+                      {Object.keys(p.permissions ?? {}).length ? "Custom — edit" : "Role default — edit"}
                     </button>
                   ) : p.role === "client" ? (
-                    <span className="muted">Customers › Portal Access</span>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
+                    <span className="muted" style={{ fontSize: "0.75rem" }}>
+                      Edit on Customers › Portal Access
+                    </span>
+                  ) : null}
                 </td>
                 <td className="nowrap">{formatDate(p.created_at)}</td>
               </tr>
