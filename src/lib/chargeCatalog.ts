@@ -70,7 +70,7 @@ export const CHARGE_CATALOG: CatalogItem[] = [
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-02", description: "Customs VAT", cur: "ZAR", unit: "AWB", vat_pct: 100 },
   { category: "Customs Clearance, VAT and Duty Charges", code: "CU-03", description: "Customs Duty", cur: "ZAR", unit: "AWB" },
   { category: "Customs Clearance, VAT and Duty Charges", code: "DIS-01", description: "Disbursement Fee", cur: "ZAR", unit: "DIS", vat_pct: 15 },
-  { category: "Customs Clearance, VAT and Duty Charges", code: "CU-05", description: "Customs Clearance Fee", cur: "ZAR", unit: "AWB", vat_pct: 15 },
+  { category: "Customs Clearance, VAT and Duty Charges", code: "CU-05", description: "Customs Clearance Fee", cur: "ZAR", unit: "DOC", vat_pct: 15 },
 ];
 
 /** A code's default currency in a section (see curIn). */

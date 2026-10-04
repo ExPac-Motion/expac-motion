@@ -17,6 +17,7 @@ import {
   RowActionsHead,
   SearchInput,
   useRowSelection,
+  CanDelete,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -334,6 +335,7 @@ export default function TemplatesPage() {
           </button>
         }
       >
+        <CanDelete>
         <button
           className="btn danger"
           onClick={onBulkDelete}
@@ -342,6 +344,7 @@ export default function TemplatesPage() {
         >
           Delete{sel.count ? ` (${sel.count})` : ""}
         </button>
+        </CanDelete>
       </PageTools>
 
       <div className="panel">

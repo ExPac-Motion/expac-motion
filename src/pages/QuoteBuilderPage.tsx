@@ -14,10 +14,10 @@ import {
   useProfiles,
   usePartnerRateSheets,
   useQuote,
-  useMyProfile,
   useRateSheet,
   useTariffSheets,
   useTierMargins,
+  useCan,
   useSaveQuote,
   useFinalizeCopiedQuote,
   useSaveSupplier,
@@ -352,19 +352,20 @@ export default function QuoteBuilderPage() {
   const tariffQ = useTariffSheets();
   // Editable tier margins (0130): the Rate tier labels and Load rates use them.
   useTierMargins();
-  const isAdmin = useMyProfile().data?.role === "admin";
+  // Tier / partner rates and buy-rate pickers need "rates" (0131; Admin always).
+  const canRates = useCan()("rates");
   const [tierLoading, setTierLoading] = useState(false);
   // Each picked partner's own rate sheets, for its "Load rates" button.
   const partnerSheetsQ: Record<PartnerKind, ReturnType<typeof usePartnerRateSheets>> = {
-    agent: usePartnerRateSheets("agent", isAdmin ? draft?.agent_id || null : null),
+    agent: usePartnerRateSheets("agent", canRates ? draft?.agent_id || null : null),
     clearing_agent: usePartnerRateSheets(
       "clearing_agent",
-      isAdmin ? draft?.clearing_agent_id || null : null,
+      canRates ? draft?.clearing_agent_id || null : null,
     ),
-    transporter: usePartnerRateSheets("transporter", isAdmin ? draft?.transporter_id || null : null),
+    transporter: usePartnerRateSheets("transporter", canRates ? draft?.transporter_id || null : null),
     destination_agent: usePartnerRateSheets(
       "destination_agent",
-      isAdmin ? draft?.destination_agent_id || null : null,
+      canRates ? draft?.destination_agent_id || null : null,
     ),
   };
   const [pickedSheet, setPickedSheet] = useState<Partial<Record<PartnerKind, string>>>({});
@@ -881,7 +882,7 @@ export default function QuoteBuilderPage() {
     return (
       <div className="field">
         <label>{PARTNER_LABEL[kind]} (internal only)</label>
-        {isAdmin && draft[key] ? (
+        {canRates && draft[key] ? (
           <div style={{ display: "flex", gap: 8 }}>
             {select}
             <button
@@ -897,7 +898,7 @@ export default function QuoteBuilderPage() {
         ) : (
           select
         )}
-        {isAdmin && draft[key] && list.length > 1 ? (
+        {canRates && draft[key] && list.length > 1 ? (
           <select
             className="hint-select"
             value={sheet?.id ?? ""}
@@ -913,7 +914,7 @@ export default function QuoteBuilderPage() {
         ) : (
           <span className="hint">
             Not shown on the customer quotation.
-            {isAdmin && draft[key]
+            {canRates && draft[key]
               ? sheet
                 ? ` Rates: ${sheetLabel(sheet)}.`
                 : ` No ${draft.mode} rate sheet yet.`
@@ -1441,7 +1442,7 @@ export default function QuoteBuilderPage() {
           )}
 
           {/* Tier rate sheets (0119) — admin-only, like Rates & Tariff */}
-          {isAdmin && (
+          {canRates && (
           <>
           <div className="field">
             <label>
@@ -1811,7 +1812,7 @@ export default function QuoteBuilderPage() {
             <div className="charge-group-head">
               <h3>{g.category.toUpperCase()}</h3>
               <div style={{ display: "flex", gap: 8 }}>
-                {isAdmin && (
+                {canRates && (
                 <button
                   className="btn small outline"
                   onClick={() => setRatePickerFor(g.category)}

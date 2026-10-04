@@ -48,6 +48,8 @@ export interface Profile {
   id: string;
   full_name: string | null;
   role: UserRole;
+  /** Per-login permission overrides (0131); a missing key = the role's setting. */
+  permissions?: Partial<Record<import("./permissions").PermKey, boolean>> | null;
   /** Set for role='client', and kept when revoked to role='restricted' so
    *  access can be restored — which customer this portal login belongs to. */
   client_id: string | null;
@@ -91,6 +93,7 @@ export type ProfilePatch = Partial<
     Profile,
     | "full_name"
     | "role"
+    | "permissions"
     | "sales_revenue_target"
     | "sales_gp_target"
     | "sales_target"
@@ -119,6 +122,8 @@ export interface CompanySettings {
   id: number;
   /** Editable tier margins (0130), e.g. { platinum: 10, gold: 15, silver: 18 }. */
   tier_margins?: Partial<Record<RateTierId, number>> | null;
+  /** Per-role permission switches (0131) — see lib/permissions.ts. */
+  role_permissions?: Partial<import("./permissions").RolePermissions> | null;
   legal_name: string;
   reg_no: string;
   vat_no: string;
@@ -1141,6 +1146,9 @@ export interface MyPartner {
   modes?: string[] | null;
   /** Coverage countries (0127) — each offers a "<country> → South Africa" route. */
   countries?: string[] | null;
+  /** Coverage ports + notes (0131), for the portal's own coverage editor. */
+  ports?: string[] | null;
+  coverage_notes?: string | null;
 }
 export interface PartnerRateSheetChange {
   id: string;

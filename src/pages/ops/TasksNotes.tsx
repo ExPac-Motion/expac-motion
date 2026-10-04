@@ -12,6 +12,7 @@ import {
   SearchInput,
   useDeepLinkReturn,
   useRowSelection,
+  CanDelete,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -485,6 +486,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
             >
               Bulk Edit{sel.count ? ` (${sel.count})` : ""}
             </button>
+            <CanDelete>
             <button
               className="btn danger"
               onClick={bulkDeleteSelected}
@@ -497,6 +499,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
             >
               Delete{sel.count ? ` (${sel.count})` : ""}
             </button>
+            </CanDelete>
           </>
         )}
       </PageTools>

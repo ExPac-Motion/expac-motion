@@ -7,6 +7,7 @@ import {
 import * as db from "./db";
 import { supabase } from "./supabase";
 import { applyTierMargins } from "./types";
+import { DEFAULT_ROLE_PERMISSIONS, type PermKey } from "./permissions";
 import type {
   RateTierId,
   MailCampaignPatch,
@@ -1502,6 +1503,23 @@ export function useTierMargins() {
   const q = useCompanySettings();
   if (q.data?.tier_margins) applyTierMargins(q.data.tier_margins);
   return q;
+}
+/** The signed-in login's permissions (0131): `can("rates")` etc. Admin is
+ *  always allowed; until the RPC answers (or before 0131 is applied) the
+ *  role's built-in default is used. */
+export function useCan() {
+  const profileQ = useMyProfile();
+  const q = useQuery({ queryKey: ["my_permissions"], queryFn: db.getMyPermissions, retry: false });
+  const role = profileQ.data?.role;
+  return (key: PermKey): boolean => {
+    if (role === "admin") return true;
+    const v = q.data?.[key];
+    if (typeof v === "boolean") return v;
+    if (role === "user") return (DEFAULT_ROLE_PERMISSIONS.user as Record<string, boolean>)[key] ?? false;
+    if (role === "partner")
+      return (DEFAULT_ROLE_PERMISSIONS.partner as Record<string, boolean>)[key] ?? false;
+    return false;
+  };
 }
 /** Changes a tier's margin; every trade-route sheet of that tier follows. */
 export function useSetTierMargin() {

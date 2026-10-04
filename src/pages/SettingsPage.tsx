@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react
 import { useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../components/common";
 import MergeCodeMenu from "../components/MergeCodeMenu";
+import Modal from "../components/Modal";
 import RichTextEditor from "../components/RichTextEditor";
 import { useToast } from "../components/Toast";
 import {
@@ -41,11 +42,22 @@ import type {
 } from "../lib/types";
 import { formatDate } from "../lib/format";
 import { PARTNER_LABEL } from "../lib/tariff";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  CLIENT_PERMS,
+  PARTNER_PERMS,
+  STAFF_PERMS,
+  rolePermissions,
+  type PermDef,
+  type PermKey,
+  type RolePermissions,
+} from "../lib/permissions";
 
 type Tab =
   | "company"
   | "defaults"
   | "team"
+  | "roles"
   | "email"
   | "comms"
   | "replies"
@@ -56,6 +68,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company Details" },
   { key: "defaults", label: "Quote Defaults" },
   { key: "team", label: "Team" },
+  { key: "roles", label: "Roles & Permissions" },
   { key: "email", label: "Email" },
   { key: "comms", label: "Shipment Comms" },
   { key: "replies", label: "Shipment Replies" },
@@ -85,6 +98,7 @@ export default function SettingsPage() {
         {tab === "company" && <CompanyTab />}
         {tab === "defaults" && <DefaultsTab />}
         {tab === "team" && <TeamTab />}
+        {tab === "roles" && <RolesTab />}
         {tab === "email" && <EmailTab />}
         {tab === "comms" && <ShipmentCommsTab />}
         {tab === "replies" && <ShipmentRepliesTab />}
@@ -299,6 +313,7 @@ function TeamTab() {
   const update = useUpdateProfile();
   const { toast, error: toastError } = useToast();
   const [editingName, setEditingName] = useState<string | null>(null);
+  const [permsFor, setPermsFor] = useState<Profile | null>(null);
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
@@ -343,6 +358,7 @@ function TeamTab() {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Permissions</th>
               <th>Joined</th>
             </tr>
           </thead>
@@ -384,13 +400,210 @@ function TeamTab() {
                     <span className="tag">{roleLabel(p)}</span>
                   )}
                 </td>
+                <td>
+                  {p.role === "admin" ? (
+                    <span className="muted">Everything</span>
+                  ) : isAdmin && (p.role === "user" || (p.role === "partner" && p.partner_id)) ? (
+                    <button type="button" className="btn small outline" onClick={() => setPermsFor(p)}>
+                      {Object.keys(p.permissions ?? {}).length ? "Custom ✎" : "Role default ✎"}
+                    </button>
+                  ) : p.role === "client" ? (
+                    <span className="muted">Customers › Portal Access</span>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
                 <td className="nowrap">{formatDate(p.created_at)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {permsFor && <PermOverrideModal profile={permsFor} onClose={() => setPermsFor(null)} />}
     </>
+  );
+}
+
+/** Settings > Roles & Permissions (0131): what each role may do. Admin User
+ *  has everything; a single login can differ via Team > Permissions. */
+function RolesTab() {
+  const { data, isLoading, isError, error } = useCompanySettings();
+  const update = useUpdateCompanySettings();
+  const isAdmin = useMyProfile().data?.role === "admin";
+  const qc = useQueryClient();
+  const { toast, error: toastError } = useToast();
+  const [draft, setDraft] = useState<RolePermissions | null>(null);
+
+  if (isLoading) return <Loading />;
+  if (isError) return <ErrorNote error={error} />;
+  const saved = rolePermissions(data?.role_permissions);
+  const v = draft ?? saved;
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(saved);
+
+  function toggle<R extends keyof RolePermissions>(role: R, key: keyof RolePermissions[R]) {
+    setDraft({ ...v, [role]: { ...v[role], [key]: !v[role][key] } });
+  }
+  async function onSave() {
+    try {
+      await update.mutateAsync({ role_permissions: v });
+      qc.invalidateQueries({ queryKey: ["my_permissions"] });
+      setDraft(null);
+      toast("Role permissions saved");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not save — is migration 0131 applied?");
+    }
+  }
+
+  const section = <R extends keyof RolePermissions>(
+    title: string,
+    note: string,
+    role: R,
+    defs: PermDef<string>[],
+  ) => (
+    <div style={{ marginBottom: 18 }}>
+      <h3 style={{ margin: "0 0 4px" }}>{title}</h3>
+      <p className="muted" style={{ margin: "0 0 8px" }}>
+        {note}
+      </p>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th style={{ width: 120 }}>Allowed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {defs.map((d) => {
+              const on = (v[role] as Record<string, boolean>)[d.key];
+              return (
+                <tr key={d.key}>
+                  <td>
+                    <strong>{d.label}</strong>
+                    {d.hint && <div className="muted" style={{ fontSize: "0.78rem" }}>{d.hint}</div>}
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={!isAdmin}
+                      onChange={() => toggle(role, d.key as keyof RolePermissions[R])}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <p className="muted" style={{ marginTop: 0 }}>
+        What each role can do. <strong>Admin User</strong> always has everything (incl. team roles,
+        partner logins and these settings). A single login can be given more or less on{" "}
+        <strong>Team › Permissions</strong>.{!isAdmin && " Only Admin can change these."}
+      </p>
+      {section("Standard User", "Staff logins — full Motion access apart from the switches below.", "user", STAFF_PERMS)}
+      {section(
+        "Partner Portal User",
+        "Agent / transporter / clearing agent / destination agent logins — they always see and edit their own rate sheets.",
+        "partner",
+        PARTNER_PERMS,
+      )}
+      {section(
+        "Customer Portal",
+        "Defaults for new customer logins — each login's own sections stay editable on Customers › Portal Access.",
+        "client",
+        CLIENT_PERMS,
+      )}
+      {isAdmin && (
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          {dirty && (
+            <button type="button" className="btn outline" onClick={() => setDraft(null)}>
+              Undo
+            </button>
+          )}
+          <button type="button" className="btn" disabled={!dirty || update.isPending} onClick={onSave}>
+            {update.isPending ? "Saving…" : "Save permissions"}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Team › Permissions: one login's overrides (Default = the role's setting). */
+function PermOverrideModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
+  const settingsQ = useCompanySettings();
+  const update = useUpdateProfile();
+  const qc = useQueryClient();
+  const { toast, error: toastError } = useToast();
+  const roleKey = profile.role === "partner" ? "partner" : "user";
+  const defs: PermDef<PermKey>[] = roleKey === "partner" ? PARTNER_PERMS : STAFF_PERMS;
+  const roleVals = rolePermissions(settingsQ.data?.role_permissions)[roleKey] as Record<string, boolean>;
+  const [over, setOver] = useState<Partial<Record<PermKey, boolean>>>(profile.permissions ?? {});
+
+  async function onSave() {
+    try {
+      const permissions = Object.keys(over).length ? over : null;
+      await update.mutateAsync({ id: profile.id, patch: { permissions } });
+      qc.invalidateQueries({ queryKey: ["my_permissions"] });
+      toast("Permissions saved");
+      onClose();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not save — is migration 0131 applied?");
+    }
+  }
+
+  return (
+    <Modal title={`Permissions — ${profile.full_name || profile.email || "login"}`} onClose={onClose}>
+      <p className="muted" style={{ marginTop: 0 }}>
+        {roleLabel(profile)}. <strong>Role default</strong> follows Settings › Roles & Permissions.
+      </p>
+      <div className="table-wrap">
+        <table>
+          <tbody>
+            {defs.map((d) => {
+              const val = over[d.key];
+              return (
+                <tr key={d.key}>
+                  <td>
+                    <strong>{d.label}</strong>
+                    <div className="muted" style={{ fontSize: "0.78rem" }}>{d.hint}</div>
+                  </td>
+                  <td style={{ width: 210 }}>
+                    <select
+                      value={val == null ? "" : val ? "on" : "off"}
+                      onChange={(e) => {
+                        const next = { ...over };
+                        if (e.target.value === "") delete next[d.key];
+                        else next[d.key] = e.target.value === "on";
+                        setOver(next);
+                      }}
+                    >
+                      <option value="">Role default ({roleVals[d.key] ? "allowed" : "blocked"})</option>
+                      <option value="on">Allow</option>
+                      <option value="off">Block</option>
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+        <button type="button" className="btn outline" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="btn" disabled={update.isPending} onClick={onSave}>
+          {update.isPending ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

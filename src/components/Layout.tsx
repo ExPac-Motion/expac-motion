@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
-import { useMyProfile } from "../lib/hooks";
+import { useCan, useMyProfile } from "../lib/hooks";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
 
@@ -141,6 +141,7 @@ export default function Layout() {
   const { pathname, search } = useLocation();
   const profileQ = useMyProfile();
   const isAdmin = profileQ.data?.role === "admin";
+  const can = useCan();
   const name =
     (user?.user_metadata?.full_name as string | undefined) || user?.email || "";
 
@@ -167,10 +168,21 @@ export default function Layout() {
         ? { ...m, children: m.children?.filter((c) => !c.to.includes("portal-access")) }
         : m,
     );
-    // Rates & Tariff (buy rates, margins, partner rates) is admin-only —
-    // the tables are locked to is_admin() in 0120.
-    nav = nav.filter((m) => m.to !== "/rates");
   }
+  // Role permissions (0131): Rates & Tariff needs "rates" (the tables are
+  // locked to admin / rates permission in the database); the CRM Dashboard
+  // and Trends (sales performance, financials) need "crm".
+  if (!can("rates")) nav = nav.filter((m) => m.to !== "/rates");
+  if (!can("crm"))
+    nav = nav.map((m) =>
+      m.to === "/crm"
+        ? {
+            ...m,
+            to: "/crm?tab=leads",
+            children: m.children?.filter((c) => c.to !== "/crm" && !c.to.includes("tab=trends")),
+          }
+        : m,
+    );
 
   const activeModule = nav.find((m) => isModuleActive(m, pathname));
 
@@ -196,14 +208,16 @@ export default function Layout() {
         <div className="topbar-utils">
           <GlobalSearch />
           <NotificationsBell />
-          <Link
-            to="/settings"
-            className={`icon-btn${pathname.startsWith("/settings") ? " active" : ""}`}
-            title="Settings"
-            aria-label="Settings"
-          >
-            {Icon.gear}
-          </Link>
+          {can("settings") && (
+            <Link
+              to="/settings"
+              className={`icon-btn${pathname.startsWith("/settings") ? " active" : ""}`}
+              title="Settings"
+              aria-label="Settings"
+            >
+              {Icon.gear}
+            </Link>
+          )}
           <div className="topbar-account">
             <span className="who">{name}</span>
             <button className="link-btn" onClick={() => signOut()}>

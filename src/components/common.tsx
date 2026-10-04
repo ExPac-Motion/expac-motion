@@ -11,6 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { STATUS_LABEL, type QuoteStatus } from "../lib/types";
+import { useCan } from "../lib/hooks";
 import Modal from "./Modal";
 import DateInput from "./DateInput";
 import TimeInput from "./TimeInput";
@@ -170,6 +171,9 @@ export function RowActions({
     e.stopPropagation();
     fn();
   };
+  // Deleting needs the "delete" permission (0131; Admin always).
+  const canDelete = useCan()("delete");
+  if (!canDelete) onDelete = undefined;
   return (
     <div className="row-icons">
       {onSelectToggle ? (
@@ -232,6 +236,13 @@ export function RowActions({
       )}
     </div>
   );
+}
+
+/** Renders its children only for a login with the "delete" permission
+ *  (0131; Admin always) — wraps bulk-delete buttons. */
+export function CanDelete({ children }: { children: ReactNode }) {
+  const can = useCan();
+  return can("delete") ? <>{children}</> : null;
 }
 
 /** Header cell to pair with RowActions: a select-all checkbox + "Actions" label.

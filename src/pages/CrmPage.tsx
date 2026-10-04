@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router-dom";
+import { useCan } from "../lib/hooks";
 import { PageHeader } from "../components/common";
 import CampaignsPage from "./crm/CampaignsPage";
 import FollowUpsPage from "./crm/FollowUpsPage";
@@ -49,7 +50,10 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
  */
 export default function CrmPage() {
   const [params] = useSearchParams();
-  const tab = (params.get("tab") as Tab) || "dashboard";
+  const can = useCan();
+  const asked = (params.get("tab") as Tab) || "dashboard";
+  // Dashboard / Trends (sales performance, financials) need "crm" (0131).
+  const tab: Tab = !can("crm") && (asked === "dashboard" || asked === "trends") ? "leads" : asked;
   const copy = COPY[tab] ?? COPY.dashboard;
 
   return (

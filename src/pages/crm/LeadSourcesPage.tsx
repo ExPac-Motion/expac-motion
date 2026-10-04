@@ -9,6 +9,7 @@ import {
   RowActions,
   RowActionsHead,
   useRowSelection,
+  CanDelete,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -137,6 +138,7 @@ export default function LeadSourcesPage() {
           </button>
         }
       >
+        <CanDelete>
         <button
           className="btn danger"
           onClick={onBulkDelete}
@@ -145,6 +147,7 @@ export default function LeadSourcesPage() {
         >
           Delete{sel.count ? ` (${sel.count})` : ""}
         </button>
+        </CanDelete>
       </PageTools>
 
       <div className="panel">

@@ -5,6 +5,7 @@ import {
   ErrorNote,
   Loading,
   useRowSelection,
+  CanDelete,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -179,6 +180,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
             >
               Bulk Edit{sel.count ? ` (${sel.count})` : ""}
             </button>
+            <CanDelete>
             <button
               className="btn danger"
               onClick={bulkDeleteSelected}
@@ -189,6 +191,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
             >
               Delete{sel.count ? ` (${sel.count})` : ""}
             </button>
+            </CanDelete>
           </>
         )}
       </div>

@@ -15,6 +15,7 @@ import {
   RowActionsHead,
   SearchInput,
   useRowSelection,
+  CanDelete,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
@@ -357,6 +358,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         >
           Bulk Edit{sel.count ? ` (${sel.count})` : ""}
         </button>
+        <CanDelete>
         <button
           className="btn outline"
           onClick={onBulkDelete}
@@ -364,6 +366,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         >
           Delete{sel.count ? ` (${sel.count})` : ""}
         </button>
+        </CanDelete>
       </PageTools>
 
       <div className="panel">

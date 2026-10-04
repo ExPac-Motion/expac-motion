@@ -3,17 +3,78 @@
 // only returns this partner's partner_rate_sheets (RLS), and they can add
 // and edit but never delete. No tier sheets, sell rates, margins, customers,
 // quotes or shipments are reachable from this login.
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth/AuthProvider";
 import { ErrorNote, Loading } from "../../components/common";
-import { useMyPartner } from "../../lib/hooks";
+import { useCan, useMyPartner } from "../../lib/hooks";
+import { updateMyCoverage } from "../../lib/db";
+import { useToast } from "../../components/Toast";
+import { CoverageEditor, CoverageView, coverageOf, type Coverage } from "../partners/PartnerCoverage";
+import type { MyPartner } from "../../lib/types";
 import { PARTNER_LABEL } from "../../lib/tariff";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
+
+/** The partner's own coverage — editable with the edit_coverage permission. */
+function MyCoverage({ me, canEdit }: { me: MyPartner; canEdit: boolean }) {
+  const qc = useQueryClient();
+  const { toast, error } = useToast();
+  const [editing, setEditing] = useState<Coverage | null>(null);
+  const [saving, setSaving] = useState(false);
+  const current = coverageOf(me);
+
+  if (!editing)
+    return (
+      <>
+        <CoverageView value={current} />
+        {canEdit && (
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button type="button" className="btn outline" onClick={() => setEditing(current)}>
+              Edit coverage
+            </button>
+          </div>
+        )}
+      </>
+    );
+  return (
+    <>
+      <CoverageEditor value={editing} onChange={setEditing} />
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+        <button type="button" className="btn outline" onClick={() => setEditing(null)}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={saving}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await updateMyCoverage(editing);
+              qc.invalidateQueries({ queryKey: ["my_partner"] });
+              setEditing(null);
+              toast("Coverage saved");
+            } catch (e) {
+              error(e instanceof Error ? e.message : "Could not save your coverage");
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {saving ? "Saving…" : "Save coverage"}
+        </button>
+      </div>
+    </>
+  );
+}
 
 export default function PartnerPortalPage() {
   const { user, signOut } = useAuth();
   const q = useMyPartner();
   const me = q.data;
+  // Switches from Settings > Roles & Permissions (0131).
+  const can = useCan();
 
   return (
     <div className="app-shell">
@@ -68,8 +129,12 @@ export default function PartnerPortalPage() {
                 partnerName={me.company || "your company"}
                 modes={me.modes}
                 countries={me.countries}
-                canDelete={false}
+                canDelete={can("delete_sheets")}
+                showHistory={can("see_history")}
               />
+            </div>
+            <div className="panel" style={{ marginTop: 14 }}>
+              <MyCoverage me={me} canEdit={can("edit_coverage")} />
             </div>
           </>
         )}

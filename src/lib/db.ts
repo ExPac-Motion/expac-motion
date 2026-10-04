@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { PermKey } from "./permissions";
 import { duplicateQuoteDraft, quoteDraftFromJob } from "./quoteDraft";
 import {
   insuranceAmount,
@@ -2543,6 +2544,26 @@ export async function listPartnerUsers(
 ): Promise<PartnerUser[]> {
   return unwrap(
     await supabase.rpc("list_partner_users", { p_kind: kind, p_partner_id: partnerId }),
+  );
+}
+/** The signed-in login's effective permissions (0131). */
+export async function getMyPermissions(): Promise<Partial<Record<PermKey, boolean>>> {
+  return unwrap<Partial<Record<PermKey, boolean>>>(await supabase.rpc("my_permissions"));
+}
+/** A partner login updates its own coverage (needs edit_coverage, 0131). */
+export async function updateMyCoverage(input: {
+  modes: string[];
+  countries: string[];
+  ports: string[];
+  coverage_notes: string;
+}): Promise<void> {
+  unwrap(
+    await supabase.rpc("update_my_coverage", {
+      p_modes: input.modes,
+      p_countries: input.countries,
+      p_ports: input.ports,
+      p_notes: input.coverage_notes,
+    }),
   );
 }
 export async function setPartnerAccess(profileId: string, enabled: boolean): Promise<void> {

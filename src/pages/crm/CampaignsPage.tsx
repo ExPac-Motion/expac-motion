@@ -15,6 +15,7 @@ import {
   RowActionsHead,
   useDeepLinkReturn,
   useRowSelection,
+  CanDelete,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -778,6 +779,7 @@ export default function CampaignsPage() {
           </button>
         }
       >
+        <CanDelete>
         <button
           className="btn danger"
           onClick={onBulkDelete}
@@ -786,6 +788,7 @@ export default function CampaignsPage() {
         >
           Delete{sel.count ? ` (${sel.count})` : ""}
         </button>
+        </CanDelete>
       </PageTools>
 
       <div className="panel">

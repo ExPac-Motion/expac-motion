@@ -28,6 +28,7 @@ import {
   useCreateClientInvite,
   useLeadSources,
   useMyProfile,
+  useCan,
   usePartnerRateStructures,
   useProfiles,
   useReplaceClientContacts,
@@ -131,6 +132,8 @@ export default function ContactsPage({
   const Label = titleCase(label);
   const isClient = kind === "client";
   const isAdmin = useMyProfile().data?.role === "admin";
+  // Partner rate sheets need "rates" (0131); partner logins stay admin-only.
+  const canRates = useCan()("rates");
   // Agents / transporters / clearing agents carry coverage (modes, countries,
   // ports) and rate structures.
   const isPartner =
@@ -712,29 +715,32 @@ export default function ContactsPage({
           {isPartner && (
             <>
               <CoverageView value={coverageOf(viewingLive)} />
-              {/* Partner buy rates are admin-only (0120). */}
+              {/* Partner buy rates: Admin, or the "rates" permission (0131). */}
+              {canRates && (
+                <PartnerRateSheets
+                  kind={kind as PartnerKind}
+                  partnerId={viewing.id}
+                  partnerName={viewing.company}
+                  modes={viewingLive?.modes}
+                  countries={viewingLive?.countries}
+                  showHistory
+                />
+              )}
+              {/* Partner logins: admin only. */}
               {isAdmin && (
-                <>
-                  <PartnerRateSheets
-                    kind={kind as PartnerKind}
-                    partnerId={viewing.id}
-                    partnerName={viewing.company}
-                    modes={viewingLive?.modes}
-                    countries={viewingLive?.countries}
-                    showHistory
-                  />
-                  <PartnerLoginAccess
-                    kind={kind as PartnerKind}
-                    partnerId={viewing.id}
-                    company={viewing.company}
-                    email={viewing.email}
-                  />
-                  <LegacyRateStructures
-                    kind={kind as PartnerKind}
-                    partnerId={viewing.id}
-                    partnerName={viewing.company}
-                  />
-                </>
+                <PartnerLoginAccess
+                  kind={kind as PartnerKind}
+                  partnerId={viewing.id}
+                  company={viewing.company}
+                  email={viewing.email}
+                />
+              )}
+              {canRates && (
+                <LegacyRateStructures
+                  kind={kind as PartnerKind}
+                  partnerId={viewing.id}
+                  partnerName={viewing.company}
+                />
               )}
             </>
           )}

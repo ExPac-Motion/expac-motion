@@ -49,7 +49,8 @@ import UnsubscribePage from "./pages/UnsubscribePage";
 import FormPublicPage from "./pages/FormPublicPage";
 import PublicTrackPage from "./pages/PublicTrackPage";
 import { isSupabaseConfigured } from "./lib/supabase";
-import { useMyProfile, useTierMargins } from "./lib/hooks";
+import { useCan, useMyProfile, useTierMargins } from "./lib/hooks";
+import type { PermKey } from "./lib/permissions";
 
 function RequireAuth() {
   const { session, loading } = useAuth();
@@ -91,9 +92,10 @@ function PartnerProtected() {
  *  Renders inside Protected, so the profile has already loaded. The tables
  *  themselves are locked to is_admin() (0120); this just keeps other staff
  *  logins off an empty page. */
-function AdminOnly({ children }: { children: ReactNode }) {
-  const profileQ = useMyProfile();
-  if (profileQ.data?.role !== "admin") return <Navigate to="/" replace />;
+/** A page that needs a role permission (0131) — Admin always passes. */
+function NeedsPerm({ perm, children }: { perm: PermKey; children: ReactNode }) {
+  const can = useCan();
+  if (!can(perm)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -257,14 +259,14 @@ function AppRoutes() {
             <Route path="jobs/completed" element={<CompletedJobsPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="crm" element={<CrmPage />} />
-            <Route path="rates" element={<AdminOnly><TierSheetsPage /></AdminOnly>} />
-            <Route path="rates/list" element={<AdminOnly><RatesPage /></AdminOnly>} />
+            <Route path="rates" element={<NeedsPerm perm="rates"><TierSheetsPage /></NeedsPerm>} />
+            <Route path="rates/list" element={<NeedsPerm perm="rates"><RatesPage /></NeedsPerm>} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="transporters" element={<TransportersPage />} />
             <Route path="clearing-agents" element={<ClearingAgentsPage />} />
             <Route path="destination-agents" element={<DestinationAgentsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings" element={<NeedsPerm perm="settings"><SettingsPage /></NeedsPerm>} />
           </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
