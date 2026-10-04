@@ -1209,6 +1209,15 @@ select.badge-select.lost {
   letter-spacing: 0;
   font-weight: 400;
 }
+/* A partner's rate-sheet pick in place of its hint line (Quote Builder). */
+.field select.hint-select {
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 2px 24px 2px 8px;
+  min-height: 0;
+  height: auto;
+  margin-top: 2px;
+}
 /* Label row with a trailing "{ }" merge-code picker */
 .merge-code-row {
   display: flex;

@@ -12,6 +12,7 @@ import {
   useCompanySettings,
   useLeads,
   useProfiles,
+  usePartnerRateSheets,
   useQuote,
   useMyProfile,
   useRateSheet,
@@ -52,7 +53,11 @@ import { fetchZarRates } from "../lib/fx";
 import { getPartnerRateSheets, listPartnerRateSheets } from "../lib/db";
 import {
   PARTNER_KINDS,
+  PARTNER_LABEL,
+  PARTNER_SECTIONS,
+  isSellOnlyCode,
   partnerIdKey,
+  partnerRate,
   lineSection,
   sectionsForIncoterm,
   sheetIdKey,
@@ -91,6 +96,8 @@ import {
   type Quote,
   type QuoteDraft,
   type QuoteLine,
+  type PartnerKind,
+  type PartnerRateSheet,
   type RateSheetItem,
   type RateTierId,
 } from "../lib/types";
@@ -343,6 +350,20 @@ export default function QuoteBuilderPage() {
   const tariffQ = useTariffSheets();
   const isAdmin = useMyProfile().data?.role === "admin";
   const [tierLoading, setTierLoading] = useState(false);
+  // Each picked partner's own rate sheets, for its "Load rates" button.
+  const partnerSheetsQ: Record<PartnerKind, ReturnType<typeof usePartnerRateSheets>> = {
+    agent: usePartnerRateSheets("agent", isAdmin ? draft?.agent_id || null : null),
+    clearing_agent: usePartnerRateSheets(
+      "clearing_agent",
+      isAdmin ? draft?.clearing_agent_id || null : null,
+    ),
+    transporter: usePartnerRateSheets("transporter", isAdmin ? draft?.transporter_id || null : null),
+    destination_agent: usePartnerRateSheets(
+      "destination_agent",
+      isAdmin ? draft?.destination_agent_id || null : null,
+    ),
+  };
+  const [pickedSheet, setPickedSheet] = useState<Partial<Record<PartnerKind, string>>>({});
 
   // Adjust state when the loaded quote arrives (React-sanctioned set-state-in-render).
   if (isEdit && existingQ.data && loadedFor !== existingQ.data.id) {
@@ -736,6 +757,164 @@ export default function QuoteBuilderPage() {
     } finally {
       setTierLoading(false);
     }
+  }
+
+  /** The partner's rate sheets for the quote's mode. */
+  function partnerSheets(kind: PartnerKind): PartnerRateSheet[] {
+    if (!draft) return [];
+    return (partnerSheetsQ[kind].data ?? []).filter(
+      (s) => s.partner_id === draft[partnerIdKey(kind)] && s.mode === draft.mode,
+    );
+  }
+  /** The sheet a partner's "Load rates" uses: the one picked, else the one the
+   *  chosen tier sheet links (or its route), else the first. */
+  function partnerSheet(kind: PartnerKind): PartnerRateSheet | null {
+    const list = partnerSheets(kind);
+    const tier = (tariffQ.data ?? []).find((s) => s.id === draft?.tariff_sheet_id);
+    return (
+      list.find((s) => s.id === pickedSheet[kind]) ??
+      list.find((s) => tier && s.id === tier[sheetIdKey(kind)]) ??
+      list.find((s) => tier && s.route.toLowerCase() === tier.route.toLowerCase()) ??
+      list[0] ??
+      null
+    );
+  }
+
+  /** Fills this partner's sections (those the quote's incoterm covers) from
+   *  its rate sheet: buy by the quote's chargeable weight, margin = the
+   *  quote's Rate tier. Every other section's lines stay as they are. */
+  function loadPartnerRates(kind: PartnerKind) {
+    if (!draft) return;
+    const sheet = partnerSheet(kind);
+    if (!sheet) return;
+    const sections = PARTNER_SECTIONS[kind].filter((c) =>
+      sectionsForIncoterm(draft.incoterms).includes(c),
+    );
+    const kg = packTotals.chargeable;
+    const fxRates = fxOfDraft(draft);
+    const margin = rateTier(draft.rate_tier).margin;
+    const fresh: QuoteLine[] = [];
+    const seen = new Set<string>();
+    for (const g of worksheetGroups(draft.mode))
+      for (const item of g.items) {
+        if (!sections.includes(g.category) || seen.has(item.code) || isSellOnlyCode(item.code))
+          continue;
+        const pLine = sheet.lines[item.code];
+        const r = partnerRate(pLine, kg);
+        if (!r) continue;
+        seen.add(item.code);
+        fresh.push({
+          ...newLine(g.category, 0),
+          code: item.code,
+          description: item.description,
+          unit: pLine?.unit ?? item.unit,
+          qty: 1,
+          vat_pct: item.vat_pct ?? 0,
+          cur: r.cur,
+          buy: r.buy,
+          margin,
+          sell: sellFromBuy(r.buy, margin, r.cur, fxRates),
+        });
+      }
+    const who = `${PARTNER_LABEL[kind]} · ${sheet.route}`;
+    if (fresh.length === 0) {
+      error(
+        `${who} has no rates for ${sections.join(" / ") || "this quote's incoterm"} yet.`,
+      );
+      return;
+    }
+    const replacing = draft.lines.some(
+      (l) => sections.includes(l.category as ChargeCategory) && (l.code || String(l.description ?? "").trim()),
+    );
+    if (
+      replacing &&
+      !window.confirm(`Replace the ${sections.join(" / ")} lines with the ${who} rates?`)
+    )
+      return;
+    setDraft((d) => {
+      if (!d) return d;
+      const keep = d.lines.filter((l) => !sections.includes(l.category as ChargeCategory));
+      const lines = CHARGE_CATEGORIES.flatMap((c) => [
+        ...keep.filter((l) => l.category === c),
+        ...fresh.filter((l) => l.category === c),
+      ]).map((l, i) => ({ ...l, position: i }));
+      return { ...d, lines };
+    });
+    toast(
+      `Loaded ${fresh.length} line${fresh.length === 1 ? "" : "s"} from ${who}` +
+        (kg > 0 ? "" : " — add the packing list, then load again to pick the right weight break"),
+    );
+  }
+
+  /** A partner field: its dropdown, plus (admin) its rate sheet + Load rates. */
+  function partnerField(
+    kind: PartnerKind,
+    options: { id: string; company: string }[],
+    placeholder: string,
+  ) {
+    if (!draft) return null;
+    const key = partnerIdKey(kind);
+    const list = partnerSheets(kind);
+    const sheet = partnerSheet(kind);
+    const select = (
+      <select
+        value={draft[key] ?? ""}
+        onChange={(e) => set(key, e.target.value)}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.company}
+          </option>
+        ))}
+      </select>
+    );
+    const sheetLabel = (s: PartnerRateSheet) =>
+      `${s.route}${s.incoterm ? ` (${s.incoterm})` : ""}`;
+    return (
+      <div className="field">
+        <label>{PARTNER_LABEL[kind]} (internal only)</label>
+        {isAdmin && draft[key] ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            {select}
+            <button
+              type="button"
+              className="btn outline"
+              disabled={!sheet}
+              title={sheet ? `Fill from ${sheetLabel(sheet)}` : `No ${draft.mode} rate sheet`}
+              onClick={() => loadPartnerRates(kind)}
+            >
+              Load rates
+            </button>
+          </div>
+        ) : (
+          select
+        )}
+        {isAdmin && draft[key] && list.length > 1 ? (
+          <select
+            className="hint-select"
+            value={sheet?.id ?? ""}
+            onChange={(e) => setPickedSheet((p) => ({ ...p, [kind]: e.target.value }))}
+            title="Rate sheet to load"
+          >
+            {list.map((s) => (
+              <option key={s.id} value={s.id}>
+                Rates: {sheetLabel(s)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="hint">
+            Not shown on the customer quotation.
+            {isAdmin && draft[key]
+              ? sheet
+                ? ` Rates: ${sheetLabel(sheet)}.`
+                : ` No ${draft.mode} rate sheet yet.`
+              : ""}
+          </span>
+        )}
+      </div>
+    );
   }
 
   /** Drag-reorder a charge line: drop `from` before/after `to`. The saved
@@ -1313,66 +1492,10 @@ export default function QuoteBuilderPage() {
           )}
 
           {/* Internal only / every mode */}
-          <div className="field">
-            <label>Agent (internal only)</label>
-            <select
-              value={draft.agent_id}
-              onChange={(e) => set("agent_id", e.target.value)}
-            >
-              <option value="">Select agent</option>
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
-            <label>Clearing Agent (internal only)</label>
-            <select
-              value={draft.clearing_agent_id}
-              onChange={(e) => set("clearing_agent_id", e.target.value)}
-            >
-              <option value="">Select clearing agent</option>
-              {clearingAgents.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
-            <label>Transporter (internal only)</label>
-            <select
-              value={draft.transporter_id}
-              onChange={(e) => set("transporter_id", e.target.value)}
-            >
-              <option value="">Select transporter</option>
-              {transporters.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
-          <div className="field">
-            <label>Destination Agent (internal only)</label>
-            <select
-              value={draft.destination_agent_id}
-              onChange={(e) => set("destination_agent_id", e.target.value)}
-            >
-              <option value="">Select destination agent</option>
-              {destinationAgents.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.company}
-                </option>
-              ))}
-            </select>
-            <span className="hint">Not shown on the customer quotation.</span>
-          </div>
+          {partnerField("agent", agents, "Select agent")}
+          {partnerField("clearing_agent", clearingAgents, "Select clearing agent")}
+          {partnerField("transporter", transporters, "Select transporter")}
+          {partnerField("destination_agent", destinationAgents, "Select destination agent")}
           <div className="field">
             <label>Sales Person</label>
             <select
