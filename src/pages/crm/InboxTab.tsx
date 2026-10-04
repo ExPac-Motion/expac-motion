@@ -12,6 +12,7 @@ import { EmptyState, ErrorNote, Loading, PageTools, SearchInput } from "../../co
 import { useToast } from "../../components/Toast";
 import {
   useCompanySettings,
+  useCreateOpportunity,
   useInbox,
   useInboxState,
   useJobs,
@@ -394,6 +395,7 @@ function Reader({
 }) {
   const update = useUpdateInboxMessage();
   const saveLead = useSaveLead();
+  const createOpportunity = useCreateOpportunity();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { toast, error } = useToast();
@@ -426,18 +428,50 @@ function Reader({
       error(e instanceof Error ? e.message : "Could not save");
     }
   }
-  async function makeLead() {
+  /** The sender as a new lead (Other / Unknown). Returns the lead's id. */
+  async function createLeadFromSender(): Promise<{ id: string; company: string }> {
     const email = msg.from_email ?? "";
     const domain = email.split("@")[1] ?? "";
     const company = msg.from_name && !msg.from_name.includes("@") ? msg.from_name : domain || email;
+    const lead = await saveLead.mutateAsync({
+      patch: { company, contact: msg.from_name || null, email, source: "Email" },
+    });
+    return { id: lead.id, company };
+  }
+  async function makeLead() {
     try {
-      await saveLead.mutateAsync({
-        patch: { company, contact: msg.from_name || null, email, source: "Email" },
-      });
+      const { company } = await createLeadFromSender();
       qc.invalidateQueries({ queryKey: ["inbox"] });
       toast(`${company} added as a lead`);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not create the lead");
+    }
+  }
+  /** A pipeline opportunity from this email — on the customer or lead it
+   *  came from (an unknown sender becomes a lead first). */
+  async function addOpportunity() {
+    try {
+      let leadId = msg.record_kind === "lead" ? msg.record_id : null;
+      const clientId = msg.record_kind === "client" ? msg.record_id : null;
+      let who = msg.record_name ?? "";
+      if (!leadId && !clientId) {
+        const lead = await createLeadFromSender();
+        leadId = lead.id;
+        who = lead.company;
+      }
+      const note = (msg.snippet ?? "").trim();
+      await createOpportunity.mutateAsync({
+        title: msg.subject || "Email enquiry",
+        lead_id: leadId,
+        client_id: clientId,
+        status: "new_lead",
+        value: 0,
+        notes: `From the inbox (${formatDateTime(msg.sent_at)}, ${msg.from_email ?? ""})${note ? `: ${note}` : ""}`,
+      });
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      toast(`Opportunity added for ${who || "the sender"} — see Sales CRM › Opportunities`);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not add the opportunity");
     }
   }
 
@@ -513,6 +547,17 @@ function Reader({
         {c === "unknown" && msg.direction === "in" && msg.from_email && (
           <button type="button" className="btn small outline" onClick={makeLead} disabled={saveLead.isPending}>
             + Make a lead
+          </button>
+        )}
+        {msg.direction === "in" && msg.from_email && (c === "unknown" || c === "lead" || c === "customer") && (
+          <button
+            type="button"
+            className="btn small outline"
+            onClick={addOpportunity}
+            disabled={createOpportunity.isPending || saveLead.isPending}
+            title={c === "unknown" ? "Makes the sender a lead, then adds the opportunity" : undefined}
+          >
+            + Add opportunity
           </button>
         )}
         <select
