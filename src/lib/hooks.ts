@@ -9,6 +9,7 @@ import { supabase } from "./supabase";
 import { applyTierMargins } from "./types";
 import { DEFAULT_ROLE_PERMISSIONS, type PermKey } from "./permissions";
 import type {
+  InboxMessagePatch,
   RateTierId,
   MailCampaignPatch,
   Client,
@@ -1825,6 +1826,32 @@ export function usePartnerRateSheets(kind: PartnerKind, partnerId: string | null
     enabled: !!partnerId,
   });
 }
+/* ---------- Admin Inbox (0134) ---------- */
+export function useInbox(enabled = true) {
+  return useQuery({ queryKey: ["inbox"], queryFn: db.listInbox, enabled, refetchInterval: 60_000 });
+}
+export function useInboxState(enabled = true) {
+  return useQuery({ queryKey: ["inbox_state"], queryFn: db.getInboxState, enabled, refetchInterval: 60_000 });
+}
+export function useUpdateInboxMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: InboxMessagePatch }) =>
+      db.updateInboxMessage(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+  });
+}
+export function useSyncInbox() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.syncInbox,
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_state"] });
+    },
+  });
+}
+
 /** Every partner rate sheet — loaded only when `enabled` (Rate list route filter). */
 export function useAllPartnerRateSheets(enabled: boolean) {
   return useQuery({

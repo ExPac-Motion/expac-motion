@@ -1898,3 +1898,56 @@ export interface UiTableLayout {
   /** Movable column keys the user has hidden. */
   hidden?: string[];
 }
+
+/* ---------- Admin Inbox (migration 0134) ---------- */
+
+/** Who the sender is, from the CRM: customer, supplier / agent, lead or unknown. */
+export type InboxCategory = "customer" | "partner" | "lead" | "unknown";
+
+/** inbox_messages_v — a support@ message (in) or a reply sent from the app (out). */
+export interface InboxMessage {
+  id: string;
+  mailbox: string;
+  uid: number | null;
+  direction: "in" | "out";
+  message_id: string | null;
+  in_reply_to: string | null;
+  refs: string | null;
+  thread_key: string | null;
+  from_email: string | null;
+  from_name: string | null;
+  to_emails: string[];
+  cc_emails: string[];
+  subject: string | null;
+  snippet: string | null;
+  body_text: string | null;
+  body_html: string | null;
+  raw_path: string | null;
+  size_bytes: number | null;
+  has_attachments: boolean;
+  is_bulk: boolean;
+  sent_at: string;
+  seen: boolean;
+  answered: boolean;
+  read_at: string | null;
+  replied_at: string | null;
+  done_at: string | null;
+  job_id: string | null;
+  job_linked_by: "auto" | "manual" | null;
+  created_at: string;
+  /** From the CRM match (view). */
+  category: InboxCategory | null;
+  record_kind: "client" | "supplier" | "agent" | "transporter" | "clearing_agent" | "destination_agent" | "lead" | null;
+  record_id: string | null;
+  record_name: string | null;
+  job_reference: string | null;
+}
+export type InboxMessagePatch = Partial<
+  Pick<InboxMessage, "read_at" | "replied_at" | "done_at" | "job_id" | "job_linked_by" | "snippet" | "body_text">
+>;
+export interface InboxState {
+  mailbox: string;
+  last_sync_at: string | null;
+  last_error: string | null;
+  pending: number | null;
+}

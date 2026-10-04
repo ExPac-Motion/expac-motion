@@ -87,6 +87,7 @@ const NAV: NavModule[] = [
     label: "Sales CRM",
     children: [
       { to: "/crm", label: "Dashboard" },
+      { to: "/crm?tab=inbox", label: "Inbox" },
       { to: "/crm?tab=trends", label: "Trends" },
       { to: "/crm?tab=leads", label: "Leads" },
       { to: "/crm?tab=opportunities", label: "Opportunities" },
@@ -184,12 +185,14 @@ export default function Layout() {
     "/rates": "rates",
   };
   nav = nav.filter((m) => !AREA[m.to] || can(AREA[m.to]));
-  // Sales CRM: Dashboard / Trends need "crm", every other tab "leads".
+  // Sales CRM: Dashboard / Trends need "crm", Inbox "inbox", every other tab "leads".
   const crmTab = (to: string) => to === "/crm" || to.includes("tab=trends");
   nav = nav
     .map((m) => {
       if (m.to !== "/crm") return m;
-      const children = m.children?.filter((c) => (crmTab(c.to) ? can("crm") : can("leads")));
+      const children = m.children?.filter((c) =>
+        c.to.includes("tab=inbox") ? can("inbox") : crmTab(c.to) ? can("crm") : can("leads"),
+      );
       return { ...m, to: children?.[0]?.to ?? m.to, children };
     })
     .filter((m) => m.to !== "/crm" && !m.to.startsWith("/crm?") ? true : (m.children?.length ?? 0) > 0);

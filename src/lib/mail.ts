@@ -23,6 +23,9 @@ export interface SendMailInput {
    *  `List-Unsubscribe` header so mail clients offer their native one-click
    *  unsubscribe. */
   unsubscribeUrl?: string;
+  /** Inbox replies: thread under the original (its Message-ID / References). */
+  inReplyTo?: string;
+  references?: string;
 }
 
 /** Standing rule: support@ is blind-copied on every Shipment Comms message and

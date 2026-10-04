@@ -176,6 +176,13 @@ export async function onRequestPost(context) {
 
   const headers = {};
   if (body.jobId) headers["X-Shipment-Id"] = String(body.jobId);
+  // Inbox replies (0134) thread under the customer's original message.
+  const msgId = (v) => (typeof v === "string" && /^<[^<>\s]+>$/.test(v.trim()) ? v.trim() : "");
+  if (msgId(body.inReplyTo)) headers["In-Reply-To"] = msgId(body.inReplyTo);
+  if (typeof body.references === "string") {
+    const refs = body.references.split(/\s+/).map(msgId).filter(Boolean).slice(-20).join(" ");
+    if (refs) headers["References"] = refs;
+  }
   if (typeof body.unsubscribeUrl === "string" && body.unsubscribeUrl) {
     headers["List-Unsubscribe"] = `<${body.unsubscribeUrl}>`;
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";

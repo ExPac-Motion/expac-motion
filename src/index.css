@@ -6129,3 +6129,241 @@ table.dt .task-title {
   color: var(--muted);
   font-size: 0.74rem;
 }
+
+/* ---------- Sales CRM › Inbox (0134) ---------- */
+.panel.inbox {
+  display: grid;
+  grid-template-columns: 210px minmax(280px, 380px) minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  min-height: 70vh;
+  overflow: hidden;
+}
+.inbox-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  border-right: 1px solid var(--line);
+  background: var(--paper, #faf8f3);
+}
+.inbox-nav-head {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 10px 6px 4px;
+}
+.inbox-nav-head:first-child {
+  margin-top: 0;
+}
+.inbox-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.inbox-nav-item:hover {
+  background: var(--teal-tint);
+}
+.inbox-nav-item.on {
+  background: var(--green-tint);
+  font-weight: 700;
+}
+.inbox-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--night);
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.inbox-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex: none;
+  background: var(--muted);
+}
+.inbox-dot.cat-customer { background: var(--green); }
+.inbox-dot.cat-lead { background: var(--amber); }
+.inbox-dot.cat-partner { background: var(--teal); }
+.inbox-dot.cat-unknown { background: #b9b9b2; }
+.inbox-dot.cat-all { background: var(--night); }
+.inbox-list {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  max-height: 78vh;
+}
+.inbox-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.inbox-row:hover {
+  background: #f7f6f1;
+}
+.inbox-row.on {
+  background: var(--teal-tint);
+}
+.inbox-row.unread .inbox-from,
+.inbox-row.unread .inbox-subject {
+  font-weight: 700;
+}
+.inbox-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inbox-from {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inbox-date {
+  font-size: 0.72rem;
+  color: var(--muted);
+  flex: none;
+}
+.inbox-subject {
+  margin: 3px 0 4px 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.inbox-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 17px;
+  align-items: center;
+}
+.inbox-snippet {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inbox-chip {
+  font-size: 0.68rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--night-tint);
+  color: var(--ink);
+  font-weight: 700;
+}
+.inbox-chip.job { background: var(--teal-tint); color: var(--teal-ink); }
+.inbox-chip.needs { background: var(--orange-tint); color: var(--orange-ink); }
+.inbox-chip.cat-customer { background: var(--green-tint); color: var(--green-dark); }
+.inbox-chip.cat-lead { background: var(--amber-tint); color: var(--amber-ink); }
+.inbox-chip.cat-partner { background: var(--teal-tint); color: var(--teal-ink); }
+.inbox-reader {
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 78vh;
+}
+.inbox-read {
+  padding: 14px 18px;
+}
+.inbox-read-head h3 {
+  margin: 0 0 6px;
+}
+.inbox-read-from {
+  font-size: 0.86rem;
+}
+.inbox-read-tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+.inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 12px 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.inbox-actions .inbox-job {
+  max-width: 260px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+}
+.inbox-thread {
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+}
+.inbox-thread summary {
+  cursor: pointer;
+  color: var(--teal-ink);
+  font-weight: 700;
+}
+.inbox-thread-item {
+  padding: 6px 0 6px 10px;
+  border-left: 3px solid var(--line);
+  margin: 6px 0;
+}
+.inbox-frame {
+  width: 100%;
+  min-height: 55vh;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.inbox-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 0.86rem;
+  margin: 0;
+}
+.inbox-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.inbox-attachment {
+  font-size: 0.8rem;
+  border: 1px solid var(--teal);
+  color: var(--teal-ink);
+  border-radius: 8px;
+  padding: 5px 10px;
+  text-decoration: none;
+  background: var(--white);
+}
+@media (max-width: 900px) {
+  .panel.inbox {
+    grid-template-columns: 1fr;
+  }
+  .inbox-nav,
+  .inbox-list {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: none;
+  }
+}

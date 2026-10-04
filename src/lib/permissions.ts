@@ -13,6 +13,7 @@ export type StaffPerm =
   | "customers"
   | "suppliers"
   | "leads"
+  | "inbox"
   | "rates"
   | "settings"
   | "crm"
@@ -35,6 +36,7 @@ export const STAFF_PERMS: PermDef<StaffPerm>[] = [
   { key: "customers", label: "Customers", hint: "Customer records (Portal Access stays Admin only)" },
   { key: "suppliers", label: "Suppliers and partners", hint: "Shippers, agents, transporters, clearing and destination agents" },
   { key: "leads", label: "Sales CRM leads and outreach", hint: "Leads, opportunities, templates, campaigns, workflows, forms, media" },
+  { key: "inbox", label: "Inbox (support@)", hint: "Read, sort and reply to the support@expac.co.za mailbox" },
   {
     key: "rates",
     label: "Rates and buy prices",
@@ -81,6 +83,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     customers: true,
     suppliers: true,
     leads: true,
+    inbox: false,
     rates: false,
     settings: true,
     crm: true,

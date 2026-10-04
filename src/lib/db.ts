@@ -8,6 +8,9 @@ import {
   volumetricFactor,
 } from "./calc";
 import type {
+  InboxMessage,
+  InboxMessagePatch,
+  InboxState,
   PartnerKind,
   PartnerRateStructure,
   PartnerRateStructureDraft,
@@ -2552,6 +2555,65 @@ export async function listPartnerUsers(
     await supabase.rpc("list_partner_users", { p_kind: kind, p_partner_id: partnerId }),
   );
 }
+/* ---------- Admin Inbox (0134) ---------- */
+const INBOX_LIST_COLS =
+  "id,mailbox,uid,direction,message_id,in_reply_to,refs,thread_key,from_email,from_name,to_emails,cc_emails," +
+  "subject,snippet,raw_path,size_bytes,has_attachments,is_bulk,sent_at,seen,answered,read_at,replied_at," +
+  "done_at,job_id,job_linked_by,created_at,category,record_kind,record_id,record_name,job_reference";
+export async function listInbox(): Promise<InboxMessage[]> {
+  return unwrap<InboxMessage[]>(
+    await supabase
+      .from("inbox_messages_v")
+      // The list skips the bodies (loaded on open); typed as the full row.
+      .select(INBOX_LIST_COLS as "*")
+      .order("sent_at", { ascending: false })
+      .limit(1500),
+  );
+}
+export async function getInboxMessage(id: string): Promise<InboxMessage> {
+  return unwrap<InboxMessage>(
+    await supabase.from("inbox_messages_v").select("*").eq("id", id).single(),
+  );
+}
+export async function updateInboxMessage(id: string, patch: InboxMessagePatch): Promise<void> {
+  unwrap(await supabase.from("inbox_messages").update(patch).eq("id", id));
+}
+export async function insertInboxMessage(row: Partial<InboxMessage>): Promise<void> {
+  unwrap(await supabase.from("inbox_messages").insert(row));
+}
+export async function getInboxState(): Promise<InboxState | null> {
+  const rows = unwrap<InboxState[]>(
+    await supabase.from("inbox_state").select("mailbox,last_sync_at,last_error,pending").limit(1),
+  );
+  return rows[0] ?? null;
+}
+/** The raw .eml of a synced message (private bucket). */
+export async function downloadInboxRaw(path: string): Promise<ArrayBuffer> {
+  const { data, error } = await supabase.storage.from("inbox").download(path);
+  if (error) throw error;
+  return data.arrayBuffer();
+}
+/** Runs /api/inbox-sync now (the cron runs it every 5 minutes). */
+export async function syncInbox(): Promise<{ added: number; pending: number }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const res = await fetch("/api/inbox-sync", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: "{}",
+  });
+  const raw = (await res.json().catch(() => ({}))) as { added?: number; pending?: number; error?: string };
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Inbox sync runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Inbox sync returned ${res.status}`);
+  }
+  return { added: raw.added ?? 0, pending: raw.pending ?? 0 };
+}
+
 /** The signed-in login's effective permissions (0131). */
 export async function getMyPermissions(): Promise<Partial<Record<PermKey, boolean>>> {
   return unwrap<Partial<Record<PermKey, boolean>>>(await supabase.rpc("my_permissions"));
