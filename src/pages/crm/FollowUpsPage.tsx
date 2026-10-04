@@ -276,7 +276,7 @@ export default function FollowUpsPage() {
           {runNow.isPending ? "Running…" : "Run due follow-ups now"}
         </button>
         <button
-          className="btn outline"
+          className="btn outline bulk"
           onClick={() => setBulkOpen(true)}
           disabled={sel.count === 0}
           title={

@@ -6,7 +6,9 @@ import {
 } from "@tanstack/react-query";
 import * as db from "./db";
 import { supabase } from "./supabase";
+import { applyTierMargins } from "./types";
 import type {
+  RateTierId,
   MailCampaignPatch,
   Client,
   CompanySettingsPatch,
@@ -1492,6 +1494,25 @@ export function useCompanySettings() {
   return useQuery({
     queryKey: ["company_settings"],
     queryFn: db.getCompanySettings,
+  });
+}
+/** Company settings with the editable tier margins (0130) applied to
+ *  RATE_TIERS — call in any page that shows or uses a tier's margin. */
+export function useTierMargins() {
+  const q = useCompanySettings();
+  if (q.data?.tier_margins) applyTierMargins(q.data.tier_margins);
+  return q;
+}
+/** Changes a tier's margin; every trade-route sheet of that tier follows. */
+export function useSetTierMargin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ tier, margin }: { tier: RateTierId; margin: number }) =>
+      db.setTierMargin(tier, margin),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company_settings"] });
+      qc.invalidateQueries({ queryKey: ["tariff_sheets"] });
+    },
   });
 }
 export function useUpdateCompanySettings() {

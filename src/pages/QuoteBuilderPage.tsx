@@ -17,6 +17,7 @@ import {
   useMyProfile,
   useRateSheet,
   useTariffSheets,
+  useTierMargins,
   useSaveQuote,
   useFinalizeCopiedQuote,
   useSaveSupplier,
@@ -349,6 +350,8 @@ export default function QuoteBuilderPage() {
   const [dropAt, setDropAt] = useState<{ index: number; after: boolean } | null>(null);
   // Tier rate sheets (migration 0119) for the "Rate tier" / "Trade route" pick.
   const tariffQ = useTariffSheets();
+  // Editable tier margins (0130): the Rate tier labels and Load rates use them.
+  useTierMargins();
   const isAdmin = useMyProfile().data?.role === "admin";
   const [tierLoading, setTierLoading] = useState(false);
   // Each picked partner's own rate sheets, for its "Load rates" button.

@@ -170,7 +170,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
         {view === "list" && (
           <>
             <button
-              className="btn outline"
+              className="btn outline bulk"
               onClick={() => setBulkOpen(true)}
               disabled={sel.count === 0}
               title={

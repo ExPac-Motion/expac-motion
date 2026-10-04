@@ -1306,6 +1306,12 @@ export async function getCompanySettings(): Promise<CompanySettings> {
   );
 }
 
+/** Sets a tier's margin and puts every sheet of that tier on it (0130).
+ *  Returns how many sheets changed. */
+export async function setTierMargin(tier: RateTierId, margin: number): Promise<number> {
+  return unwrap<number>(await supabase.rpc("set_tier_margin", { p_tier: tier, p_margin: margin }));
+}
+
 export async function updateCompanySettings(
   patch: CompanySettingsPatch,
 ): Promise<CompanySettings> {

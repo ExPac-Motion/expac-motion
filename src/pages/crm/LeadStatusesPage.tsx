@@ -118,7 +118,7 @@ export default function LeadStatusesPage() {
         }
       >
         <button
-          className="btn outline"
+          className="btn outline bulk"
           onClick={() => setBulkOpen(true)}
           disabled={sel.count === 0}
           title={sel.count === 0 ? "Tick rows in the Actions column to bulk edit" : undefined}

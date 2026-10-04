@@ -717,7 +717,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       >
         {mode === "active" && (
           <button
-            className={`btn ${recordFilter === "atrisk" ? "at-risk-on" : "outline"}`}
+            className={`btn ${recordFilter === "atrisk" ? "at-risk-on" : "outline warn"}`}
             onClick={() =>
               setRecordFilter(recordFilter === "atrisk" ? null : "atrisk")
             }
@@ -727,7 +727,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           </button>
         )}
         <button
-          className="btn outline"
+          className="btn outline bulk"
           onClick={() => setBulkOpen(true)}
           disabled={sel.count === 0}
           title={

@@ -442,13 +442,31 @@ input[type="number"] {
   opacity: 0.55;
   cursor: not-allowed;
 }
+/* Colour-coded secondary buttons (brand palette): teal = secondary action
+   (Edit, Import, Save Grid, Copy, Add Filter …), amber = Bulk Edit,
+   orange = warning / switch-off. Green fill (.btn) stays the primary CTA. */
 .btn.outline {
-  background: transparent;
-  border-color: var(--line);
-  color: var(--ink);
+  background: var(--white);
+  border-color: var(--teal);
+  color: var(--teal-ink);
 }
 .btn.outline:hover {
-  background: #fff;
+  background: var(--teal-tint);
+}
+.btn.outline.bulk {
+  background: var(--amber-tint);
+  border-color: var(--amber);
+  color: var(--amber-ink);
+}
+.btn.outline.bulk:hover {
+  background: #f9e6b8;
+}
+.btn.outline.warn {
+  border-color: var(--orange);
+  color: var(--orange-ink);
+}
+.btn.outline.warn:hover {
+  background: var(--orange-tint);
 }
 .btn.btn-sm {
   padding: 5px 12px;
@@ -458,7 +476,7 @@ input[type="number"] {
 .btn.ghost {
   background: none;
   border: 0;
-  color: var(--muted);
+  color: var(--night);
   padding: 8px 10px;
 }
 .btn.danger {

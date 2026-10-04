@@ -20,7 +20,9 @@ import {
   usePartnerRateSheets,
   useQuotes,
   useSaveTariffSheet,
+  useSetTierMargin,
   useTariffSheets,
+  useTierMargins,
   useTransporters,
 } from "../../lib/hooks";
 import {
@@ -106,7 +108,10 @@ export default function TierSheetsPage() {
   const [creating, setCreating] = useState(false);
   const [duplicating, setDuplicating] = useState<TariffSheetDraft | null>(null);
   const [importing, setImporting] = useState(false);
+  const [editingMargins, setEditingMargins] = useState(false);
   const dirty = useRef(false);
+  // The editable tier margins (0130) — tabs, new sheets and the editor use them.
+  useTierMargins();
 
   const all = useMemo(() => q.data ?? [], [q.data]);
 
@@ -201,6 +206,13 @@ export default function TierSheetsPage() {
       >
         <button
           className="btn outline"
+          onClick={() => guard(() => setEditingMargins(true))}
+          title="Change the Platinum / Gold / Silver margin % as markets move"
+        >
+          Tier margins
+        </button>
+        <button
+          className="btn outline"
           onClick={() => guard(() => setImporting(true))}
           title="Create tier sheets for the trade routes on your quotes and shipments"
         >
@@ -286,6 +298,16 @@ export default function TierSheetsPage() {
           onSave={(v) => createRoute(v, duplicating)}
         />
       )}
+      {editingMargins && (
+        <TierMarginsModal
+          sheets={all}
+          onClose={() => setEditingMargins(false)}
+          onSaved={(msg) => {
+            setEditingMargins(false);
+            toast(msg);
+          }}
+        />
+      )}
       {importing && (
         <ImportRoutesModal
           existing={all}
@@ -301,6 +323,97 @@ export default function TierSheetsPage() {
         />
       )}
     </>
+  );
+}
+
+/** Edit the three tier margins. A changed tier puts every one of its
+ *  trade-route sheets on the new % (set_tier_margin, 0130). */
+function TierMarginsModal({
+  sheets,
+  onClose,
+  onSaved,
+}: {
+  sheets: TariffSheet[];
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const setMargin = useSetTierMargin();
+  const { error } = useToast();
+  const [vals, setVals] = useState<Record<RateTierId, string>>(
+    () =>
+      Object.fromEntries(RATE_TIERS.map((t) => [t.id, String(t.margin)])) as Record<
+        RateTierId,
+        string
+      >,
+  );
+  const changed = RATE_TIERS.filter((t) => vals[t.id].trim() !== "" && Number(vals[t.id]) !== t.margin);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    for (const t of changed) {
+      const n = Number(vals[t.id]);
+      if (!Number.isFinite(n) || n < 0 || n > 500) {
+        error(`${t.label}: enter a margin between 0 and 500%`);
+        return;
+      }
+    }
+    if (changed.length === 0) {
+      onClose();
+      return;
+    }
+    try {
+      const done: string[] = [];
+      for (const t of changed) {
+        const n = await setMargin.mutateAsync({ tier: t.id, margin: Number(vals[t.id]) });
+        done.push(`${t.label} ${vals[t.id]}% (${n} sheet${n === 1 ? "" : "s"})`);
+      }
+      onSaved(`Tier margins updated: ${done.join(", ")}`);
+    } catch (err) {
+      error(err instanceof Error ? err.message : "Could not update the tier margins — is migration 0130 applied?");
+    }
+  }
+
+  return (
+    <Modal title="Tier margins" onClose={onClose}>
+      <form onSubmit={submit}>
+        <p className="hint" style={{ marginTop: 0 }}>
+          The margin % added to every buy price on each tier. Changing a tier puts all its trade-route
+          sheets on the new % (a sheet's own margin can still be set for a one-off route), and the
+          Quote Builder uses it from then on.
+        </p>
+        <div className="grid3">
+          {RATE_TIERS.map((t) => {
+            const n = sheets.filter((s) => s.tier === t.id).length;
+            return (
+              <div className="field" key={t.id}>
+                <label>
+                  <TierDot tier={t.id} />
+                  {t.label} (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={vals[t.id]}
+                  onChange={(e) => setVals({ ...vals, [t.id]: e.target.value })}
+                />
+                <span className="hint">
+                  Now {t.margin}% · {n} sheet{n === 1 ? "" : "s"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+          <button type="button" className="btn outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn" disabled={setMargin.isPending}>
+            {setMargin.isPending ? "Saving…" : changed.length ? `Save ${changed.length} change${changed.length === 1 ? "" : "s"}` : "Save"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

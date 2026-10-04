@@ -171,7 +171,7 @@ export default function PartnerLoginAccess({
           </span>
           <button
             type="button"
-            className="btn small outline"
+            className={`btn small outline${u.role === "partner" ? " warn" : ""}`}
             disabled={setAccess.isPending}
             onClick={async () => {
               const enable = u.role !== "partner";

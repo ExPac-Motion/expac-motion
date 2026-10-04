@@ -117,6 +117,8 @@ export type ShipmentCommsConfig = Partial<
 
 export interface CompanySettings {
   id: number;
+  /** Editable tier margins (0130), e.g. { platinum: 10, gold: 15, silver: 18 }. */
+  tier_margins?: Partial<Record<RateTierId, number>> | null;
   legal_name: string;
   reg_no: string;
   vat_no: string;
@@ -1026,6 +1028,14 @@ export const RATE_TIERS: {
 export const DEFAULT_RATE_TIER: RateTierId = "silver";
 export function rateTier(id: string | null | undefined) {
   return RATE_TIERS.find((t) => t.id === id) ?? RATE_TIERS[2];
+}
+/** The admin-editable tier margins (company_settings.tier_margins, 0130),
+ *  applied over the defaults above once settings load (useTierMargins). */
+export function applyTierMargins(m: Partial<Record<RateTierId, number>> | null | undefined) {
+  for (const t of RATE_TIERS) {
+    const v = Number(m?.[t.id]);
+    if (m?.[t.id] != null && Number.isFinite(v)) t.margin = v;
+  }
 }
 
 /** A rate picked by the quote's chargeable weight, e.g. "0-45KG". */

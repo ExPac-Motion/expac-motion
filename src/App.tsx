@@ -49,7 +49,7 @@ import UnsubscribePage from "./pages/UnsubscribePage";
 import FormPublicPage from "./pages/FormPublicPage";
 import PublicTrackPage from "./pages/PublicTrackPage";
 import { isSupabaseConfigured } from "./lib/supabase";
-import { useMyProfile } from "./lib/hooks";
+import { useMyProfile, useTierMargins } from "./lib/hooks";
 
 function RequireAuth() {
   const { session, loading } = useAuth();
@@ -62,6 +62,8 @@ function RequireAuth() {
 function Protected() {
   const { session, loading } = useAuth();
   const profileQ = useMyProfile();
+  // Editable tier margins (0130) applied app-wide once settings load.
+  useTierMargins();
   if (loading || (session && profileQ.isLoading)) {
     return <div className="center-note">Loading…</div>;
   }
