@@ -40,6 +40,7 @@ import type {
   UserRole,
 } from "../lib/types";
 import { formatDate } from "../lib/format";
+import { PARTNER_LABEL } from "../lib/tariff";
 
 type Tab =
   | "company"
@@ -272,6 +273,25 @@ function DefaultsTab() {
   );
 }
 
+/** Portal logins (partner or customer, incl. switched-off ones) aren't staff. */
+function isStaffLogin(p: Profile) {
+  return (p.role === "admin" || p.role === "user" || p.role === "restricted") && !p.client_id && !p.partner_id;
+}
+function roleRank(p: Profile) {
+  if (isStaffLogin(p)) return p.role === "admin" ? 0 : p.role === "user" ? 1 : 2;
+  return p.partner_id || p.role === "partner" ? 3 : 4;
+}
+function roleLabel(p: Profile) {
+  if (p.role === "admin") return "Admin User";
+  if (p.role === "user") return "Standard User";
+  if (p.role === "partner")
+    return `Partner Portal User${p.partner_kind ? ` · ${PARTNER_LABEL[p.partner_kind]}` : ""}`;
+  if (p.role === "client") return "Customer Portal";
+  if (p.partner_id) return "Partner Portal (switched off)";
+  if (p.client_id) return "Customer Portal (access off)";
+  return "Restricted";
+}
+
 function TeamTab() {
   const { data, isLoading, isError, error } = useProfiles();
   const myProfileQ = useMyProfile();
@@ -282,10 +302,11 @@ function TeamTab() {
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
-  // Portal customers (role='client', or 'restricted' with a client_id —
-  // i.e. a revoked portal login) live on Customers > Portal Access, not
-  // here — this list is internal staff only.
-  const rows = (data ?? []).filter((p) => p.role !== "client" && !p.client_id);
+  // Every login, each under its real role: staff first (their role can be
+  // changed here), then partner-portal and customer-portal logins — those
+  // are read-only here (managed on the partner / customer record), so a
+  // portal login can never be turned into staff from this list.
+  const rows = [...(data ?? [])].sort((a, b) => roleRank(a) - roleRank(b));
   if (rows.length === 0) return <EmptyState>No team members yet.</EmptyState>;
 
   async function onRole(p: Profile, role: UserRole) {
@@ -311,16 +332,16 @@ function TeamTab() {
   return (
     <>
       <p className="muted" style={{ marginTop: 0 }}>
-        Team members are created by signing in.
-        {isAdmin
-          ? " Only Admin can change roles — Standard User is full Motion access, Restricted blocks it entirely."
-          : " Only Admin can change roles."}
+        Every login and its role. Only Admin can change a staff role — Standard User is full Motion
+        access, Restricted blocks it entirely. Partner Portal and Customer Portal logins are managed on
+        the partner / customer record.
       </p>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Name</th>
+              <th>Email</th>
               <th>Role</th>
               <th>Joined</th>
             </tr>
@@ -348,24 +369,19 @@ function TeamTab() {
                     </button>
                   )}
                 </td>
+                <td className="muted">{p.email || "—"}</td>
                 <td>
-                  {isAdmin ? (
+                  {isAdmin && isStaffLogin(p) ? (
                     <select
                       value={p.role}
                       onChange={(e) => onRole(p, e.target.value as UserRole)}
                     >
-                      <option value="admin">Admin</option>
-                      <option value="user">Standard user</option>
+                      <option value="admin">Admin User</option>
+                      <option value="user">Standard User</option>
                       <option value="restricted">Restricted</option>
                     </select>
                   ) : (
-                    <span className="tag">
-                      {p.role === "admin"
-                        ? "Admin"
-                        : p.role === "restricted"
-                          ? "Restricted"
-                          : "Standard user"}
-                    </span>
+                    <span className="tag">{roleLabel(p)}</span>
                   )}
                 </td>
                 <td className="nowrap">{formatDate(p.created_at)}</td>
