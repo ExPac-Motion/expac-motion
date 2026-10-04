@@ -267,6 +267,162 @@ function fetchItems(r) {
   return o;
 }
 
+/** The mailbox's Junk / Spam folder: the one flagged \Junk (RFC 6154), else
+ *  a common name (Junk, Junk Email, Junk E-mail, Spam, INBOX.Junk, …). */
+async function findJunkFolder(imap) {
+  const list = await imap.cmd('LIST "" "*"');
+  const folders = [];
+  for (const r of list) {
+    const m = r.text.match(/^\* LIST \(([^)]*)\) (?:"(?:[^"\\]|\\.)*"|NIL) (.+)$/i);
+    if (!m) continue;
+    const name = val(tokenize(m[2])[0], r.lits);
+    if (name) folders.push({ name, flags: m[1].toLowerCase() });
+  }
+  const flagged = folders.find((f) => f.flags.includes("\\junk"));
+  if (flagged) return flagged.name;
+  const named = folders.find((f) =>
+    /^(inbox[./])?(junk( ?e-?mail)?|spam|bulk ?mail)$/i.test(f.name.trim()),
+  );
+  return named ? named.name : null;
+}
+/** One folder: store its new messages (up to `budget`) and refresh flags. */
+async function syncFolder(imap, env, folder, key, spam, budget) {
+  const sel = await imap.cmd(`SELECT ${quote(folder)}`);
+  const uv = Number(sel.map((r) => r.text.match(/UIDVALIDITY (\d+)/i)).find(Boolean)?.[1] || 0);
+
+  // Last 30 days on the server vs what's stored.
+  const since = imapDate(new Date(Date.now() - WINDOW_DAYS * 86400000));
+  const found = await imap.cmd(`UID SEARCH SINCE ${since}`);
+  const serverUids = found
+    .flatMap((r) => (r.text.match(/^\* SEARCH(.*)$/i)?.[1] || "").trim().split(/\s+/))
+    .filter(Boolean)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const minUid = serverUids[0] || 0;
+  const stored = minUid
+    ? await sbJson(
+        env,
+        `/rest/v1/inbox_messages?select=uid&mailbox=eq.${encodeURIComponent(key)}&uidvalidity=eq.${uv}&uid=gte.${minUid}&direction=eq.in`,
+        { headers: sb(env) },
+      )
+    : [];
+  const have = new Set((stored || []).map((r) => Number(r.uid)));
+  const pending = serverUids.filter((u) => !have.has(u));
+  const batch = budget > 0 ? pending.slice(-budget) : []; // newest first
+
+  let added = 0;
+  if (batch.length) {
+    const meta = await imap.cmd(
+      `UID FETCH ${batch.join(",")} (UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE ` +
+        `BODY.PEEK[HEADER.FIELDS (REFERENCES AUTO-SUBMITTED PRECEDENCE LIST-UNSUBSCRIBE LIST-ID)])`,
+    );
+    const rows = [];
+    for (const r of meta) {
+      const o = fetchItems(r);
+      if (!o || !o.UID) continue;
+      const uid = Number(val(o.UID, r.lits));
+      const env_ = o.ENVELOPE || [];
+      const flags = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((f) => String(f).toLowerCase());
+      const headers = val(o.BODY, r.lits) || "";
+      const from = addresses(env_[2], r.lits)[0] || { name: null, email: null };
+      const messageId = val(env_[9], r.lits);
+      const inReplyTo = val(env_[8], r.lits);
+      const references = headerValue(headers, "References");
+      const root = (references.match(/<[^>]+>/) || [])[0] || inReplyTo || messageId || null;
+      const autoSub = headerValue(headers, "Auto-Submitted").toLowerCase();
+      const prec = headerValue(headers, "Precedence").toLowerCase();
+      const bulk =
+        (autoSub && autoSub !== "no") ||
+        ["bulk", "list", "junk"].includes(prec) ||
+        !!headerValue(headers, "List-Unsubscribe") ||
+        !!headerValue(headers, "List-Id") ||
+        /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounce)/i.test(from.email || "");
+      const internal = val(o.INTERNALDATE, r.lits);
+      const size = Number(val(o["RFC822.SIZE"], r.lits) || 0);
+      const date = internal
+        ? new Date(internal.replace(/^(\d+)-(\w+)-(\d+)/, "$1 $2 $3"))
+        : new Date(val(env_[0], r.lits) || Date.now());
+      rows.push({
+        mailbox: key,
+        // only Junk rows carry the column (0136), so Inbox sync never depends on it
+        ...(spam ? { spam: true } : {}),
+        uidvalidity: uv,
+        uid,
+        direction: "in",
+        message_id: messageId,
+        in_reply_to: inReplyTo,
+        refs: references || null,
+        thread_key: root,
+        from_email: from.email,
+        from_name: from.name,
+        to_emails: addresses(env_[5], r.lits).map((a) => a.email),
+        cc_emails: addresses(env_[6], r.lits).map((a) => a.email),
+        subject: decodeWords(val(env_[1], r.lits)) || "(no subject)",
+        size_bytes: size || null,
+        is_bulk: !!bulk,
+        sent_at: isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString(),
+        seen: flags.includes("\\seen"),
+        answered: flags.includes("\\answered"),
+        raw_path: null,
+        has_attachments: false,
+      });
+    }
+
+    // Raw source -> storage, one message at a time.
+    for (const row of rows) {
+      if (row.size_bytes && row.size_bytes > MAX_RAW_BYTES) continue;
+      const res = await imap.cmd(`UID FETCH ${row.uid} (UID BODY.PEEK[])`);
+      const lit = res.find((r) => r.lits.length)?.lits?.[0];
+      if (!lit) continue;
+      const path = `${key.replace(/[^a-z0-9-]/gi, "_")}/${uv}/${row.uid}.eml`;
+      const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/inbox/${path}`, {
+        method: "POST",
+        headers: sb(env, { "content-type": "message/rfc822", "x-upsert": "true" }),
+        body: lit,
+      });
+      if (up.ok) {
+        row.raw_path = path;
+        row.has_attachments = /content-disposition:\s*attachment/i.test(
+          utf8.decode(lit.subarray(0, Math.min(lit.length, 400000))),
+        );
+      }
+    }
+
+    if (rows.length) {
+      await sbJson(env, `/rest/v1/inbox_messages?on_conflict=mailbox,uidvalidity,uid`, {
+        method: "POST",
+        headers: sb(env, {
+          "content-type": "application/json",
+          prefer: "resolution=ignore-duplicates,return=minimal",
+        }),
+        body: JSON.stringify(rows),
+      });
+      added = rows.length;
+    }
+  }
+
+  // Seen / Answered changed elsewhere (Outlook, webmail).
+  if (minUid) {
+    const fl = await imap.cmd(`UID FETCH ${minUid}:* (UID FLAGS)`);
+    const flags = {};
+    for (const r of fl) {
+      const o = fetchItems(r);
+      if (!o || !o.UID) continue;
+      const f = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((x) => String(x).toLowerCase());
+      flags[Number(val(o.UID, r.lits))] = [f.includes("\\seen"), f.includes("\\answered")];
+    }
+    if (Object.keys(flags).length) {
+      await sbJson(env, `/rest/v1/rpc/inbox_apply_flags`, {
+        method: "POST",
+        headers: sb(env, { "content-type": "application/json" }),
+        body: JSON.stringify({ p_mailbox: key, p_uidvalidity: uv, p_flags: flags }),
+      });
+    }
+  }
+
+  return { added, pending: Math.max(0, pending.length - added), uidvalidity: uv };
+}
+
 /* ---------- Sync ---------- */
 async function sync(env) {
   const port = Number(env.IMAP_PORT || 993);
@@ -284,139 +440,23 @@ async function sync(env) {
       imap = new Imap(socket.startTls());
     }
     await imap.cmd(`LOGIN ${quote(env.IMAP_USER)} ${quote(env.IMAP_PASSWORD)}`);
-    const sel = await imap.cmd("SELECT INBOX");
-    const uv = Number(sel.map((r) => r.text.match(/UIDVALIDITY (\d+)/i)).find(Boolean)?.[1] || 0);
-
-    // Last 30 days on the server vs what's stored.
-    const since = imapDate(new Date(Date.now() - WINDOW_DAYS * 86400000));
-    const found = await imap.cmd(`UID SEARCH SINCE ${since}`);
-    const serverUids = found
-      .flatMap((r) => (r.text.match(/^\* SEARCH(.*)$/i)?.[1] || "").trim().split(/\s+/))
-      .filter(Boolean)
-      .map(Number)
-      .sort((a, b) => a - b);
-    const minUid = serverUids[0] || 0;
-    const stored = minUid
-      ? await sbJson(
-          env,
-          `/rest/v1/inbox_messages?select=uid&mailbox=eq.${MAILBOX}&uidvalidity=eq.${uv}&uid=gte.${minUid}&direction=eq.in`,
-          { headers: sb(env) },
-        )
-      : [];
-    const have = new Set((stored || []).map((r) => Number(r.uid)));
-    const pending = serverUids.filter((u) => !have.has(u));
-    const batch = pending.slice(-BATCH); // newest first
-
-    let added = 0;
-    if (batch.length) {
-      const meta = await imap.cmd(
-        `UID FETCH ${batch.join(",")} (UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE ` +
-          `BODY.PEEK[HEADER.FIELDS (REFERENCES AUTO-SUBMITTED PRECEDENCE LIST-UNSUBSCRIBE LIST-ID)])`,
-      );
-      const rows = [];
-      for (const r of meta) {
-        const o = fetchItems(r);
-        if (!o || !o.UID) continue;
-        const uid = Number(val(o.UID, r.lits));
-        const env_ = o.ENVELOPE || [];
-        const flags = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((f) => String(f).toLowerCase());
-        const headers = val(o.BODY, r.lits) || "";
-        const from = addresses(env_[2], r.lits)[0] || { name: null, email: null };
-        const messageId = val(env_[9], r.lits);
-        const inReplyTo = val(env_[8], r.lits);
-        const references = headerValue(headers, "References");
-        const root = (references.match(/<[^>]+>/) || [])[0] || inReplyTo || messageId || null;
-        const autoSub = headerValue(headers, "Auto-Submitted").toLowerCase();
-        const prec = headerValue(headers, "Precedence").toLowerCase();
-        const bulk =
-          (autoSub && autoSub !== "no") ||
-          ["bulk", "list", "junk"].includes(prec) ||
-          !!headerValue(headers, "List-Unsubscribe") ||
-          !!headerValue(headers, "List-Id") ||
-          /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounce)/i.test(from.email || "");
-        const internal = val(o.INTERNALDATE, r.lits);
-        const size = Number(val(o["RFC822.SIZE"], r.lits) || 0);
-        const date = internal
-          ? new Date(internal.replace(/^(\d+)-(\w+)-(\d+)/, "$1 $2 $3"))
-          : new Date(val(env_[0], r.lits) || Date.now());
-        rows.push({
-          mailbox: MAILBOX,
-          uidvalidity: uv,
-          uid,
-          direction: "in",
-          message_id: messageId,
-          in_reply_to: inReplyTo,
-          refs: references || null,
-          thread_key: root,
-          from_email: from.email,
-          from_name: from.name,
-          to_emails: addresses(env_[5], r.lits).map((a) => a.email),
-          cc_emails: addresses(env_[6], r.lits).map((a) => a.email),
-          subject: decodeWords(val(env_[1], r.lits)) || "(no subject)",
-          size_bytes: size || null,
-          is_bulk: !!bulk,
-          sent_at: isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString(),
-          seen: flags.includes("\\seen"),
-          answered: flags.includes("\\answered"),
-          raw_path: null,
-          has_attachments: false,
-        });
+    // The Inbox first, then the Junk / Spam folder (if the mailbox has one),
+    // sharing one batch budget per run.
+    const main = await syncFolder(imap, env, "INBOX", MAILBOX, false, BATCH);
+    let junkPending = 0;
+    // A Junk-folder problem never stops the Inbox sync.
+    try {
+      const junk = await findJunkFolder(imap);
+      if (junk) {
+        const j = await syncFolder(imap, env, junk, `${MAILBOX}:junk`, true, BATCH - main.added);
+        junkPending = j.pending;
+        main.added += j.added;
       }
-
-      // Raw source -> storage, one message at a time.
-      for (const row of rows) {
-        if (row.size_bytes && row.size_bytes > MAX_RAW_BYTES) continue;
-        const res = await imap.cmd(`UID FETCH ${row.uid} (UID BODY.PEEK[])`);
-        const lit = res.find((r) => r.lits.length)?.lits?.[0];
-        if (!lit) continue;
-        const path = `${MAILBOX}/${uv}/${row.uid}.eml`;
-        const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/inbox/${path}`, {
-          method: "POST",
-          headers: sb(env, { "content-type": "message/rfc822", "x-upsert": "true" }),
-          body: lit,
-        });
-        if (up.ok) {
-          row.raw_path = path;
-          row.has_attachments = /content-disposition:\s*attachment/i.test(
-            utf8.decode(lit.subarray(0, Math.min(lit.length, 400000))),
-          );
-        }
-      }
-
-      if (rows.length) {
-        await sbJson(env, `/rest/v1/inbox_messages?on_conflict=mailbox,uidvalidity,uid`, {
-          method: "POST",
-          headers: sb(env, {
-            "content-type": "application/json",
-            prefer: "resolution=ignore-duplicates,return=minimal",
-          }),
-          body: JSON.stringify(rows),
-        });
-        added = rows.length;
-      }
+    } catch {
+      /* Junk folder unreadable or 0136 not applied yet — Inbox still synced */
     }
-
-    // Seen / Answered changed elsewhere (Outlook, webmail).
-    if (minUid) {
-      const fl = await imap.cmd(`UID FETCH ${minUid}:* (UID FLAGS)`);
-      const flags = {};
-      for (const r of fl) {
-        const o = fetchItems(r);
-        if (!o || !o.UID) continue;
-        const f = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((x) => String(x).toLowerCase());
-        flags[Number(val(o.UID, r.lits))] = [f.includes("\\seen"), f.includes("\\answered")];
-      }
-      if (Object.keys(flags).length) {
-        await sbJson(env, `/rest/v1/rpc/inbox_apply_flags`, {
-          method: "POST",
-          headers: sb(env, { "content-type": "application/json" }),
-          body: JSON.stringify({ p_mailbox: MAILBOX, p_uidvalidity: uv, p_flags: flags }),
-        });
-      }
-    }
-
     await imap.cmd("LOGOUT").catch(() => undefined);
-    return { added, pending: Math.max(0, pending.length - added), uidvalidity: uv };
+    return { added: main.added, pending: main.pending + junkPending, uidvalidity: main.uidvalidity };
   } finally {
     try {
       socket.close();

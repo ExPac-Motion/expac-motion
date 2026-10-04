@@ -1830,6 +1830,9 @@ export function usePartnerRateSheets(kind: PartnerKind, partnerId: string | null
 export function useInbox(enabled = true) {
   return useQuery({ queryKey: ["inbox"], queryFn: db.listInbox, enabled, refetchInterval: 60_000 });
 }
+export function useSentMail(enabled = true) {
+  return useQuery({ queryKey: ["inbox_sent"], queryFn: db.listSentMail, enabled, refetchInterval: 60_000 });
+}
 export function useInboxState(enabled = true) {
   return useQuery({ queryKey: ["inbox_state"], queryFn: db.getInboxState, enabled, refetchInterval: 60_000 });
 }

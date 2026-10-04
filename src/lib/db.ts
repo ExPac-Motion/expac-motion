@@ -8,6 +8,7 @@ import {
   volumetricFactor,
 } from "./calc";
 import type {
+  SentMail,
   InboxMessage,
   InboxMessagePatch,
   InboxState,
@@ -2558,17 +2559,22 @@ export async function listPartnerUsers(
 /* ---------- Admin Inbox (0134) ---------- */
 const INBOX_LIST_COLS =
   "id,mailbox,uid,direction,message_id,in_reply_to,refs,thread_key,from_email,from_name,to_emails,cc_emails," +
-  "subject,snippet,raw_path,size_bytes,has_attachments,is_bulk,sent_at,seen,answered,read_at,replied_at," +
+  "subject,snippet,raw_path,size_bytes,has_attachments,is_bulk,spam,marked_unread,sent_at,seen,answered,read_at,replied_at," +
   "done_at,job_id,job_linked_by,created_at,category,record_kind,record_id,record_name,job_reference";
 export async function listInbox(): Promise<InboxMessage[]> {
-  return unwrap<InboxMessage[]>(
-    await supabase
+  const run = (cols: string) =>
+    supabase
       .from("inbox_messages_v")
       // The list skips the bodies (loaded on open); typed as the full row.
-      .select(INBOX_LIST_COLS as "*")
+      .select(cols as "*")
       .order("sent_at", { ascending: false })
-      .limit(1500),
-  );
+      .limit(1500);
+  const res = await run(INBOX_LIST_COLS);
+  // Before migration 0136 (spam / marked_unread) the view lacks those columns.
+  if (res.error && /spam|marked_unread/.test(res.error.message)) {
+    return unwrap<InboxMessage[]>(await run(INBOX_LIST_COLS.replace("spam,marked_unread,", "")));
+  }
+  return unwrap<InboxMessage[]>(res);
 }
 export async function getInboxMessage(id: string): Promise<InboxMessage> {
   return unwrap<InboxMessage>(
@@ -2581,9 +2587,19 @@ export async function updateInboxMessage(id: string, patch: InboxMessagePatch): 
 export async function insertInboxMessage(row: Partial<InboxMessage>): Promise<void> {
   unwrap(await supabase.from("inbox_messages").insert(row));
 }
+/** Sent items (0136): Inbox, Shipment Comms and quotation emails. */
+export async function listSentMail(): Promise<SentMail[]> {
+  return unwrap<SentMail[]>(
+    await supabase.from("inbox_sent_v").select("*").order("sent_at", { ascending: false }).limit(500),
+  );
+}
 export async function getInboxState(): Promise<InboxState | null> {
   const rows = unwrap<InboxState[]>(
-    await supabase.from("inbox_state").select("mailbox,last_sync_at,last_error,pending").limit(1),
+    await supabase
+      .from("inbox_state")
+      .select("mailbox,last_sync_at,last_error,pending")
+      .eq("mailbox", "support")
+      .limit(1),
   );
   return rows[0] ?? null;
 }

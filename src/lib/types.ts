@@ -1927,6 +1927,13 @@ export interface InboxMessage {
   size_bytes: number | null;
   has_attachments: boolean;
   is_bulk: boolean;
+  /** Synced from the mailbox's Junk / Spam folder, or marked Spam in the app (0136). */
+  spam: boolean;
+  /** "Mark unread" in the app — wins over the server's Seen flag until opened (0136). */
+  marked_unread: boolean;
+  /** Sent from the app: Resend's id + its latest delivery event (0136). */
+  provider_id?: string | null;
+  delivery_status?: string | null;
   sent_at: string;
   seen: boolean;
   answered: boolean;
@@ -1944,11 +1951,41 @@ export interface InboxMessage {
   job_reference: string | null;
 }
 export type InboxMessagePatch = Partial<
-  Pick<InboxMessage, "read_at" | "replied_at" | "done_at" | "job_id" | "job_linked_by" | "snippet" | "body_text">
+  Pick<
+    InboxMessage,
+    | "read_at"
+    | "replied_at"
+    | "done_at"
+    | "job_id"
+    | "job_linked_by"
+    | "snippet"
+    | "body_text"
+    | "spam"
+    | "marked_unread"
+  >
 >;
 export interface InboxState {
   mailbox: string;
   last_sync_at: string | null;
   last_error: string | null;
   pending: number | null;
+}
+
+/** inbox_sent_v (0136) — everything sent from the app, with delivery status. */
+export interface SentMail {
+  id: string;
+  source: "inbox" | "shipment" | "quote";
+  to_emails: string[];
+  cc_emails: string[];
+  subject: string | null;
+  preview: string;
+  body: string | null;
+  sent_at: string;
+  /** saved | queued | sent | delivered | opened | clicked | bounced | failed */
+  status: string;
+  error: string | null;
+  job_id: string | null;
+  job_reference: string | null;
+  quote_id: string | null;
+  quote_reference: string | null;
 }

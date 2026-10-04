@@ -11,9 +11,17 @@ import Modal from "../../components/Modal";
 import { EmptyState, ErrorNote, Loading, PageTools, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
+  useAgents,
+  useClearingAgents,
+  useClients,
   useCompanySettings,
   useCreateOpportunity,
+  useDestinationAgents,
   useInbox,
+  useLeads,
+  useSentMail,
+  useSuppliers,
+  useTransporters,
   useInboxState,
   useJobs,
   useSaveLead,
@@ -21,12 +29,14 @@ import {
   useUpdateInboxMessage,
 } from "../../lib/hooks";
 import { downloadInboxRaw, insertInboxMessage } from "../../lib/db";
+import TaskEditModal from "../ops/TaskEditModal";
+import RecipientInput, { type BookEntry } from "./RecipientInput";
 import { sendMail } from "../../lib/mail";
 import { formatDateTime } from "../../lib/format";
-import type { InboxCategory, InboxMessage, Job } from "../../lib/types";
+import type { InboxCategory, InboxMessage, Job, SentMail } from "../../lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Folder = "all" | InboxCategory;
+type Folder = "all" | InboxCategory | "spam" | "sent";
 type View = "all" | "unread" | "needs" | "job";
 
 const FOLDERS: { key: Folder; label: string }[] = [
@@ -36,6 +46,8 @@ const FOLDERS: { key: Folder; label: string }[] = [
   { key: "partner", label: "Suppliers & Agents" },
   { key: "unknown", label: "Other / Unknown" },
   { key: "internal", label: "Internal" },
+  { key: "spam", label: "Spam" },
+  { key: "sent", label: "Sent" },
 ];
 const VIEWS: { key: View; label: string }[] = [
   { key: "all", label: "Everything" },
@@ -63,9 +75,12 @@ const RECORD_ROUTE: Record<string, string> = {
  *  send.expac.co.za) never needs a reply. */
 const isOurs = (email: string | null) => /(@|\.)expac\.co\.za$/i.test((email ?? "").trim());
 
-const isUnread = (m: InboxMessage) => m.direction === "in" && !m.seen && !m.read_at;
+// Mark unread in the app wins over "read in Outlook" (0136).
+const isUnread = (m: InboxMessage) =>
+  m.direction === "in" && (!!m.marked_unread || (!m.seen && !m.read_at));
 const needsReply = (m: InboxMessage) =>
   m.direction === "in" &&
+  !m.spam &&
   !m.answered &&
   !m.replied_at &&
   !m.done_at &&
@@ -129,6 +144,7 @@ export default function InboxTab() {
   const [jobFilter, setJobFilter] = useState("");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [tasking, setTasking] = useState<InboxMessage | null>(null);
   const [compose, setCompose] = useState<{
     replyTo?: InboxMessage;
     forward?: { msg: InboxMessage; parsed?: Parsed };
@@ -167,6 +183,34 @@ export default function InboxTab() {
 
   const all = useMemo(() => q.data ?? [], [q.data]);
   const jobs = useMemo(() => jobsQ.data ?? [], [jobsQ.data]);
+  const sentQ = useSentMail();
+  const sent = useMemo(() => sentQ.data ?? [], [sentQ.data]);
+  const [openSent, setOpenSent] = useState<SentMail | null>(null);
+
+  // Address book: everyone mailed / heard from, plus CRM contacts.
+  const clientsQ = useClients();
+  const leadsQ = useLeads();
+  const partnerLists = [useSuppliers(), useAgents(), useTransporters(), useClearingAgents(), useDestinationAgents()];
+  const partnerData = partnerLists.map((p) => p.data);
+  const book = useMemo<BookEntry[]>(() => {
+    const map = new Map<string, BookEntry>();
+    const add = (email: string | null | undefined, name?: string | null, org?: string | null) => {
+      const e = (email ?? "").trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) || /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster)/.test(e)) return;
+      const had = map.get(e);
+      map.set(e, { email: e, name: had?.name || name || null, org: had?.org || org || null });
+    };
+    for (const c of clientsQ.data ?? []) add(c.email, c.contact, c.company);
+    for (const l of leadsQ.data ?? []) add(l.email, l.contact, l.company);
+    for (const list of partnerData) for (const p of list ?? []) add(p.email, p.contact, p.company);
+    for (const m of all) {
+      if (m.direction === "in") add(m.from_email, m.from_name, m.record_name);
+      for (const t of [...(m.to_emails ?? []), ...(m.cc_emails ?? [])]) add(t);
+    }
+    for (const s of sent) for (const t of [...s.to_emails, ...s.cc_emails]) add(t);
+    return [...map.values()].sort((a, b) => a.email.localeCompare(b.email));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientsQ.data, leadsQ.data, all, sent, ...partnerData]);
 
   // Sync once when the inbox opens (the cron keeps it fresh after that).
   useEffect(() => {
@@ -175,7 +219,9 @@ export default function InboxTab() {
   }, []);
 
   const incoming = all.filter((m) => m.direction === "in");
-  const inFolder = (m: InboxMessage) => folder === "all" || cat(m) === folder;
+  // Spam only shows in the Spam folder.
+  const inFolder = (m: InboxMessage) =>
+    folder === "spam" ? !!m.spam : !m.spam && (folder === "all" || cat(m) === folder);
   const inView = (m: InboxMessage) =>
     view === "unread"
       ? isUnread(m)
@@ -194,8 +240,18 @@ export default function InboxTab() {
           .some((v) => (v ?? "").toLowerCase().includes(needle))),
   );
   const open = all.find((m) => m.id === openId) ?? null;
+  const sentRows = sent.filter(
+    (s) =>
+      !needle ||
+      [s.subject, s.preview, s.job_reference, s.quote_reference, ...s.to_emails, ...s.cc_emails].some((v) =>
+        (v ?? "").toLowerCase().includes(needle),
+      ),
+  );
 
-  const folderCount = (f: Folder) => incoming.filter((m) => (f === "all" || cat(m) === f) && isUnread(m)).length;
+  const folderCount = (f: Folder) =>
+    f === "spam"
+      ? incoming.filter((m) => m.spam && isUnread(m)).length
+      : incoming.filter((m) => !m.spam && (f === "all" || cat(m) === f) && isUnread(m)).length;
   const viewCount = (v: View) =>
     v === "unread"
       ? incoming.filter((m) => inFolder(m) && isUnread(m)).length
@@ -208,7 +264,8 @@ export default function InboxTab() {
 
   function select(m: InboxMessage) {
     setOpenId(m.id);
-    if (isUnread(m)) update.mutate({ id: m.id, patch: { read_at: new Date().toISOString() } });
+    if (isUnread(m))
+      update.mutate({ id: m.id, patch: { read_at: new Date().toISOString(), marked_unread: false } });
   }
 
   async function onSync() {
@@ -237,7 +294,13 @@ export default function InboxTab() {
     <>
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search sender, subject, shipment…" />}
-        count={q.isLoading ? undefined : `${rows.length} message${rows.length === 1 ? "" : "s"}`}
+        count={
+          folder === "sent"
+            ? `${sentRows.length} sent`
+            : q.isLoading
+              ? undefined
+              : `${rows.length} message${rows.length === 1 ? "" : "s"}`
+        }
         hint={`support@expac.co.za — sorted by who the sender is in the CRM. ${syncNote}`}
         primary={
           <button className="btn" onClick={() => setCompose({})}>
@@ -300,7 +363,46 @@ export default function InboxTab() {
         </nav>
 
         <div className="inbox-list">
-          {q.isLoading ? (
+          {folder === "sent" ? (
+            sentQ.isLoading ? (
+              <Loading />
+            ) : sentQ.isError ? (
+              <ErrorNote error={sentQ.error} />
+            ) : sentRows.length === 0 ? (
+              <EmptyState>Nothing sent yet.</EmptyState>
+            ) : (
+              sentRows.map((s) => (
+                <div
+                  key={`${s.source}-${s.id}`}
+                  role="button"
+                  tabIndex={0}
+                  className={`inbox-row${openSent?.id === s.id ? " on" : ""}`}
+                  onClick={() => setOpenSent(s)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") setOpenSent(s);
+                  }}
+                >
+                  <div className="inbox-row-gutter">
+                    <span className={`inbox-dot ${DELIVERY[deliveryKey(s.status)].dot}`} title={DELIVERY[deliveryKey(s.status)].label} />
+                  </div>
+                  <div className="inbox-row-main">
+                    <div className="inbox-row-top">
+                      <span className="inbox-from">To: {s.to_emails.join(", ") || "—"}</span>
+                      <span className="inbox-date">{shortDate(s.sent_at)}</span>
+                    </div>
+                    <div className="inbox-subject">{s.subject || "(no subject)"}</div>
+                    <div className="inbox-meta">
+                      <DeliveryChip status={s.status} />
+                      <span className="inbox-chip">{SOURCE_LABEL[s.source]}</span>
+                      {s.job_reference && <span className="inbox-chip job">{s.job_reference}</span>}
+                      {s.quote_reference && <span className="inbox-chip job">{s.quote_reference}</span>}
+                      {s.preview && <span className="inbox-snippet">{s.preview}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )
+          ) : q.isLoading ? (
             <Loading />
           ) : q.isError ? (
             <ErrorNote error={q.error} />
@@ -310,14 +412,40 @@ export default function InboxTab() {
             </EmptyState>
           ) : (
             rows.map((m) => (
-              <button
+              <div
                 key={m.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 className={`inbox-row${m.id === openId ? " on" : ""}${isUnread(m) ? " unread" : ""}`}
                 onClick={() => select(m)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    select(m);
+                  }
+                }}
               >
-                <div className="inbox-row-top">
+                <div className="inbox-row-gutter">
                   <span className={`inbox-dot cat-${cat(m)}`} title={CATEGORY_LABEL[cat(m)]} />
+                  <button
+                    type="button"
+                    className="inbox-task-btn"
+                    title="Create a task from this email"
+                    aria-label="Create a task from this email"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTasking(m);
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="5" width="18" height="16" rx="2" />
+                      <path d="M3 9h18" />
+                      <path d="M8 14l2.5 2.5L16 11" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="inbox-row-main">
+                <div className="inbox-row-top">
                   <span className="inbox-from">
                     {m.direction === "out"
                       ? `To: ${m.to_emails[0] ?? ""}`
@@ -336,7 +464,8 @@ export default function InboxTab() {
                   {m.direction === "out" && <span className="inbox-chip">Sent</span>}
                   {m.snippet && <span className="inbox-snippet">{m.snippet}</span>}
                 </div>
-              </button>
+                </div>
+              </div>
             ))
           )}
         </div>
@@ -358,7 +487,13 @@ export default function InboxTab() {
         />
 
         <div className="inbox-reader">
-          {open ? (
+          {folder === "sent" ? (
+            openSent ? (
+              <SentReader key={`${openSent.source}-${openSent.id}`} mail={openSent} />
+            ) : (
+              <EmptyState>Pick a sent email to see it and whether it was delivered.</EmptyState>
+            )
+          ) : open ? (
             <Reader
               key={open.id}
               msg={open}
@@ -373,10 +508,115 @@ export default function InboxTab() {
         </div>
       </div>
 
+      {tasking && (
+        <TaskEditModal
+          key={tasking.id}
+          task={null}
+          defaults={{
+            title: `Email: ${tasking.subject || "(no subject)"}`,
+            body: [
+              `From ${tasking.from_name ? `${tasking.from_name} <${tasking.from_email ?? ""}>` : tasking.from_email ?? ""}, ${formatDateTime(tasking.sent_at)}`,
+              tasking.snippet ?? "",
+            ]
+              .filter(Boolean)
+              .join("\n\n"),
+            job_id: tasking.job_id,
+            client_id: tasking.record_kind === "client" ? tasking.record_id : null,
+            lead_id: tasking.record_kind === "lead" ? tasking.record_id : null,
+            supplier_id: tasking.record_kind === "supplier" ? tasking.record_id : null,
+          }}
+          onClose={() => setTasking(null)}
+        />
+      )}
       {compose && (
-        <ComposeModal replyTo={compose.replyTo} forward={compose.forward} onClose={() => setCompose(null)} />
+        <ComposeModal
+          replyTo={compose.replyTo}
+          forward={compose.forward}
+          book={book}
+          onClose={() => setCompose(null)}
+        />
       )}
     </>
+  );
+}
+
+/** Delivery status (Resend events via /api/mail-webhook) as shown on Sent. */
+const DELIVERY = {
+  delivered: { label: "Delivered", dot: "cat-customer", chip: "cat-customer" },
+  opened: { label: "Opened", dot: "cat-customer", chip: "cat-customer" },
+  bounced: { label: "Bounced — not delivered", dot: "cat-bounced", chip: "needs" },
+  sending: { label: "Sent — awaiting delivery", dot: "cat-unknown", chip: "" },
+  saved: { label: "Sent (no delivery tracking)", dot: "cat-unknown", chip: "" },
+} as const;
+type DeliveryKey = keyof typeof DELIVERY;
+function deliveryKey(status: string): DeliveryKey {
+  const st = (status || "").toLowerCase();
+  if (st === "delivered") return "delivered";
+  if (st === "opened" || st === "clicked") return "opened";
+  if (st === "bounced" || st === "failed" || st === "complained") return "bounced";
+  if (st === "saved") return "saved";
+  return "sending";
+}
+function DeliveryChip({ status }: { status: string }) {
+  const d = DELIVERY[deliveryKey(status)];
+  return <span className={`inbox-chip ${d.chip}`}>{d.label}</span>;
+}
+const SOURCE_LABEL: Record<SentMail["source"], string> = {
+  inbox: "Inbox",
+  shipment: "Shipment Comms",
+  quote: "Quotation",
+};
+
+function SentReader({ mail }: { mail: SentMail }) {
+  const navigate = useNavigate();
+  return (
+    <div className="inbox-read">
+      <div className="inbox-read-head">
+        <h3>{mail.subject || "(no subject)"}</h3>
+        <div className="inbox-read-from">
+          <strong>To: {mail.to_emails.join(", ") || "—"}</strong>
+          <span className="muted"> · {formatDateTime(mail.sent_at)}</span>
+        </div>
+        {mail.cc_emails.length > 0 && (
+          <div className="muted" style={{ fontSize: "0.78rem" }}>
+            Cc: {mail.cc_emails.join(", ")}
+          </div>
+        )}
+        <div className="inbox-read-tags">
+          <DeliveryChip status={mail.status} />
+          <span className="inbox-chip">{SOURCE_LABEL[mail.source]}</span>
+          {mail.job_id && (
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={() => navigate("/jobs", { state: { openJobId: mail.job_id } })}
+            >
+              Open shipment {mail.job_reference} ›
+            </button>
+          )}
+          {mail.quote_id && (
+            <button type="button" className="btn ghost small" onClick={() => navigate(`/quotes/${mail.quote_id}`)}>
+              Open quotation {mail.quote_reference} ›
+            </button>
+          )}
+        </div>
+        {mail.error && <p className="hint" style={{ color: "var(--orange-ink)" }}>{mail.error}</p>}
+      </div>
+      <div className="inbox-body" style={{ marginTop: 12 }}>
+        {mail.body ? (
+          <iframe
+            title="Sent message"
+            className="inbox-frame"
+            sandbox="allow-popups allow-popups-to-escape-sandbox"
+            srcDoc={`<base target="_blank"><style>body{font-family:Aptos,Calibri,"Segoe UI",sans-serif;font-size:14px;color:#2e2e2e;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style>${
+              /<[a-z][\s\S]*>/i.test(mail.body) ? mail.body : mail.body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>")
+            }`}
+          />
+        ) : (
+          <p className="muted">{mail.preview || "No body stored."}</p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -552,10 +792,28 @@ function Reader({
             </button>
           ) : null)}
         {msg.direction === "in" && !isUnread(msg) && (
-          <button type="button" className="btn small outline" onClick={() => patch({ read_at: null }, "Marked unread")}>
+          <button
+            type="button"
+            className="btn small outline"
+            onClick={() => patch({ read_at: null, marked_unread: true }, "Marked unread")}
+          >
             Mark unread
           </button>
         )}
+        {msg.direction === "in" &&
+          (msg.spam ? (
+            <button type="button" className="btn small outline" onClick={() => patch({ spam: false }, "Moved to the inbox")}>
+              Not spam
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn small outline warn"
+              onClick={() => patch({ spam: true }, "Moved to Spam")}
+            >
+              Spam
+            </button>
+          ))}
         {c === "unknown" && msg.direction === "in" && msg.from_email && (
           <button type="button" className="btn small outline" onClick={makeLead} disabled={saveLead.isPending}>
             + Make a lead
@@ -677,10 +935,12 @@ const FORWARD_ATTACH_LIMIT = 14 * 1024 * 1024;
 function ComposeModal({
   replyTo,
   forward,
+  book,
   onClose,
 }: {
   replyTo?: InboxMessage;
   forward?: { msg: InboxMessage; parsed?: Parsed };
+  book: BookEntry[];
   onClose: () => void;
 }) {
   const fwd = forward?.msg;
@@ -752,7 +1012,7 @@ function ComposeModal({
       ? [replyTo.refs ?? "", replyTo.message_id ?? ""].join(" ").trim()
       : undefined;
     try {
-      await sendMail({
+      const sentRes = await sendMail({
         to: toList,
         cc: list(cc),
         subject: subject || "(no subject)",
@@ -770,6 +1030,8 @@ function ComposeModal({
       await insertInboxMessage({
         direction: "out",
         mailbox: "support",
+        provider_id: sentRes.id,
+        delivery_status: "sent",
         from_email: "support@expac.co.za",
         from_name: settings?.mail_sender_name || "ExPac",
         to_emails: toList,
@@ -791,6 +1053,7 @@ function ComposeModal({
       });
       if (replyTo) await update.mutateAsync({ id: replyTo.id, patch: { replied_at: new Date().toISOString() } });
       qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_sent"] });
       toast(replyTo ? "Reply sent" : fwd ? "Email forwarded" : "Email sent");
       onClose();
     } catch (err) {
@@ -806,11 +1069,17 @@ function ComposeModal({
         <div className="grid2">
           <div className="field">
             <label>To</label>
-            <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@company.com" />
+            <RecipientInput
+              value={to}
+              onChange={setTo}
+              book={book}
+              placeholder="Start typing a name or email"
+              autoFocus={!replyTo}
+            />
           </div>
           <div className="field">
             <label>Cc</label>
-            <input value={cc} onChange={(e) => setCc(e.target.value)} />
+            <RecipientInput value={cc} onChange={setCc} book={book} />
           </div>
         </div>
         <div className="field">
@@ -819,7 +1088,7 @@ function ComposeModal({
         </div>
         <div className="field">
           <label>Message</label>
-          <textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} autoFocus />
+          <textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} autoFocus={!!replyTo} />
           <span className="hint">
             Sent from support@expac.co.za with your email signature
             {replyTo ? ", threaded under the original message" : ""}

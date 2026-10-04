@@ -141,6 +141,10 @@ export async function onRequestPost(context) {
         `mail_campaign_recipients?provider_id=eq.${encodeURIComponent(id)}`,
         recipientPatch,
       ),
+      // Inbox replies / forwards / new emails (0136) — Sent items.
+      sbPatch(env, `inbox_messages?provider_id=eq.${encodeURIComponent(id)}`, {
+        delivery_status: status,
+      }),
     ]);
     return json({ ok: true });
   }

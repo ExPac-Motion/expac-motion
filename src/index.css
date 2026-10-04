@@ -6205,7 +6205,9 @@ table.dt .task-title {
   max-height: 78vh;
 }
 .inbox-row {
-  display: block;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 0 6px;
   width: 100%;
   text-align: left;
   border: 0;
@@ -6244,7 +6246,7 @@ table.dt .task-title {
   flex: none;
 }
 .inbox-subject {
-  margin: 3px 0 4px 17px;
+  margin: 3px 0 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6254,7 +6256,6 @@ table.dt .task-title {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-left: 17px;
   align-items: center;
 }
 .inbox-snippet {
@@ -6391,3 +6392,72 @@ table.dt .task-title {
 /* Inbox › Internal (ExPac's own mail, 0135). */
 .inbox-dot.cat-internal { background: var(--night); border: 2px solid var(--green); width: 10px; height: 10px; }
 .inbox-chip.cat-internal { background: var(--night); color: #fff; }
+/* Inbox list: category dot with the "create a task" icon below it. */
+.inbox-row-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+.inbox-row-main {
+  min-width: 0;
+}
+.inbox-task-btn {
+  border: 0;
+  background: none;
+  padding: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: #a3a39b;
+  cursor: pointer;
+}
+.inbox-task-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.inbox-task-btn:hover {
+  color: var(--teal-ink);
+  background: var(--teal-tint);
+}
+/* Inbox › Sent: bounced = orange dot. */
+.inbox-dot.cat-bounced { background: var(--orange); }
+/* Address book suggestions (To / Cc). */
+.rcpt {
+  position: relative;
+}
+.rcpt-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: #fff;
+  border: 1px solid #d8d9d4;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.rcpt-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.rcpt-item.on {
+  background: var(--teal-tint);
+}
+.rcpt-org {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+}

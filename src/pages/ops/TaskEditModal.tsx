@@ -66,7 +66,7 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
   return {
     kind: task?.kind ?? (defaults?.kind as Form["kind"]) ?? "task",
     title: task?.title ?? defaults?.title ?? "",
-    body: task?.body ?? "",
+    body: task?.body ?? (defaults?.body as string) ?? "",
     status: task?.status ?? "open",
     priority: task?.priority ?? (defaults?.priority as Form["priority"]) ?? "normal",
     due_date: task?.due_date ?? (defaults?.due_date as string) ?? "",
