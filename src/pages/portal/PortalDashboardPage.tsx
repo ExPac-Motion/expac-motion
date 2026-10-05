@@ -367,6 +367,7 @@ function WhatsNew() {
   const q = usePortalAnnouncements();
   const items = q.data ?? [];
   const [i, setI] = useState(0);
+  const [zoom, setZoom] = useState(false);
   const cur = items[Math.min(i, items.length - 1)];
   return (
     <div className="panel pt-news">
@@ -385,11 +386,10 @@ function WhatsNew() {
         )}
       </div>
       {cur ? (
-        <article className="pt-news-item">
+        // Whole image, fitted to the box (no cropping); click for full size.
+        <button type="button" className="pt-news-item" onClick={() => setZoom(true)} title="View full image">
           <img src={cur.url} alt={cur.title} />
-          <h3>{cur.title}</h3>
-          <span className="hint">{formatDate(cur.created_at)}</span>
-        </article>
+        </button>
       ) : (
         <div className="pt-news-empty">
           <img src="/Logo.jpg" alt="ExPac" />
@@ -397,6 +397,14 @@ function WhatsNew() {
             Welcome to ExPac Motion — request quotes, accept quotations and follow every shipment here. News and updates from the
             ExPac team will show in this space.
           </p>
+        </div>
+      )}
+      {zoom && cur && (
+        <div className="pt-lightbox" onClick={() => setZoom(false)} role="dialog" aria-label="What's new">
+          <img src={cur.url} alt={cur.title} />
+          <button type="button" className="pt-lightbox-x" aria-label="Close">
+            ✕
+          </button>
         </div>
       )}
     </div>
