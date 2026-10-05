@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, SearchInput } from "../../components/common";
@@ -30,7 +30,11 @@ export default function PortalWarehousePage() {
   const releasesQ = useWmsReleases();
   const runsQ = useWmsBillingRuns();
   const whQ = useWmsWarehouses();
-  const [view, setView] = useState<View>("stock");
+  // The sidebar's Warehouse › Receipt / Release / Inventory / Storage statements set ?view=.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("view") as View | null;
+  const view: View = asked && ["stock", "all", "releases", "statements"].includes(asked) ? asked : "stock";
+  const setView = (v: View) => setParams({ view: v }, { replace: true });
   const [search, setSearch] = useState("");
   const [viewing, setViewing] = useState<WmsReceipt | null>(null);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
@@ -96,7 +100,7 @@ export default function PortalWarehousePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Your account" title="Warehouse" />
+      <PageHeader eyebrow="Warehouse" title={view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search receipt, SKU, reference…" />}
         filters={

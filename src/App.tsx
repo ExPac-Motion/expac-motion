@@ -46,6 +46,10 @@ import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
 import PortalRatesPage from "./pages/portal/PortalRatesPage";
 import PortalWarehousePage from "./pages/portal/PortalWarehousePage";
+import PortalQuoteViewPage from "./pages/portal/PortalQuoteViewPage";
+import PortalRequestQuotePage from "./pages/portal/PortalRequestQuotePage";
+import PortalItemsPage from "./pages/portal/PortalItemsPage";
+import PortalReportsPage from "./pages/portal/PortalReportsPage";
 import PartnerPortalPage from "./pages/partner/PartnerPortalPage";
 import PartnerSignupPage from "./pages/partner/PartnerSignupPage";
 import RestrictedAccountPage from "./pages/RestrictedAccountPage";
@@ -189,6 +193,12 @@ function AppRoutes() {
             <Route path="/dev/wms-print" element={<WmsPrintDemoPage />} />
           )}
           {import.meta.env.DEV && (
+            <Route path="/dev/portal" element={<PortalLayout />}>
+              <Route index element={<PortalDashboardPage />} />
+              <Route path="quote" element={<PortalRequestQuotePage />} />
+            </Route>
+          )}
+          {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
@@ -247,6 +257,31 @@ function AppRoutes() {
                 </PortalSection>
               }
             />
+            <Route
+              path="portal/quotes/new"
+              element={
+                <PortalSection permission="quotes">
+                  <PortalRequestQuotePage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/quotes/:id"
+              element={
+                <PortalSection permission="quotes">
+                  <PortalQuoteViewPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/items"
+              element={
+                <PortalSection permission="warehouse">
+                  <PortalItemsPage />
+                </PortalSection>
+              }
+            />
+            <Route path="portal/reports" element={<PortalReportsPage />} />
             <Route
               path="portal/warehouse"
               element={

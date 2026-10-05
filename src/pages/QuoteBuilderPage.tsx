@@ -70,6 +70,7 @@ import {
 import { TierDot } from "./rates/TierSheetsPage";
 import {
   AUTO_REFERENCE,
+  formatDate,
   money,
   moneyCur,
   newReference,
@@ -1041,6 +1042,23 @@ export default function QuoteBuilderPage() {
           </>
         }
       />
+
+      {existingQ.data?.portal_requested_at && (
+        <div className="panel portal-request-note">
+          <b>Requested by the customer on the portal</b> · {formatDate(existingQ.data.portal_requested_at)}
+          {existingQ.data.request_ready_date && <> · cargo ready {formatDate(existingQ.data.request_ready_date)}</>}
+          {existingQ.data.request_pickup && <div>Collect from: {existingQ.data.request_pickup}</div>}
+          {existingQ.data.request_delivery && <div>Deliver to: {existingQ.data.request_delivery}</div>}
+          {existingQ.data.request_notes && <div>Notes: {existingQ.data.request_notes}</div>}
+          {existingQ.data.portal_decision && (
+            <div>
+              <b>Customer {existingQ.data.portal_decision}</b> on the portal {formatDate(existingQ.data.portal_decided_at)}
+              {existingQ.data.portal_decline_reason ? ` — "${existingQ.data.portal_decline_reason}"` : ""}
+            </div>
+          )}
+          <div className="hint">Complete it, add the charges and set the status to Quote Sent — it appears on the customer's portal to accept.</div>
+        </div>
+      )}
 
       <div className="panel">
         <div className="panel-head">

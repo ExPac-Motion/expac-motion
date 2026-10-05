@@ -47,6 +47,8 @@ export type UserRole = "admin" | "user" | "client" | "restricted" | "partner";
 export interface Profile {
   id: string;
   full_name: string | null;
+  /** How the Customer Portal greets this login, e.g. "Mr Gilbert" (0141). */
+  greeting?: string | null;
   role: UserRole;
   /** Per-login permission overrides (0131); a missing key = the role's setting. */
   permissions?: Partial<Record<import("./permissions").PermKey, boolean>> | null;
@@ -1240,6 +1242,15 @@ export interface Quote {
   valid_until: string | null;
   status: QuoteStatus;
   accepted_at: string | null;
+  /** Customer Portal request / decision (0141). */
+  portal_requested_at?: string | null;
+  request_ready_date?: string | null;
+  request_pickup?: string | null;
+  request_delivery?: string | null;
+  request_notes?: string | null;
+  portal_decision?: "accepted" | "declined" | null;
+  portal_decided_at?: string | null;
+  portal_decline_reason?: string | null;
   /** First time the quote reached Sent / Not Proceeding — stamped by
    *  trigger (migration 0111); null on quotes from before it. */
   sent_at?: string | null;

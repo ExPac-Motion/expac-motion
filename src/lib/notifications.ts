@@ -92,6 +92,29 @@ export function buildNotifications(
   }
 
   for (const q of src.quotes ?? []) {
+    // Customer Portal (0141): new quote requests and the customer's answer.
+    if (q.status === "open" && recent(q.portal_requested_at)) {
+      out.push({
+        key: `qreq-${q.id}`,
+        domain: "sales",
+        text: `Portal quote request — ${q.client?.company ?? "customer"} · ${q.reference}`,
+        when: q.portal_requested_at as string,
+        to: `/quotes/${q.id}`,
+        quoteId: q.id,
+        clientId: q.client_id,
+      });
+    }
+    if (q.portal_decision === "declined" && recent(q.portal_decided_at)) {
+      out.push({
+        key: `qdecl-${q.id}`,
+        domain: "sales",
+        text: `Quote declined on the portal — ${q.reference}${q.portal_decline_reason ? `: ${q.portal_decline_reason}` : ""}`,
+        when: q.portal_decided_at as string,
+        to: `/quotes/${q.id}`,
+        quoteId: q.id,
+        clientId: q.client_id,
+      });
+    }
     if (recent(q.accepted_at)) {
       out.push({
         key: `qwon-${q.id}`,
