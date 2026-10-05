@@ -7763,3 +7763,143 @@ tr.clickable:hover td {
   flex-direction: column;
   gap: 4px;
 }
+/* Customer record (0142) — tabs + boxed fields with the label inside, after
+   the user's reference screenshot */
+.cr-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  margin: -6px 0 16px;
+  background: var(--white);
+  border-radius: 10px 10px 0 0;
+  padding: 0 6px;
+}
+.cr-tabs button {
+  border: 0;
+  background: none;
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 0.86rem;
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.cr-tabs button:hover {
+  color: var(--green-dark);
+}
+.cr-tabs button.active {
+  color: var(--green-dark);
+  font-weight: 700;
+  border-bottom-color: var(--green);
+}
+.cr-section {
+  padding: 16px 18px;
+}
+.cr-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.cr-section-head h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+.cr-portal-count {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+.cr-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.cr-field {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 10px 4px;
+  background: var(--white);
+  min-width: 0;
+  margin: 0;
+}
+.cr-field:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px var(--teal-tint);
+}
+.cr-field > span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cr-field input,
+.cr-field select,
+.cr-field textarea {
+  border: 0;
+  padding: 2px 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  font-size: 0.88rem;
+}
+.cr-field input:focus,
+.cr-field select:focus,
+.cr-field textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+.cr-check {
+  margin: 2px 0;
+}
+.cr-portal {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  max-width: 760px;
+  background: #fbfaf7;
+}
+.cr-portal-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cr-portal-row input {
+  width: 260px;
+}
+.cr-portal-issued {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.cr-portal-logins {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.cr-soon {
+  color: var(--amber-ink);
+  font-weight: 700;
+}
+.cr-wrap {
+  white-space: pre-line;
+  max-width: 320px;
+}
+@media (max-width: 900px) {
+  .cr-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

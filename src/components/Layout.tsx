@@ -83,14 +83,15 @@ const NAV: NavModule[] = [
     label: "Customers",
     children: [
       { to: "/clients", label: "All Customers" },
+      // Shippers belong to a customer (0142) — the full list lives here now.
+      { to: "/suppliers", label: "Shippers" },
       { to: "/clients?tab=portal-access", label: "Portal Access" },
     ],
   },
   {
-    to: "/suppliers",
-    label: "Suppliers",
+    to: "/agents",
+    label: "Vendors",
     children: [
-      { to: "/suppliers", label: "Shippers" },
       { to: "/agents", label: "Agents" },
       { to: "/transporters", label: "Transporters" },
       { to: "/clearing-agents", label: "Clearing Agents" },
@@ -197,7 +198,7 @@ export default function Layout() {
     "/wms": "warehouse",
     "/import-vat-duty": "customs",
     "/clients": "customers",
-    "/suppliers": "suppliers",
+    "/agents": "suppliers",
     "/rates": "rates",
   };
   nav = nav.filter((m) => !AREA[m.to] || can(AREA[m.to]));

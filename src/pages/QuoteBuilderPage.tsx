@@ -1205,7 +1205,10 @@ export default function QuoteBuilderPage() {
             >
               <option value="__add__">+ Add Shipper</option>
               <option value="">Select shipper</option>
-              {suppliers.map((s) => (
+              {/* Shippers belong to a customer (0142): this customer's own (all when none is picked yet). */}
+              {suppliers
+                .filter((s) => !draft.client_id || s.client_id === draft.client_id || s.id === draft.supplier_id)
+                .map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.company}
                 </option>
@@ -2328,7 +2331,7 @@ export default function QuoteBuilderPage() {
           onSave={async (company, contact, email, phone) => {
             try {
               const created = await saveSupplier.mutateAsync({
-                values: { company, contact, email, phone },
+                values: { company, contact, email, phone, client_id: draft.client_id || null },
               });
               set("supplier_id", created.id);
               setAddingShipper(false);

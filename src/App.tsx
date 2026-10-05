@@ -34,6 +34,7 @@ import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
 import PortalLayout from "./pages/portal/PortalLayout";
 import WmsPage from "./pages/WmsPage";
+import CustomerRecordPage from "./pages/clients/CustomerRecordPage";
 import WmsPrintPage from "./pages/wms/WmsPrintPage";
 import WmsPrintDemoPage from "./pages/wms/WmsPrintDemoPage";
 import PortalPendingPage from "./pages/portal/PortalPendingPage";
@@ -192,6 +193,7 @@ function AppRoutes() {
           {import.meta.env.DEV && (
             <Route path="/dev/wms-print" element={<WmsPrintDemoPage />} />
           )}
+          {import.meta.env.DEV && <Route path="/dev/customer/:id" element={<div className="main"><CustomerRecordPage /></div>} />}
           {import.meta.env.DEV && (
             <Route path="/dev/portal" element={<PortalLayout />}>
               <Route index element={<PortalDashboardPage />} />
@@ -310,6 +312,7 @@ function AppRoutes() {
             <Route path="jobs" element={<NeedsPerm perm="shipments"><JobsPage /></NeedsPerm>} />
             <Route path="jobs/completed" element={<NeedsPerm perm="shipments"><CompletedJobsPage /></NeedsPerm>} />
             <Route path="clients" element={<NeedsPerm perm="customers"><ClientsPage /></NeedsPerm>} />
+            <Route path="clients/:id" element={<NeedsPerm perm="customers"><CustomerRecordPage /></NeedsPerm>} />
             <Route path="crm" element={<CrmPage />} />
             <Route path="rates" element={<NeedsPerm perm="rates"><TierSheetsPage /></NeedsPerm>} />
             <Route path="rates/list" element={<NeedsPerm perm="rates"><RatesPage /></NeedsPerm>} />

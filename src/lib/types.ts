@@ -915,6 +915,8 @@ export const WON_QUOTE_STATUSES: QuoteStatus[] = ["accepted", "completed"];
 export interface Contact {
   id: string;
   company: string;
+  /** Shippers only (0142): the customer this shipper belongs to. */
+  client_id?: string | null;
   contact: string | null;
   email: string | null;
   phone: string | null;

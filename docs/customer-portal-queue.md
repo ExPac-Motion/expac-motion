@@ -43,3 +43,11 @@ From the "Customer Portal EXPAC (ZAJNB)" deck, 5 Oct 2026. These headings / sect
 - **Activity / notifications bell for the customer** (new quote ready, shipment arrived, document shared). The dashboard's "Action required" list covers the main ones for now.
 - **Mobile app** (the deck shows a phone app). The portal works in a phone browser; a native app is a separate project.
 - **Email to support@ when a customer requests a quote**. Today staff see it in Notifications and in Quotations › New Lead.
+
+## Customer record (staff side) — tabs not built yet
+From the customer-record screenshot (5 Oct 2026). Built: General, Contacts, Other Details, Bank Detail, Documents, Permits / Certificates, Products & SKUs, Consignees & Shippers, Associated Leads, Margins & Charges (+ Quotes & Shipments).
+- **Integrations**: customer EDI / API / ERP links.
+- **Customer Forecast**: expected volumes per lane / month.
+- **Status**: the last tab, cut off in the screenshot ("Statu…"). Confirm what it holds (account status? credit hold?).
+- **Portal Access counter "(1/2 Contacts)"**: shows contacts with a login out of all contacts; today it shows the number of contacts.
+- **Documents visible to the customer in the portal**: the `visible_to_client` flag exists on customer documents; the portal screen isn't built yet.

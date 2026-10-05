@@ -27,6 +27,7 @@ import DataTable, { type DataColumn } from "../components/DataTable";
 import {
   useCreateClientInvite,
   useLeadSources,
+  useClients,
   useMyProfile,
   useCan,
   usePartnerRateStructures,
@@ -162,6 +163,8 @@ export default function ContactsPage({
     (p) => p.role === "admin" || p.role === "user",
   );
   const sourcesQ = useLeadSources();
+  const clientsQ = useClients();
+  const clientName = useMemo(() => new Map((clientsQ.data ?? []).map((c) => [c.id, c.company])), [clientsQ.data]);
   const sources = sourcesQ.data ?? [];
   const replaceClientContacts = useReplaceClientContacts();
   const [extraContacts, setExtraContacts] = useState<LeadContactDraft[]>([]);
@@ -217,6 +220,10 @@ export default function ContactsPage({
       ?.openContactId;
     if (!openId || rows.length === 0) return;
     const row = rows.find((r) => r.id === openId);
+    if (row && isClient) {
+      navigate("/clients/" + row.id);
+      return;
+    }
     if (row) {
       setViewing(row);
       arm();
@@ -301,6 +308,8 @@ export default function ContactsPage({
     }
     if (kind === "supplier") {
       values.also_customer = fd.get("also_customer") === "on";
+      // Every shipper belongs to a customer (0142).
+      values.client_id = String(fd.get("client_id") || "") || null;
     }
     if (!values.company) {
       error("Company name is required");
@@ -438,8 +447,8 @@ export default function ContactsPage({
               mailTitle={`Email this ${label}`}
               onTask={kind === "destination_agent" ? undefined : () => setTaskingRow(r)}
               taskTitle={`Create a task for this ${label}`}
-              onView={() => setViewing(r)}
-              onEdit={() => setEditing(r)}
+              onView={() => (isClient ? navigate("/clients/" + r.id) : setViewing(r))}
+              onEdit={() => (isClient ? navigate("/clients/" + r.id) : setEditing(r))}
               onDelete={() => onDelete(r)}
               onDuplicate={() => onDuplicate(r)}
             />
@@ -463,6 +472,17 @@ export default function ContactsPage({
           </>
         ),
       },
+      ...(kind === "supplier"
+        ? [
+            {
+              key: "customer",
+              header: "Customer",
+              width: 200,
+              sortValue: (r: Contact) => clientName.get(r.client_id ?? "") ?? "",
+              render: (r: Contact) => clientName.get(r.client_id ?? "") ?? <span className="muted small">not linked</span>,
+            },
+          ]
+        : []),
       {
         key: "contact",
         header: "Contact",
@@ -553,7 +573,7 @@ export default function ContactsPage({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, kind, Label],
+    [sel, kind, Label, clientName],
   );
 
   return (
@@ -574,7 +594,7 @@ export default function ContactsPage({
         }
         onToolsSlot={setToolsSlot}
         primary={
-          <button className="btn" onClick={() => setEditing("new")}>
+          <button className="btn" onClick={() => (isClient ? navigate("/clients/new") : setEditing("new"))}>
             + Add {label}
           </button>
         }
@@ -610,6 +630,7 @@ export default function ContactsPage({
             columns={columns}
             rows={filtered}
             rowKey={(r) => r.id}
+            onRowClick={isClient ? (r) => navigate("/clients/" + r.id) : undefined}
           />
         )}
       </div>
@@ -839,6 +860,19 @@ export default function ContactsPage({
               <div className="field">
                 <label>Contact person</label>
                 <input name="contact" defaultValue={current?.contact ?? ""} />
+              </div>
+            )}
+            {kind === "supplier" && (
+              <div className="field">
+                <label>Customer (whose shipper this is)</label>
+                <select name="client_id" defaultValue={current?.client_id ?? ""}>
+                  <option value="">— not linked yet —</option>
+                  {(clientsQ.data ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
             <div className="grid2">
