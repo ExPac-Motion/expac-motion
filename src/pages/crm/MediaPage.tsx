@@ -12,10 +12,6 @@ import {
   useRenameMediaAsset,
   useRenameMediaFolder,
   useUploadMediaAsset,
-  useAnnouncements,
-  useCreateAnnouncement,
-  useDeleteAnnouncement,
-  useUpdateAnnouncement,
 } from "../../lib/hooks";
 import { formatDate } from "../../lib/format";
 import type { MediaAsset } from "../../lib/types";
@@ -85,13 +81,6 @@ export default function MediaPage() {
   const renameFolder = useRenameMediaFolder();
   const deleteFolder = useDeleteMediaFolder();
   const { toast, error: toastError } = useToast();
-  // Customer portal "What's new" (portal_announcements, 0092): an image posted from here.
-  const annQ = useAnnouncements();
-  const createAnn = useCreateAnnouncement();
-  const updateAnn = useUpdateAnnouncement();
-  const deleteAnn = useDeleteAnnouncement();
-  const [posting, setPosting] = useState<MediaAsset | null>(null);
-  const onPortal = useMemo(() => new Set((annQ.data ?? []).map((x) => x.image_url)), [annQ.data]);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [folder, setFolder] = useState<string>(ALL);
@@ -263,7 +252,7 @@ export default function MediaPage() {
             ? undefined
             : `${shown.length} image${shown.length === 1 ? "" : "s"} · ${folder === ALL ? "All media" : folder}`
         }
-        hint={`Reusable images for campaigns and templates. Uploads land in ${uploadFolder}.`}
+        hint={`Reusable images for campaigns and templates. Uploads land in ${uploadFolder}. Images in the Announcements folder show on the customer portal under What's new (newest first, the image name as the headline).`}
         primary={
           <button
             className="btn"
@@ -351,38 +340,6 @@ export default function MediaPage() {
         <button className="btn outline btn-sm media-newfolder" onClick={onNewFolder}>
           + New folder
         </button>
-        <div className="media-rail-head" style={{ marginTop: 18 }}>
-          Customer portal — What's new
-        </div>
-        {(annQ.data ?? []).length === 0 ? (
-          <p className="hint" style={{ margin: "4px 8px" }}>
-            Nothing posted. Use "Post to portal" on an image.
-          </p>
-        ) : (
-          (annQ.data ?? []).map((x) => (
-            <div key={x.id} className="media-ann">
-              <span className={x.published ? "on" : undefined} title={x.published ? "Showing on the portal" : "Hidden"}>
-                {x.title}
-              </span>
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => updateAnn.mutate({ id: x.id, patch: { published: !x.published } }, { onError: (e) => toastError(e.message) })}
-              >
-                {x.published ? "Hide" : "Show"}
-              </button>
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => {
-                  if (confirm("Remove " + x.title + " from the portal?")) deleteAnn.mutate(x.id, { onError: (e) => toastError(e.message) });
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          ))
-        )}
       </aside>
 
       <section className="media-main panel">
@@ -443,9 +400,6 @@ export default function MediaPage() {
                     <button className="btn ghost small" onClick={() => setRenaming(a)}>
                       Rename
                     </button>
-                    <button className="btn ghost small" onClick={() => setPosting(a)} title="Show this image on the customer portal dashboard (What's new)">
-                      {onPortal.has(a.url) ? "On portal ✓" : "Post to portal"}
-                    </button>
                     <button
                       className="btn ghost small danger"
                       onClick={() => onDelete(a)}
@@ -459,47 +413,6 @@ export default function MediaPage() {
           </div>
         )}
       </section>
-
-      {posting && (
-        <Modal title="Post to the customer portal" onClose={() => setPosting(null)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              const title = String(fd.get("title") ?? "").trim();
-              if (!title) return toastError("Give it a title");
-              createAnn.mutate(
-                { title, body: String(fd.get("body") ?? ""), image_url: posting.url },
-                {
-                  onSuccess: () => {
-                    toast("Posted — it shows on every customer's portal dashboard");
-                    setPosting(null);
-                  },
-                  onError: (er) => toastError(er.message),
-                },
-              );
-            }}
-          >
-            <img src={posting.url} alt={posting.name} style={{ width: "100%", borderRadius: 8, maxHeight: 240, objectFit: "cover" }} />
-            <div className="field">
-              <label>Title</label>
-              <input name="title" defaultValue={posting.name.replace(/\.[a-z0-9]+$/i, "")} autoFocus />
-            </div>
-            <div className="field">
-              <label>What's new (short text)</label>
-              <textarea name="body" rows={3} placeholder="e.g. New weekly LCL consolidation Shanghai → Durban" />
-            </div>
-            <div className="modal-foot-row">
-              <button type="button" className="btn outline" onClick={() => setPosting(null)}>
-                Cancel
-              </button>
-              <button className="btn" disabled={createAnn.isPending}>
-                {createAnn.isPending ? "Posting…" : "Post to portal"}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
 
       {renaming && (
         <RenameModal

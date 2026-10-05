@@ -249,3 +249,20 @@ export function markCommsSeen(jobId: string) {
     /* private mode */
   }
 }
+
+/** What's new (0144): images in Media › Announcements, newest first. */
+export const usePortalAnnouncements = () =>
+  useQuery({
+    queryKey: ["portal", "announcements"],
+    queryFn: async (): Promise<{ id: string; title: string; url: string; created_at: string }[]> => {
+      const { data, error } = await supabase.from("client_announcements").select("*").order("created_at", { ascending: false });
+      if (error) return []; // before 0144 is applied
+      return ((data ?? []) as { id: string; name: string; url: string; created_at: string }[]).map((a) => ({
+        id: a.id,
+        url: a.url,
+        created_at: a.created_at,
+        // "new-lcl-service.png" -> "new lcl service"
+        title: a.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " "),
+      }));
+    },
+  });

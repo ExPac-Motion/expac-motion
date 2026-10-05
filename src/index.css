@@ -7965,25 +7965,6 @@ tr.clickable:hover td {
     grid-row: auto;
   }
 }
-.media-ann {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-}
-.media-ann span {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-}
-.media-ann span.on {
-  color: var(--green-dark);
-  font-weight: 700;
-}
 
 /* user menu stays light on the dark sidebar */
 .pt-user-menu {

@@ -8,7 +8,7 @@ import { DELIVERED_STATUS, type ClientJob } from "../../lib/types";
 import { greetingFor, portalQuoteStatus, usePortalQuotes } from "../../lib/portal";
 import { useWmsReceipts } from "../../lib/wms";
 import { PortalIcon } from "./PortalLayout";
-import { usePublishedAnnouncements } from "../../lib/hooks";
+import { usePortalAnnouncements } from "../../lib/portal";
 
 const isDone = (j: ClientJob) => j.shipment_status === DELIVERED_STATUS || j.milestone === "Delivered";
 const modeKey = (m: string) =>
@@ -362,9 +362,9 @@ function ShipmentCalendar({
   );
 }
 
-/** What's new — announcements ExPac posts from Sales CRM › Media (image + text). */
+/** What's new — the images in Sales CRM › Media › Announcements (0144). */
 function WhatsNew() {
-  const q = usePublishedAnnouncements();
+  const q = usePortalAnnouncements();
   const items = q.data ?? [];
   const [i, setI] = useState(0);
   const cur = items[Math.min(i, items.length - 1)];
@@ -386,9 +386,8 @@ function WhatsNew() {
       </div>
       {cur ? (
         <article className="pt-news-item">
-          {cur.image_url && <img src={cur.image_url} alt={cur.title} />}
+          <img src={cur.url} alt={cur.title} />
           <h3>{cur.title}</h3>
-          {cur.body && <p>{cur.body}</p>}
           <span className="hint">{formatDate(cur.created_at)}</span>
         </article>
       ) : (

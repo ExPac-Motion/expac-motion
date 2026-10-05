@@ -6,7 +6,8 @@ import DataTable, { type DataColumn } from "../../components/DataTable";
 import DateInput from "../../components/DateInput";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, RowActions, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
-import { useMyJobTracking, useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
+import { useMyDocuments, useMyJobTracking, useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
+import { getMyDocumentUrl } from "../../lib/db";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import { DELIVERED_STATUS, shipmentStatusSlug, type ClientJob } from "../../lib/types";
 import {
@@ -14,6 +15,7 @@ import {
   markCommsSeen,
   useCreatePortalTask,
   usePortalMsgStamps,
+  usePortalQuotes,
   usePortalTasks,
   type PortalTask,
 } from "../../lib/portal";
@@ -48,7 +50,6 @@ function daysUntil(date: string | null | undefined): number | null {
  * tasks (ask ExPac for something; ExPac's shared tasks show here too).
  */
 export default function PortalShipmentsPage() {
-  const navigate = useNavigate();
   const jobsQ = useMyJobs();
   const trackQ = useMyJobTracking();
   const tasksQ = usePortalTasks();
@@ -58,6 +59,7 @@ export default function PortalShipmentsPage() {
   const [search, setSearch] = useState("");
   const [commsJob, setCommsJob] = useState<ClientJob | null>(null);
   const [taskJob, setTaskJob] = useState<ClientJob | null>(null);
+  const [viewJob, setViewJob] = useState<ClientJob | null>(null);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const [, bump] = useState(0);
 
@@ -108,7 +110,7 @@ export default function PortalShipmentsPage() {
             onTask={() => setTaskJob(j)}
             taskTitle="Tasks — ask ExPac for something on this shipment"
             taskOpen={openTaskJobs.has(j.id)}
-            onView={() => navigate(`/portal/shipments/${j.id}`)}
+            onView={() => setViewJob(j)}
           />
         </div>
       ),
@@ -119,9 +121,9 @@ export default function PortalShipmentsPage() {
       header: "Shipment",
       width: 130,
       render: (j) => (
-        <Link className="job-ref" to={`/portal/shipments/${j.id}`}>
+        <button type="button" className="link-btn job-ref" onClick={() => setViewJob(j)}>
           {j.reference}
-        </Link>
+        </button>
       ),
       sortValue: (j) => j.reference,
     },
@@ -213,11 +215,13 @@ export default function PortalShipmentsPage() {
               columns={columns}
               rows={rows}
               rowKey={(j) => j.id}
+              onRowClick={(j) => setViewJob(j)}
             />
           )}
         </div>
       </div>
       {commsJob && <PortalCommsRail job={commsJob} onClose={() => setCommsJob(null)} />}
+      {viewJob && <PortalShipmentViewModal job={viewJob} eta={etaOf(viewJob)} etd={etdOf(viewJob)} onClose={() => setViewJob(null)} />}
       {taskJob && <PortalTasksModal job={taskJob} tasks={(tasksQ.data ?? []).filter((t) => t.job_id === taskJob.id)} onClose={() => setTaskJob(null)} />}
     </>
   );
@@ -378,6 +382,116 @@ function PortalTasksModal({ job, tasks, onClose }: { job: ClientJob; tasks: Port
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+const docLabel = (mode: string) =>
+  mode.startsWith("Air") || mode.startsWith("Courier") ? "AWB No" : mode.startsWith("Sea") ? "MBL No" : "Ref No";
+
+function ViewField({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div className="hint" style={{ marginBottom: 4 }}>
+        {label}
+      </div>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+/** The shipment View — same layout as ExPac's Active Shipments view (no
+ *  notes / customer field); documents are the ones ExPac shares. */
+export function PortalShipmentViewModal({
+  job,
+  eta,
+  etd,
+  onClose,
+}: {
+  job: ClientJob;
+  eta: string | null | undefined;
+  etd: string | null | undefined;
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const { error } = useToast();
+  const docsQ = useMyDocuments(job.id);
+  const quotesQ = usePortalQuotes();
+  // A shipment keeps its quotation's system number.
+  const quote = (quotesQ.data ?? []).find((q) => q.reference === job.reference);
+
+  async function open(path: string) {
+    const tab = window.open("", "_blank");
+    try {
+      const url = await getMyDocumentUrl(path);
+      if (tab) tab.location.href = url;
+    } catch (e) {
+      tab?.close();
+      error(e instanceof Error ? e.message : "Could not open the document");
+    }
+  }
+
+  return (
+    <Modal
+      title={job.reference}
+      onClose={onClose}
+      wide
+      headerActions={
+        <button className="btn outline" onClick={() => navigate(`/portal/shipments/${job.id}`)}>
+          Track shipment
+        </button>
+      }
+    >
+      <div className="grid2">
+        <ViewField label="Shipper" value={job.supplier_company ?? "—"} />
+        <ViewField label="Mode" value={job.mode} />
+        <ViewField label="Milestone" value={job.milestone} />
+        <ViewField label="Shipment Status" value={job.shipment_status || "—"} />
+        <ViewField label="Your Reference" value={job.po_no || "—"} />
+        <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
+        <ViewField label="Container No" value={job.container_no || "—"} />
+        <ViewField label={job.mode.startsWith("Sea") ? "Shipping Line" : "Carrier"} value={job.shipping_line || "—"} />
+        <ViewField label="Agent/Airline" value={job.carrier_name || "—"} />
+        <ViewField label="Vessel" value={job.vessel_name || "—"} />
+        <ViewField label="POL" value={code(job.origin) || "—"} />
+        <ViewField label="POD" value={code(job.destination) || "—"} />
+        <ViewField label="ETD" value={formatDate(etd)} />
+        <ViewField label="ETA" value={formatDate(eta)} />
+        <ViewField label="PDD" value={formatDate(job.provisional_delivery_date)} />
+        <ViewField label="Created On" value={formatDate(job.created_at)} />
+      </div>
+      {quote && (
+        <p style={{ marginTop: 8 }}>
+          <Link to={`/portal/quotes/${quote.id}`} onClick={onClose}>
+            View originating quotation →
+          </Link>
+        </p>
+      )}
+
+      <div style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+        <strong>Documents</strong>
+        {docsQ.isLoading ? (
+          <Loading />
+        ) : (docsQ.data ?? []).length === 0 ? (
+          <p className="hint">No documents shared on this shipment yet.</p>
+        ) : (
+          <table className="table--compact" style={{ marginTop: 8 }}>
+            <tbody>
+              {(docsQ.data ?? []).map((d) => (
+                <tr key={d.id}>
+                  <td>
+                    <button type="button" className="link-btn" onClick={() => void open(d.storage_path)}>
+                      {d.name}
+                    </button>
+                  </td>
+                  <td>{d.doc_type || "—"}</td>
+                  <td>{formatDate(d.created_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </Modal>
   );
 }
