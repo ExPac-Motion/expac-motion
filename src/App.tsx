@@ -33,6 +33,9 @@ import ShipmentDocPrintPage from "./pages/ShipmentDocPrintPage";
 import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
 import PortalLayout from "./pages/portal/PortalLayout";
+import WmsPage from "./pages/WmsPage";
+import WmsPrintPage from "./pages/wms/WmsPrintPage";
+import WmsPrintDemoPage from "./pages/wms/WmsPrintDemoPage";
 import PortalPendingPage from "./pages/portal/PortalPendingPage";
 import PortalSignupPage from "./pages/portal/PortalSignupPage";
 import PortalDashboardPage from "./pages/portal/PortalDashboardPage";
@@ -182,6 +185,9 @@ function AppRoutes() {
             <Route path="/quotes/demo/print" element={<QuotePrintDemoPage />} />
           )}
           {import.meta.env.DEV && (
+            <Route path="/dev/wms-print" element={<WmsPrintDemoPage />} />
+          )}
+          {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
@@ -247,11 +253,13 @@ function AppRoutes() {
               path="jobs/:id/documents/:doc/print"
               element={<ShipmentDocPrintPage />}
             />
+            <Route path="wms/print/:doc/:id" element={<WmsPrintPage />} />
           </Route>
           <Route element={<Protected />}>
             <Route index element={<DashboardPage />} />
             <Route path="ops" element={<NeedsPerm perm="ops"><OpsControlTowerPage /></NeedsPerm>} />
             <Route path="quotes" element={<NeedsPerm perm="quotes"><QuotesListPage /></NeedsPerm>} />
+            <Route path="wms" element={<NeedsPerm perm="warehouse"><WmsPage /></NeedsPerm>} />
             <Route path="import-vat-duty" element={<NeedsPerm perm="customs"><ImportVatDutyPage /></NeedsPerm>} />
             <Route path="quotes/new" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
             <Route path="quotes/:id" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />

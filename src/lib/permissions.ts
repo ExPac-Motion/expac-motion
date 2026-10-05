@@ -1,4 +1,4 @@
-// Roles & permissions (migration 0131). Admin User has everything; Standard
+// Roles & permissions (migration 0131; "warehouse" 0137). Admin User has everything; Standard
 // User and Partner Portal User get each switch from Settings > Roles &
 // Permissions (company_settings.role_permissions), overridable per login on
 // Settings > Team (profiles.permissions). Customer Portal logins keep their
@@ -9,6 +9,7 @@ export type StaffPerm =
   | "ops"
   | "shipments"
   | "quotes"
+  | "warehouse"
   | "customs"
   | "customers"
   | "suppliers"
@@ -32,6 +33,7 @@ export const STAFF_PERMS: PermDef<StaffPerm>[] = [
   { key: "ops", label: "Control Tower", hint: "Tasks & notes, notifications, calendar, live tracking, document vault" },
   { key: "shipments", label: "Shipments", hint: "Active and completed shipments, every mode" },
   { key: "quotes", label: "Quotations", hint: "Quote list and Quote Builder" },
+  { key: "warehouse", label: "WMS (warehouse)", hint: "Receipts, movements, releases, inventory, storage billing, cycle counts" },
   { key: "customs", label: "Customs Charges", hint: "Import VAT and duty calculator" },
   { key: "customers", label: "Customers", hint: "Customer records (Portal Access stays Admin only)" },
   { key: "suppliers", label: "Suppliers and partners", hint: "Shippers, agents, transporters, clearing and destination agents" },
@@ -79,6 +81,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     ops: true,
     shipments: true,
     quotes: true,
+    warehouse: true,
     customs: true,
     customers: true,
     suppliers: true,
