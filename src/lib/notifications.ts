@@ -174,6 +174,19 @@ export function buildNotifications(
   }
 
   const todayEnd = new Date(now).setHours(23, 59, 59, 999);
+  // Customer Portal (0143): a customer asked for something on a shipment.
+  for (const t of src.tasks ?? [])
+    if (t.from_portal && t.status !== "done" && recent(t.created_at))
+      out.push({
+        key: `ptask-${t.id}`,
+        domain: "operations",
+        text: `Customer request on ${t.job?.reference ?? "a shipment"} — ${t.title}`,
+        when: t.created_at,
+        to: "/ops?tab=tasks",
+        jobId: t.job_id,
+        clientId: t.client_id,
+      });
+
   for (const t of src.tasks ?? [])
     if (
       t.status !== "done" &&

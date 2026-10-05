@@ -185,3 +185,67 @@ export function greetingFor(profile: { greeting?: string | null; full_name?: str
   const who = profile?.greeting?.trim() || profile?.full_name?.trim() || email?.split("@")[0] || "";
   return who ? `Good day, ${who}` : "Good day";
 }
+
+/* ---------- Shipments board (0143): tasks + comms ---------- */
+
+export interface PortalTask {
+  id: string;
+  job_id: string;
+  title: string;
+  body: string | null;
+  status: "open" | "doing" | "done";
+  due_date: string | null;
+  created_at: string;
+  done_at: string | null;
+  from_portal: boolean;
+}
+export interface PortalMsgStamp {
+  id: string;
+  job_id: string;
+  direction: "in" | "out";
+  created_at: string;
+}
+
+export const usePortalTasks = () =>
+  useQuery({
+    queryKey: ["portal", "tasks"],
+    queryFn: async (): Promise<PortalTask[]> => {
+      const { data, error } = await supabase.from("client_tasks").select("*").order("created_at", { ascending: false });
+      if (error) return []; // before 0143 is applied
+      return (data ?? []) as PortalTask[];
+    },
+  });
+
+/** Every message stamp across the customer's shipments — for the unread dot. */
+export const usePortalMsgStamps = () =>
+  useQuery({
+    queryKey: ["portal", "msgstamps"],
+    queryFn: async (): Promise<PortalMsgStamp[]> =>
+      unwrap(await supabase.from("client_messages").select("id, job_id, direction, created_at").order("created_at", { ascending: false })),
+    refetchInterval: 60_000,
+  });
+
+export function useCreatePortalTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { jobId: string; title: string; body: string; due: string }) =>
+      unwrap(await supabase.rpc("portal_create_task", { p_job: v.jobId, p_title: v.title, p_body: v.body, p_due: v.due || null })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "tasks"] }),
+  });
+}
+
+/** Comms "seen" marker per shipment, kept in this browser. */
+export function commsSeen(jobId: string): string {
+  try {
+    return localStorage.getItem(`pt-comms-seen-${jobId}`) ?? "";
+  } catch {
+    return "";
+  }
+}
+export function markCommsSeen(jobId: string) {
+  try {
+    localStorage.setItem(`pt-comms-seen-${jobId}`, new Date().toISOString());
+  } catch {
+    /* private mode */
+  }
+}

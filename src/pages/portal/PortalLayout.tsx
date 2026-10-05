@@ -172,7 +172,7 @@ export default function PortalLayout() {
     <div className={`pt-shell${navOpen ? " nav-open" : ""}`}>
       <aside className="pt-side">
         <Link to="/portal" className="pt-brand" onClick={() => setNavOpen(false)}>
-          <img src="/Logo.jpg" alt="ExPac" />
+          <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac" />
         </Link>
         <nav className="pt-nav">
           {nav.map((n) => {

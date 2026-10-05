@@ -50,6 +50,7 @@ type Form = {
   /** "agent:<id>" / "transporter:<id>" / "clearing_agent:<id>" or "". */
   partner: string;
   assigned_to: string;
+  portal_visible: boolean;
 };
 
 const PARTNER_KEYS = ["agent_id", "transporter_id", "clearing_agent_id"] as const;
@@ -78,6 +79,7 @@ function seed(task: OpsTask | null, defaults?: Partial<OpsTaskPatch>): Form {
     supplier_id: task?.supplier_id ?? (defaults?.supplier_id as string) ?? "",
     partner: task ? partnerOf(task) : partnerOf(defaults),
     assigned_to: task?.assigned_to ?? (defaults?.assigned_to as string) ?? "",
+    portal_visible: task?.portal_visible ?? false,
   };
 }
 
@@ -192,6 +194,8 @@ export default function TaskEditModal({
     if (!task && defaults?.source_notification_key) {
       values.source_notification_key = defaults.source_notification_key as string;
     }
+    // Customer Portal (0143): only sent when ticked now or before.
+    if (f.portal_visible || task?.portal_visible) values.portal_visible = f.portal_visible;
     if (task && f.status === "done" && task.status !== "done") {
       values.done_at = new Date().toISOString();
     }
@@ -518,6 +522,18 @@ export default function TaskEditModal({
           </select>
         </div>
       </div>
+
+      {f.job_id && f.kind === "task" && (
+        <label className="check" style={{ marginTop: -4 }}>
+          <input
+            type="checkbox"
+            checked={f.portal_visible || !!task?.from_portal}
+            disabled={!!task?.from_portal}
+            onChange={(e) => setF((p) => ({ ...p, portal_visible: e.target.checked }))}
+          />{" "}
+          {task?.from_portal ? "Raised by the customer on the portal — they see its status" : "Show this task to the customer on the portal"}
+        </label>
+      )}
 
       {(task?.source_notification_key || defaults?.source_notification_key) && (
         <p className="hint" style={{ marginTop: -4 }}>

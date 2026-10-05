@@ -291,6 +291,8 @@ export interface ClientQuoteLine {
 
 export interface ClientJob {
   id: string;
+  /** The customer's own reference / PO (0143). */
+  po_no?: string | null;
   reference: string;
   client_id: string;
   mode: QuoteMode;
@@ -1569,6 +1571,9 @@ export interface OpsTask {
   /** Set when this task was created from the Notifications tab — traces it
    *  back to the notification that prompted it. */
   source_notification_key: string | null;
+  /** Customer Portal (0143): shown to the customer / raised by the customer. */
+  portal_visible?: boolean;
+  from_portal?: boolean;
   /** Joined for display. */
   job?: Pick<Job, "id" | "reference"> | null;
   quote?: Pick<Quote, "id" | "reference"> | null;
@@ -1602,6 +1607,7 @@ export type OpsTaskPatch = Partial<
     | "done_at"
     | "assigned_to"
     | "source_notification_key"
+    | "portal_visible"
   >
 >;
 
