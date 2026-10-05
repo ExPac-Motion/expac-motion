@@ -64,7 +64,7 @@ create index if not exists suppliers_client_idx on public.suppliers (client_id);
 update public.suppliers set client_id = source_client_id
 where client_id is null and source_client_id is not null;
 
-do $
+do $$
 declare
   s record;
   c uuid;
