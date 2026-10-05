@@ -628,6 +628,18 @@ function BudgetRow({
     onSave(entry.id, { ...draft, occurred_on: iso });
   }
 
+  // Expenses: flag Amount Paid when nothing (orange) or only part (amber) is paid.
+  const amtNow = Number(draft.amount) || 0;
+  const paidNow = Number(draft.amount_paid) || 0;
+  const payState =
+    entry.kind !== "expense" || amtNow <= 0
+      ? ""
+      : paidNow <= 0
+        ? "unpaid"
+        : paidNow < amtNow
+          ? "part-paid"
+          : "";
+
   return (
     <tr className={dirty ? "vault-row-dirty" : undefined}>
       <td className="nowrap">
@@ -664,7 +676,16 @@ function BudgetRow({
           />
         </span>
       </td>
-      <td className="nowrap">
+      <td
+        className={`nowrap${payState ? ` vault-${payState}` : ""}`}
+        title={
+          payState === "unpaid"
+            ? "Unpaid"
+            : payState === "part-paid"
+              ? `Part paid — ${(amtNow - paidNow).toFixed(2)} still due`
+              : undefined
+        }
+      >
         <input
           type="number"
           step="0.01"

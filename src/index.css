@@ -6473,3 +6473,20 @@ table.dt .task-title {
   padding: 6px 10px;
   margin-bottom: 8px;
 }
+/* Personal Vault budget: Amount Paid on an unpaid / part-paid expense. */
+td.vault-unpaid {
+  background: var(--orange-tint);
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+td.vault-unpaid input {
+  color: var(--orange-ink);
+  font-weight: 700;
+}
+td.vault-part-paid {
+  background: var(--amber-tint);
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+td.vault-part-paid input {
+  color: var(--amber-ink);
+  font-weight: 700;
+}
