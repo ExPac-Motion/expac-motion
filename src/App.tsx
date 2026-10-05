@@ -45,6 +45,7 @@ import PortalQuotesPage from "./pages/portal/PortalQuotesPage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
 import PortalRatesPage from "./pages/portal/PortalRatesPage";
+import PortalWarehousePage from "./pages/portal/PortalWarehousePage";
 import PartnerPortalPage from "./pages/partner/PartnerPortalPage";
 import PartnerSignupPage from "./pages/partner/PartnerSignupPage";
 import RestrictedAccountPage from "./pages/RestrictedAccountPage";
@@ -243,6 +244,14 @@ function AppRoutes() {
               element={
                 <PortalSection permission="rates">
                   <PortalRatesPage />
+                </PortalSection>
+              }
+            />
+            <Route
+              path="portal/warehouse"
+              element={
+                <PortalSection permission="warehouse">
+                  <PortalWarehousePage />
                 </PortalSection>
               }
             />

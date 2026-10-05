@@ -17,27 +17,38 @@ import { useToast } from "../../components/Toast";
 import { formatDate } from "../../lib/format";
 import { VOLUMETRIC_FACTOR } from "../../lib/calc";
 import {
+  CONSOL_MODE_LABEL,
+  PACKAGE_TYPES,
   qty,
   round,
   useWmsConsols,
   useWmsMutation,
   useWmsReceipts,
+  wmCbm,
   wmsDb,
+  type ConsolMode,
   type WmsConsol,
   type WmsConsolHouse,
   type WmsConsolInput,
+  type WmsContainer,
   type WmsReceipt,
 } from "../../lib/wms";
 import { orNull, useWmsLookups } from "./shared";
 
-/** Default Accounting Information on a house: ExPac as notify party (from the
+/** Default Accounting Information / notify party on a house: ExPac (from the
  *  air waybill template ExPac supplied, 2026-10-05). */
 export const EXPAC_NOTIFY =
   "NOTIFY PARTY:\nEXPAC FORWARDING\nADD: ECO PARK BLVD, WITCH-HAZEL AVE, HIGHVELD\nCENTURION, 0144, SOUTH AFRICA\nTEL: +27 (0) 11 568 8281";
 
+export const CONTAINER_TYPES = ["20GP", "40GP", "40HC", "20RF", "40RF", "20OT", "40OT", "20FR", "40FR", "45HC"];
+
 export function houseNo(c: Pick<WmsConsol, "consol_no">, h: Pick<WmsConsolHouse, "house_no">, i: number): string {
   return h.house_no || `${c.consol_no}-H${String(i + 1).padStart(2, "0")}`;
 }
+
+/** "MAWB" on air, "MBL" on sea; houses "HAWB" / "HBL". */
+export const masterLabel = (m: ConsolMode) => (m === "air" ? "MAWB" : "MBL");
+export const houseLabel = (m: ConsolMode) => (m === "air" ? "HAWB" : "HBL");
 
 export function consolTotals(houses: WmsConsolHouse[]) {
   return houses.reduce(
@@ -57,9 +68,10 @@ const STATUS_LABEL: Record<WmsConsol["status"], string> = {
   departed: "Departed",
 };
 
-/** Air consolidations: a master (MAWB) built from house shipments (HAWB),
- *  each house made of warehouse receipts. Prints MAWB, HAWBs and Manifest. */
-export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
+/** Consolidations, one list per mode: Air (MAWB + HAWBs), LCL groupage and
+ *  FCL consolidation (MBL + HBLs). Houses are built from warehouse receipts;
+ *  "Release & depart" books them all out of the warehouse. */
+export default function WmsConsols({ toggle, mode }: { toggle: ReactNode; mode: ConsolMode }) {
   const navigate = useNavigate();
   const { toast, error } = useToast();
   const consolsQ = useWmsConsols();
@@ -68,17 +80,37 @@ export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const del = useWmsMutation(wmsDb.deleteConsol);
   const ship = useWmsMutation(wmsDb.releaseConsol);
+  const sea = mode !== "air";
+  const ML = masterLabel(mode);
+  const HL = houseLabel(mode);
 
-  const rows = consolsQ.data ?? [];
+  const rows = (consolsQ.data ?? []).filter((c) => c.mode === mode);
   const q = search.trim().toLowerCase();
   const filtered = rows.filter(
     (c) =>
       !q ||
-      [c.consol_no, c.master_no, c.flight_no, c.origin, c.destination, ...c.houses.map((h) => `${h.house_no} ${h.consignee}`)]
+      [
+        c.consol_no,
+        c.master_no,
+        c.flight_no,
+        c.vessel,
+        c.voyage_no,
+        c.origin,
+        c.destination,
+        c.port_of_loading,
+        c.port_of_discharge,
+        ...(c.containers ?? []).map((k) => k.container_no),
+        ...c.houses.map((h) => `${h.house_no} ${h.consignee}`),
+      ]
         .join(" ")
         .toLowerCase()
         .includes(q),
   );
+
+  const go = (path: string, close: () => void) => {
+    close();
+    navigate(path);
+  };
 
   const columns: DataColumn<WmsConsol>[] = [
     {
@@ -97,15 +129,47 @@ export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
       ),
     },
     { key: "no", header: "Consol No", width: 110, render: (c) => <b>{c.consol_no}</b>, sortValue: (c) => c.consol_no },
-    { key: "mawb", header: "MAWB", width: 130, render: (c) => c.master_no || "—", sortValue: (c) => c.master_no ?? "" },
-    { key: "route", header: "Route", width: 110, render: (c) => `${c.origin || "—"} → ${c.destination || "—"}` },
-    { key: "flight", header: "Flight", width: 100, render: (c) => c.flight_no || "—" },
-    { key: "date", header: "Flight date", width: 100, render: (c) => formatDate(c.flight_date), sortValue: (c) => c.flight_date ?? "" },
-    { key: "houses", header: "Houses", width: 70, render: (c) => c.houses.length },
+    { key: "master", header: ML, width: 130, render: (c) => c.master_no || "—", sortValue: (c) => c.master_no ?? "" },
+    sea
+      ? {
+          key: "route",
+          header: "POL → POD",
+          width: 130,
+          render: (c) => `${c.port_of_loading || "—"} → ${c.port_of_discharge || "—"}`,
+        }
+      : { key: "route", header: "Route", width: 110, render: (c) => `${c.origin || "—"} → ${c.destination || "—"}` },
+    sea
+      ? { key: "vessel", header: "Vessel / voyage", width: 150, render: (c) => [c.vessel, c.voyage_no].filter(Boolean).join(" / ") || "—" }
+      : { key: "flight", header: "Flight", width: 100, render: (c) => c.flight_no || "—" },
+    sea
+      ? { key: "date", header: "ETD", width: 100, render: (c) => formatDate(c.etd), sortValue: (c) => c.etd ?? "" }
+      : { key: "date", header: "Flight date", width: 100, render: (c) => formatDate(c.flight_date), sortValue: (c) => c.flight_date ?? "" },
+    ...(sea
+      ? [
+          {
+            key: "cont",
+            header: "Containers",
+            width: 170,
+            render: (c: WmsConsol) => (c.containers ?? []).map((k) => `${k.container_no}${k.type ? ` (${k.type})` : ""}`).join(", ") || "—",
+          },
+        ]
+      : []),
+    { key: "houses", header: `${HL}s`, width: 70, render: (c) => c.houses.length },
     { key: "pcs", header: "Pieces", width: 70, render: (c) => consolTotals(c.houses).pieces },
     { key: "kg", header: "Gross kg", width: 90, render: (c) => qty(consolTotals(c.houses).gross) },
-    { key: "chg", header: "Chg kg", width: 90, render: (c) => qty(consolTotals(c.houses).chargeable) },
-    { key: "status", header: "Status", width: 100, render: (c) => <span className={`badge ${c.status === "departed" ? "completed" : c.status === "closed" ? "sent" : "open"}`}>{STATUS_LABEL[c.status]}</span> },
+    sea
+      ? { key: "cbm", header: "CBM", width: 80, render: (c) => qty(consolTotals(c.houses).cbm, 3) }
+      : { key: "chg", header: "Chg kg", width: 90, render: (c) => qty(consolTotals(c.houses).chargeable) },
+    {
+      key: "status",
+      header: "Status",
+      width: 100,
+      render: (c) => (
+        <span className={`badge ${c.status === "departed" ? "completed" : c.status === "closed" ? "sent" : "open"}`}>
+          {STATUS_LABEL[c.status]}
+        </span>
+      ),
+    },
     {
       key: "docs",
       header: "Documents",
@@ -115,12 +179,29 @@ export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
           <Popover label="Print ▾">
             {(close) => (
               <div className="ui-pop-list">
-                <button type="button" onClick={() => { close(); navigate(`/wms/print/mawb/${c.id}`); }}>MAWB</button>
-                <button type="button" onClick={() => { close(); navigate(`/wms/print/manifest/${c.id}`); }}>Manifest</button>
-                <button type="button" onClick={() => { close(); navigate(`/wms/print/hawb/${c.id}`); }}>All HAWBs</button>
+                {sea ? (
+                  <button type="button" onClick={() => go(`/wms/print/sea-manifest/${c.id}`, close)}>
+                    Cargo manifest
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => go(`/wms/print/mawb/${c.id}`, close)}>
+                      MAWB
+                    </button>
+                    <button type="button" onClick={() => go(`/wms/print/manifest/${c.id}`, close)}>
+                      Manifest
+                    </button>
+                  </>
+                )}
+                <button type="button" onClick={() => go(`/wms/print/loadplan/${c.id}`, close)}>
+                  Load plan (warehouse)
+                </button>
+                <button type="button" onClick={() => go(`/wms/print/${sea ? "hbl" : "hawb"}/${c.id}`, close)}>
+                  All {HL}s
+                </button>
                 {c.houses.map((h, i) => (
-                  <button key={i} type="button" onClick={() => { close(); navigate(`/wms/print/hawb/${c.id}?house=${i}`); }}>
-                    HAWB {houseNo(c, h, i)}
+                  <button key={i} type="button" onClick={() => go(`/wms/print/${sea ? "hbl" : "hawb"}/${c.id}?house=${i}`, close)}>
+                    {HL} {houseNo(c, h, i)}
                   </button>
                 ))}
               </div>
@@ -154,16 +235,17 @@ export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
     },
   ];
 
+  const noun = CONSOL_MODE_LABEL[mode].toLowerCase();
   return (
     <>
       <PageTools
-        search={<SearchInput value={search} onChange={setSearch} placeholder="Search consol, MAWB, HAWB…" />}
+        search={<SearchInput value={search} onChange={setSearch} placeholder={`Search consol, ${ML}, ${HL}${sea ? ", container" : ""}…`} />}
         filters={toggle}
-        count={consolsQ.isLoading ? undefined : `${filtered.length} consolidation${filtered.length === 1 ? "" : "s"}`}
+        count={consolsQ.isLoading ? undefined : `${filtered.length} ${noun}${filtered.length === 1 ? "" : "s"}`}
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setEditing("new")}>
-            + New consolidation
+            + New {mode === "lcl" ? "groupage" : "consolidation"}
           </button>
         }
       />
@@ -173,10 +255,12 @@ export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
         ) : consolsQ.isError ? (
           <ErrorNote error={consolsQ.error} />
         ) : filtered.length === 0 ? (
-          <EmptyState>No consolidations yet. + New consolidation groups receipts into houses under one MAWB.</EmptyState>
+          <EmptyState>
+            No {noun}s yet. + New {mode === "lcl" ? "groupage" : "consolidation"} groups warehouse receipts into houses ({HL}s) under one {ML}.
+          </EmptyState>
         ) : (
           <DataTable
-            tableKey="wms-consols"
+            tableKey={`wms-consols-${mode}`}
             className="table--compact"
             toolsPortal={toolsSlot}
             columns={columns}
@@ -186,13 +270,15 @@ export default function WmsConsols({ toggle }: { toggle: ReactNode }) {
           />
         )}
       </div>
-      {editing !== null && <ConsolEditModal consol={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
+      {editing !== null && (
+        <ConsolEditModal consol={editing === "new" ? null : editing} mode={mode} onClose={() => setEditing(null)} />
+      )}
     </>
   );
 }
 
-const blankConsol = (): WmsConsolInput => ({
-  mode: "air",
+const blankConsol = (mode: ConsolMode): WmsConsolInput => ({
+  mode,
   warehouse_id: null,
   job_id: null,
   status: "open",
@@ -202,11 +288,11 @@ const blankConsol = (): WmsConsolInput => ({
   flight_date: null,
   origin: null,
   origin_name: null,
-  destination: "JNB",
+  destination: mode === "air" ? "JNB" : null,
   routing: [],
   shipper: null,
   consignee: null,
-  accounting_info: "FREIGHT COLLECT",
+  accounting_info: mode === "air" ? "FREIGHT COLLECT" : null,
   agent_name: null,
   agent_iata: null,
   agent_account: null,
@@ -216,40 +302,63 @@ const blankConsol = (): WmsConsolInput => ({
   declared_customs: "NCV",
   insurance: "NIL",
   handling_info: null,
-  rate_class: "K",
+  rate_class: mode === "air" ? "K" : null,
   rate_charge: null,
   total_charge: "AS AGREED",
   signed_by: null,
   executed_on: null,
   executed_place: null,
   notes: null,
+  vessel: null,
+  voyage_no: null,
+  place_of_receipt: null,
+  port_of_loading: null,
+  port_of_discharge: mode === "air" ? null : "ZADUR",
+  place_of_delivery: null,
+  etd: null,
+  eta: null,
+  co_loader: null,
+  containers: [],
 });
 
-function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClose: () => void }) {
+function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; mode: ConsolMode; onClose: () => void }) {
   const lk = useWmsLookups();
   const { toast, error } = useToast();
   const receiptsQ = useWmsReceipts();
+  const sea = mode !== "air";
+  const ML = masterLabel(mode);
+  const HL = houseLabel(mode);
   const save = useWmsMutation((v: { id?: string; values: WmsConsolInput; houses: WmsConsolHouse[] }) =>
     wmsDb.saveConsol(v.id, v.values, v.houses),
   );
   const [f, setF] = useState<WmsConsolInput>(() => {
-    if (!consol) return blankConsol();
+    if (!consol) return blankConsol(mode);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _i, consol_no: _n, created_at: _c, houses: _h, ...rest } = consol;
-    return rest;
+    return { ...blankConsol(mode), ...rest };
   });
   const [houses, setHouses] = useState<WmsConsolHouse[]>(consol?.houses ?? []);
   const [adding, setAdding] = useState(false);
   const set = <K extends keyof WmsConsolInput>(k: K, v: WmsConsolInput[K]) => setF((p) => ({ ...p, [k]: v }));
-  const s = (k: keyof WmsConsolInput) => (f[k] as string | null) ?? "";
-  const txt = (k: keyof WmsConsolInput, label: string, opts?: { rows?: number; placeholder?: string }) => (
+  const s = (k: keyof WmsConsolInput) => (f[k] as string | null | undefined) ?? "";
+  const txt = (k: keyof WmsConsolInput, label: string, opts?: { rows?: number; placeholder?: string; upper?: boolean }) => (
     <div className="field">
       <label>{label}</label>
       {opts?.rows ? (
         <textarea rows={opts.rows} value={s(k)} placeholder={opts.placeholder} onChange={(e) => set(k, orNull(e.target.value) as never)} />
       ) : (
-        <input value={s(k)} placeholder={opts?.placeholder} onChange={(e) => set(k, orNull(e.target.value) as never)} />
+        <input
+          value={s(k)}
+          placeholder={opts?.placeholder}
+          onChange={(e) => set(k, orNull(opts?.upper ? e.target.value.toUpperCase() : e.target.value) as never)}
+        />
       )}
+    </div>
+  );
+  const date = (k: keyof WmsConsolInput, label: string) => (
+    <div className="field">
+      <label>{label}</label>
+      <DateInput value={s(k)} onChange={(v) => set(k, orNull(v) as never)} />
     </div>
   );
   const setHouse = (i: number, patch: Partial<WmsConsolHouse>) =>
@@ -259,9 +368,15 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
     const next = legs.map((l, j) => (j === i ? { ...l, [k]: v } : l));
     set("routing", next.filter((l) => l.to || l.by));
   };
+  const containers = f.containers ?? [];
+  const setContainer = (i: number, patch: Partial<WmsContainer>) =>
+    set(
+      "containers",
+      containers.map((k, j) => (j === i ? { ...k, ...patch } : k)),
+    );
   const t = consolTotals(houses);
 
-  // Receipts already in another house of this consol can't be added twice.
+  // A receipt can only sit in one house of this consolidation.
   const used = new Set(houses.flatMap((h) => h.receipt_ids));
   const available = (receiptsQ.data ?? []).filter((r) => r.on_hand > 0 && !used.has(r.id));
 
@@ -274,6 +389,7 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
     const cbm = recs.reduce((x, r) => x + r.on_hand_cbm, 0);
     const block = (co?: { company: string; address?: string | null; phone?: string | null; company_phone?: string | null } | null) =>
       co ? [co.company, co.address, co.company_phone || co.phone ? `TEL: ${co.company_phone || co.phone}` : null].filter(Boolean).join("\n") : null;
+    const types = [...new Set(recs.map((r) => r.package_type).filter(Boolean))];
     setHouses((hs) => [
       ...hs,
       {
@@ -285,9 +401,13 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
         accounting_info: EXPAC_NOTIFY,
         nature_of_goods: [...new Set(recs.map((r) => r.description).filter(Boolean))].join(", ") || null,
         handling_info: null,
+        marks: [...new Set(recs.map((r) => r.marks).filter(Boolean))].join("\n") || null,
+        package_type: types.length === 1 ? types[0] : types.length ? "Packages" : null,
+        container_no: containers.length === 1 ? containers[0].container_no : null,
         pieces: recs.reduce((x, r) => x + r.on_hand, 0),
         gross_kg: round(gross, 2),
-        chargeable_kg: round(Math.max(gross, cbm * VOLUMETRIC_FACTOR), 1),
+        // Air: chargeable kg (1 CBM = 167 kg). Sea: W/M revenue tons (1 CBM = 1 000 kg).
+        chargeable_kg: sea ? round(wmCbm(cbm, gross), 3) : round(Math.max(gross, cbm * VOLUMETRIC_FACTOR), 1),
         volume_cbm: round(cbm, 3),
         receipt_ids: recs.map((r) => r.id),
       },
@@ -296,9 +416,14 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
   }
 
   function submit() {
-    if (houses.length === 0 && !confirm("No houses yet — save the master anyway?")) return;
+    if (houses.length === 0 && !confirm(`No ${HL}s yet — save the master anyway?`)) return;
+    const values: WmsConsolInput = {
+      ...f,
+      mode,
+      containers: containers.filter((k) => k.container_no || k.type || k.seal_no),
+    };
     save.mutate(
-      { id: consol?.id, values: f, houses },
+      { id: consol?.id, values, houses },
       {
         onSuccess: () => {
           toast("Consolidation saved");
@@ -309,86 +434,167 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
     );
   }
 
+  const title = consol ? `${CONSOL_MODE_LABEL[mode]} ${consol.consol_no}` : `New ${CONSOL_MODE_LABEL[mode].toLowerCase()}`;
+
   return (
-    <Modal title={consol ? `Consolidation ${consol.consol_no}` : "New air consolidation"} onClose={onClose} wide stickyHeader>
-      <h4 className="wms-subhead" style={{ marginTop: 0 }}>Master air waybill</h4>
-      <div className="grid4">
-        {txt("master_no", "MAWB number", { placeholder: "176-12345675" })}
-        {txt("carrier", "Issued by (carrier)")}
-        {txt("flight_no", "Flight / ID")}
-        <div className="field">
-          <label>Flight date</label>
-          <DateInput value={f.flight_date ?? ""} onChange={(v) => set("flight_date", orNull(v))} />
-        </div>
-      </div>
-      <div className="grid4">
-        {txt("origin", "Departure airport code", { placeholder: "HKG" })}
-        {txt("origin_name", "Airport of departure (name)", { placeholder: "HONG KONG" })}
-        {txt("destination", "Destination airport code", { placeholder: "JNB" })}
-        <div className="field">
-          <label>Status</label>
-          <select value={f.status} onChange={(e) => set("status", e.target.value as WmsConsol["status"])}>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
+    <Modal title={title} onClose={onClose} wide stickyHeader>
+      {sea ? (
+        <>
+          <h4 className="wms-subhead" style={{ marginTop: 0 }}>
+            Master bill of lading
+          </h4>
+          <div className="grid4">
+            {txt("master_no", "MBL number")}
+            {txt("carrier", "Shipping line")}
+            {mode === "lcl" ? txt("co_loader", "Co-loader / consolidator") : txt("agent_name", "Origin agent")}
+            <div className="field">
+              <label>Status</label>
+              <select value={f.status} onChange={(e) => set("status", e.target.value as WmsConsol["status"])}>
+                {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid4">
+            {txt("vessel", "Vessel")}
+            {txt("voyage_no", "Voyage no")}
+            {date("etd", "ETD")}
+            {date("eta", "ETA")}
+          </div>
+          <div className="grid4">
+            {txt("place_of_receipt", "Place of receipt")}
+            {txt("port_of_loading", "Port of loading", { placeholder: "CNSHA", upper: true })}
+            {txt("port_of_discharge", "Port of discharge", { placeholder: "ZADUR", upper: true })}
+            {txt("place_of_delivery", "Place of delivery")}
+          </div>
+          <div className="wms-containers">
+            <label>Containers</label>
+            {containers.map((k, i) => (
+              <div key={i} className="wms-container-row">
+                <input placeholder="Container no" value={k.container_no} onChange={(e) => setContainer(i, { container_no: e.target.value.toUpperCase() })} />
+                <select value={k.type} onChange={(e) => setContainer(i, { type: e.target.value })}>
+                  <option value="">Type</option>
+                  {CONTAINER_TYPES.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+                <input placeholder="Seal no" value={k.seal_no} onChange={(e) => setContainer(i, { seal_no: e.target.value.toUpperCase() })} />
+                <button type="button" className="row-icon-btn danger" title="Remove" onClick={() => set("containers", containers.filter((_, j) => j !== i))}>
+                  ✕
+                </button>
+              </div>
             ))}
-          </select>
-        </div>
-      </div>
-      <div className="wms-legs">
-        <label>Routing (To / By)</label>
-        {legs.map((l, i) => (
-          <div key={i} className="wms-leg">
-            <input value={l.to} placeholder={i === 0 ? "JNB" : "To"} onChange={(e) => setLeg(i, "to", e.target.value.toUpperCase())} />
-            <input value={l.by} placeholder={i === 0 ? "By first carrier" : "By"} onChange={(e) => setLeg(i, "by", e.target.value)} />
+            <button
+              type="button"
+              className="btn outline btn-sm"
+              onClick={() => set("containers", [...containers, { container_no: "", type: mode === "fcl" ? "40HC" : "", seal_no: "" }])}
+            >
+              + Add container
+            </button>
           </div>
-        ))}
-      </div>
-      <div className="grid2">
-        {txt("shipper", "Shipper's name and address", { rows: 4 })}
-        {txt("consignee", "Consignee's name and address", { rows: 4 })}
-      </div>
-      <div className="grid2">
-        {txt("accounting_info", "Accounting information (notify party)", { rows: 4 })}
-        <div>
-          {txt("agent_name", "Issuing carrier's agent name and city")}
+          <div className="grid3">
+            {txt("shipper", "Shipper (on the MBL)", { rows: 4 })}
+            {txt("consignee", "Consignee (on the MBL)", { rows: 4 })}
+            {txt("accounting_info", "Notify party", { rows: 4 })}
+          </div>
+          <div className="grid4">
+            <div className="field">
+              <label>Freight</label>
+              <select value={f.charges_code} onChange={(e) => set("charges_code", e.target.value as "PP" | "CC")}>
+                <option value="CC">Freight collect</option>
+                <option value="PP">Freight prepaid</option>
+              </select>
+            </div>
+            {txt("signed_by", "Signed for the carrier (issuer)")}
+            {txt("executed_place", "Place of issue")}
+            {date("executed_on", "Date of issue")}
+          </div>
+          <div className="field">
+            <label>Remarks (printed on the HBLs)</label>
+            <input value={s("handling_info")} onChange={(e) => set("handling_info", orNull(e.target.value))} />
+          </div>
+        </>
+      ) : (
+        <>
+          <h4 className="wms-subhead" style={{ marginTop: 0 }}>
+            Master air waybill
+          </h4>
+          <div className="grid4">
+            {txt("master_no", "MAWB number", { placeholder: "176-12345675" })}
+            {txt("carrier", "Issued by (carrier)")}
+            {txt("flight_no", "Flight / ID")}
+            {date("flight_date", "Flight date")}
+          </div>
+          <div className="grid4">
+            {txt("origin", "Departure airport code", { placeholder: "HKG", upper: true })}
+            {txt("origin_name", "Airport of departure (name)", { placeholder: "HONG KONG" })}
+            {txt("destination", "Destination airport code", { placeholder: "JNB", upper: true })}
+            <div className="field">
+              <label>Status</label>
+              <select value={f.status} onChange={(e) => set("status", e.target.value as WmsConsol["status"])}>
+                {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="wms-legs">
+            <label>Routing (To / By)</label>
+            {legs.map((l, i) => (
+              <div key={i} className="wms-leg">
+                <input value={l.to} placeholder={i === 0 ? "JNB" : "To"} onChange={(e) => setLeg(i, "to", e.target.value.toUpperCase())} />
+                <input value={l.by} placeholder={i === 0 ? "By first carrier" : "By"} onChange={(e) => setLeg(i, "by", e.target.value)} />
+              </div>
+            ))}
+          </div>
           <div className="grid2">
-            {txt("agent_iata", "Agent's IATA code")}
-            {txt("agent_account", "Account no")}
+            {txt("shipper", "Shipper's name and address", { rows: 4 })}
+            {txt("consignee", "Consignee's name and address", { rows: 4 })}
           </div>
-        </div>
-      </div>
-      <div className="grid4" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
-        {txt("currency", "Currency")}
-        <div className="field">
-          <label>Charges</label>
-          <select value={f.charges_code} onChange={(e) => set("charges_code", e.target.value as "PP" | "CC")}>
-            <option value="CC">CC (collect)</option>
-            <option value="PP">PP (prepaid)</option>
-          </select>
-        </div>
-        {txt("declared_carriage", "Decl. value carriage")}
-        {txt("declared_customs", "Decl. value customs")}
-        {txt("insurance", "Insurance")}
-        {txt("rate_class", "Rate class")}
-      </div>
-      <div className="grid4">
-        {txt("rate_charge", "Rate / charge")}
-        {txt("total_charge", "Total")}
-        {txt("signed_by", "Signature of shipper or agent")}
-        <div className="field">
-          <label>Executed on</label>
-          <DateInput value={f.executed_on ?? ""} onChange={(v) => set("executed_on", orNull(v))} />
-        </div>
-      </div>
-      <div className="grid4">
-        {txt("executed_place", "At (place)", { placeholder: "HKG" })}
-        <div className="field" style={{ gridColumn: "span 3" }}>
-          <label>Handling information</label>
-          <input value={s("handling_info")} onChange={(e) => set("handling_info", orNull(e.target.value))} />
-        </div>
-      </div>
+          <div className="grid2">
+            {txt("accounting_info", "Accounting information (notify party)", { rows: 4 })}
+            <div>
+              {txt("agent_name", "Issuing carrier's agent name and city")}
+              <div className="grid2">
+                {txt("agent_iata", "Agent's IATA code")}
+                {txt("agent_account", "Account no")}
+              </div>
+            </div>
+          </div>
+          <div className="grid4" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
+            {txt("currency", "Currency")}
+            <div className="field">
+              <label>Charges</label>
+              <select value={f.charges_code} onChange={(e) => set("charges_code", e.target.value as "PP" | "CC")}>
+                <option value="CC">CC (collect)</option>
+                <option value="PP">PP (prepaid)</option>
+              </select>
+            </div>
+            {txt("declared_carriage", "Decl. value carriage")}
+            {txt("declared_customs", "Decl. value customs")}
+            {txt("insurance", "Insurance")}
+            {txt("rate_class", "Rate class")}
+          </div>
+          <div className="grid4">
+            {txt("rate_charge", "Rate / charge")}
+            {txt("total_charge", "Total")}
+            {txt("signed_by", "Signature of shipper or agent")}
+            {date("executed_on", "Executed on")}
+          </div>
+          <div className="grid4">
+            {txt("executed_place", "At (place)", { placeholder: "HKG" })}
+            <div className="field" style={{ gridColumn: "span 3" }}>
+              <label>Handling information</label>
+              <input value={s("handling_info")} onChange={(e) => set("handling_info", orNull(e.target.value))} />
+            </div>
+          </div>
+        </>
+      )}
       <div className="grid2">
         <div className="field">
           <label>Shipment (master job, optional)</label>
@@ -416,12 +622,15 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
       </div>
 
       <h4 className="wms-subhead">
-        Houses (HAWB) — {houses.length} · {t.pieces} pcs · {qty(t.gross)} kg gross · {qty(t.chargeable)} kg chargeable
+        Houses ({HL}) — {houses.length} · {t.pieces} pcs · {qty(t.gross)} kg
+        {sea ? ` · ${qty(t.cbm, 3)} CBM` : ` · ${qty(t.chargeable)} kg chargeable`}
       </h4>
       {houses.map((h, i) => (
         <div key={i} className="wms-house">
           <div className="wms-house-head">
-            <b>House {i + 1}</b>
+            <b>
+              {HL} {i + 1}
+            </b>
             <span className="hint">
               {h.receipt_ids.length
                 ? `Receipts: ${h.receipt_ids.map((id) => (receiptsQ.data ?? []).find((r) => r.id === id)?.receipt_no ?? "?").join(", ")}`
@@ -431,23 +640,56 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
               Remove
             </button>
           </div>
-          <div className="grid4">
+          <div className="grid4" style={sea ? { gridTemplateColumns: "repeat(6, minmax(0, 1fr))" } : undefined}>
             <div className="field">
-              <label>HAWB number</label>
+              <label>{HL} number</label>
               <input value={h.house_no ?? ""} placeholder={consol ? houseNo(consol, h, i) : "Auto"} onChange={(e) => setHouse(i, { house_no: orNull(e.target.value) })} />
             </div>
             <div className="field">
               <label>Pieces</label>
               <input type="number" value={h.pieces} onChange={(e) => setHouse(i, { pieces: Number(e.target.value) || 0 })} />
             </div>
+            {sea && (
+              <div className="field">
+                <label>Package kind</label>
+                <select value={h.package_type ?? ""} onChange={(e) => setHouse(i, { package_type: orNull(e.target.value) })}>
+                  <option value="">—</option>
+                  {[...PACKAGE_TYPES, "Packages"].map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="field">
               <label>Gross kg</label>
               <input type="number" step="any" value={h.gross_kg} onChange={(e) => setHouse(i, { gross_kg: Number(e.target.value) || 0 })} />
             </div>
-            <div className="field">
-              <label>Chargeable kg</label>
-              <input type="number" step="any" value={h.chargeable_kg} onChange={(e) => setHouse(i, { chargeable_kg: Number(e.target.value) || 0 })} />
-            </div>
+            {sea ? (
+              <>
+                <div className="field">
+                  <label>CBM</label>
+                  <input type="number" step="any" value={h.volume_cbm} onChange={(e) => setHouse(i, { volume_cbm: Number(e.target.value) || 0 })} />
+                </div>
+                <div className="field">
+                  <label>Container</label>
+                  <select value={h.container_no ?? ""} onChange={(e) => setHouse(i, { container_no: orNull(e.target.value) })}>
+                    <option value="">—</option>
+                    {containers
+                      .filter((k) => k.container_no)
+                      .map((k) => (
+                        <option key={k.container_no} value={k.container_no}>
+                          {k.container_no}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div className="field">
+                <label>Chargeable kg</label>
+                <input type="number" step="any" value={h.chargeable_kg} onChange={(e) => setHouse(i, { chargeable_kg: Number(e.target.value) || 0 })} />
+              </div>
+            )}
           </div>
           <div className="grid3">
             <div className="field">
@@ -459,21 +701,29 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
               <textarea rows={3} value={h.consignee ?? ""} onChange={(e) => setHouse(i, { consignee: orNull(e.target.value) })} />
             </div>
             <div className="field">
-              <label>Accounting information</label>
+              <label>{sea ? "Notify party" : "Accounting information"}</label>
               <textarea rows={3} value={h.accounting_info ?? ""} onChange={(e) => setHouse(i, { accounting_info: orNull(e.target.value) })} />
             </div>
           </div>
-          <div className="field">
-            <label>Nature and quantity of goods (incl. dimensions or volume)</label>
-            <input value={h.nature_of_goods ?? ""} onChange={(e) => setHouse(i, { nature_of_goods: orNull(e.target.value) })} />
+          <div className={sea ? "grid2" : undefined}>
+            {sea && (
+              <div className="field">
+                <label>Marks &amp; numbers</label>
+                <input value={h.marks ?? ""} onChange={(e) => setHouse(i, { marks: orNull(e.target.value) })} />
+              </div>
+            )}
+            <div className="field">
+              <label>{sea ? "Description of goods" : "Nature and quantity of goods (incl. dimensions or volume)"}</label>
+              <input value={h.nature_of_goods ?? ""} onChange={(e) => setHouse(i, { nature_of_goods: orNull(e.target.value) })} />
+            </div>
           </div>
         </div>
       ))}
       {adding ? (
-        <AddHouse receipts={available} lkClient={lk.clientName} onAdd={addHouseFrom} onCancel={() => setAdding(false)} />
+        <AddHouse receipts={available} lkClient={lk.clientName} houseLabel={HL} onAdd={addHouseFrom} onCancel={() => setAdding(false)} />
       ) : (
         <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)}>
-          + Add house from warehouse receipts
+          + Add {HL} from warehouse receipts
         </button>
       )}
 
@@ -485,6 +735,9 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
           {save.isPending ? "Saving…" : "Save"}
         </button>
       </div>
+      <p className="hint" style={{ textAlign: "right" }}>
+        {ML} {f.master_no || "not set yet"} — save, then print the {HL}s, manifest and load plan from the list.
+      </p>
     </Modal>
   );
 }
@@ -492,11 +745,13 @@ function ConsolEditModal({ consol, onClose }: { consol: WmsConsol | null; onClos
 function AddHouse({
   receipts,
   lkClient,
+  houseLabel: HL,
   onAdd,
   onCancel,
 }: {
   receipts: WmsReceipt[];
   lkClient: (id: string | null) => string;
+  houseLabel: string;
   onAdd: (ids: string[]) => void;
   onCancel: () => void;
 }) {
@@ -504,7 +759,7 @@ function AddHouse({
   return (
     <div className="wms-house">
       <div className="wms-house-head">
-        <b>Pick the receipts in this house</b>
+        <b>Pick the receipts in this {HL}</b>
         <span className="hint">Usually one consignee per house</span>
       </div>
       {receipts.length === 0 ? (
@@ -545,7 +800,7 @@ function AddHouse({
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button type="button" className="btn btn-sm" disabled={ids.length === 0} onClick={() => onAdd(ids)}>
-          Add house
+          Add {HL}
         </button>
         <button type="button" className="btn outline btn-sm" onClick={onCancel}>
           Cancel

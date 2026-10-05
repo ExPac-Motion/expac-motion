@@ -198,6 +198,10 @@ export interface WmsConsolHouse {
   accounting_info: string | null;
   nature_of_goods: string | null;
   handling_info: string | null;
+  /** Sea (0138): marks & numbers, package kind, the container it's stuffed in. */
+  marks?: string | null;
+  package_type?: string | null;
+  container_no?: string | null;
   pieces: number;
   gross_kg: number;
   chargeable_kg: number;
@@ -207,7 +211,8 @@ export interface WmsConsolHouse {
 export interface WmsConsol {
   id: string;
   consol_no: string;
-  mode: "air" | "sea";
+  /** air = MAWB/HAWB; lcl = LCL groupage; fcl = FCL consolidation (0138). */
+  mode: ConsolMode;
   warehouse_id: string | null;
   job_id: string | null;
   status: "open" | "closed" | "departed";
@@ -238,9 +243,31 @@ export interface WmsConsol {
   executed_on: string | null;
   executed_place: string | null;
   notes: string | null;
+  /* Sea (0138) */
+  vessel?: string | null;
+  voyage_no?: string | null;
+  place_of_receipt?: string | null;
+  port_of_loading?: string | null;
+  port_of_discharge?: string | null;
+  place_of_delivery?: string | null;
+  etd?: string | null;
+  eta?: string | null;
+  co_loader?: string | null;
+  containers?: WmsContainer[];
   created_at: string;
   houses: WmsConsolHouse[];
 }
+export type ConsolMode = "air" | "lcl" | "fcl";
+export interface WmsContainer {
+  container_no: string;
+  type: string;
+  seal_no: string;
+}
+export const CONSOL_MODE_LABEL: Record<ConsolMode, string> = {
+  air: "Air consolidation",
+  lcl: "LCL groupage",
+  fcl: "FCL consolidation",
+};
 export type WmsConsolInput = Omit<WmsConsol, "id" | "consol_no" | "created_at" | "houses">;
 
 export interface WmsCountLine {
@@ -492,6 +519,7 @@ export const wmsDb = {
     return rows.map((c) => ({
       ...c,
       routing: Array.isArray(c.routing) ? c.routing : [],
+      containers: Array.isArray(c.containers) ? c.containers : [],
       houses: [...(c.houses ?? [])]
         .sort((a, b) => a.position - b.position)
         .map((h) => ({

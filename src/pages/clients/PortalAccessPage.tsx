@@ -204,7 +204,8 @@ function ActivePortalUsers() {
     try {
       await setPermissions.mutateAsync({
         profileId,
-        permissions: { ...current, [key]: !current[key] },
+        // A key missing on an older login counts as on (e.g. "warehouse", 0138).
+        permissions: { ...current, [key]: current[key] === false },
       });
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not update permissions");
@@ -334,7 +335,7 @@ function ActivePortalUsers() {
                         >
                           <input
                             type="checkbox"
-                            checked={u.portal_permissions[key]}
+                            checked={u.portal_permissions[key] !== false}
                             onChange={() =>
                               onTogglePermission(u.id, u.portal_permissions, key)
                             }

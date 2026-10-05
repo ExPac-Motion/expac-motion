@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import type { WmsConsol } from "../../lib/wms";
 import { EXPAC_NOTIFY } from "./WmsConsols";
 import { AwbSheet, ManifestSheet } from "./WmsPrintPage";
+import { HblSheet, SeaManifestSheet } from "./WmsSeaDocs";
 
 /** DEV only (/dev/wms-print?doc=mawb|hawb|manifest): the air waybill layouts
  *  on sample data, for checking against ExPac's Excel template. */
@@ -74,12 +75,35 @@ const DEMO: WmsConsol = {
   ],
 };
 
+const SEA: WmsConsol = {
+  ...DEMO,
+  mode: "lcl",
+  consol_no: "CN000002",
+  master_no: "MEDUSH123456",
+  carrier: "MSC",
+  vessel: "MSC ANNA",
+  voyage_no: "FA542A",
+  place_of_receipt: "SHANGHAI CFS",
+  port_of_loading: "CNSHA",
+  port_of_discharge: "ZADUR",
+  place_of_delivery: "JOHANNESBURG CFS",
+  etd: "2026-10-12",
+  eta: "2026-11-08",
+  co_loader: "SHANGHAI CONSOL LINES",
+  containers: [{ container_no: "MSCU1234567", type: "40HC", seal_no: "ML123456" }],
+  houses: DEMO.houses.map((h) => ({ ...h, container_no: "MSCU1234567", marks: "ACME / JHB\nC/NO 1-12", package_type: "Cartons" })),
+};
+
 export default function WmsPrintDemoPage() {
   const [params] = useSearchParams();
   const doc = params.get("doc") ?? "mawb";
   return (
     <div className="qs-wrap">
-      {doc === "manifest" ? (
+      {doc === "hbl" ? (
+        <HblSheet consol={SEA} house={SEA.houses[0]} index={0} />
+      ) : doc === "sea-manifest" ? (
+        <SeaManifestSheet consol={SEA} />
+      ) : doc === "manifest" ? (
         <ManifestSheet consol={DEMO} />
       ) : doc === "hawb" ? (
         <AwbSheet consol={DEMO} house={DEMO.houses[0]} index={0} />

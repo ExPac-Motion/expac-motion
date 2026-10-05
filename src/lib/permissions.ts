@@ -21,7 +21,7 @@ export type StaffPerm =
   | "delete";
 export type PartnerPerm = "delete_sheets" | "edit_coverage" | "see_history";
 export type PermKey = StaffPerm | PartnerPerm;
-export type ClientPerm = "shipments" | "quotes" | "invoices" | "suppliers" | "rates" | "messaging";
+export type ClientPerm = "shipments" | "quotes" | "invoices" | "suppliers" | "rates" | "warehouse" | "messaging";
 
 export interface PermDef<K extends string> {
   key: K;
@@ -65,6 +65,7 @@ export const CLIENT_PERMS: PermDef<ClientPerm>[] = [
   { key: "invoices", label: "Invoices", hint: "" },
   { key: "suppliers", label: "Suppliers", hint: "" },
   { key: "rates", label: "Tariff sheet", hint: "" },
+  { key: "warehouse", label: "Warehouse", hint: "Their stock in the warehouse, releases and storage statements" },
   { key: "messaging", label: "Messaging", hint: "" },
 ];
 
@@ -93,7 +94,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     delete: false,
   },
   partner: { delete_sheets: false, edit_coverage: false, see_history: false },
-  client: { shipments: true, quotes: true, invoices: true, suppliers: true, rates: true, messaging: true },
+  client: { shipments: true, quotes: true, invoices: true, suppliers: true, rates: true, warehouse: true, messaging: true },
 };
 
 /** What only an Admin User can ever do. */

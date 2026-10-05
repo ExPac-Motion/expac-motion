@@ -17,6 +17,7 @@ import {
 } from "../../lib/wms";
 import { BillingLinesTable } from "./WmsBilling";
 import { consolTotals, houseNo } from "./WmsConsols";
+import { HblSheet, LoadPlanSheet, SeaManifestSheet } from "./WmsSeaDocs";
 import { useWmsLookups } from "./shared";
 
 const TITLES: Record<string, string> = {
@@ -27,6 +28,9 @@ const TITLES: Record<string, string> = {
   mawb: "Master Air Waybill",
   hawb: "House Air Waybill",
   manifest: "Air Cargo Manifest",
+  hbl: "House Bill of Lading",
+  "sea-manifest": "Cargo Manifest",
+  loadplan: "Load Plan",
 };
 
 /** Printable WMS documents: /wms/print/:doc/:id (Print / Save as PDF). */
@@ -306,6 +310,8 @@ export default function WmsPrintPage() {
     if (!c) return <div className="center-note">Consolidation not found</div>;
     if (doc === "mawb") body = <AwbSheet consol={c} />;
     else if (doc === "manifest") body = <ManifestSheet consol={c} />;
+    else if (doc === "sea-manifest") body = <SeaManifestSheet consol={c} />;
+    else if (doc === "loadplan") body = <LoadPlanSheet consol={c} />;
     else {
       const only = params.get("house");
       const list = c.houses.map((h, i) => ({ h, i })).filter(({ i }) => only == null || String(i) === only);
@@ -313,7 +319,7 @@ export default function WmsPrintPage() {
       body = (
         <>
           {list.map(({ h, i }) => (
-            <AwbSheet key={i} consol={c} house={h} index={i} />
+            doc === "hbl" ? <HblSheet key={i} consol={c} house={h} index={i} /> : <AwbSheet key={i} consol={c} house={h} index={i} />
           ))}
         </>
       );
@@ -322,8 +328,8 @@ export default function WmsPrintPage() {
 
   return (
     <div className="qs-wrap">
-      {doc === "manifest" && <style>{"@media print { @page { size: A4 landscape; margin: 8mm; } }"}</style>}
-      {(doc === "mawb" || doc === "hawb") && <style>{"@media print { @page { size: A4; margin: 8mm; } }"}</style>}
+      {(doc === "manifest" || doc === "sea-manifest") && <style>{"@media print { @page { size: A4 landscape; margin: 8mm; } }"}</style>}
+      {(doc === "mawb" || doc === "hawb" || doc === "hbl") && <style>{"@media print { @page { size: A4; margin: 8mm; } }"}</style>}
       {toolbar}
       {body}
     </div>
@@ -332,7 +338,7 @@ export default function WmsPrintPage() {
 
 /* ---------- Letterhead documents (Document Vault style) ---------- */
 
-function LetterSheet({ title, children }: { title: string; children: ReactNode }) {
+export function LetterSheet({ title, children }: { title: string; children: ReactNode }) {
   const { data: settings } = useCompanySettings();
   const company = settings
     ? {
@@ -369,7 +375,7 @@ function LetterSheet({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-function Grid({ rows, cols }: { rows: [string, string][]; cols: number }) {
+export function Grid({ rows, cols }: { rows: [string, string][]; cols: number }) {
   return (
     <div className="qs-info" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
       {rows.map(([k, v]) => (
@@ -412,7 +418,7 @@ function SignOff({ left, right }: { left: string; right: string }) {
 
 /* ---------- Air waybill (MAWB / HAWB) — ExPac's template layout ---------- */
 
-const TERMS =
+export const TERMS =
   "All business transactions are subject to Company’s Standard Trading Terms and Conditions and copy of which can be provided upon request";
 
 export function AwbSheet({ consol: c, house, index = 0 }: { consol: WmsConsol; house?: WmsConsolHouse; index?: number }) {
@@ -468,7 +474,7 @@ export function AwbSheet({ consol: c, house, index = 0 }: { consol: WmsConsol; h
             </div>
           </div>
           <div className="awb-half">
-            <div className="awb-cell" style={{ height: "34mm" }}>
+            <div className="awb-cell" style={{ height: "27mm" }}>
               <div className="lbl">Not Negotiable</div>
               <div className="awb-strong">Air Waybill</div>
               <div className="lbl">Issued By</div>
@@ -622,7 +628,7 @@ export function AwbSheet({ consol: c, house, index = 0 }: { consol: WmsConsol; h
             ))}
           </div>
           <div className="awb-half">
-            <div className="awb-cell" style={{ height: "20mm" }}>
+            <div className="awb-cell" style={{ height: "14mm" }}>
               <div className="lbl">Other Charges</div>
             </div>
             <div className="awb-cell">

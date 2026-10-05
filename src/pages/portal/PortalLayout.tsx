@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { useMyProfile } from "../../lib/hooks";
 import type { Profile } from "../../lib/types";
+import { useWmsReceipts } from "../../lib/wms";
 import PortalChatWidget from "./PortalChatWidget";
 
 const NAV: {
@@ -15,6 +16,7 @@ const NAV: {
   { to: "/portal/invoices", label: "Invoices", permission: "invoices" },
   { to: "/portal/suppliers", label: "Customer Party", permission: "suppliers" },
   { to: "/portal/rates", label: "Tariff Sheet", permission: "rates" },
+  { to: "/portal/warehouse", label: "Warehouse", permission: "warehouse" },
 ];
 
 function isActive(to: string, pathname: string): boolean {
@@ -31,8 +33,13 @@ export default function PortalLayout() {
   // Dashboard has no toggle — always shown. Every other tab is hidden
   // (not just disabled) when an admin has turned it off for this login,
   // set from Customers > Portal Access.
+  // Warehouse only shows for customers with goods booked into the WMS.
+  const wmsQ = useWmsReceipts();
+  const hasWarehouse = (wmsQ.data ?? []).length > 0;
   const nav = NAV.filter(
-    (n) => !n.permission || !permissions || permissions[n.permission],
+    (n) =>
+      (!n.permission || !permissions || permissions[n.permission] !== false) &&
+      (n.permission !== "warehouse" || hasWarehouse),
   );
   const showChat = permissions?.messaging !== false;
 

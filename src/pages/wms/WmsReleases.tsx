@@ -27,26 +27,34 @@ import {
   type WmsRelease,
   type WmsReleaseHeader,
   type WmsReleaseLineInput,
+  type ConsolMode,
 } from "../../lib/wms";
 import WmsConsols from "./WmsConsols";
 import { orNull, useWmsLookups } from "./shared";
 
-type View = "releases" | "consols";
+type View = "releases" | ConsolMode;
 
-/** WMS > Warehouse Release: goods out (RL000001) and air consolidations. */
+const VIEWS: [View, string][] = [
+  ["releases", "Releases"],
+  ["air", "Air consolidations"],
+  ["lcl", "LCL groupage"],
+  ["fcl", "FCL consolidations"],
+];
+
+/** WMS > Warehouse Release: goods out (RL000001) and consolidations — air
+ *  (MAWB / HAWB), LCL groupage and FCL consolidation (MBL / HBL). */
 export default function WmsReleases() {
   const [view, setView] = useState<View>("releases");
   const toggle = (
     <div className="wms-seg">
-      <button type="button" className={view === "releases" ? "active" : ""} onClick={() => setView("releases")}>
-        Releases
-      </button>
-      <button type="button" className={view === "consols" ? "active" : ""} onClick={() => setView("consols")}>
-        Air consolidations
-      </button>
+      {VIEWS.map(([v, label]) => (
+        <button key={v} type="button" className={view === v ? "active" : ""} onClick={() => setView(v)}>
+          {label}
+        </button>
+      ))}
     </div>
   );
-  return view === "releases" ? <ReleasesList toggle={toggle} /> : <WmsConsols toggle={toggle} />;
+  return view === "releases" ? <ReleasesList toggle={toggle} /> : <WmsConsols key={view} toggle={toggle} mode={view} />;
 }
 
 function ReleasesList({ toggle }: { toggle: ReactNode }) {

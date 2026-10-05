@@ -66,6 +66,8 @@ export interface Profile {
     suppliers: boolean;
     rates: boolean;
     messaging: boolean;
+    /** WMS stock / releases / storage statements (0138). Missing = on. */
+    warehouse?: boolean;
   };
   /** Free-text company name typed on the self-serve signup form, to help
    *  staff match a pending request to an existing client. */

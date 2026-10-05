@@ -6820,7 +6820,7 @@ td.vault-part-paid input {
   flex: 1 1 0;
 }
 .awb-party {
-  height: 30mm;
+  height: 25mm;
 }
 .awb-partyhead {
   display: flex;
@@ -6845,7 +6845,7 @@ td.vault-part-paid input {
   margin-top: 4mm;
 }
 .awb-conditions {
-  min-height: 22mm;
+  min-height: 14mm;
 }
 .awb-route {
   flex-direction: row;
@@ -6910,7 +6910,7 @@ td.vault-part-paid input {
 }
 .awb-goods td {
   border-left: 1px solid #000;
-  height: 78mm;
+  height: 60mm;
   vertical-align: top;
   padding: 1.5mm;
   font-size: 10pt;
@@ -6937,7 +6937,7 @@ td.vault-part-paid input {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   border-top: 1px solid #000;
-  min-height: 6mm;
+  min-height: 5mm;
   align-items: start;
   text-align: center;
 }
@@ -7029,4 +7029,43 @@ td.vault-part-paid input {
   .awb-sheet:last-child {
     break-after: auto;
   }
+}
+/* WMS sea consolidations (0138) */
+.wms-containers {
+  margin-bottom: 10px;
+}
+.wms-containers > label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.wms-container-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.2fr auto;
+  gap: 6px;
+  margin-bottom: 6px;
+  max-width: 620px;
+}
+.hbl-goods th:nth-child(3),
+.hbl-goods td:nth-child(3) {
+  width: auto;
+}
+.hbl-goods th:first-child {
+  width: 26%;
+}
+.hbl-goods th:nth-child(2) {
+  width: 15%;
+}
+.hbl-goods th:nth-child(4),
+.hbl-goods th:last-child {
+  width: 13%;
+}
+.hbl-goods td {
+  height: 62mm;
+  text-align: left;
+}
+.hbl-goods td:nth-child(4),
+.hbl-goods td:last-child {
+  text-align: right;
 }
