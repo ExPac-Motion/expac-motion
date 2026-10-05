@@ -8,6 +8,7 @@ import { DELIVERED_STATUS, type ClientJob } from "../../lib/types";
 import { greetingFor, portalQuoteStatus, usePortalQuotes } from "../../lib/portal";
 import { useWmsReceipts } from "../../lib/wms";
 import { PortalIcon } from "./PortalLayout";
+import { usePublishedAnnouncements } from "../../lib/hooks";
 
 const isDone = (j: ClientJob) => j.shipment_status === DELIVERED_STATUS || j.milestone === "Delivered";
 const modeKey = (m: string) =>
@@ -93,7 +94,36 @@ export default function PortalDashboardPage() {
           <ShipmentCalendar jobs={jobs} etaOf={etaOf} etdOf={etdOf} />
         </div>
 
+        <WhatsNew />
+
         <div className="panel">
+          <div className="panel-head">
+            <h2>Active shipments by mode</h2>
+          </div>
+          <Donut
+            parts={byMode.filter((b) => b.n).map((b) => ({ label: b.m, value: b.n, color: MODE_COLOR[b.m] }))}
+            total={active.length}
+          />
+        </div>
+
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Quotations</h2>
+            <Link to="/portal/quotes" className="link-btn">
+              View all
+            </Link>
+          </div>
+          <Donut
+            parts={[
+              { label: "Requested", value: requested.length, color: "var(--muted)" },
+              { label: "Ready for you", value: responses.length, color: "var(--amber)" },
+              { label: "Accepted", value: quotes.filter((q) => q.status === "accepted" || q.status === "completed").length, color: "var(--green)" },
+            ].filter((p) => p.value)}
+            total={quotes.length}
+          />
+        </div>
+
+        <div className="panel pt-span3">
           <div className="panel-head">
             <h2>Action required</h2>
           </div>
@@ -127,33 +157,6 @@ export default function PortalDashboardPage() {
               ))}
             </div>
           )}
-        </div>
-
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Active shipments by mode</h2>
-          </div>
-          <Donut
-            parts={byMode.filter((b) => b.n).map((b) => ({ label: b.m, value: b.n, color: MODE_COLOR[b.m] }))}
-            total={active.length}
-          />
-        </div>
-
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Quotations</h2>
-            <Link to="/portal/quotes" className="link-btn">
-              View all
-            </Link>
-          </div>
-          <Donut
-            parts={[
-              { label: "Requested", value: requested.length, color: "var(--muted)" },
-              { label: "Ready for you", value: responses.length, color: "var(--amber)" },
-              { label: "Accepted", value: quotes.filter((q) => q.status === "accepted" || q.status === "completed").length, color: "var(--green)" },
-            ].filter((p) => p.value)}
-            total={quotes.length}
-          />
         </div>
 
         <div className="panel pt-span3">
@@ -356,5 +359,47 @@ function ShipmentCalendar({
         })}
       </div>
     </>
+  );
+}
+
+/** What's new — announcements ExPac posts from Sales CRM › Media (image + text). */
+function WhatsNew() {
+  const q = usePublishedAnnouncements();
+  const items = q.data ?? [];
+  const [i, setI] = useState(0);
+  const cur = items[Math.min(i, items.length - 1)];
+  return (
+    <div className="panel pt-news">
+      <div className="panel-head">
+        <h2>What's new</h2>
+        {items.length > 1 && (
+          <span className="pt-news-nav">
+            <button type="button" className="link-btn" onClick={() => setI((i - 1 + items.length) % items.length)} aria-label="Previous">
+              ‹
+            </button>
+            {i + 1} / {items.length}
+            <button type="button" className="link-btn" onClick={() => setI((i + 1) % items.length)} aria-label="Next">
+              ›
+            </button>
+          </span>
+        )}
+      </div>
+      {cur ? (
+        <article className="pt-news-item">
+          {cur.image_url && <img src={cur.image_url} alt={cur.title} />}
+          <h3>{cur.title}</h3>
+          {cur.body && <p>{cur.body}</p>}
+          <span className="hint">{formatDate(cur.created_at)}</span>
+        </article>
+      ) : (
+        <div className="pt-news-empty">
+          <img src="/Logo.jpg" alt="ExPac" />
+          <p>
+            Welcome to ExPac Motion — request quotes, accept quotations and follow every shipment here. News and updates from the
+            ExPac team will show in this space.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
