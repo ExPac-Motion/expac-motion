@@ -42,6 +42,7 @@ import {
   useUpdateShipmentDocument,
   useUploadShipmentDocument,
   useCan,
+  useDocumentTypes,
 } from "../lib/hooks";
 import ConsolidateModal from "./wms/ConsolidateModal";
 import { useWmsConsols } from "../lib/wms";
@@ -1051,6 +1052,7 @@ function DocumentsSection({ job }: { job: Job }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [docType, setDocType] = useState<string>(DOCUMENT_TYPES[0]);
   const [visibleToClient, setVisibleToClient] = useState(false);
+  const docTypes = useDocumentTypes();
   const [printDoc, setPrintDoc] = useState<string>(DOCUMENT_TYPES_LIST[0].slug);
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
@@ -1119,7 +1121,7 @@ function DocumentsSection({ job }: { job: Job }) {
             title="Document to print"
             style={{ width: "auto" }}
           >
-            {DOCUMENT_TYPES_LIST.map((d) => (
+            {docTypes.map((d) => (
               <option key={d.slug} value={d.slug}>
                 {d.title}
               </option>

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { documentTypes } from "./docTemplates";
 import {
   useMutation,
   useQuery,
@@ -1533,6 +1534,11 @@ export function useSetTierMargin() {
       qc.invalidateQueries({ queryKey: ["tariff_sheets"] });
     },
   });
+}
+/** Document Vault document types with the company's edited titles (0140). */
+export function useDocumentTypes() {
+  const q = useCompanySettings();
+  return documentTypes(q.data?.doc_titles);
 }
 export function useUpdateCompanySettings() {
   const qc = useQueryClient();

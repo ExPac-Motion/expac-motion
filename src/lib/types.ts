@@ -126,6 +126,8 @@ export interface CompanySettings {
   tier_margins?: Partial<Record<RateTierId, number>> | null;
   /** Per-role permission switches (0131) — see lib/permissions.ts. */
   role_permissions?: Partial<import("./permissions").RolePermissions> | null;
+  /** Document Vault title overrides (0140): { slug: title }. */
+  doc_titles?: Record<string, string> | null;
   legal_name: string;
   reg_no: string;
   vat_no: string;

@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { useShipmentDocuments } from "../lib/hooks";
-import { DOCUMENT_TYPES_LIST } from "../lib/docTemplates";
+import { useDocumentTypes, useShipmentDocuments } from "../lib/hooks";
 import type { ShipmentAttachmentPick } from "../lib/shipmentAttachments";
 
 /** "📎 Attach document" for Shipment and Quotation Comms: a shipment's
@@ -23,10 +22,11 @@ export default function AttachDocumentPicker({
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const docsQ = useShipmentDocuments(job?.id);
+  const docTypes = useDocumentTypes();
 
   const options = useMemo(() => {
     const generated: ShipmentAttachmentPick[] = job
-      ? DOCUMENT_TYPES_LIST.map((d) => ({
+      ? docTypes.map((d) => ({
           key: `gen:${d.slug}`,
           label: d.title,
           kind: "generated",
@@ -54,7 +54,7 @@ export default function AttachDocumentPicker({
         ]
       : [];
     return { generated, files, quoteOpt };
-  }, [job, quote, docsQ.data]);
+  }, [job, quote, docsQ.data, docTypes]);
 
   const picked = (key: string) => picks.some((p) => p.key === key);
   const toggle = (o: ShipmentAttachmentPick) =>

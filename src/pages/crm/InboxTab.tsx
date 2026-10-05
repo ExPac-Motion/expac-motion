@@ -200,7 +200,7 @@ export default function InboxTab() {
   const jobs = useMemo(() => jobsQ.data ?? [], [jobsQ.data]);
   const sentQ = useSentMail();
   const sent = useMemo(() => sentQ.data ?? [], [sentQ.data]);
-  const [openSent, setOpenSent] = useState<SentMail | null>(null);
+  const [pickedSent, setOpenSent] = useState<SentMail | null>(null);
 
   // Address book: everyone mailed / heard from, plus CRM contacts.
   const clientsQ = useClients();
@@ -254,7 +254,9 @@ export default function InboxTab() {
         [m.subject, m.from_name, m.from_email, m.snippet, m.record_name, m.job_reference, ...(m.to_emails ?? [])]
           .some((v) => (v ?? "").toLowerCase().includes(needle))),
   );
-  const open = all.find((m) => m.id === openId) ?? null;
+  // Nothing picked yet: the reading pane shows the top message of the list
+  // (not marked read until it's actually clicked).
+  const open = openId === null ? rows[0] ?? null : all.find((m) => m.id === openId) ?? null;
   const sentRows = sent.filter(
     (s) =>
       !needle ||
@@ -262,6 +264,9 @@ export default function InboxTab() {
         (v ?? "").toLowerCase().includes(needle),
       ),
   );
+
+  // Same for Sent: the newest sent email shows until one is picked.
+  const openSent = pickedSent ?? sentRows[0] ?? null;
 
   const folderCount = (f: Folder) =>
     f === "spam"
@@ -431,7 +436,7 @@ export default function InboxTab() {
                 key={m.id}
                 role="button"
                 tabIndex={0}
-                className={`inbox-row${m.id === openId ? " on" : ""}${isUnread(m) ? " unread" : ""}`}
+                className={`inbox-row${m.id === open?.id ? " on" : ""}${isUnread(m) ? " unread" : ""}`}
                 onClick={() => select(m)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {

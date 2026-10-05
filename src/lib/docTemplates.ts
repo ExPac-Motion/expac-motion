@@ -31,6 +31,15 @@ export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undef
   return DOCUMENT_TYPES_LIST.find((d) => d.slug === slug);
 }
 
+/** The document types with ExPac's own titles applied (company_settings.doc_titles, 0140). */
+export function documentTypes(titles: Record<string, string> | null | undefined): DocumentTypeDef[] {
+  return DOCUMENT_TYPES_LIST.map((d) => {
+    const t = titles?.[d.slug]?.trim();
+    // A letter's notes heading followed its title when it had none of its own.
+    return t ? { ...d, title: t, notesLabel: d.notesLabel ?? t } : d;
+  });
+}
+
 /** A party's company name, then "Add:", "Attn:" and "Tel:" lines (printed
  *  with white-space: pre-line); any missing line is simply left out. */
 function partyBlock(

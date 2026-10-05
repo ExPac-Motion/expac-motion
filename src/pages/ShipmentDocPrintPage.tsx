@@ -1,13 +1,14 @@
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useCompanySettings,
+  useDocumentTypes,
   useJobTracking,
   useJobs,
   useProfiles,
   useQuote,
 } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
-import { docTypeBySlug, shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
+import { shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 
 function n2(v: number | string | null | undefined): string {
@@ -36,7 +37,8 @@ export default function ShipmentDocPrintPage() {
   const packingRows = quoteQ.data?.packing_list_items ?? [];
   const vFactor = volumetricFactor(job?.mode);
   const pack = packingTotals(packingRows, vFactor);
-  const def = docTypeBySlug(doc);
+  // Titles as edited in Document Vault › Document titles (0140).
+  const def = useDocumentTypes().find((d) => d.slug === doc);
 
   const company = settings
     ? {
