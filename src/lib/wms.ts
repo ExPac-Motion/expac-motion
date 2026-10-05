@@ -202,6 +202,10 @@ export interface WmsConsolHouse {
   marks?: string | null;
   package_type?: string | null;
   container_no?: string | null;
+  /** Shipment this house is (0139); its HAWB/HBL + the master number are written back to it. */
+  job_id?: string | null;
+  /** Who issued the house document: ExPac, or the origin agent (then ExPac doesn't print it). */
+  issued_by?: "expac" | "agent";
   pieces: number;
   gross_kg: number;
   chargeable_kg: number;
@@ -560,6 +564,18 @@ export const wmsDb = {
       );
     }
     return cid;
+  },
+  /** Appends houses to an existing consolidation (Active Shipments › Consolidate). */
+  async addHouses(consolId: string, houses: WmsConsolHouse[], startAt: number) {
+    unwrap(
+      await supabase.from("wms_consol_houses").insert(
+        houses.map((h, i) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id: _id, consol_id: _c, ...rest } = h;
+          return { ...rest, consol_id: consolId, position: startAt + i };
+        }),
+      ),
+    );
   },
   async setConsolStatus(id: string, status: WmsConsol["status"]) {
     unwrap(await supabase.from("wms_consols").update({ status }).eq("id", id));

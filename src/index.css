@@ -7069,3 +7069,18 @@ td.vault-part-paid input {
 .hbl-goods td:last-child {
   text-align: right;
 }
+/* Shipment view: master / consolidation line (0139) */
+.job-consol {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.job-consol .k {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -34,6 +34,9 @@ import {
   type WmsReceipt,
 } from "../../lib/wms";
 import { orNull, useWmsLookups } from "./shared";
+import { useQuotes } from "../../lib/hooks";
+import { isShipmentComplete, type Job } from "../../lib/types";
+import { houseFromShipment, jobsOnMasters, shipmentFitsConsol, shipmentHouseNo } from "./houseFromShipment";
 
 /** Default Accounting Information / notify party on a house: ExPac (from the
  *  air waybill template ExPac supplied, 2026-10-05). */
@@ -71,7 +74,18 @@ const STATUS_LABEL: Record<WmsConsol["status"], string> = {
 /** Consolidations, one list per mode: Air (MAWB + HAWBs), LCL groupage and
  *  FCL consolidation (MBL + HBLs). Houses are built from warehouse receipts;
  *  "Release & depart" books them all out of the warehouse. */
-export default function WmsConsols({ toggle, mode }: { toggle: ReactNode; mode: ConsolMode }) {
+export default function WmsConsols({
+  toggle,
+  mode,
+  openId,
+  onOpened,
+}: {
+  toggle: ReactNode;
+  mode: ConsolMode;
+  /** Open this consolidation's editor once loaded (deep link). */
+  openId?: string | null;
+  onOpened?: () => void;
+}) {
   const navigate = useNavigate();
   const { toast, error } = useToast();
   const consolsQ = useWmsConsols();
@@ -80,6 +94,15 @@ export default function WmsConsols({ toggle, mode }: { toggle: ReactNode; mode: 
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const del = useWmsMutation(wmsDb.deleteConsol);
   const ship = useWmsMutation(wmsDb.releaseConsol);
+  useEffect(() => {
+    if (!openId) return;
+    const c = consolsQ.data?.find((x) => x.id === openId);
+    if (c) {
+      setEditing(c);
+      onOpened?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, consolsQ.data]);
   const sea = mode !== "air";
   const ML = masterLabel(mode);
   const HL = houseLabel(mode);
@@ -277,7 +300,7 @@ export default function WmsConsols({ toggle, mode }: { toggle: ReactNode; mode: 
   );
 }
 
-const blankConsol = (mode: ConsolMode): WmsConsolInput => ({
+export const blankConsol = (mode: ConsolMode): WmsConsolInput => ({
   mode,
   warehouse_id: null,
   job_id: null,
@@ -339,6 +362,9 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
   });
   const [houses, setHouses] = useState<WmsConsolHouse[]>(consol?.houses ?? []);
   const [adding, setAdding] = useState(false);
+  const [addingJobs, setAddingJobs] = useState(false);
+  const quotesQ = useQuotes();
+  const consolsAll = useWmsConsols().data ?? [];
   const set = <K extends keyof WmsConsolInput>(k: K, v: WmsConsolInput[K]) => setF((p) => ({ ...p, [k]: v }));
   const s = (k: keyof WmsConsolInput) => (f[k] as string | null | undefined) ?? "";
   const txt = (k: keyof WmsConsolInput, label: string, opts?: { rows?: number; placeholder?: string; upper?: boolean }) => (
@@ -413,6 +439,33 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
       },
     ]);
     setAdding(false);
+  }
+
+  // Active shipments of this mode not already on another master or in this one.
+  const taken = jobsOnMasters(consolsAll.filter((c) => c.status !== "departed"), consol?.id);
+  const inThis = new Set(houses.map((h) => h.job_id).filter(Boolean));
+  const candidates = lk.jobs.filter(
+    (j) => !isShipmentComplete(j) && shipmentFitsConsol(j.mode, mode) && !taken.has(j.id) && !inThis.has(j.id),
+  );
+  const quoteOf = (id: string | null) => (id ? (quotesQ.data ?? []).find((q) => q.id === id) : undefined);
+
+  function addFromJobs(ids: string[]) {
+    const add = lk.jobs
+      .filter((j) => ids.includes(j.id))
+      .map((j, i) =>
+        houseFromShipment({
+          job: j,
+          quote: quoteOf(j.quote_id),
+          consolMode: mode,
+          receipts: (receiptsQ.data ?? []).filter((r) => !used.has(r.id)),
+          client: lk.client,
+          supplier: lk.supplier,
+          containerNo: containers.length === 1 ? containers[0].container_no : null,
+          position: houses.length + i,
+        }),
+      );
+    setHouses((hs) => [...hs, ...add]);
+    setAddingJobs(false);
   }
 
   function submit() {
@@ -631,11 +684,21 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
             <b>
               {HL} {i + 1}
             </b>
+            {h.job_id && <span className="badge sent">Shipment {lk.jobRef(h.job_id)}</span>}
             <span className="hint">
               {h.receipt_ids.length
                 ? `Receipts: ${h.receipt_ids.map((id) => (receiptsQ.data ?? []).find((r) => r.id === id)?.receipt_no ?? "?").join(", ")}`
-                : "No receipts linked"}
+                : "No warehouse receipts"}
             </span>
+            <select
+              value={h.issued_by ?? "expac"}
+              onChange={(e) => setHouse(i, { issued_by: e.target.value as "expac" | "agent" })}
+              title={`Who issued this ${HL}`}
+              style={{ width: "auto", marginLeft: "auto" }}
+            >
+              <option value="expac">{HL} issued by ExPac</option>
+              <option value="agent">{HL} issued by origin agent</option>
+            </select>
             <button type="button" className="link-btn" onClick={() => setHouses((hs) => hs.filter((_, j) => j !== i))}>
               Remove
             </button>
@@ -719,12 +782,26 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
           </div>
         </div>
       ))}
-      {adding ? (
+      {addingJobs ? (
+        <AddFromShipments
+          jobs={candidates}
+          houseLabel={HL}
+          houseNoOf={(j) => shipmentHouseNo(quoteOf(j.quote_id), mode)}
+          receiptsOf={(id) => (receiptsQ.data ?? []).filter((r) => r.job_id === id && r.on_hand > 0).length}
+          onAdd={addFromJobs}
+          onCancel={() => setAddingJobs(false)}
+        />
+      ) : adding ? (
         <AddHouse receipts={available} lkClient={lk.clientName} houseLabel={HL} onAdd={addHouseFrom} onCancel={() => setAdding(false)} />
       ) : (
-        <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)}>
-          + Add {HL} from warehouse receipts
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="btn outline btn-sm" onClick={() => setAddingJobs(true)}>
+            + Add {HL} from active shipment
+          </button>
+          <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)}>
+            + Add {HL} from warehouse receipts
+          </button>
+        </div>
       )}
 
       <div className="modal-foot-row">
@@ -801,6 +878,91 @@ function AddHouse({
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button type="button" className="btn btn-sm" disabled={ids.length === 0} onClick={() => onAdd(ids)}>
           Add {HL}
+        </button>
+        <button type="button" className="btn outline btn-sm" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Picker: active shipments of this mode, each becoming one house. */
+function AddFromShipments({
+  jobs,
+  houseLabel: HL,
+  houseNoOf,
+  receiptsOf,
+  onAdd,
+  onCancel,
+}: {
+  jobs: Job[];
+  houseLabel: string;
+  houseNoOf: (j: Job) => string | null;
+  receiptsOf: (jobId: string) => number;
+  onAdd: (ids: string[]) => void;
+  onCancel: () => void;
+}) {
+  const [ids, setIds] = useState<string[]>([]);
+  const [q, setQ] = useState("");
+  const shown = jobs.filter(
+    (j) => !q || [j.reference, j.client?.company, j.supplier?.company, j.po_no, houseNoOf(j)].join(" ").toLowerCase().includes(q.toLowerCase()),
+  );
+  return (
+    <div className="wms-house">
+      <div className="wms-house-head">
+        <b>Active shipments — each becomes one {HL}</b>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" style={{ width: 200, marginLeft: "auto" }} />
+      </div>
+      {shown.length === 0 ? (
+        <p className="hint">No active shipments of this mode that aren't already on a master.</p>
+      ) : (
+        <table className="table--compact wms-mini">
+          <thead>
+            <tr>
+              <th style={{ width: 30 }} />
+              <th>Shipment</th>
+              <th>Mode</th>
+              <th>Customer</th>
+              <th>Shipper</th>
+              <th>{HL} on file</th>
+              <th>Route</th>
+              <th>In warehouse</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((j) => {
+              const n = receiptsOf(j.id);
+              return (
+                <tr key={j.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={ids.includes(j.id)}
+                      onChange={(e) => setIds((p) => (e.target.checked ? [...p, j.id] : p.filter((x) => x !== j.id)))}
+                    />
+                  </td>
+                  <td>
+                    <b>{j.reference}</b>
+                  </td>
+                  <td>{j.mode}</td>
+                  <td>{j.client?.company ?? "—"}</td>
+                  <td>{j.supplier?.company ?? "—"}</td>
+                  <td>{houseNoOf(j) || <span className="hint">— ExPac to issue</span>}</td>
+                  <td>
+                    {j.origin ?? "—"} → {j.destination ?? "—"}
+                  </td>
+                  <td>{n ? `${n} receipt${n === 1 ? "" : "s"}` : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button type="button" className="btn btn-sm" disabled={ids.length === 0} onClick={() => onAdd(ids)}>
+          Add {ids.length || ""} {HL}
+          {ids.length === 1 ? "" : "s"}
         </button>
         <button type="button" className="btn outline btn-sm" onClick={onCancel}>
           Cancel

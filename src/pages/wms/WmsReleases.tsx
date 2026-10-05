@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import DateInput from "../../components/DateInput";
@@ -22,6 +22,7 @@ import {
   useWmsMoves,
   useWmsMutation,
   useWmsReceipts,
+  useWmsConsols,
   useWmsReleases,
   wmsDb,
   type WmsRelease,
@@ -45,6 +46,23 @@ const VIEWS: [View, string][] = [
  *  (MAWB / HAWB), LCL groupage and FCL consolidation (MBL / HBL). */
 export default function WmsReleases() {
   const [view, setView] = useState<View>("releases");
+  // ?consol=<id> (Active Shipments › Consolidate, a shipment's master link)
+  // opens that consolidation in its own mode's list.
+  const [params, setParams] = useSearchParams();
+  const consolsQ = useWmsConsols();
+  const openId = params.get("consol");
+  const [pendingOpen, setPendingOpen] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openId || !consolsQ.data) return;
+    const c = consolsQ.data.find((x) => x.id === openId);
+    if (c) {
+      setView(c.mode);
+      setPendingOpen(c.id);
+    }
+    params.delete("consol");
+    setParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, consolsQ.data]);
   const toggle = (
     <div className="wms-seg">
       {VIEWS.map(([v, label]) => (
@@ -54,7 +72,7 @@ export default function WmsReleases() {
       ))}
     </div>
   );
-  return view === "releases" ? <ReleasesList toggle={toggle} /> : <WmsConsols key={view} toggle={toggle} mode={view} />;
+  return view === "releases" ? <ReleasesList toggle={toggle} /> : <WmsConsols key={view} toggle={toggle} mode={view} openId={pendingOpen} onOpened={() => setPendingOpen(null)} />;
 }
 
 function ReleasesList({ toggle }: { toggle: ReactNode }) {

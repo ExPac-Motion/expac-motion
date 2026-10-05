@@ -41,7 +41,12 @@ import {
   useUpdateJobsBulk,
   useUpdateShipmentDocument,
   useUploadShipmentDocument,
+  useCan,
 } from "../lib/hooks";
+import ConsolidateModal from "./wms/ConsolidateModal";
+import { useWmsConsols } from "../lib/wms";
+import { houseLabel, houseNo, masterLabel } from "./wms/WmsConsols";
+import { consolModeFor } from "./wms/houseFromShipment";
 import { getShipmentDocumentUrl } from "../lib/db";
 import { DOCUMENT_TYPES_LIST, carrierLabel } from "../lib/docTemplates";
 import { formatDate, newReference, portCode } from "../lib/format";
@@ -231,6 +236,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [taskingJob, setTaskingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [consolidating, setConsolidating] = useState<Job[] | null>(null);
+  const canWms = useCan()("warehouse");
   const unreadMessagesQ = useUnreadMessages();
   const unreadJobIds = useMemo(
     () => new Set((unreadMessagesQ.data ?? []).map((m) => m.job_id)),
@@ -738,6 +745,20 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         >
           Bulk Edit{sel.count ? ` (${sel.count})` : ""}
         </button>
+        {canWms && mode === "active" && (
+          <button
+            className="btn outline"
+            onClick={() => setConsolidating((jobs ?? []).filter((j) => sel.isSelected(j.id)))}
+            disabled={sel.count === 0}
+            title={
+              sel.count === 0
+                ? "Tick air or sea shipments to put them as houses (HAWB / HBL) on a master (MAWB / MBL)"
+                : "Put the ticked shipments on a master (MAWB / MBL)"
+            }
+          >
+            Consolidate{sel.count ? ` (${sel.count})` : ""}
+          </button>
+        )}
       </PageTools>
 
       <div className="panel jobs-panel">
@@ -813,6 +834,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         />
       )}
 
+      {consolidating && (
+        <ConsolidateModal
+          jobs={consolidating}
+          onClose={() => {
+            setConsolidating(null);
+            sel.clear();
+          }}
+        />
+      )}
       {bulkOpen && (
         <BulkEditModal
           title={`Bulk edit ${sel.count} shipment${sel.count === 1 ? "" : "s"}`}
@@ -959,8 +989,49 @@ function JobViewModal({
         <CreateQuoteForJob job={job} onDone={onClose} />
       )}
 
+      <ConsolSection job={job} />
       <DocumentsSection job={job} />
     </Modal>
+  );
+}
+
+/** Which master (MAWB / MBL) this shipment travels on, as a house — or a
+ *  button to put it on one (WMS consolidations, 0139). */
+function ConsolSection({ job }: { job: Job }) {
+  const can = useCan();
+  const navigate = useNavigate();
+  const consolsQ = useWmsConsols();
+  const [adding, setAdding] = useState(false);
+  const mode = consolModeFor(job.mode);
+  if (!can("warehouse") || !mode) return null;
+  const on = (consolsQ.data ?? []).flatMap((c) =>
+    c.houses.map((h, i) => ({ c, h, i })).filter(({ h }) => h.job_id === job.id),
+  );
+  return (
+    <div className="job-consol">
+      <span className="k">Master / consolidation</span>
+      {on.length ? (
+        on.map(({ c, h, i }) => (
+          <button
+            key={c.id}
+            type="button"
+            className="link-btn"
+            onClick={() => navigate(`/wms?tab=release&consol=${c.id}`)}
+          >
+            {houseLabel(c.mode)} {houseNo(c, h, i)} on {c.consol_no}
+            {c.master_no ? ` — ${masterLabel(c.mode)} ${c.master_no}` : ""} ({c.status})
+          </button>
+        ))
+      ) : (
+        <>
+          <span className="hint">Ships on its own house document</span>
+          <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)}>
+            Add to a master ({masterLabel(mode)})
+          </button>
+        </>
+      )}
+      {adding && <ConsolidateModal jobs={[job]} onClose={() => setAdding(false)} />}
+    </div>
   );
 }
 

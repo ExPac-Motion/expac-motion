@@ -314,8 +314,12 @@ export default function WmsPrintPage() {
     else if (doc === "loadplan") body = <LoadPlanSheet consol={c} />;
     else {
       const only = params.get("house");
-      const list = c.houses.map((h, i) => ({ h, i })).filter(({ i }) => only == null || String(i) === only);
-      if (list.length === 0) return <div className="center-note">This consolidation has no houses yet</div>;
+      // "All" prints only the houses ExPac issues — an origin agent's HAWB / HBL is their document.
+      const list = c.houses
+        .map((h, i) => ({ h, i }))
+        .filter(({ h, i }) => (only == null ? h.issued_by !== "agent" : String(i) === only));
+      if (list.length === 0)
+        return <div className="center-note">No houses to print — none yet, or every house document was issued by the origin agent</div>;
       body = (
         <>
           {list.map(({ h, i }) => (
