@@ -120,6 +120,7 @@ const NAV: NavItem[] = [
     icon: "warehouse",
     permission: "warehouse",
     children: [
+      { to: "/portal/warehouse?view=overview", label: "Overview" },
       { to: "/portal/warehouse?view=all", label: "Receipt" },
       { to: "/portal/warehouse?view=releases", label: "Release" },
       { to: "/portal/warehouse?view=stock", label: "Inventory" },
@@ -215,7 +216,7 @@ export default function PortalLayout() {
                   <div className="pt-subnav">
                     {n.children.map((c) => {
                       const want = new URLSearchParams(c.to.split("?")[1]).get("view");
-                      const cur = new URLSearchParams(search).get("view") ?? "stock";
+                      const cur = new URLSearchParams(search).get("view") ?? "overview";
                       return (
                         <Link key={c.to} to={c.to} className={`pt-subnav-item${cur === want ? " active" : ""}`} onClick={() => setNavOpen(false)}>
                           {c.label}

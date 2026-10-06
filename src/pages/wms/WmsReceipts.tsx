@@ -21,6 +21,7 @@ import {
   CONDITION_LABEL,
   PACKAGE_TYPES,
   bulkUpdateReceipts,
+  setReceiptChecked,
   daysBetween,
   packageTotals,
   qty,
@@ -34,6 +35,8 @@ import {
   type WmsReceiptInput,
 } from "../../lib/wms";
 import { LocationOptions, ReceiptStatusBadge, orNull, useWmsLookups } from "./shared";
+import ReceiptImages from "./ReceiptImages";
+import { useQueryClient } from "@tanstack/react-query";
 
 type StatusFilter = "stock" | "in_store" | "part_released" | "released" | "all";
 
@@ -137,6 +140,13 @@ export default function WmsReceipts() {
       header: "Condition",
       width: 120,
       render: (r) => <span className={r.condition !== "good" ? "wms-warn" : undefined}>{CONDITION_LABEL[r.condition]}</span>,
+    },
+    {
+      key: "checked",
+      header: "Checked",
+      width: 100,
+      render: (r) => (r.checked_at ? <span className="wms-ok">✓ {formatDate(r.checked_at)}</span> : "—"),
+      sortValue: (r) => r.checked_at ?? "",
     },
     {
       key: "days",
@@ -315,7 +325,22 @@ function ReceiptViewModal({
     ["CBM", qty(r.volume_cbm, 3)],
     ["Condition", CONDITION_LABEL[r.condition] + (r.condition_notes ? `, ${r.condition_notes}` : "")],
     ["Hazardous", r.hazardous ? "Yes" : "No"],
+    ["Checked", r.checked_at ? `${formatDateTime(r.checked_at)}, ${lk.person(r.checked_by)}` : "Not yet"],
   ];
+  const qc = useQueryClient();
+  const { error } = useToast();
+  const [checking, setChecking] = useState(false);
+  async function toggleChecked() {
+    setChecking(true);
+    try {
+      await setReceiptChecked(r.id, !r.checked_at);
+      qc.invalidateQueries({ queryKey: ["wms"] });
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not update");
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <Modal
       title={`${r.receipt_no}, ${lk.clientName(r.client_id)}`}
@@ -324,6 +349,14 @@ function ReceiptViewModal({
       headerActions={
         <>
           <ReceiptStatusBadge status={r.status} />
+          <button
+            className={`btn btn-sm${r.checked_at ? " outline" : ""}`}
+            onClick={toggleChecked}
+            disabled={checking}
+            title={r.checked_at ? "Undo the checked step" : "Goods inspected and measured, shows as Checked on the customer portal"}
+          >
+            {r.checked_at ? "✓ Checked" : "Mark as checked"}
+          </button>
           <button className="btn outline btn-sm" onClick={() => navigate(`/wms/print/receipt/${r.id}`)}>
             Print WR
           </button>
@@ -357,6 +390,8 @@ function ReceiptViewModal({
           </div>
         </div>
       )}
+      <h4 className="wms-subhead">Images</h4>
+      <ReceiptImages receiptId={r.id} editable />
       <h4 className="wms-subhead">Package items</h4>
       {r.packages.length === 0 ? (
         <p className="hint">No package items captured.</p>

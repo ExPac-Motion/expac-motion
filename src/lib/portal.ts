@@ -294,3 +294,50 @@ export const usePortalAnnouncements = () =>
       }));
     },
   });
+
+/* ---------- Warehouse journey (0147) ---------- */
+
+export interface WmsTrackerRow {
+  receipt_id: string;
+  checked_at: string | null;
+  consol_no: string | null;
+  consol_mode: "air" | "lcl" | "fcl" | null;
+  consol_status: "open" | "closed" | "departed" | null;
+  master_no: string | null;
+  house_no: string | null;
+  transport: string | null;
+  etd: string | null;
+  eta: string | null;
+  shipment_ref: string | null;
+  shipment_id: string | null;
+  release_no: string | null;
+  released_at: string | null;
+  outbound_ref: string | null;
+}
+export type WmsStage = "received" | "checked" | "preparing" | "shipped" | "part_shipped";
+
+export const usePortalWmsTracker = () =>
+  useQuery({
+    queryKey: ["portal", "wms-tracker"],
+    queryFn: async (): Promise<WmsTrackerRow[]> => {
+      const { data, error } = await supabase.from("client_wms_tracker").select("*");
+      if (error) return []; // before 0147 is applied
+      return (data ?? []) as WmsTrackerRow[];
+    },
+  });
+
+/** Where a receipt is in its journey. Shipped = nothing left in store. */
+export function wmsStage(r: { on_hand: number; pieces: number }, t: WmsTrackerRow | undefined): WmsStage {
+  if (r.pieces > 0 && r.on_hand <= 0) return "shipped";
+  if (r.on_hand < r.pieces) return "part_shipped";
+  if (t?.consol_no && t.consol_status !== "departed") return "preparing";
+  if (t?.checked_at) return "checked";
+  return "received";
+}
+export const WMS_STAGE_LABEL: Record<WmsStage, string> = {
+  received: "Received",
+  checked: "Checked",
+  preparing: "Being prepared for shipping",
+  part_shipped: "Part shipped",
+  shipped: "Shipped",
+};

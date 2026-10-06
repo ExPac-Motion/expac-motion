@@ -8125,3 +8125,122 @@ tr.clickable:hover td {
     justify-content: center;
   }
 }
+/* Portal warehouse journey (0147) */
+.wj-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 280px;
+}
+.wj-step {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-align: center;
+}
+.wj-step i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--white);
+  position: relative;
+  z-index: 1;
+}
+.wj-step::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--line);
+}
+.wj-step:first-child::before {
+  display: none;
+}
+.wj-step em {
+  font-style: normal;
+  white-space: nowrap;
+}
+.wj-step.done i {
+  background: var(--green);
+  border-color: var(--green);
+}
+.wj-step.done::before,
+.wj-step.now::before {
+  background: var(--green);
+}
+.wj-step.now i {
+  background: var(--teal);
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+.wj-step.now em {
+  color: var(--teal-ink);
+  font-weight: 700;
+}
+.wj-kpi {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wj-kpi:disabled {
+  cursor: default;
+}
+.wms-ok {
+  color: var(--green-dark);
+  font-weight: 700;
+}
+/* receipt images */
+.rc-images-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.rc-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.rc-images-grid figure {
+  position: relative;
+  margin: 0;
+}
+.rc-images-grid figure > button:first-child {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: zoom-in;
+  background: var(--paper);
+}
+.rc-images-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.rc-images-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: 0;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.7rem;
+}

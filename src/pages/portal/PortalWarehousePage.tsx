@@ -19,8 +19,11 @@ import {
 } from "../../lib/wms";
 import { PackagesTable } from "../wms/WmsReceipts";
 import { ReceiptStatusBadge } from "../wms/shared";
+import ReceiptImages from "../wms/ReceiptImages";
+import PortalWmsOverview, { JourneySteps, useWmsJourney } from "./PortalWmsOverview";
+import { WMS_STAGE_LABEL, wmsStage } from "../../lib/portal";
 
-type View = "stock" | "all" | "releases" | "statements";
+type View = "overview" | "stock" | "all" | "releases" | "statements";
 
 /** Customer Portal > Warehouse (0138): the customer's own goods in the
  *  ExPac warehouse, releases and storage statements, read only. */
@@ -33,7 +36,7 @@ export default function PortalWarehousePage() {
   // The sidebar's Warehouse › Receipt / Release / Inventory / Storage statements set ?view=.
   const [params, setParams] = useSearchParams();
   const asked = params.get("view") as View | null;
-  const view: View = asked && ["stock", "all", "releases", "statements"].includes(asked) ? asked : "stock";
+  const view: View = asked && ["overview", "stock", "all", "releases", "statements"].includes(asked) ? asked : "overview";
   const setView = (v: View) => setParams({ view: v }, { replace: true });
   const [search, setSearch] = useState("");
   const [viewing, setViewing] = useState<WmsReceipt | null>(null);
@@ -100,13 +103,14 @@ export default function PortalWarehousePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Warehouse" title={view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
+      <PageHeader eyebrow="Warehouse" title={view === "overview" ? "Warehouse Overview" : view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search receipt, SKU, reference…" />}
         filters={
           <div className="wms-seg">
             {(
               [
+                ["overview", "Overview"],
                 ["stock", "In store"],
                 ["all", "All receipts"],
                 ["releases", "Releases"],
@@ -122,6 +126,9 @@ export default function PortalWarehousePage() {
         count={`${inStock.length} in store · ${totals.pcs} pcs · ${qty(totals.cbm, 2)} CBM`}
         onToolsSlot={setToolsSlot}
       />
+      {view === "overview" ? (
+        <PortalWmsOverview receipts={receipts} loading={receiptsQ.isLoading} search={search} onOpen={setViewing} toolsSlot={toolsSlot} />
+      ) : (
       <div className="panel">
         {loading ? (
           <Loading />
@@ -153,6 +160,7 @@ export default function PortalWarehousePage() {
           />
         )}
       </div>
+      )}
       {viewing && <PortalReceiptModal receipt={viewing} warehouse={whName(viewing.warehouse_id)} onClose={() => setViewing(null)} />}
     </>
   );
@@ -199,6 +207,9 @@ function PortalReceiptModal({ receipt: r, warehouse, onClose }: { receipt: WmsRe
           </div>
         ))}
       </div>
+      <PortalJourney receipt={r} />
+      <h4 className="wms-subhead">Images</h4>
+      <ReceiptImages receiptId={r.id} editable={false} />
       <h4 className="wms-subhead">Package items</h4>
       {r.packages.length === 0 ? <p className="hint">No package items listed.</p> : <PackagesTable packages={r.packages} />}
       <h4 className="wms-subhead">In &amp; out</h4>
@@ -221,5 +232,37 @@ function PortalReceiptModal({ receipt: r, warehouse, onClose }: { receipt: WmsRe
         </tbody>
       </table>
     </Modal>
+  );
+}
+
+/** The receipt's journey: stage dots + where / checked / consolidation / shipment. */
+function PortalJourney({ receipt: r }: { receipt: WmsReceipt }) {
+  const j = useWmsJourney();
+  const t = j.tracker.get(r.id);
+  const stage = wmsStage(r, t);
+  const rows: [string, string][] = [
+    ["Stage", WMS_STAGE_LABEL[stage]],
+    ["Where", stage === "shipped" ? "Left the warehouse" : j.whereOf(r)],
+    ["Checked", t?.checked_at ? formatDateTime(t.checked_at) : "Not yet"],
+    ["Consolidation", t?.consol_no ? [t.consol_no, t.house_no ? "house " + t.house_no : null].filter(Boolean).join(", ") : "—"],
+    ["Master (MAWB / MBL)", t?.master_no || "—"],
+    ["Flight / Vessel", t?.transport || "—"],
+    ["ETD", formatDate(t?.etd)],
+    ["Shipment No", t?.shipment_ref || "—"],
+    ["Shipped on", t?.released_at ? formatDateTime(t.released_at) : "—"],
+  ];
+  return (
+    <>
+      <h4 className="wms-subhead">Journey</h4>
+      <JourneySteps stage={stage} />
+      <div className="wms-fields" style={{ marginTop: 12 }}>
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <div className="k">{k}</div>
+            <div className="v">{v}</div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

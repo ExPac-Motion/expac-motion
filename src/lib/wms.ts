@@ -94,6 +94,9 @@ export interface WmsReceipt {
   condition_notes: string | null;
   hazardous: boolean;
   notes: string | null;
+  /** "Checked" step (0147): goods inspected / measured after receiving. */
+  checked_at?: string | null;
+  checked_by?: string | null;
   created_at: string;
   /* computed by wms_receipts_v */
   on_hand: number;
@@ -108,6 +111,8 @@ export type WmsReceiptInput = Omit<
   | "receipt_no"
   | "created_at"
   | "received_by"
+  | "checked_at"
+  | "checked_by"
   | "on_hand"
   | "on_hand_kg"
   | "on_hand_cbm"
@@ -899,3 +904,51 @@ export function locationLabel(loc: Pick<WmsLocation, "zone" | "code"> | null | u
 export async function bulkUpdateReceipts(ids: string[], patch: Record<string, unknown>) {
   unwrap(await supabase.from("wms_receipts").update(patch).in("id", ids));
 }
+
+export async function setReceiptChecked(id: string, checked: boolean) {
+  const { data } = await supabase.auth.getUser();
+  unwrap(
+    await supabase
+      .from("wms_receipts")
+      .update(checked ? { checked_at: new Date().toISOString(), checked_by: data.user?.id ?? null } : { checked_at: null, checked_by: null })
+      .eq("id", id),
+  );
+}
+
+/* ---------- Receipt images (0147) ---------- */
+export interface WmsReceiptImage {
+  id: string;
+  receipt_id: string;
+  storage_path: string;
+  name: string | null;
+  size_bytes: number | null;
+  created_at: string;
+}
+const IMG_BUCKET = "shipment-documents";
+
+export async function listReceiptImages(receiptId: string): Promise<(WmsReceiptImage & { url: string })[]> {
+  const rows = unwrap(
+    await supabase.from("wms_receipt_images").select("*").eq("receipt_id", receiptId).order("created_at"),
+  ) as WmsReceiptImage[];
+  if (rows.length === 0) return [];
+  const { data } = await supabase.storage.from(IMG_BUCKET).createSignedUrls(rows.map((r) => r.storage_path), 3600);
+  const byPath = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
+  return rows.map((r) => ({ ...r, url: byPath.get(r.storage_path) ?? "" }));
+}
+export async function uploadReceiptImages(receiptId: string, files: File[]) {
+  for (const f of files) {
+    const path = `wms/${receiptId}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
+    unwrap(await supabase.storage.from(IMG_BUCKET).upload(path, f, { upsert: false, contentType: f.type || undefined }));
+    unwrap(await supabase.from("wms_receipt_images").insert({ receipt_id: receiptId, storage_path: path, name: f.name, size_bytes: f.size }));
+  }
+}
+export async function deleteReceiptImage(img: WmsReceiptImage) {
+  await supabase.storage.from(IMG_BUCKET).remove([img.storage_path]);
+  unwrap(await supabase.from("wms_receipt_images").delete().eq("id", img.id));
+}
+export const useReceiptImages = (receiptId: string | undefined) =>
+  useQuery({
+    queryKey: ["wms", "images", receiptId],
+    queryFn: () => listReceiptImages(receiptId as string),
+    enabled: !!receiptId,
+  });
