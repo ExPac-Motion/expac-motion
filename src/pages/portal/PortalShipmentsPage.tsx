@@ -76,7 +76,7 @@ export default function PortalShipmentsPage() {
   const etaOf = (j: ClientJob) => track.get(j.id)?.pod_eta || track.get(j.id)?.eta || j.eta;
   const etdOf = (j: ClientJob) => track.get(j.id)?.etd || j.etd;
   const openTaskJobs = useMemo(
-    () => new Set((tasksQ.data ?? []).filter((t) => t.status !== "done").map((t) => t.job_id)),
+    () => new Set((tasksQ.data ?? []).filter((t) => t.status !== "done" && (t.kind ?? "task") === "task").map((t) => t.job_id)),
     [tasksQ.data],
   );
   // Unread = a message from ExPac newer than when this browser last opened that shipment's comms.
@@ -261,7 +261,7 @@ export default function PortalShipmentsPage() {
       </div>
       {commsJob && <PortalCommsRail job={commsJob} onClose={() => setCommsJob(null)} />}
       {viewJob && <PortalShipmentViewModal job={viewJob} eta={etaOf(viewJob)} etd={etdOf(viewJob)} onClose={() => setViewJob(null)} />}
-      {taskJob && <PortalTasksModal job={taskJob} tasks={(tasksQ.data ?? []).filter((t) => t.job_id === taskJob.id)} onClose={() => setTaskJob(null)} />}
+      {taskJob && <PortalTasksModal job={taskJob} tasks={(tasksQ.data ?? []).filter((t) => t.job_id === taskJob.id && (t.kind ?? "task") === "task")} onClose={() => setTaskJob(null)} />}
     </>
   );
 }

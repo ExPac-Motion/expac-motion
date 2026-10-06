@@ -297,6 +297,128 @@ export interface PortalTask {
   created_at: string;
   done_at: string | null;
   from_portal: boolean;
+  /* 0154: notes, quotations and account-level items */
+  kind?: "task" | "note";
+  quote_id?: string | null;
+  client_id?: string | null;
+  job_reference?: string | null;
+  quote_reference?: string | null;
+  updated_at?: string | null;
+}
+
+/** Portal Tasks & Notes (0154): shared items (synced with Motion's Tasks &
+ *  Notes) and the customer's private ones, in one list. */
+export interface PortalItem {
+  id: string;
+  kind: "task" | "note";
+  title: string;
+  body: string | null;
+  status: "open" | "doing" | "done";
+  due_date: string | null;
+  created_at: string;
+  done_at: string | null;
+  job_id: string | null;
+  quote_id: string | null;
+  job_reference: string | null;
+  quote_reference: string | null;
+  /** Lives in Motion (ExPac sees it). */
+  shared: boolean;
+  /** The customer's own (editable); false = from ExPac. */
+  mine: boolean;
+}
+interface PrivateRow {
+  id: string;
+  kind: "task" | "note";
+  title: string;
+  body: string | null;
+  status: "open" | "done";
+  due_date: string | null;
+  created_at: string;
+  done_at: string | null;
+  job_id: string | null;
+  quote_id: string | null;
+}
+
+export const usePortalItems = () =>
+  useQuery({
+    queryKey: ["portal", "items-notes"],
+    queryFn: async (): Promise<PortalItem[]> => {
+      const [shared, priv] = await Promise.all([
+        supabase.from("client_tasks").select("*"),
+        supabase.from("client_private_items").select("*"),
+      ]);
+      const out: PortalItem[] = [];
+      for (const t of (shared.data ?? []) as PortalTask[])
+        out.push({
+          id: t.id,
+          kind: t.kind ?? "task",
+          title: t.title,
+          body: t.body,
+          status: t.status,
+          due_date: t.due_date,
+          created_at: t.created_at,
+          done_at: t.done_at,
+          job_id: t.job_id,
+          quote_id: t.quote_id ?? null,
+          job_reference: t.job_reference ?? null,
+          quote_reference: t.quote_reference ?? null,
+          shared: true,
+          mine: t.from_portal,
+        });
+      for (const p of (priv.data ?? []) as PrivateRow[])
+        out.push({ ...p, job_reference: null, quote_reference: null, shared: false, mine: true });
+      return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    },
+  });
+
+export interface PortalItemInput {
+  kind: "task" | "note";
+  title: string;
+  body: string;
+  due_date: string;
+  job_id: string;
+  quote_id: string;
+  share: boolean;
+}
+
+/** Add / edit / delete / share / make private, for the customer's own items. */
+export function usePortalItemActions() {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ["portal", "items-notes"] });
+    qc.invalidateQueries({ queryKey: ["portal", "tasks"] });
+  };
+  const wrap = <V,>(fn: (v: V) => Promise<unknown>) => useMutation({ mutationFn: fn, onSuccess: done });
+  return {
+    add: wrap(async (v: PortalItemInput) => {
+      if (v.share) {
+        unwrap(await supabase.rpc("portal_save_item", { p: { kind: v.kind, title: v.title, body: v.body, due_date: v.due_date || null, job_id: v.job_id || null, quote_id: v.quote_id || null } }));
+      } else {
+        if (!v.title.trim() && !v.body.trim()) throw new Error("Write something first");
+        unwrap(
+          await supabase.from("client_private_items").insert({
+            kind: v.kind,
+            title: v.title.trim() || v.body.trim().slice(0, 80),
+            body: v.body.trim() || null,
+            due_date: v.due_date || null,
+            job_id: v.job_id || null,
+            quote_id: v.quote_id || null,
+          }),
+        );
+      }
+    }),
+    update: wrap(async (v: { item: PortalItem; patch: Partial<Pick<PortalItem, "title" | "body" | "due_date" | "status">> }) => {
+      const patch = { ...v.patch, ...(v.patch.status ? { done_at: v.patch.status === "done" ? new Date().toISOString() : null } : {}) };
+      if (v.item.shared) unwrap(await supabase.rpc("portal_update_item", { p_id: v.item.id, p: v.patch }));
+      else unwrap(await supabase.from("client_private_items").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", v.item.id));
+    }),
+    remove: wrap(async (item: PortalItem) => {
+      if (item.shared) unwrap(await supabase.rpc("portal_delete_item", { p_id: item.id }));
+      else unwrap(await supabase.from("client_private_items").delete().eq("id", item.id));
+    }),
+    share: wrap(async (item: PortalItem) => unwrap(await supabase.rpc("portal_share_item", { p_id: item.id }))),
+    unshare: wrap(async (item: PortalItem) => unwrap(await supabase.rpc("portal_unshare_item", { p_id: item.id }))),
+  };
 }
 export interface PortalMsgStamp {
   id: string;

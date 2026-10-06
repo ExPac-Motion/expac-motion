@@ -48,6 +48,7 @@ import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
 import PortalRatesPage from "./pages/portal/PortalRatesPage";
 import PortalWarehousePage from "./pages/portal/PortalWarehousePage";
 import PortalQuotePrintPage from "./pages/portal/PortalQuotePrintPage";
+import PortalTasksPage from "./pages/portal/PortalTasksPage";
 import PortalRequestQuotePage from "./pages/portal/PortalRequestQuotePage";
 import PortalItemsPage from "./pages/portal/PortalItemsPage";
 import PortalReportsPage from "./pages/portal/PortalReportsPage";
@@ -284,6 +285,7 @@ function AppRoutes() {
               }
             />
             <Route path="portal/reports" element={<PortalReportsPage />} />
+            <Route path="portal/tasks" element={<PortalTasksPage />} />
             <Route
               path="portal/warehouse"
               element={

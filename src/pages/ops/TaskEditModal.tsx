@@ -523,7 +523,7 @@ export default function TaskEditModal({
         </div>
       </div>
 
-      {f.job_id && f.kind === "task" && (
+      {(f.job_id || f.quote_id || f.client_id) && (
         <label className="check" style={{ marginTop: -4 }}>
           <input
             type="checkbox"
@@ -531,7 +531,9 @@ export default function TaskEditModal({
             disabled={!!task?.from_portal}
             onChange={(e) => setF((p) => ({ ...p, portal_visible: e.target.checked }))}
           />{" "}
-          {task?.from_portal ? "Raised by the customer on the portal, they see its status" : "Show this task to the customer on the portal"}
+          {task?.from_portal
+            ? `Shared by the customer from the portal, they see this ${f.kind}`
+            : `Show this ${f.kind} to the customer on the portal (Tasks & Notes)`}
         </label>
       )}
 

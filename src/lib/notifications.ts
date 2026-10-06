@@ -181,8 +181,8 @@ export function buildNotifications(
         key: `ptask-${t.id}`,
         domain: "operations",
         text: t.job?.reference
-          ? `Customer request on ${t.job.reference}, ${t.title}`
-          : `Customer request: ${t.title}${t.client?.company ? `, ${t.client.company}` : ""}`,
+          ? `Customer ${t.kind === "note" ? "note" : "request"} on ${t.job.reference}, ${t.title}`
+          : `Customer ${t.kind === "note" ? "note" : "request"}: ${t.title}${t.client?.company ? `, ${t.client.company}` : ""}`,
         when: t.created_at,
         to: "/ops?tab=tasks",
         jobId: t.job_id,
