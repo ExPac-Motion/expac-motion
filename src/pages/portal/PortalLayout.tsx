@@ -219,7 +219,8 @@ export default function PortalLayout() {
       <aside className="pt-side">
         <div className="pt-brand-row">
           <Link to="/portal" className="pt-brand" onClick={() => setNavOpen(false)}>
-            <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac" />
+            <img className="pt-brand-full" src="/ExPac-Final_Maybe-300x106.png" alt="ExPac" />
+            <img className="pt-brand-icon" src="https://cdn.expac.co.za/mail-assets/media/bbc0aa7a-891f-4d0a-928f-8dd902fb76d7.png" alt="ExPac" />
           </Link>
           <button
             type="button"
