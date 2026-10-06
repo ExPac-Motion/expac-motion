@@ -326,7 +326,7 @@ function GreetingModal({ profileId, current, onClose }: { profileId: string; cur
   return (
     <Modal title="How should we greet you?" onClose={onClose}>
       <div className="field">
-        <label>Shown as "Good day, …"</label>
+        <label>Shown as "Good morning, …" / "Good afternoon, …"</label>
         <input value={v} onChange={(e) => setV(e.target.value)} placeholder="e.g. Mr Gilbert" autoFocus />
       </div>
       <div className="modal-foot-row">

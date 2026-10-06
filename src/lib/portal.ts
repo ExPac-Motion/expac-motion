@@ -180,10 +180,19 @@ export function useSetGreeting() {
   });
 }
 
-/** "Good morning / Good afternoon / Good evening" — the user asked for "Good day". */
+/** Time-of-day greeting in the customer's own time zone (their device's
+ *  clock, so it follows their country / region): Good morning before 12:00,
+ *  Good afternoon 12:00–17:59, Good evening from 18:00. */
+export function timeGreeting(now: Date = new Date()): string {
+  const h = now.getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** "Good morning, Mr Gilbert" — profiles.greeting, else the login's name. */
 export function greetingFor(profile: { greeting?: string | null; full_name?: string | null } | null | undefined, email?: string | null): string {
   const who = profile?.greeting?.trim() || profile?.full_name?.trim() || email?.split("@")[0] || "";
-  return who ? `Good day, ${who}` : "Good day";
+  const hello = timeGreeting();
+  return who ? `${hello}, ${who}` : hello;
 }
 
 /* ---------- Shipments board (0143): tasks + comms ---------- */
