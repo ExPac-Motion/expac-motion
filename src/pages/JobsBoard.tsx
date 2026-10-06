@@ -561,14 +561,14 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
       {
         key: "shipping_line",
-        header: modeTab === "Sea" ? "Shipping Line" : modeTab === "All" ? "Carrier / Shipping Line" : "Carrier",
+        header: "Shipping Line",
         width: 150,
         sortValue: (j) => j.shipping_line ?? "",
         render: (j) => j.shipping_line || "—",
       },
       {
         key: "carrier_name",
-        header: "Agent/Airline",
+        header: "Airline",
         width: 160,
         sortValue: (j) => j.carrier_name ?? "",
         render: (j) => j.carrier_name || "—",
@@ -861,10 +861,10 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             },
             {
               key: "shipping_line",
-              label: modeTab === "Sea" ? "Shipping Line" : modeTab === "All" ? "Carrier / Shipping Line" : "Carrier",
+              label: "Shipping Line",
               type: "text",
             },
-            { key: "carrier_name", label: "Agent/Airline", type: "text" },
+            { key: "carrier_name", label: "Airline", type: "text" },
           ]}
           onApply={async (patch) => {
             const ids = sel.ids;
@@ -968,7 +968,7 @@ function JobViewModal({
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
         <ViewField label={carrierLabel(job.mode)} value={job.shipping_line || "—"} />
-        <ViewField label="Agent/Airline" value={job.carrier_name || "—"} />
+        <ViewField label="Airline" value={job.carrier_name || "—"} />
         <ViewField label="POL" value={codeOf(job.origin) || "—"} />
         <ViewField label="POD" value={codeOf(job.destination) || "—"} />
         <ViewField label="ETD" value={formatDate(job.etd)} />
@@ -1316,7 +1316,7 @@ function JobEditModal({
             <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
           </div>
           <div className="field">
-            <label>Agent/Airline</label>
+            <label>Airline</label>
             <input name="carrier_name" defaultValue={job.carrier_name ?? ""} />
           </div>
         </div>
