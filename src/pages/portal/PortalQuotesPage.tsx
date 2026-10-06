@@ -75,7 +75,7 @@ export default function PortalQuotesPage() {
     },
     {
       key: "vat",
-      header: "TTL VAT",
+      header: "TTL (VAT)",
       width: 110,
       render: (q) => (totals.has(q.id) ? money(totals.get(q.id)?.vat) : "—"),
       sortValue: (q) => totals.get(q.id)?.vat ?? 0,
