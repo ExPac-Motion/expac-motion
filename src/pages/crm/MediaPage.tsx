@@ -52,7 +52,7 @@ function RenameModal({
           <label>Display name</label>
           <input name="name" defaultValue={asset.name} autoFocus />
           <span className="hint">
-            Only the label in this gallery changes — the image URL stays the same.
+            Only the label in this gallery changes, the image URL stays the same.
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
@@ -100,7 +100,7 @@ export default function MediaPage() {
     try {
       localStorage.setItem("media.view", v);
     } catch {
-      /* private mode — non-fatal */
+      /* private mode, non-fatal */
     }
   }
 
@@ -182,7 +182,7 @@ export default function MediaPage() {
       setFolder(ALL);
       toast(
         inFolder.length
-          ? `Folder deleted — ${inFolder.length} image${
+          ? `Folder deleted, ${inFolder.length} image${
               inFolder.length === 1 ? "" : "s"
             } moved to ${DEFAULT_FOLDER}`
           : "Folder deleted",
@@ -351,7 +351,7 @@ export default function MediaPage() {
         ) : shown.length === 0 ? (
           <EmptyState>
             {assets.length === 0
-              ? "No images yet — upload one to get started."
+              ? "No images yet, upload one to get started."
               : "This folder is empty. Upload an image or pick another folder."}
           </EmptyState>
         ) : (

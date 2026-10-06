@@ -125,7 +125,7 @@ export function impliedMargin(
   return (s / (b * rate) - 1) * 100;
 }
 
-/** Effective multiplier for a line's rate-total maths — normally just qty,
+/** Effective multiplier for a line's rate-total maths, normally just qty,
  *  except OF-06 (Ocean Freight LCL-DDP) whose buy/sell rate is priced per
  *  0.50 CBM chargeable block (e.g. CNY850 per 0.50 CBM), not per whole CBM.
  *  Qty itself stays in real CBM (0.50 min) for display; only the total
@@ -161,7 +161,7 @@ export function lineVatPct(l: Pick<QuoteLine, "vat_pct">): number {
 }
 
 /** A line whose whole amount IS a VAT amount (e.g. Customs VAT): vat_pct 100.
- *  It carries no VAT-exclusive value — the sell is the tax itself. */
+ *  It carries no VAT-exclusive value, the sell is the tax itself. */
 export function isVatOnlyLine(l: Pick<QuoteLine, "vat_pct">): boolean {
   return lineVatPct(l) >= 100;
 }
@@ -179,7 +179,7 @@ export function lineVat(l: QuoteLine): number {
     : lineTotal(l) * (lineVatPct(l) / 100);
 }
 
-/** ZAR line total including VAT (net + VAT — equals lineTotal either way). */
+/** ZAR line total including VAT (net + VAT, equals lineTotal either way). */
 export function lineTotalIncl(l: QuoteLine): number {
   return lineNet(l) + lineVat(l);
 }
@@ -237,13 +237,13 @@ export function effectiveQty(
   return auto != null ? auto : Number(line.qty) || 0;
 }
 
-/** ExPac sell-only codes: no buy cost — the operator types the sell. Picking
+/** ExPac sell-only codes: no buy cost, the operator types the sell. Picking
  *  the code pre-fills a suggested sell (see serviceFeePrefillZar), then every
  *  cell is a normal editable field. */
 export const INSURANCE_CODE = "IN-01";
 export const FORWARDING_CODE = "FW-01";
 export const DISBURSEMENT_CODE = "DIS-01";
-/** Customs Clearance Fee — a normal buy / sell line (the clearing agent's
+/** Customs Clearance Fee, a normal buy / sell line (the clearing agent's
  *  fee + margin) since 2026-10-03; it was sell-only before, so an older
  *  CU-05 line with no buy keeps its stored sell (see resolveLine). */
 export const CUSTOMS_CLEARANCE_CODE = "CU-05";
@@ -261,13 +261,13 @@ export function isLegacyClearanceFee(
 /** Default suggested rates (decimal) for the pre-fill. */
 export const FORWARDING_RATE = 0.01;
 export const DISBURSEMENT_RATE = 0.025;
-/** Customs VAT / Customs Duty charge codes — the base for the DIS-01 pre-fill. */
+/** Customs VAT / Customs Duty charge codes, the base for the DIS-01 pre-fill. */
 export const CUSTOMS_VAT_CODE = "CU-02";
 export const CUSTOMS_DUTY_CODE = "CU-03";
 
 /**
  * Σ(qty × buy) over the International Freight Charges lines, each converted to
- * USD, excluding the forwarding fee itself and cargo insurance — the base the
+ * USD, excluding the forwarding fee itself and cargo insurance, the base the
  * FW-01 1% fee is charged on. Feed it the resolved lines so derived qtys are
  * settled. `fx` holds USD→ZAR / CNY→ZAR, so CNY→USD = cny/usd and ZAR→USD = 1/usd.
  */
@@ -291,7 +291,7 @@ export function intlFreightBuyUsd(lines: QuoteLine[], fx: FxRates): number {
 
 /**
  * Σ(qty × buy) over the Customs VAT (CU-02) + Customs Duty (CU-03) lines,
- * converted to ZAR — the base the DIS-01 2.5% disbursement fee is charged on.
+ * converted to ZAR, the base the DIS-01 2.5% disbursement fee is charged on.
  */
 export function customsVatDutyZar(lines: QuoteLine[], fx: FxRates): number {
   return (lines || [])
@@ -326,7 +326,7 @@ export interface LineContext {
   mode: QuoteMode;
   fx: FxRates;
   pack: PackingTotals;
-  /** Declared commercial value ($) — drives the IN-01 insurance line. */
+  /** Declared commercial value ($), drives the IN-01 insurance line. */
   commercialValue: number | string;
 }
 
@@ -344,7 +344,7 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
   if (auto != null) qty = auto;
 
   // Sell-only codes (IN-01 / FW-01 / DIS-01): there is no buy cost and
-  // no markup — the whole amount is a selling rate, held only in sell (R)
+  // no markup, the whole amount is a selling rate, held only in sell (R)
   // (pre-filled on pick, see serviceFeePrefillZar). buy / margin are pinned to
   // 0 everywhere (builder, quote detail, print, list totals) so nothing that
   // was ever stored on the row leaks back into a Buy figure.
@@ -357,7 +357,7 @@ export function resolveLine(line: QuoteLine, ctx: LineContext): QuoteLine {
     return { ...line, qty, buy: 0, margin: 0, sell: Number(line.sell) || 0 };
   }
 
-  // Customs VAT (CU-02): the whole amount is tax — a 100%-VAT line with no buy
+  // Customs VAT (CU-02): the whole amount is tax, a 100%-VAT line with no buy
   // cost and no markup. The sell stands as entered / stored.
   if (line.code === CUSTOMS_VAT_CODE) {
     return {
@@ -405,7 +405,7 @@ export function chargeTotals(
   let sell = 0;
   let vat = 0;
   (lines || []).forEach((l) => {
-    // A VAT-only line (Customs VAT) is a pure pass-through — no cost, no
+    // A VAT-only line (Customs VAT) is a pure pass-through, no cost, no
     // margin, no net sale; the whole amount lands in the VAT bucket.
     cost += isVatOnlyLine(l) ? 0 : lineCostZar(l, fx);
     sell += lineNet(l);
@@ -525,7 +525,7 @@ export const QUOTE_STAGE: Record<QuoteStatus, OpportunityStatus> = {
 
 /**
  * Every quotation not yet linked to a real Opportunity record is surfaced as
- * a synthetic pipeline card — the same rule the Opportunities board uses —
+ * a synthetic pipeline card, the same rule the Opportunities board uses,
  * so anywhere pipeline value/count is totalled matches what the board shows.
  * `leadStatusIdByLead` is optional: pass it when the caller needs the lead
  * status badge on the synthesized card (the board does); omit it where only
@@ -594,11 +594,11 @@ export function synthesizeQuoteOpportunities(
 
 /**
  * A real (non-synthetic) Opportunity record's `value` is a plain number set
- * once by hand and never kept in sync afterwards — unlike a synthesized
+ * once by hand and never kept in sync afterwards, unlike a synthesized
  * quote card, which always computes its value live from the quote (see
  * synthesizeQuoteOpportunities above). Once a quote gets linked to a real
  * opportunity (quote_id set), re-derive its value the same way so every
- * consumer — the pipeline board, the sales dashboard, trends — agrees with
+ * consumer, the pipeline board, the sales dashboard, trends, agrees with
  * the quote's actual current total instead of a stale stored number.
  */
 export function withLiveOpportunityValues(

@@ -214,7 +214,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
             <button
               className={`task-check is-${t.status}`}
               onClick={() => cycleStatus(t)}
-              title={`Status: ${t.status} — click to advance`}
+              title={`Status: ${t.status}, click to advance`}
               aria-label="Advance status"
             />
             {STATUS_LABEL[t.status]}
@@ -234,7 +234,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
       render: (t) => (
         <button className="task-title" onClick={() => setEdit(t)}>
           <span className={`prio-dot ${PRIO_DOT[t.priority]}`} /> {t.title}
-          {t.body && <span className="task-body"> — {t.body}</span>}
+          {t.body && <span className="task-body">, {t.body}</span>}
         </button>
       ),
     },

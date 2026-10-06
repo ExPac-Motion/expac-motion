@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 /**
  * Control Tower → World Clock. Every time is rendered by the browser's Intl
  * engine against an IANA zone, so daylight-saving switches (Europe, the US,
- * Sydney, Auckland, Egypt…) are applied automatically — no hard-coded offsets.
+ * Sydney, Auckland, Egypt…) are applied automatically, no hard-coded offsets.
  */
 
 interface City {

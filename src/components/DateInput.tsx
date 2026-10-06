@@ -68,7 +68,7 @@ export default function DateInput({
     if (!t) return commit("");
     const parsed = dmyToIso(t);
     if (parsed) commit(parsed);
-    else setText(isoToDmy(iso)); // invalid — revert to the last good date
+    else setText(isoToDmy(iso)); // invalid, revert to the last good date
   }
 
   function openPicker() {

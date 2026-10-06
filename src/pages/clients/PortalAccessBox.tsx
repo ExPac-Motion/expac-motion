@@ -10,7 +10,7 @@ import { customersDb, useCustomerMutation, type CustomerRecord } from "../../lib
  * General › Primary Contact › "Enable Customer Portal Access" (like the
  * reference screenshot): create the contact's portal login with a password,
  * reset it, send the login details by email, or switch access off.
- * Admin only — same as Customers › Portal Access.
+ * Admin only, same as Customers › Portal Access.
  */
 export default function PortalAccessBox({
   client,
@@ -81,7 +81,7 @@ export default function PortalAccessBox({
         subject: "Your ExPac Motion customer portal login",
         html:
           `<div style="${EMAIL_BODY_STYLE}"><p>${hello}</p>` +
-          `<p>Your ExPac Motion customer portal is ready — request quotes, accept quotations, track every shipment and see your goods in our warehouse, all in one place.</p>` +
+          `<p>Your ExPac Motion customer portal is ready, request quotes, accept quotations, track every shipment and see your goods in our warehouse, all in one place.</p>` +
           `<p><b>Sign in:</b> ${url}<br><b>Email:</b> ${issued.email}<br><b>Password:</b> ${issued.password}</p>` +
           `<p>${emailButtonHtml(url, "Open the portal")}</p>` +
           `<p>Please change your password after your first sign-in (Forgot password on the sign-in page).</p>` +
@@ -143,7 +143,7 @@ export default function PortalAccessBox({
             type="button"
             className="btn outline btn-sm"
             disabled={!issued || sending}
-            title={issued ? undefined : "Create the login or reset the password first — the email includes the password"}
+            title={issued ? undefined : "Create the login or reset the password first, the email includes the password"}
             onClick={sendDetails}
           >
             {sending ? "Sending…" : "Send Login Details To Customer"}
@@ -152,14 +152,14 @@ export default function PortalAccessBox({
       )}
       {issued && (
         <p className="cr-portal-issued">
-          Login: <b>{issued.email}</b> · Password: <b>{issued.password}</b> — shown once; send it to the customer or note it now.
+          Login: <b>{issued.email}</b> · Password: <b>{issued.password}</b>, shown once; send it to the customer or note it now.
         </p>
       )}
       {logins.length > 0 && (
         <div className="cr-portal-logins">
           {logins.map((u) => (
             <span key={u.id}>
-              {u.email} — {u.role === "client" ? "active" : "switched off"}
+              {u.email}, {u.role === "client" ? "active" : "switched off"}
               {u.last_sign_in_at ? ` · last sign-in ${formatDateTime(u.last_sign_in_at)}` : " · never signed in"}
             </span>
           ))}

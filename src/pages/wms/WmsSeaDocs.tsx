@@ -20,7 +20,7 @@ function containerLines(c: WmsConsol, h: WmsConsolHouse): string {
   return list.map((k) => [k.container_no, k.type, k.seal_no ? `SEAL ${k.seal_no}` : null].filter(Boolean).join(" / ")).join("\n");
 }
 
-/** House Bill of Lading (LCL groupage / FCL consolidation) — same box style as the air waybill. */
+/** House Bill of Lading (LCL groupage / FCL consolidation), same box style as the air waybill. */
 export function HblSheet({ consol: c, house: h, index }: { consol: WmsConsol; house: WmsConsolHouse; index: number }) {
   const { data: settings } = useCompanySettings();
   const issuer = settings
@@ -61,7 +61,7 @@ export function HblSheet({ consol: c, house: h, index }: { consol: WmsConsol; ho
                 BILL OF LADING
               </div>
               <div className="lbl center">
-                {c.mode === "fcl" ? "FCL consolidation" : "LCL groupage"} — for combined transport or port to port shipment
+                {c.mode === "fcl" ? "FCL consolidation" : "LCL groupage"}, for combined transport or port to port shipment
               </div>
             </div>
             <div className="awb-cell" style={{ display: "flex", gap: "3mm", alignItems: "flex-start" }}>
@@ -102,7 +102,7 @@ export function HblSheet({ consol: c, house: h, index }: { consol: WmsConsol; ho
         <table className="awb-goods hbl-goods">
           <thead>
             <tr>
-              <th>Container / Seal No. — Marks &amp; Numbers</th>
+              <th>Container / Seal No., Marks &amp; Numbers</th>
               <th>No. &amp; Kind of Packages</th>
               <th>Description of Goods</th>
               <th>Gross Weight (KG)</th>
@@ -275,7 +275,7 @@ export function SeaManifestSheet({ consol: c }: { consol: WmsConsol }) {
 }
 
 /** Load plan for the warehouse floor: every receipt on the consolidation,
- *  which bay it's in now and how much is on hand — pick, stuff, tick. */
+ *  which bay it's in now and how much is on hand, pick, stuff, tick. */
 export function LoadPlanSheet({ consol: c }: { consol: WmsConsol }) {
   const lk = useWmsLookups();
   const receiptsQ = useWmsReceipts();

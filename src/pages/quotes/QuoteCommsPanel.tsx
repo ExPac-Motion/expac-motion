@@ -28,9 +28,9 @@ interface Recipient {
   email: string;
 }
 
-/** The activity/comms body for one quotation — compose + full message
+/** The activity/comms body for one quotation, compose + full message
  *  thread. Same method as Shipment Comms (CommsPanel), just against a
- *  Quote instead of a Job — hosted by QuoteCommsRail (docked panel) on
+ *  Quote instead of a Job, hosted by QuoteCommsRail (docked panel) on
  *  the Quotations list. */
 export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
   const { toast, error } = useToast();
@@ -41,7 +41,7 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
 
   const [tab, setTab] = useState<"email" | "note">("email");
   // 'update' (default) = the full status-update template (Settings ->
-  // Quotation Comms) — the common case on first contact. 'reply' is the
+  // Quotation Comms), the common case on first contact. 'reply' is the
   // quick chat-style message, no quotation-data block. Auto-switches to
   // 'reply' once the thread already has a message, below, but stays
   // whatever the operator picks after that.
@@ -240,7 +240,7 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
                   checked={checked.has(r.email)}
                   onChange={() => toggle(r.email)}
                 />
-                {r.label} — {r.email}
+                {r.label}, {r.email}
               </label>
             ))}
           </div>
@@ -257,7 +257,7 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
               type="button"
               className={`chip${template === "reply" ? " on" : ""}`}
               onClick={() => setTemplate("reply")}
-              title="A quick chat-style message — no quotation-data block"
+              title="A quick chat-style message, no quotation-data block"
             >
               Reply
             </button>

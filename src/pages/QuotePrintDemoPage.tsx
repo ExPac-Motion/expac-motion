@@ -12,7 +12,7 @@ import { QuoteSheet, type QuoteSheetData } from "./QuotePrintPage";
  *   /quotes/demo/print?lines=40   ~ 3+ pages
  *   /quotes/demo/print?lines=3    single page
  *   /quotes/demo/print?sell=EUR   Sell Currency conversion preview
- * Route is only registered when import.meta.env.DEV — it can't reach prod.
+ * Route is only registered when import.meta.env.DEV, it can't reach prod.
  */
 
 function makeLine(i: number, category: QuoteLine["category"]): QuoteLine {
@@ -23,7 +23,7 @@ function makeLine(i: number, category: QuoteLine["category"]): QuoteLine {
     code: `XX-${String((i % 40) + 1).padStart(2, "0")}`,
     description:
       i % 5 === 0
-        ? `Line ${i} — a deliberately long service description to exercise wrapping and row height on the page`
+        ? `Line ${i}, a deliberately long service description to exercise wrapping and row height on the page`
         : `Service line ${i}`,
     cur: "ZAR",
     unit: i % 2 ? "B/L" : "CBM",
@@ -101,8 +101,8 @@ export default function QuotePrintDemoPage() {
       ["Incoterms", "FCA"],
       ["Delivery Terms", "Warehouse to Door"],
       ["Valid Until", "2026-09-30"],
-      ["Origin / Port of Load", "CNSHA — Shanghai, China"],
-      ["Destination / Port of Discharge", "ZADUR — Durban, South Africa"],
+      ["Origin / Port of Load", "CNSHA, Shanghai, China"],
+      ["Destination / Port of Discharge", "ZADUR, Durban, South Africa"],
       ["Commercial Value", "25 000.00"],
       ["Insurance Amount", "27 500.00"],
     ],
@@ -110,8 +110,8 @@ export default function QuotePrintDemoPage() {
     mode: "Sea Freight (LCL)",
     createdAt: "2026-09-09",
     validUntil: "2026-09-30",
-    origin: "CNSHA — Shanghai, China",
-    destination: "ZADUR — Durban, South Africa",
+    origin: "CNSHA, Shanghai, China",
+    destination: "ZADUR, Durban, South Africa",
     packingRows,
     vFactor,
     pack,
@@ -134,7 +134,7 @@ export default function QuotePrintDemoPage() {
         </button>
       </div>
       <div className="qs-note">
-        DEV demo — fabricated quote for checking multi-page layout. Add
+        DEV demo, fabricated quote for checking multi-page layout. Add
         <code> ?lines=40 </code>, <code> ?pack=12 </code>,
         <code> ?groups=1,0,5,3 </code> or <code> ?addr=long </code> to the URL.
       </div>

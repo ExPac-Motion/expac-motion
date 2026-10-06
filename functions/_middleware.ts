@@ -1,23 +1,23 @@
 /**
- * Cloudflare Pages Function — runs on every request to every domain this
+ * Cloudflare Pages Function, runs on every request to every domain this
  * deployment answers to (expac-motion.co.za, expac-motion.pages.dev, any
  * preview-deployment alias).
  *
  * expac-motion.pages.dev stays fully live deliberately (the team keeps
- * working there day-to-day — see project memory), but only
+ * working there day-to-day, see project memory), but only
  * expac-motion.co.za should ever show up in search results. A static
  * robots.txt/meta tag can't tell these domains apart since they're the
  * exact same build; this middleware can, because it sees the actual
  * Host header on each request.
  *
- * X-Robots-Tag is the authoritative "don't index this" signal to Google —
+ * X-Robots-Tag is the authoritative "don't index this" signal to Google,
  * stronger than robots.txt, which only blocks crawling (a page can still
  * get indexed from an inbound link without ever being crawled). It's set
  * PRODUCTION_HOST allowlist-style (indexable only if the Host matches
  * exactly) so any current or future alternate domain defaults to blocked.
  *
  * This also injects Open Graph / Twitter Card tags into hosted web-form
- * pages (/forms/:id) only — those are the one route type meant to be
+ * pages (/forms/:id) only, those are the one route type meant to be
  * shared directly (WhatsApp, email, etc.). The app is a client-rendered
  * SPA with one static index.html for every route, and link-preview
  * crawlers don't execute JS, so this can't be done from React at all;

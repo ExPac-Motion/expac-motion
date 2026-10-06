@@ -1,5 +1,5 @@
 // Curated UN/LOCODE list for the Origin / Destination pickers on the quote
-// builder. This is NOT the full ~120k UNECE set — it's a hand-picked list of
+// builder. This is NOT the full ~120k UNECE set, it's a hand-picked list of
 // the major sea ports and international airports that ExPac actually quotes,
 // weighted to the South Africa <-> China lanes and the main global hubs.
 //
@@ -324,9 +324,9 @@ export const LOCODES: Locode[] = [
   { code: "NZWLG", city: "Wellington", country: "New Zealand" },
 ];
 
-/** "ZAJNB — Johannesburg (OR Tambo), South Africa" */
+/** "ZAJNB, Johannesburg (OR Tambo), South Africa" */
 export function locodeLabel(l: Locode): string {
-  return `${l.code} — ${l.city}, ${l.country}`;
+  return `${l.code}, ${l.city}, ${l.country}`;
 }
 
 /** Datalist option strings, sorted by code. */

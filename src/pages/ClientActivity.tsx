@@ -11,7 +11,7 @@ import { formatDate, money } from "../lib/format";
 import { STATUS_LABEL, STATUS_ORDER } from "../lib/types";
 
 /**
- * A customer's deal pipeline + activity timeline + open tasks — the
+ * A customer's deal pipeline + activity timeline + open tasks, the
  * content that used to live on the Sales CRM "Opportunities" tab before
  * that became a real Kanban pipeline. Relocated onto the Customers page
  * (shown inside a client's View modal) rather than dropped.
@@ -109,7 +109,7 @@ export default function ClientActivity({ clientId }: { clientId: string }) {
                 <div key={t.id} style={{ padding: "6px 0" }}>
                   {t.title}
                   {t.due_date && (
-                    <span className="muted small"> — due {formatDate(t.due_date)}</span>
+                    <span className="muted small">, due {formatDate(t.due_date)}</span>
                   )}
                 </div>
               ))
@@ -134,7 +134,7 @@ export default function ClientActivity({ clientId }: { clientId: string }) {
             >
               <span>
                 {e.label}
-                {e.detail && <span className="muted small"> — {e.detail}</span>}
+                {e.detail && <span className="muted small">, {e.detail}</span>}
               </span>
               <span className="muted small nowrap">{formatDate(e.date)}</span>
             </div>

@@ -27,7 +27,7 @@ export default function FormPublicPage() {
       .catch(() => setForm("missing"));
   }, [id]);
 
-  // A smaller-looking tab icon on hosted forms only — same mark, more
+  // A smaller-looking tab icon on hosted forms only, same mark, more
   // transparent padding around it, so it reads as a smaller icon than the
   // rest of the app's favicon. This is a single-page-app, so there's no
   // separate index.html per route to set this statically; swap the shared

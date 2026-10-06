@@ -33,7 +33,7 @@ function modeLabel(mode: string): string {
   return mode.replace(/\s*\(.*\)\s*$/, "").trim();
 }
 
-/** formatDate, but blank (not "—") when there's no date — matches the template. */
+/** formatDate, but blank (not "—") when there's no date, matches the template. */
 function d(iso: string | null | undefined): string {
   return iso ? formatDate(iso) : "";
 }
@@ -122,7 +122,7 @@ Thank you,
 Support at EXPAC (ZAJNB)
 ${RULE}`;
 
-/** Built-in templates — reproduce the previous hard-coded email exactly.
+/** Built-in templates, reproduce the previous hard-coded email exactly.
  *  Sea gets the fuller block; Air / Courier / Road use the shorter one. */
 export const DEFAULT_SHIPMENT_COMMS: Record<
   ShipmentModeKey,
@@ -172,7 +172,7 @@ export function shipmentReplyTemplate(
   return resolveTemplate(key, config, DEFAULT_SHIPMENT_REPLIES);
 }
 
-/** A quick chat-style reply within an existing thread — no shipment-data
+/** A quick chat-style reply within an existing thread, no shipment-data
  *  block, just the operator's message and the signature. Same per-mode
  *  override shape as Shipment Comms (Settings → Shipment Replies), but the
  *  built-in defaults are identical across modes since there's no
@@ -207,7 +207,7 @@ export const DEFAULT_SHIPMENT_REPLIES: Record<
 /** Merge-code values for a shipment-notification email. */
 export function shipmentMergeContext(job: Job): MergeContext {
   return {
-    // {{ contact.name }} — the customer's contact person, else the company.
+    // {{ contact.name }}, the customer's contact person, else the company.
     name: job.client?.contact || job.client?.company || "Customer",
     customerName: job.client?.company || "Customer",
     company: job.client?.company ?? "",
@@ -249,18 +249,18 @@ export function renderShipmentEmail(
 }
 
 const RULE_LINE = /^_+$/;
-/** A "Label: value" line — the label (with its colon) is what gets bolded.
+/** A "Label: value" line, the label (with its colon) is what gets bolded.
  *  Only a label-like prefix counts: starts with a letter, ≤41 chars, no
  *  commas / sentence punctuation, and the colon ends the line or is followed
  *  by a space. Otherwise free-text remarks got bolded up to any colon in
- *  them — e.g. a ":)" smiley, a time like 10:30, or a URL. */
+ *  them, e.g. a ":)" smiley, a time like 10:30, or a URL. */
 const LABEL_LINE = /^(\s*[A-Za-z][A-Za-z0-9 /&()'#.-]{0,40}:)(\s.*|)$/;
-/** Sign-off lines that mark the end of the shipment-data block — the
+/** Sign-off lines that mark the end of the shipment-data block, the
  *  signature after this (incl. its own "T: / E: / Postal Address:" lines)
  *  is never bolded by the general Label: rule, even though those also
  *  look like "Label: value" (they get their own styling below instead). */
 const SIGNOFF_LINE = /^(thank you|kind regards)\b/i;
-/** The signature's own contact labels — bold + brand green, wherever the
+/** The signature's own contact labels, bold + brand green, wherever the
  *  signature is used (Shipment Comms and Quotation Comms, and both their
  *  Replies variants, all share this one line). Captures the value after
  *  the label too (kept as plain text, never a link -- see
@@ -341,11 +341,11 @@ function linkifySignature(html: string): string {
   );
 }
 
-/** The line the Live Tracking button is anchored under — matches whether
+/** The line the Live Tracking button is anchored under, matches whether
  *  the label has since been HTML-bolded or not. */
 const TRACKING_ANCHOR_LABEL = "Provisional Delivery Date:";
 
-/** Job and Quote share the same reference/shipment number — a quote not
+/** Job and Quote share the same reference/shipment number, a quote not
  *  yet accepted just won't have tracking data yet on the other end. */
 function trackingUrl(entity: { reference: string }): string {
   return `${PUBLIC_APP_URL}/track?ref=${encodeURIComponent(entity.reference)}`;
@@ -353,9 +353,9 @@ function trackingUrl(entity: { reference: string }): string {
 
 /** Insert `line` right after the line containing `label`, with exactly one
  *  blank line on each side so it doesn't sit flush against the surrounding
- *  text — any blank line the template already had right after that label is
+ *  text, any blank line the template already had right after that label is
  *  absorbed first, so the gap below doesn't end up doubled against the one
- *  above. Appends at the end (same spacing) if the label isn't present —
+ *  above. Appends at the end (same spacing) if the label isn't present,
  *  e.g. a Settings-customized template that dropped the Provisional
  *  Delivery Date field. */
 function insertAfterLabelLine(text: string, label: string, line: string): string {
@@ -370,13 +370,13 @@ function insertAfterLabelLine(text: string, label: string, line: string): string
 
 /** Wrap the plain-text body in the branded HTML shell. `boldHeadings` (the
  *  shipment status-update body, not the free-text reply) also bolds the
- *  first line — the customer's name, upper-cased — and the label on every
+ *  first line, the customer's name, upper-cased, and the label on every
  *  "Label: value" line up to the sign-off (Shipment Status, Supplier Name,
  *  etc). The signature's own T:/WA:/F:/E:/Postal Address: labels get bold
- *  + brand-green styling either way. Pass `entity` (a Job or a Quote — both
+ *  + brand-green styling either way. Pass `entity` (a Job or a Quote, both
  *  have `reference`) to insert the ExPac Motion Live Tracking button under
- *  Provisional Delivery Date (or, if that line isn't present — e.g. the
- *  Reply template — at the end). */
+ *  Provisional Delivery Date (or, if that line isn't present, e.g. the
+ *  Reply template, at the end). */
 export function shipmentEmailHtml(
   text: string,
   boldHeadings = false,
@@ -394,7 +394,7 @@ export function shipmentEmailHtml(
       emailButtonHtml(trackingUrl(entity), "ExPac Motion Live Tracking"),
     );
   }
-  // Plain text in the house font — no logo image (it rendered as a broken
+  // Plain text in the house font, no logo image (it rendered as a broken
   // attachment in Outlook); branding lives in the signature.
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${body}</pre>
@@ -436,7 +436,7 @@ export function buildShipmentEmail(
   const tpl = shipmentCommsTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
   // Plain-text counterpart of the button shipmentEmailHtml inlines into the
-  // html version — same spot, under Provisional Delivery Date.
+  // html version, same spot, under Provisional Delivery Date.
   const textWithLink = insertAfterLabelLine(
     text,
     TRACKING_ANCHOR_LABEL,
@@ -447,7 +447,7 @@ export function buildShipmentEmail(
 
 /**
  * A quick chat-style reply within an existing thread (Settings → Shipment
- * Replies, or the built-in default) — just the operator's message and
+ * Replies, or the built-in default), just the operator's message and
  * signature, no shipment-data block. Use for ongoing back-and-forth;
  * buildShipmentEmail is still there for a full status-update notification.
  */
@@ -459,7 +459,7 @@ export function buildShipmentReply(
   const tpl = shipmentReplyTemplate(shipmentModeKey(job.mode), config);
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
   // No Provisional Delivery Date line in the Reply body, so this falls back
-  // to appending at the end — same fallback shipmentEmailHtml uses below.
+  // to appending at the end, same fallback shipmentEmailHtml uses below.
   const textWithLink = insertAfterLabelLine(
     text,
     TRACKING_ANCHOR_LABEL,
@@ -637,7 +637,7 @@ export function renderQuoteEmail(
  * Assemble the customer update email for a quotation, using the team's
  * per-mode template (Settings → Quotation Comms) or the built-in default.
  * Includes the ExPac Motion Live Tracking button under Provisional
- * Delivery Date, same as Shipment Comms — it deep-links by reference, so
+ * Delivery Date, same as Shipment Comms, it deep-links by reference, so
  * it works once the quote is accepted and tracking data exists.
  */
 export function buildQuoteCommsEmail(
@@ -661,7 +661,7 @@ export function buildQuoteCommsEmail(
 
 /**
  * A quick chat-style reply within an existing thread (Settings →
- * Quotation Replies, or the built-in default) — just the operator's
+ * Quotation Replies, or the built-in default), just the operator's
  * message and signature, no quotation-data block.
  */
 export function buildQuoteCommsReply(
@@ -672,7 +672,7 @@ export function buildQuoteCommsReply(
   const tpl = quotationReplyTemplate(shipmentModeKey(quote.mode), config);
   const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
   // No Provisional Delivery Date line in the Reply body, so this falls back
-  // to appending at the end — same fallback shipmentEmailHtml uses below.
+  // to appending at the end, same fallback shipmentEmailHtml uses below.
   const textWithLink = insertAfterLabelLine(
     text,
     TRACKING_ANCHOR_LABEL,

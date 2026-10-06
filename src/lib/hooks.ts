@@ -461,11 +461,11 @@ export function useSetNotificationState() {
 function useTrackingRealtime(queryKeys: string[][]) {
   const qc = useQueryClient();
   useEffect(() => {
-    // Unique channel name per mount — supabase-js caches channels by name and
+    // Unique channel name per mount, supabase-js caches channels by name and
     // rejects .on() after .subscribe(), which StrictMode's double-mount trips.
     const bump = () =>
       queryKeys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
-    // Random channel name per mount — supabase-js caches channels by name and
+    // Random channel name per mount, supabase-js caches channels by name and
     // throws if .on() runs on one already subscribed (StrictMode double-mount).
     const channel = supabase
       .channel(`tracking-live-${Math.random().toString(36).slice(2)}`)
@@ -524,7 +524,7 @@ export function useMessages(jobId: string | undefined) {
   });
 }
 
-/** Unread customer replies — polled so one sent from the portal lights up
+/** Unread customer replies, polled so one sent from the portal lights up
  *  the mail icon (and the notif bell) here without a manual refresh. */
 export function useUnreadMessages() {
   return useQuery({
@@ -646,7 +646,7 @@ export function useQuoteMessages(quoteId: string | undefined) {
   });
 }
 
-/** Unread customer replies — polled so one sent from the portal lights up
+/** Unread customer replies, polled so one sent from the portal lights up
  *  the mail icon (and the notif bell) here without a manual refresh. */
 export function useUnreadQuoteMessages() {
   return useQuery({
@@ -896,7 +896,7 @@ export function useMyQuoteLines(quoteId: string | undefined) {
 export function useMyJobs() {
   return useQuery({ queryKey: ["my_jobs"], queryFn: db.listMyJobs });
 }
-/** Portal tracking — polled (a client can't subscribe to job_tracking under
+/** Portal tracking, polled (a client can't subscribe to job_tracking under
  *  RLS; refetching every 2 min is plenty for a customer view). */
 export function useMyJobTracking() {
   return useQuery({
@@ -936,18 +936,18 @@ export function useMyDocuments(jobId: string | undefined) {
     enabled: Boolean(jobId),
   });
 }
-/** Every document across all of this client's shipments — Invoices tab. */
+/** Every document across all of this client's shipments, Invoices tab. */
 export function useMyDocumentsAll() {
   return useQuery({
     queryKey: ["my_documents_all"],
     queryFn: db.listMyDocumentsAll,
   });
 }
-/** "Customer Party" — shippers used on this client's own shipments. */
+/** "Customer Party", shippers used on this client's own shipments. */
 export function useMySuppliers() {
   return useQuery({ queryKey: ["my_suppliers"], queryFn: db.listMySuppliers });
 }
-/** "Tariff Sheet" — the internal rate sheet, sell-only. */
+/** "Tariff Sheet", the internal rate sheet, sell-only. */
 export function useMyRateSheet() {
   return useQuery({ queryKey: ["my_rate_sheet"], queryFn: db.listMyRateSheet });
 }
@@ -1500,7 +1500,7 @@ export function useCompanySettings() {
   });
 }
 /** Company settings with the editable tier margins (0130) applied to
- *  RATE_TIERS — call in any page that shows or uses a tier's margin. */
+ *  RATE_TIERS, call in any page that shows or uses a tier's margin. */
 export function useTierMargins() {
   const q = useCompanySettings();
   if (q.data?.tier_margins) applyTierMargins(q.data.tier_margins);
@@ -1861,7 +1861,7 @@ export function useSyncInbox() {
   });
 }
 
-/** Every partner rate sheet — loaded only when `enabled` (Rate list route filter). */
+/** Every partner rate sheet, loaded only when `enabled` (Rate list route filter). */
 export function useAllPartnerRateSheets(enabled: boolean) {
   return useQuery({
     queryKey: ["partner_rate_sheets", "all"],

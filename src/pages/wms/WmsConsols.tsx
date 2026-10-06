@@ -469,7 +469,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
   }
 
   function submit() {
-    if (houses.length === 0 && !confirm(`No ${HL}s yet — save the master anyway?`)) return;
+    if (houses.length === 0 && !confirm(`No ${HL}s yet, save the master anyway?`)) return;
     const values: WmsConsolInput = {
       ...f,
       mode,
@@ -656,7 +656,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
             {lk.jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.reference}
-                {j.client?.company ? ` — ${j.client.company}` : ""}
+                {j.client?.company ? `, ${j.client.company}` : ""}
               </option>
             ))}
           </select>
@@ -667,7 +667,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
             <option value="">—</option>
             {lk.warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.code} — {w.name}
+                {w.code}, {w.name}
               </option>
             ))}
           </select>
@@ -675,7 +675,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
       </div>
 
       <h4 className="wms-subhead">
-        Houses ({HL}) — {houses.length} · {t.pieces} pcs · {qty(t.gross)} kg
+        Houses ({HL}), {houses.length} · {t.pieces} pcs · {qty(t.gross)} kg
         {sea ? ` · ${qty(t.cbm, 3)} CBM` : ` · ${qty(t.chargeable)} kg chargeable`}
       </h4>
       {houses.map((h, i) => (
@@ -813,7 +813,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
         </button>
       </div>
       <p className="hint" style={{ textAlign: "right" }}>
-        {ML} {f.master_no || "not set yet"} — save, then print the {HL}s, manifest and load plan from the list.
+        {ML} {f.master_no || "not set yet"}, save, then print the {HL}s, manifest and load plan from the list.
       </p>
     </Modal>
   );
@@ -911,7 +911,7 @@ function AddFromShipments({
   return (
     <div className="wms-house">
       <div className="wms-house-head">
-        <b>Active shipments — each becomes one {HL}</b>
+        <b>Active shipments, each becomes one {HL}</b>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" style={{ width: 200, marginLeft: "auto" }} />
       </div>
       {shown.length === 0 ? (

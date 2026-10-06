@@ -179,7 +179,7 @@ function ScopeToggle({
 }
 
 /* ------------------------------------------------------------------ */
-/* Personal Budget — one income/expense ledger, toggled between a      */
+/* Personal Budget, one income/expense ledger, toggled between a      */
 /* Personal and a Business view (same table, filtered by `scope`).     */
 /* ------------------------------------------------------------------ */
 function PersonalBudget({
@@ -210,7 +210,7 @@ function PersonalBudget({
   const rows = useMemo(() => {
     let out = (q.data ?? []).filter((e) => (e.scope ?? "personal") === scope);
     if (month) out = out.filter((e) => e.occurred_on.startsWith(month));
-    // Income always leads, then expenses oldest-added first — so a newly
+    // Income always leads, then expenses oldest-added first, so a newly
     // added expense lands at the bottom instead of jumping to the top.
     return [...out].sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === "income" ? -1 : 1;
@@ -544,7 +544,7 @@ function PersonalBudget({
         <EmptyState>
           {month
             ? "No entries this month."
-            : "No entries yet — add your first above."}
+            : "No entries yet, add your first above."}
         </EmptyState>
       ) : (
         <div className="table-wrap">
@@ -682,7 +682,7 @@ function BudgetRow({
           payState === "unpaid"
             ? "Unpaid"
             : payState === "part-paid"
-              ? `Part paid — ${(amtNow - paidNow).toFixed(2)} still due`
+              ? `Part paid, ${(amtNow - paidNow).toFixed(2)} still due`
               : undefined
         }
       >
@@ -729,7 +729,7 @@ function BudgetRow({
 }
 
 /* ------------------------------------------------------------------ */
-/* Expense Control — forecasted expenses + where they were transferred */
+/* Expense Control, forecasted expenses + where they were transferred */
 /* ------------------------------------------------------------------ */
 const emptyExpense = (): VaultExpenseDraft => ({
   title: "",
@@ -762,7 +762,7 @@ function ExpenseControl({
 
   const items = useMemo(() => {
     let out = (q.data ?? []).filter((t) => (t.scope ?? "personal") === scope);
-    // Dated by when each item was added — there's no separate date field
+    // Dated by when each item was added, there's no separate date field
     // to edit, so this always reflects the month it was actually created in.
     if (month) out = out.filter((t) => t.created_at.startsWith(month));
     return out;
@@ -770,7 +770,7 @@ function ExpenseControl({
   const openCount = items.filter((t) => !t.transferred_to).length;
   const forecastTotal = items.reduce((s, t) => s + (Number(t.forecasted) || 0), 0);
   /** Sum of every expense that's actually been moved (has a Transferred To)
-   *  — the running balance sitting in the Expense Control account. */
+   * , the running balance sitting in the Expense Control account. */
   const transferredTotal = items.reduce(
     (s, t) => s + (t.transferred_to ? Number(t.forecasted) || 0 : 0),
     0,

@@ -48,7 +48,7 @@ interface Props<T> {
    */
   headerTools?: "pull" | "row";
   /** Renders the Save Grid / Reset / Table-settings controls into this DOM
-   *  node instead of directly above the table — e.g. a slot in the page's
+   *  node instead of directly above the table, e.g. a slot in the page's
    *  own header row, next to its "+ New …" button, so a page with a search
    *  bar doesn't need a whole separate row just for these. The table still
    *  owns all the underlying state; this only moves where the buttons draw. */

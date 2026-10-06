@@ -20,7 +20,7 @@ import { useWmsLookups } from "./shared";
 
 /**
  * Active Shipments › Consolidate: the ticked shipments become houses (HAWB /
- * HBL) on a master (MAWB / MBL) — an open one of the same mode or a new one —
+ * HBL) on a master (MAWB / MBL), an open one of the same mode or a new one,
  * then the master opens in WMS › Warehouse Release to finish its details.
  */
 export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
@@ -112,7 +112,7 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
             {open.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.consol_no}
-                {c.master_no ? ` — ${ML} ${c.master_no}` : ""} ({c.houses.length} {HL}s)
+                {c.master_no ? `, ${ML} ${c.master_no}` : ""} ({c.houses.length} {HL}s)
               </option>
             ))}
           </select>
@@ -137,9 +137,9 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
               <td>{j.mode}</td>
               <td>
                 {misfits.includes(j) ? (
-                  <span className="wms-warn">Not {mode === "air" ? "air" : "sea"} — skipped</span>
+                  <span className="wms-warn">Not {mode === "air" ? "air" : "sea"}, skipped</span>
                 ) : already.includes(j) ? (
-                  <span className="wms-warn">Already on {taken.get(j.id)?.consol_no} — skipped</span>
+                  <span className="wms-warn">Already on {taken.get(j.id)?.consol_no}, skipped</span>
                 ) : (
                   <span className="hint">Becomes a {HL}</span>
                 )}
@@ -149,7 +149,7 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
         </tbody>
       </table>
       <p className="hint">
-        Each shipment's {HL} number (yours or the origin agent's), parties, commodity, pieces, kg and CBM come across — from its
+        Each shipment's {HL} number (yours or the origin agent's), parties, commodity, pieces, kg and CBM come across, from its
         warehouse receipts when the goods are in store. Once on the master, its {ML} number fills in on the shipment.
       </p>
       <div className="modal-foot-row">

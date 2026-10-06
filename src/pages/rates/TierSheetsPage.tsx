@@ -1,7 +1,7 @@
 // Rates & Tariff → Tier Rate Sheets (migration 0119). Platinum / Gold /
 // Silver, one sheet per tier per mode + trade route. Each sheet is the Quote
 // Builder's code worksheet: lines buy from a linked Agent / Transporter /
-// Clearing Agent rate sheet (live — the partner's rate for the same code) or
+// Clearing Agent rate sheet (live, the partner's rate for the same code) or
 // a manual buy, plus the tier margin unless a line overrides it. The Quote
 // Builder loads a sheet by the customer's tier.
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -110,7 +110,7 @@ export default function TierSheetsPage() {
   const [importing, setImporting] = useState(false);
   const [editingMargins, setEditingMargins] = useState(false);
   const dirty = useRef(false);
-  // The editable tier margins (0130) — tabs, new sheets and the editor use them.
+  // The editable tier margins (0130), tabs, new sheets and the editor use them.
   useTierMargins();
 
   const all = useMemo(() => q.data ?? [], [q.data]);
@@ -157,7 +157,7 @@ export default function TierSheetsPage() {
     });
   }
 
-  /** Create a trade route on one or all tiers — blank, or copied from a
+  /** Create a trade route on one or all tiers, blank, or copied from a
    *  sheet (Duplicate). Each tier gets its own default margin. */
   async function createRoute(
     v: { route: string; origin: string; destination: string; allTiers: boolean },
@@ -264,7 +264,7 @@ export default function TierSheetsPage() {
           </>
         ) : !sheet ? (
           <p className="hint">
-            No {rateTier(tier).label} {mode} trade routes yet — click <strong>+ New trade route</strong>.
+            No {rateTier(tier).label} {mode} trade routes yet, click <strong>+ New trade route</strong>.
           </p>
         ) : (
           <SheetEditor
@@ -369,7 +369,7 @@ function TierMarginsModal({
       }
       onSaved(`Tier margins updated: ${done.join(", ")}`);
     } catch (err) {
-      error(err instanceof Error ? err.message : "Could not update the tier margins — is migration 0130 applied?");
+      error(err instanceof Error ? err.message : "Could not update the tier margins, is migration 0130 applied?");
     }
   }
 
@@ -622,20 +622,20 @@ function SheetEditor({
             <optgroup label="Any mode (incl. air)">
               {INCOTERMS_ANY_MODE.map((i) => (
                 <option key={i.code} value={i.code}>
-                  {i.code} — {i.name}
+                  {i.code}, {i.name}
                 </option>
               ))}
             </optgroup>
               <optgroup label="Sea / inland waterway">
                 {INCOTERMS_SEA.map((i) => (
                   <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
+                    {i.code}, {i.name}
                   </option>
                 ))}
               </optgroup>
           </select>
           <span className="hint">
-            Shows the charges quoted under this incoterm — a quote loads the same sections.
+            Shows the charges quoted under this incoterm, a quote loads the same sections.
           </span>
         </div>
         <div className="field">
@@ -933,7 +933,7 @@ function SheetEditor({
                               </span>
                             ) : (
                               <span className="hint" title={missingTitle}>
-                                —
+                               ,
                               </span>
                             )}
                           </td>
@@ -1111,7 +1111,7 @@ interface FoundRoute {
   quotes: number;
   shipments: number;
   last: string;
-  /** Most recent quotation on the route with buy rates — seeds the sheet. */
+  /** Most recent quotation on the route with buy rates, seeds the sheet. */
   latest: Quote | null;
   /** Tiers that already have this route. */
   have: RateTierId[];
@@ -1120,7 +1120,7 @@ interface FoundRoute {
 /** Every mode + origin → destination on the quotations and shipments, to
  *  create tier sheets for in one go (all three tiers). Each new sheet takes
  *  the latest quote's agent / transporter / clearing agent and its coded
- *  buy rates as manual buys — switch lines to a partner once their rate
+ *  buy rates as manual buys, switch lines to a partner once their rate
  *  sheets are in. */
 function ImportRoutesModal({
   existing,

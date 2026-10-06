@@ -14,7 +14,7 @@ export type Milestone =
   | "On Delivery"
   | "Delivered";
 
-/** One colour per Operational Funnel stage — same hues as the .ms-tag
+/** One colour per Operational Funnel stage, same hues as the .ms-tag
  *  badge variants, so a shipment's status colour reads consistently
  *  wherever it shows up. */
 export const MILESTONE_COLOR: Record<Milestone, string> = {
@@ -28,7 +28,7 @@ export const MILESTONE_COLOR: Record<Milestone, string> = {
 };
 
 /** One colour per stage for the 5-row pipeline bars (Quotation Pipeline,
- *  Opportunities Pipeline, Quotes by Status) — all three share the same
+ *  Opportunities Pipeline, Quotes by Status), all three share the same
  *  New Lead / Sent / Accepted / Completed / Lost shape, applied by row
  *  index rather than a lookup since STATUS_ORDER and OPPORTUNITY_STAGES
  *  use different key types for the same five conceptual stages. */
@@ -53,14 +53,14 @@ export interface Profile {
   /** Per-login permission overrides (0131); a missing key = the role's setting. */
   permissions?: Partial<Record<import("./permissions").PermKey, boolean>> | null;
   /** Set for role='client', and kept when revoked to role='restricted' so
-   *  access can be restored — which customer this portal login belongs to. */
+   *  access can be restored, which customer this portal login belongs to. */
   client_id: string | null;
   /** Self-serve portal signups only. null = not applicable (staff, or an
-   *  older invite-claimed client) — the app treats null the same as
+   *  older invite-claimed client), the app treats null the same as
    *  'approved'. */
   portal_status: "pending" | "approved" | "rejected" | null;
   /** Which portal nav sections this login can see. Only meaningful for
-   *  role='client' (or 'restricted' — kept so it's remembered on restore). */
+   *  role='client' (or 'restricted', kept so it's remembered on restore). */
   portal_permissions: {
     shipments: boolean;
     quotes: boolean;
@@ -79,7 +79,7 @@ export interface Profile {
   partner_kind?: PartnerKind | null;
   partner_id?: string | null;
   /** @deprecated flat currency targets superseded by sales_target (incl.
-   *  VAT) + the company-wide Cost of Sales Ratio target — kept for existing
+   *  VAT) + the company-wide Cost of Sales Ratio target, kept for existing
    *  data; no longer surfaced in the Sales Person UI. */
   sales_revenue_target: number;
   /** @deprecated see sales_revenue_target above. */
@@ -126,7 +126,7 @@ export interface CompanySettings {
   id: number;
   /** Editable tier margins (0130), e.g. { platinum: 10, gold: 15, silver: 18 }. */
   tier_margins?: Partial<Record<RateTierId, number>> | null;
-  /** Per-role permission switches (0131) — see lib/permissions.ts. */
+  /** Per-role permission switches (0131), see lib/permissions.ts. */
   role_permissions?: Partial<import("./permissions").RolePermissions> | null;
   /** Document Vault title overrides (0140): { slug: title }. */
   doc_titles?: Record<string, string> | null;
@@ -148,19 +148,19 @@ export interface CompanySettings {
   default_incoterm: string;
   /** Company-wide Total Sales target (Grand Total incl. VAT). */
   sales_target: number;
-  /** @deprecated superseded by cost_of_sales_target — kept for existing
+  /** @deprecated superseded by cost_of_sales_target, kept for existing
    *  data; no longer surfaced in the Edit Targets UI. */
   sales_revenue_target: number;
   /** @deprecated see sales_revenue_target above. */
   sales_gp_target: number;
   sales_new_leads_target: number;
-  /** Cost of Sales Ratio target (%) — at or below this, margin is healthy. */
+  /** Cost of Sales Ratio target (%), at or below this, margin is healthy. */
   cost_of_sales_target: number;
-  /** Quote Win Rate target (%), higher is better — migration 0118. */
+  /** Quote Win Rate target (%), higher is better, migration 0118. */
   win_rate_target?: number;
-  /** Median quote turnaround target (hours), lower is better — 0118. */
+  /** Median quote turnaround target (hours), lower is better, 0118. */
   quote_turnaround_target_hrs?: number;
-  /** Overall target for the Opportunities Pipeline chart's total value —
+  /** Overall target for the Opportunities Pipeline chart's total value,
    *  each stage's bar is scaled against this instead of the pipeline's own
    *  current total. 0 = no target set, falls back to the current total. */
   opportunities_pipeline_target: number;
@@ -172,10 +172,10 @@ export interface CompanySettings {
   mail_signature_html: string;
   /** Per-mode shipment-notification template overrides. */
   shipment_comms: ShipmentCommsConfig;
-  /** Per-mode quick-reply template overrides — a chat-style message within
+  /** Per-mode quick-reply template overrides, a chat-style message within
    *  an existing thread, no shipment-data block. */
   shipment_replies: ShipmentCommsConfig;
-  /** Per-mode quotation-notification template overrides — same idea as
+  /** Per-mode quotation-notification template overrides, same idea as
    *  shipment_comms, for a quote's Comms panel. */
   quotation_comms: ShipmentCommsConfig;
   /** Per-mode quick-reply template overrides for a quote's Comms panel. */
@@ -209,7 +209,7 @@ export type RateSheetPatch = Partial<
   Omit<RateSheetItem, "id" | "created_at" | "updated_at">
 >;
 
-/* ---------- Customer Portal (safe subsets — see client_* views) ---------- */
+/* ---------- Customer Portal (safe subsets, see client_* views) ---------- */
 
 export interface ClientInvite {
   token: string;
@@ -219,7 +219,7 @@ export interface ClientInvite {
   created_at: string;
 }
 
-/** Row shape from the list_portal_users() RPC — every profile linked to a
+/** Row shape from the list_portal_users() RPC, every profile linked to a
  *  customer (approved, restricted, or a pending self-serve request),
  *  admin-only (see 0091_role_model_v2.sql). */
 export interface PortalUser {
@@ -335,7 +335,7 @@ export interface ClientDocument {
   created_at: string;
 }
 
-/** "Customer Party" — a shipper used on one of this client's own shipments. */
+/** "Customer Party", a shipper used on one of this client's own shipments. */
 export interface ClientSupplier {
   id: string;
   company: string;
@@ -344,7 +344,7 @@ export interface ClientSupplier {
   phone: string | null;
 }
 
-/** Tariff Sheet — the internal rate_sheet with buy/margin collapsed into a
+/** Tariff Sheet, the internal rate_sheet with buy/margin collapsed into a
  *  single sell rate (see client_rate_sheet in 0071). */
 export interface ClientRateSheetItem {
   id: string;
@@ -399,7 +399,7 @@ export interface LeadStatus {
 }
 export type LeadStatusPatch = Partial<Omit<LeadStatus, "id" | "created_at">>;
 
-/** Managed picklist for the free-text Lead/Customer "source" field — this
+/** Managed picklist for the free-text Lead/Customer "source" field, this
  *  only supplies the dropdown's options, `source` itself stays plain text. */
 export interface LeadSource {
   id: string;
@@ -775,7 +775,7 @@ export const MILESTONES: Milestone[] = [
 
 /**
  * Shipment status shown on the Active Jobs board. Free text in the DB
- * (`jobs.shipment_status`) — edit this list as the workflow changes.
+ * (`jobs.shipment_status`), edit this list as the workflow changes.
  */
 export const SHIPMENT_STATUSES: string[] = [
   "Created",
@@ -794,7 +794,7 @@ export const SHIPMENT_STATUSES: string[] = [
   "Delivered",
 ];
 
-/** CSS-class-safe slug for a status pill — each status gets its own colour. */
+/** CSS-class-safe slug for a status pill, each status gets its own colour. */
 export function shipmentStatusSlug(s: string | null | undefined): string {
   const v = (s ?? "").trim();
   if (!v) return "unset";
@@ -853,7 +853,7 @@ export interface Incoterm {
   code: string;
   name: string;
 }
-/** Incoterms usable with any transport mode (incl. air) — FOB is used on
+/** Incoterms usable with any transport mode (incl. air), FOB is used on
  *  air freight too, not only sea (ExPac practice). */
 export const INCOTERMS_ANY_MODE: Incoterm[] = [
   { code: "EXW", name: "Ex Works" },
@@ -926,7 +926,7 @@ export interface Contact {
   vat_no?: string | null;
   import_code?: string | null;
   address?: string | null;
-  /** Customer-only profile fields — parity with a Lead (clients table). */
+  /** Customer-only profile fields, parity with a Lead (clients table). */
   company_phone?: string | null;
   website?: string | null;
   source?: string | null;
@@ -939,7 +939,7 @@ export interface Contact {
   /** Non-null on a row that mirrors a record in the other table (read-only here). */
   source_agent_id?: string | null;
   source_clearing_agent_id?: string | null;
-  /** Customer <-> Shipper cross-listing (clients / suppliers only) — the
+  /** Customer <-> Shipper cross-listing (clients / suppliers only), the
    *  shipper/exporter is sometimes also the customer, and vice versa. */
   also_shipper?: boolean | null;
   also_customer?: boolean | null;
@@ -953,7 +953,7 @@ export interface Contact {
   countries?: string[] | null;
   ports?: string[] | null;
   coverage_notes?: string | null;
-  /** Customer price tier (clients only, migration 0119) — Silver by default. */
+  /** Customer price tier (clients only, migration 0119), Silver by default. */
   rate_tier?: RateTierId | null;
   created_at: string;
   /** Joined for display (clients only). */
@@ -990,7 +990,7 @@ export interface RateTier {
   amount: number | null;
 }
 /** One block of a rate structure: a commodity/service on one routing, with
- *  its weight breaks, origin charges and pick-up tiers — one table of the
+ *  its weight breaks, origin charges and pick-up tiers, one table of the
  *  agent's rate sheet. */
 export interface RateBlock {
   id: string;
@@ -1078,7 +1078,7 @@ export interface PartnerRateSheet {
   valid_from: string | null;
   valid_until: string | null;
   notes: string | null;
-  /** The basis the partner quotes on (EXW, FOB …) — decides which of their
+  /** The basis the partner quotes on (EXW, FOB …), decides which of their
    *  sections the sheet prices (0125). */
   incoterm: string | null;
   lines: Record<string, PartnerSheetLine>;
@@ -1093,7 +1093,7 @@ export interface TariffSheetLine {
   source: TariffBuySource;
   /** Manual buy (source "manual"); otherwise the partner's rate is used live. */
   buy: number | null;
-  /** Currency of a manual buy — defaults to the code's currency. */
+  /** Currency of a manual buy, defaults to the code's currency. */
   cur?: LineCurrency;
   /** Overrides of the code's default description / unit (as on a quote). */
   description?: string;
@@ -1152,9 +1152,9 @@ export interface MyPartner {
   partner_kind: PartnerKind;
   partner_id: string;
   company: string | null;
-  /** Coverage modes handled (0126) — the portal's rate sheets offer only these. */
+  /** Coverage modes handled (0126), the portal's rate sheets offer only these. */
   modes?: string[] | null;
-  /** Coverage countries (0127) — each offers a "<country> → South Africa" route. */
+  /** Coverage countries (0127), each offers a "<country> → South Africa" route. */
   countries?: string[] | null;
   /** Coverage ports + notes (0131), for the portal's own coverage editor. */
   ports?: string[] | null;
@@ -1216,27 +1216,27 @@ export interface QuoteLine {
 
 export interface Quote {
   id: string;
-  /** System shipment number (AIR/SEA/CX/RDX + 6 digits) — never changes. */
+  /** System shipment number (AIR/SEA/CX/RDX + 6 digits), never changes. */
   reference: string;
   /** Operator-typed customer reference / customer PO for this enquiry. */
   customer_reference: string | null;
   client_id: string | null;
   /** Set instead of client_id when the customer is a not-yet-promoted lead. */
   lead_id: string | null;
-  /** Attributed sales rep — a Sales CRM concept, independent of lead_id. */
+  /** Attributed sales rep, a Sales CRM concept, independent of lead_id. */
   sales_person_id: string | null;
   supplier_id: string | null;
   /** Who the goods are delivered to, when different from the paying
-   *  Customer/Importer (client_id) — e.g. the customer's own customer.
+   *  Customer/Importer (client_id), e.g. the customer's own customer.
    *  Unset falls back to the Customer everywhere it's shown. */
   consignee_id: string | null;
   /** Set instead of consignee_id when the delivery point is a not-yet-promoted lead. */
   consignee_lead_id: string | null;
-  /** Agent / transporter / clearing agent — internal only, never shown to the customer. */
+  /** Agent / transporter / clearing agent, internal only, never shown to the customer. */
   agent_id: string | null;
   transporter_id: string | null;
   clearing_agent_id: string | null;
-  /** Destination handling agent (0124) — internal only. */
+  /** Destination handling agent (0124), internal only. */
   destination_agent_id?: string | null;
   mode: QuoteMode;
   commodity: string | null;
@@ -1255,7 +1255,7 @@ export interface Quote {
   portal_decision?: "accepted" | "declined" | null;
   portal_decided_at?: string | null;
   portal_decline_reason?: string | null;
-  /** First time the quote reached Sent / Not Proceeding — stamped by
+  /** First time the quote reached Sent / Not Proceeding, stamped by
    *  trigger (migration 0111); null on quotes from before it. */
   sent_at?: string | null;
   lost_at?: string | null;
@@ -1265,18 +1265,18 @@ export interface Quote {
   commercial_value: number | null;
   insurance_amount: number | null;
   vessel_name: string | null;
-  /** Sea Freight voyage number (migration 0107) — printed on shipment docs. */
+  /** Sea Freight voyage number (migration 0107), printed on shipment docs. */
   voyage_no?: string | null;
   /** Rate tier + tier sheet the quote was priced from (migration 0119). */
   rate_tier?: RateTierId | null;
   tariff_sheet_id?: string | null;
-  /** Air Freight routing / transit time (migration 0108) — printed on shipment docs. */
+  /** Air Freight routing / transit time (migration 0108), printed on shipment docs. */
   routing?: string | null;
   transit_time?: string | null;
   mbl_no: string | null;
   hbl_no: string | null;
   container_no: string | null;
-  /** e.g. "1x 20GP", "2x 40HC" — Sea Freight only. */
+  /** e.g. "1x 20GP", "2x 40HC", Sea Freight only. */
   container_type: string | null;
   etd: string | null;
   eta: string | null;
@@ -1287,7 +1287,7 @@ export interface Quote {
   flight_no: string | null;
   flight_date: string | null;
   carrier_name: string | null;
-  /** Carrier / shipping line — seeds the shipment's Carrier column. */
+  /** Carrier / shipping line, seeds the shipment's Carrier column. */
   shipping_line: string | null;
   fx_usd_zar: number;
   fx_cny_zar: number;
@@ -1297,7 +1297,7 @@ export interface Quote {
   /** When set, the customer-facing Sell/Total figures display converted
    *  into this currency instead of ZAR (same fx rate as above). Null = ZAR. */
   sell_currency: LineCurrency | null;
-  /** Currency Commercial Value / Insurance Amount were captured in — they're
+  /** Currency Commercial Value / Insurance Amount were captured in, they're
    *  customer-supplied and not always ZAR. Defaults to 'ZAR'. */
   value_currency: LineCurrency;
   /** Internal follow-up notes on this quote (not shown to the customer). */
@@ -1375,25 +1375,25 @@ export interface Job {
   po_no: string | null;
   shipment_status: string | null;
   notes: string | null;
-  /** Ops-only remarks — never shown in the app UI other than pre-filling
+  /** Ops-only remarks, never shown in the app UI other than pre-filling
    *  the Remarks line on Document Vault print documents. */
   ops_remarks: string | null;
   awb_mbl: string | null;
   /** Ocean container number (air jobs track on awb_mbl). */
   container_no: string | null;
-  /** e.g. "1x 20GP", "2x 40HC" — Sea Freight only. */
+  /** e.g. "1x 20GP", "2x 40HC", Sea Freight only. */
   container_type: string | null;
   /** Sea Freight details for the customer update email; persist on the board. */
   shipping_line: string | null;
   vessel_name: string | null;
   provisional_delivery_date: string | null;
-  /** Date invoiced (migration 0110) — null = not yet invoiced. Entered by
+  /** Date invoiced (migration 0110), null = not yet invoiced. Entered by
    *  hand for now; a future Sage Accounting sync fills it. */
   invoiced_at?: string | null;
   invoice_no?: string | null;
   /** Carrier / airline name, seeded from the quote; shown on the board. */
   carrier_name: string | null;
-  /** Carrier SCAC — set for a bill-of-lading tracking registration. */
+  /** Carrier SCAC, set for a bill-of-lading tracking registration. */
   scac: string | null;
   etd: string | null;
   eta: string | null;
@@ -1422,8 +1422,8 @@ export interface Job {
 export const DELIVERED_STATUS = "Delivered";
 
 /**
- * A shipment is finished — belongs on Completed Shipments and drops off the
- * dashboard, Control Tower and Live Tracking — once its shipment status or its
+ * A shipment is finished, belongs on Completed Shipments and drops off the
+ * dashboard, Control Tower and Live Tracking, once its shipment status or its
  * milestone reads Delivered.
  */
 export function isShipmentComplete(
@@ -1490,7 +1490,7 @@ export interface Message {
   created_by: string | null;
   created_at: string;
   sent_at: string | null;
-  /** Only meaningful for direction='in' (a customer reply) — null = unread. */
+  /** Only meaningful for direction='in' (a customer reply), null = unread. */
   read_at: string | null;
 }
 
@@ -1498,7 +1498,7 @@ export type MessagePatch = Partial<
   Pick<Message, "status" | "provider_id" | "error" | "sent_at">
 >;
 
-/** Quotation Comms — mirrors Message, but linked to a quote instead of a
+/** Quotation Comms, mirrors Message, but linked to a quote instead of a
  *  job (its own quote_messages table, kept parallel rather than a nullable
  *  dual-purpose FK on the job-only messages table). */
 export interface QuoteMessage {
@@ -1519,7 +1519,7 @@ export interface QuoteMessage {
   created_by: string | null;
   created_at: string;
   sent_at: string | null;
-  /** Only meaningful for direction='in' (a customer reply) — null = unread. */
+  /** Only meaningful for direction='in' (a customer reply), null = unread. */
   read_at: string | null;
 }
 
@@ -1568,7 +1568,7 @@ export interface OpsTask {
   updated_at: string;
   done_at: string | null;
   assigned_to: string | null;
-  /** Set when this task was created from the Notifications tab — traces it
+  /** Set when this task was created from the Notifications tab, traces it
    *  back to the notification that prompted it. */
   source_notification_key: string | null;
   /** Customer Portal (0143): shown to the customer / raised by the customer. */
@@ -1639,7 +1639,7 @@ export interface JobTracking {
   ref_type: "ocean" | "air" | null;
   ref_value: string | null;
   carrier: string | null;
-  /** Legacy ShipsGo id — kept for old rows, no longer written. */
+  /** Legacy ShipsGo id, kept for old rows, no longer written. */
   shipsgo_id: string | null;
   /** Tracking provider (e.g. "terminal49"). */
   provider: string | null;
@@ -1667,7 +1667,7 @@ export interface JobTracking {
   vessel_lon: number | null;
   position_at: string | null;
   last_event: string | null;
-  /** Legacy blob — new events land in the tracking_events table. */
+  /** Legacy blob, new events land in the tracking_events table. */
   movements: TrackingMovement[];
   raw: unknown;
   synced_at: string | null;
@@ -1692,7 +1692,7 @@ export interface TrackingEvent {
   created_at: string;
 }
 
-/** Portal-safe tracking view (client_job_tracking) — no internal fields. */
+/** Portal-safe tracking view (client_job_tracking), no internal fields. */
 export interface ClientJobTracking {
   job_id: string;
   status: string | null;
@@ -1730,7 +1730,7 @@ export interface ClientTrackingEvent {
   is_actual: boolean;
 }
 
-/** Public, unauthenticated shipment lookup (track_shipment RPC) —
+/** Public, unauthenticated shipment lookup (track_shipment RPC),
  *  expac.co.za/live-tracking, search by our shipment number, no login. */
 export interface TrackedShipmentEvent {
   event_code: string | null;
@@ -1836,7 +1836,7 @@ export interface VaultBudgetEntry {
   id: string;
   user_id: string;
   kind: "income" | "expense";
-  /** Which ledger this row belongs to — the Budget section's Personal /
+  /** Which ledger this row belongs to, the Budget section's Personal /
    *  Business toggle filters on this. */
   scope: VaultBudgetScope;
   category: string | null;
@@ -1869,7 +1869,7 @@ export interface VaultTodo {
   /** Which Budget ledger this expense belongs to. */
   scope: VaultBudgetScope;
   /** The vault_budget_entries row auto-created (and kept in sync) while
-   *  this is transferred — null while it isn't. */
+   *  this is transferred, null while it isn't. */
   linked_budget_entry_id: string | null;
   done: boolean;
   sort_order: number;
@@ -1881,13 +1881,13 @@ export type VaultExpenseDraft = {
   transferred_to: string;
 };
 
-/** A private Notes & Calendar entry — same shape as the shared Control
+/** A private Notes & Calendar entry, same shape as the shared Control
  *  Tower ops_tasks, but never linked to a shipment/quote/customer and
  *  never visible outside Personal Vault. */
 export interface VaultNote {
   id: string;
   user_id: string;
-  /** Which Personal/Business side this belongs to — same toggle as Budget
+  /** Which Personal/Business side this belongs to, same toggle as Budget
    *  and Expense Control. */
   scope: VaultBudgetScope;
   kind: OpsTaskKind;
@@ -1928,7 +1928,7 @@ export interface UiTableLayout {
  *  itself (internal, 0135) or unknown. */
 export type InboxCategory = "customer" | "partner" | "lead" | "unknown" | "internal";
 
-/** inbox_messages_v — a support@ message (in) or a reply sent from the app (out). */
+/** inbox_messages_v, a support@ message (in) or a reply sent from the app (out). */
 export interface InboxMessage {
   id: string;
   mailbox: string;
@@ -1952,7 +1952,7 @@ export interface InboxMessage {
   is_bulk: boolean;
   /** Synced from the mailbox's Junk / Spam folder, or marked Spam in the app (0136). */
   spam: boolean;
-  /** "Mark unread" in the app — wins over the server's Seen flag until opened (0136). */
+  /** "Mark unread" in the app, wins over the server's Seen flag until opened (0136). */
   marked_unread: boolean;
   /** Sent from the app: Resend's id + its latest delivery event (0136). */
   provider_id?: string | null;
@@ -1994,7 +1994,7 @@ export interface InboxState {
   pending: number | null;
 }
 
-/** inbox_sent_v (0136) — everything sent from the app, with delivery status. */
+/** inbox_sent_v (0136), everything sent from the app, with delivery status. */
 export interface SentMail {
   id: string;
   source: "inbox" | "shipment" | "quote";

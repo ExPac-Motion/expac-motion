@@ -62,7 +62,7 @@ const DOMAIN_ICON: Record<NotificationDomain, ReactNode> = {
 export default function NotificationsBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  // Snapshot "now" once per mount — keeps the feed calc pure across re-renders.
+  // Snapshot "now" once per mount, keeps the feed calc pure across re-renders.
   const [now] = useState(() => Date.now());
   const ref = useRef<HTMLDivElement>(null);
 
@@ -84,7 +84,7 @@ export default function NotificationsBell() {
   }, [stateQ.data]);
 
   const items = useMemo<NotificationItem[]>(() => {
-    // Unread inbound replies only, in the shape buildNotifications expects —
+    // Unread inbound replies only, in the shape buildNotifications expects,
     // keeps the bell's own query lightweight (no full messages/documents
     // fetch here; the full Notifications tab covers those).
     const messages: Message[] = (unreadMessages ?? []).map((m) => ({

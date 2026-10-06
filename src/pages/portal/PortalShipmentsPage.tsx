@@ -45,7 +45,7 @@ function daysUntil(date: string | null | undefined): number | null {
 
 /**
  * Customer Portal › Shipments: the same board as ExPac's Active Shipments,
- * from the customer's side — read only, no notes / invoicing / duplicate /
+ * from the customer's side, read only, no notes / invoicing / duplicate /
  * delete; with Shipment Comms (the per-shipment chat with ExPac) and shipment
  * tasks (ask ExPac for something; ExPac's shared tasks show here too).
  */
@@ -105,10 +105,10 @@ export default function PortalShipmentsPage() {
         <div className="pt-rowacts">
           <RowActions
             onMail={() => openComms(j)}
-            mailTitle="Shipment Comms — chat with ExPac"
+            mailTitle="Shipment Comms, chat with ExPac"
             mailUnread={unread(j)}
             onTask={() => setTaskJob(j)}
-            taskTitle="Tasks — ask ExPac for something on this shipment"
+            taskTitle="Tasks, ask ExPac for something on this shipment"
             taskOpen={openTaskJobs.has(j.id)}
             onView={() => setViewJob(j)}
           />
@@ -227,7 +227,7 @@ export default function PortalShipmentsPage() {
   );
 }
 
-/** Shipment Comms — the shipment's message history with ExPac, docked right
+/** Shipment Comms, the shipment's message history with ExPac, docked right
  *  like the Activity Panel on ExPac's board. */
 function PortalCommsRail({ job, onClose }: { job: ClientJob; onClose: () => void }) {
   const qc = useQueryClient();
@@ -297,7 +297,7 @@ function PortalCommsRail({ job, onClose }: { job: ClientJob; onClose: () => void
   );
 }
 
-/** Shipment tasks — what the customer asked ExPac for, and tasks ExPac shares;
+/** Shipment tasks, what the customer asked ExPac for, and tasks ExPac shares;
  *  plus "+ New task" to ask for something. */
 function PortalTasksModal({ job, tasks, onClose }: { job: ClientJob; tasks: PortalTask[]; onClose: () => void }) {
   const { toast, error } = useToast();
@@ -314,7 +314,7 @@ function PortalTasksModal({ job, tasks, onClose }: { job: ClientJob; tasks: Port
       { jobId: job.id, title: title.trim(), body, due },
       {
         onSuccess: () => {
-          toast("Sent to ExPac — the team has been notified");
+          toast("Sent to ExPac, the team has been notified");
           setTitle("");
           setBody("");
           setDue("");
@@ -325,7 +325,7 @@ function PortalTasksModal({ job, tasks, onClose }: { job: ClientJob; tasks: Port
   }
 
   return (
-    <Modal title={`Tasks — ${job.reference}`} onClose={onClose} wide>
+    <Modal title={`Tasks, ${job.reference}`} onClose={onClose} wide>
       {tasks.length === 0 ? (
         <p className="hint" style={{ marginTop: 0 }}>
           No tasks on this shipment yet.
@@ -400,7 +400,7 @@ function ViewField({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** The shipment View — same layout as ExPac's Active Shipments view (no
+/** The shipment View, same layout as ExPac's Active Shipments view (no
  *  notes / customer field); documents are the ones ExPac shares. */
 export function PortalShipmentViewModal({
   job,

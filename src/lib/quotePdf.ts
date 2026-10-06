@@ -11,7 +11,7 @@ import { docName } from "./format";
 
 export interface QuoteAttachment {
   filename: string;
-  /** base64 PDF, no data: prefix — the shape functions/api/send-mail wants. */
+  /** base64 PDF, no data: prefix, the shape functions/api/send-mail wants. */
   content: string;
 }
 
@@ -98,7 +98,7 @@ export async function buildQuotePdf(
 
     for (let i = 0; i < pages.length; i++) {
       const canvas = await html2canvas(pages[i], {
-        // 3x is close to print quality (~300dpi) at A4 width — 2x (~200dpi)
+        // 3x is close to print quality (~300dpi) at A4 width, 2x (~200dpi)
         // read soft once zoomed past 100%, which is what this is fixing.
         scale: 3,
         backgroundColor: "#ffffff",
@@ -106,13 +106,13 @@ export async function buildQuotePdf(
         logging: false,
         windowWidth: doc.documentElement.scrollWidth,
       });
-      // PNG, not JPEG — this page is text/tables/lines, not a photo. JPEG's
+      // PNG, not JPEG, this page is text/tables/lines, not a photo. JPEG's
       // lossy chroma-subsampled compression blurs/rings right around sharp
       // edges like letterforms and table borders; PNG is lossless and
       // actually compresses this kind of flat-color content well.
       const img = canvas.toDataURL("image/png");
       // `.qs-page` is a screen-mode box (CSS min-height: 278mm) that's
-      // deliberately shorter than a full A4 sheet (297mm) — on the real
+      // deliberately shorter than a full A4 sheet (297mm), on the real
       // print/download path the browser's own @page margin makes up that
       // difference. There's no such margin here, so fit the image to the
       // full page in both dimensions rather than just the width: capping

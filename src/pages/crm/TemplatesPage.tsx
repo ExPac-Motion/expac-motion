@@ -35,7 +35,7 @@ import type {
 } from "../../lib/types";
 
 /** Fills {{ contact.name }} / {{ contact.company }} / the unsubscribe
- *  link with sample values for a quick preview — the real merge happens
+ *  link with sample values for a quick preview, the real merge happens
  *  wherever a template is actually used to send mail (a later phase). */
 function previewMerge(html: string): string {
   return html
@@ -327,7 +327,7 @@ export default function TemplatesPage() {
             ? undefined
             : `${rows.length}${rows.length !== (data ?? []).length ? ` of ${(data ?? []).length}` : ""} template${rows.length === 1 ? "" : "s"}`
         }
-        hint="Use {{ contact.name }} and {{ contact.company }} anywhere in the body — they're filled in per recipient wherever a template is used to send mail."
+        hint="Use {{ contact.name }} and {{ contact.company }} anywhere in the body, they're filled in per recipient wherever a template is used to send mail."
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setEditing("new")}>

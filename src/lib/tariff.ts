@@ -95,7 +95,7 @@ export function sectionsForIncoterm(incoterm: string | null | undefined): Charge
 }
 
 /** The sections a partner's rate sheet prices under its incoterm: its own
- *  sections the incoterm covers — an agent's FOB Charges only on an FOB
+ *  sections the incoterm covers, an agent's FOB Charges only on an FOB
  *  sheet (EXW = freight + ex-works, FOB = freight + FOB charges). */
 export function partnerSectionsForIncoterm(
   kind: PartnerKind,
@@ -143,7 +143,7 @@ export function breakRange(label: string): [number, number] | null {
 }
 
 /** Index of the break that applies to `kg`: the highest floor it clears,
- *  then the narrowest range — so 35 kg on 0-45 / 0-100 / 0-300 picks 0-45. */
+ *  then the narrowest range, so 35 kg on 0-45 / 0-100 / 0-300 picks 0-45. */
 export function matchingIndex(labels: string[], kg: number): number {
   if (!(kg > 0)) return -1;
   let best = -1;
@@ -300,7 +300,7 @@ export function partnerIdKey(kind: PartnerKind) {
 
 /* ---------- trade routes from quotes / shipments ---------- */
 
-/** "CNSZX — Shenzhen, China" -> "CNSZX"; free text stays as typed. */
+/** "CNSZX, Shenzhen, China" -> "CNSZX"; free text stays as typed. */
 export function placeShort(s: string | null | undefined): string {
   const t = (s ?? "").trim();
   const m = t.match(/^([A-Z]{2}[A-Z0-9]{3})\b/);

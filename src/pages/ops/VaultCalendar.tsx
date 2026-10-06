@@ -58,7 +58,7 @@ export default function VaultCalendar({ scope }: { scope: VaultBudgetScope }) {
         Calendar <span className="chip sm on">{scope === "personal" ? "Personal" : "Business"}</span>
       </h3>
       <p className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
-        Due dates from your private Notes above — nothing else feeds this.
+        Due dates from your private Notes above, nothing else feeds this.
       </p>
 
       <div className="cal-toolbar">

@@ -242,7 +242,7 @@ export default function PortalLayout() {
           <PortalSearch />
           <div className="pt-top-right">
             {meQ.data && (
-              <button type="button" className="pt-company-btn" onClick={() => setCompanyOpen(true)} title="Your company details — click to update">
+              <button type="button" className="pt-company-btn" onClick={() => setCompanyOpen(true)} title="Your company details, click to update">
                 {meQ.data.company} <span aria-hidden>✎</span>
               </button>
             )}
@@ -411,7 +411,7 @@ function CompanyDetailsModal({ me, onClose }: { me: PortalMe; onClose: () => voi
         {area("address", "Company Address")}
         {area("physical_address", "Delivery Address")}
       </div>
-      <p className="hint">These details update your customer account with ExPac — they're used on your quotations, documents and invoices.</p>
+      <p className="hint">These details update your customer account with ExPac, they're used on your quotations, documents and invoices.</p>
       <div className="modal-foot-row">
         <button type="button" className="btn outline" onClick={onClose}>
           Cancel

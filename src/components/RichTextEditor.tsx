@@ -52,7 +52,7 @@ function storagePathFromUrl(url: string): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-/** Body + bottom action bar — bold/italic/underline/lists, a link, inline
+/** Body + bottom action bar, bold/italic/underline/lists, a link, inline
  *  images (via the shared Media gallery), merge-tag insertion, an
  *  unsubscribe-link insert, and a raw-HTML code view. Deliberately
  *  hand-rolled (execCommand) rather than a component library, to match

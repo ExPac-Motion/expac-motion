@@ -152,7 +152,7 @@ export default function ContactsPage({
   const [search, setSearch] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
   // Slot in the header row (beside "+ Add ...") that DataTable portals its
-  // Save Grid / Reset columns / Table settings controls into — keeps the
+  // Save Grid / Reset columns / Table settings controls into, keeps the
   // search-bar row free so the table starts right after it.
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
@@ -256,7 +256,7 @@ export default function ContactsPage({
     );
   }, [rows, search]);
 
-  // Rows mirrored from the other contact book are read-only here — not selectable.
+  // Rows mirrored from the other contact book are read-only here, not selectable.
   const selectable = useMemo(
     () =>
       filtered.filter(
@@ -387,10 +387,10 @@ export default function ContactsPage({
   async function onInvite(row: Contact) {
     // Defaults to the client's own (primary) email; staff can type a
     // different address to invite a secondary contact at the same company
-    // instead — each gets their own portal login, both scoped to this
+    // instead, each gets their own portal login, both scoped to this
     // client_id.
     const email = window.prompt(
-      "Portal invite email (defaults to the primary contact — edit to invite a secondary contact instead):",
+      "Portal invite email (defaults to the primary contact, edit to invite a secondary contact instead):",
       row.email ?? "",
     );
     if (email === null) return; // cancelled
@@ -423,7 +423,7 @@ export default function ContactsPage({
       {
         key: "actions",
         fixed: true,
-        // Partner lists carry a mail icon too (7 icons) — keep them clear of Company.
+        // Partner lists carry a mail icon too (7 icons), keep them clear of Company.
         width: isPartner ? 250 : 200,
         header: (
           <RowActionsHead
@@ -994,7 +994,7 @@ export default function ContactsPage({
                   >
                     {RATE_TIERS.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.label} ({t.margin}%) — {t.note}
+                        {t.label} ({t.margin}%), {t.note}
                       </option>
                     ))}
                   </select>
@@ -1199,7 +1199,7 @@ function ViewField({
 }
 
 /** Old-format rate structures (0114), shown under the code-based rate
- *  sheets only while a partner still has any — read and copy across. */
+ *  sheets only while a partner still has any, read and copy across. */
 function LegacyRateStructures({
   kind,
   partnerId,
@@ -1214,7 +1214,7 @@ function LegacyRateStructures({
   return (
     <details className="rs-wrap">
       <summary className="hint">
-        Earlier rate structures (old format, {q.data.length}) — copy these into a rate sheet above
+        Earlier rate structures (old format, {q.data.length}), copy these into a rate sheet above
       </summary>
       <RateStructures kind={kind} partnerId={partnerId} partnerName={partnerName} />
     </details>

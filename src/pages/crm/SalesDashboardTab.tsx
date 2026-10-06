@@ -82,7 +82,7 @@ const OPEN_OPP_STATUSES: OpportunityStatus[] = [
   "quote_accepted",
 ];
 
-// New Lead + Quote Sent — quotes not yet won or lost.
+// New Lead + Quote Sent, quotes not yet won or lost.
 const OPEN_QUOTE_STATUSES: QuoteStatus[] = ["open", "sent"];
 
 const Icon = {
@@ -173,7 +173,7 @@ export default function SalesDashboardTab() {
   const followLogQ = useFollowUpLog();
   const settingsQ = useCompanySettings();
   const [editingTargets, setEditingTargets] = useState(false);
-  // Month the dashboard reports on — this month by default; step back to
+  // Month the dashboard reports on, this month by default; step back to
   // review earlier months. Live views (pipeline, unbilled, open opps, lead
   // sources, activity) ignore it.
   const [period, setPeriod] = useState<Period>(currentPeriod);
@@ -195,7 +195,7 @@ export default function SalesDashboardTab() {
   const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
   const leads = useMemo(() => leadsQ.data ?? [], [leadsQ.data]);
   // A real opportunity's stored value never syncs once a quote is linked to
-  // it — recompute live from the quote so pipeline totals below match what
+  // it, recompute live from the quote so pipeline totals below match what
   // the Opportunities board shows (see withLiveOpportunityValues).
   const opps = useMemo(
     () => withLiveOpportunityValues(oppsQ.data ?? [], quotesQ.data ?? []),
@@ -224,18 +224,18 @@ export default function SalesDashboardTab() {
     const totals = acceptedThisMonth.map((q) => chargeTotals(q.quote_lines, fxOf(q)));
     const revenue = totals.reduce((s, t) => s + t.sell, 0);
     // Same figure as the printable quotation's Grand Total (sell + VAT),
-    // summed across every accepted/completed quote — VAT-inclusive, unlike
+    // summed across every accepted/completed quote, VAT-inclusive, unlike
     // Revenue below which stays excl. VAT.
     const sales = totals.reduce((s, t) => s + t.sellIncl, 0);
     const grossProfit = totals.reduce((s, t) => s + t.gp, 0);
     // Cost of Sales Ratio = Total Cost of Sales ÷ Revenue (excl. VAT) × 100.
-    // Target 85% or lower — going over erodes margin.
+    // Target 85% or lower, going over erodes margin.
     const costOfSales = totals.reduce((s, t) => s + t.cost, 0);
     const costRatio = revenue > 0 ? (costOfSales / revenue) * 100 : 0;
     const leadsThisMonth = leads.filter((l) => inPeriod(l.created_at, period));
     const newLeads = leadsThisMonth.length;
     // Open Pipeline: VAT-inclusive total of this month's not-yet-won quotes
-    // (New Lead + Quote Sent) — same Grand Total formula as Revenue/Sales
+    // (New Lead + Quote Sent), same Grand Total formula as Revenue/Sales
     // above, just for quotes that haven't been accepted yet.
     const openQuotesThisMonth = quotes.filter(
       (q) => OPEN_QUOTE_STATUSES.includes(q.status) && inPeriod(q.created_at, period),
@@ -246,7 +246,7 @@ export default function SalesDashboardTab() {
     );
     const openOppCount = openQuotesThisMonth.length;
     // Lead → Customer: scoped to this month's leads too, same cohort as
-    // Total Leads above — how many of them have converted so far.
+    // Total Leads above, how many of them have converted so far.
     const converted = leadsThisMonth.filter((l) => l.promoted_at).length;
     const convRate =
       leadsThisMonth.length > 0 ? (converted / leadsThisMonth.length) * 100 : 0;
@@ -358,7 +358,7 @@ export default function SalesDashboardTab() {
     });
     const totalValue = rows.reduce((s, r) => s + r.value, 0);
     // Scaled against an overall pipeline target when one's set (Edit
-    // Targets), otherwise against total pipeline value across every stage —
+    // Targets), otherwise against total pipeline value across every stage,
     // never against just whichever single stage holds the most, or that
     // stage always renders as a full bar regardless of how it's doing.
     const target = settingsQ.data?.opportunities_pipeline_target || 0;
@@ -584,7 +584,7 @@ export default function SalesDashboardTab() {
       >
         <p className="muted" style={{ margin: 0 }}>
           Sales performance for <strong>{periodLabel(period)}</strong>
-          {isCurrent ? " (month to date)" : ""} — pipeline, unbilled and lead
+          {isCurrent ? " (month to date)" : ""}, pipeline, unbilled and lead
           sources are always live.
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -648,7 +648,7 @@ export default function SalesDashboardTab() {
           </div>
           <div className="kpi-value">{money(kpis.revenue)}</div>
           <div className="kpi-foot">
-            <span>Excl. VAT — see Cost of Sales Ratio for the margin target</span>
+            <span>Excl. VAT, see Cost of Sales Ratio for the margin target</span>
           </div>
         </div>
         <div className="kpi static">

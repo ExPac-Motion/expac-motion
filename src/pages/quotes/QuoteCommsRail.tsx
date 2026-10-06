@@ -2,7 +2,7 @@ import type { Quote } from "../../lib/types";
 import QuoteCommsPanel from "./QuoteCommsPanel";
 
 /**
- * Docked, collapsible "Activity Panel" on the right of the Quotations list —
+ * Docked, collapsible "Activity Panel" on the right of the Quotations list,
  * same method as CommsRail on Active Shipments, against a Quote instead of
  * a Job. Collapsed = a thin edge tab; expanded = a fixed 420px panel showing
  * the comms thread for the selected quotation.
@@ -47,7 +47,7 @@ export default function QuoteCommsRail({
           <QuoteCommsPanel key={quote.id} quote={quote} />
         ) : (
           <p className="hint" style={{ padding: "12px 2px" }}>
-            Pick a quotation from the list — click its <strong>✉ Messages</strong> button.
+            Pick a quotation from the list, click its <strong>✉ Messages</strong> button.
           </p>
         )}
       </div>

@@ -2,7 +2,7 @@
 // User and Partner Portal User get each switch from Settings > Roles &
 // Permissions (company_settings.role_permissions), overridable per login on
 // Settings > Team (profiles.permissions). Customer Portal logins keep their
-// own portal_permissions — the role settings are the defaults for new ones.
+// own portal_permissions, the role settings are the defaults for new ones.
 
 /** Motion areas (0133) + switches (0131). */
 export type StaffPerm =
@@ -49,7 +49,7 @@ export const STAFF_PERMS: PermDef<StaffPerm>[] = [
   {
     key: "delete",
     label: "Delete records",
-    hint: "Quotes, shipments, customers, partners, leads, tasks and lists — locked in the database",
+    hint: "Quotes, shipments, customers, partners, leads, tasks and lists, locked in the database",
   },
 ];
 
@@ -75,7 +75,7 @@ export interface RolePermissions {
   client: Record<ClientPerm, boolean>;
 }
 
-/** Built-in defaults — same as the database's (0131). */
+/** Built-in defaults, same as the database's (0131). */
 export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
   // Delete is admin-only unless switched on (0132 locks it in the database).
   user: {

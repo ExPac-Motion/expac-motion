@@ -7,13 +7,13 @@ import { formatDate, formatDateTime, portCode } from "../lib/format";
 import type { TrackedShipment } from "../lib/types";
 
 /**
- * Public, unauthenticated "track by shipment number" page — no portal login.
+ * Public, unauthenticated "track by shipment number" page, no portal login.
  * Meant to replace the generic ShipsGo embed widget that currently lives at
  * expac.co.za/live-tracking (that widget searches ShipsGo's own database by
- * container/BL/booking/AWB number — it has never heard of our shipment
+ * container/BL/booking/AWB number, it has never heard of our shipment
  * numbers like SEA170869, so a customer searching one there always comes
  * back empty). This page looks up our own job_tracking data instead, via
- * the track_shipment() RPC (security definer, granted to anon — see
+ * the track_shipment() RPC (security definer, granted to anon, see
  * migration 0064).
  */
 export default function PublicTrackPage() {
@@ -86,7 +86,7 @@ export default function PublicTrackPage() {
           )}
           {state === "error" && (
             <div className="panel">
-              <p className="hint">Something went wrong — please try again shortly.</p>
+              <p className="hint">Something went wrong, please try again shortly.</p>
             </div>
           )}
 

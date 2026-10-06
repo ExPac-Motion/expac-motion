@@ -1,10 +1,10 @@
-// /partner/signup?token=… — an agent / transporter / clearing agent creates
+// /partner/signup?token=…, an agent / transporter / clearing agent creates
 // their partner-portal login from an ExPac invite (migration 0121).
 // signup_kind "partner" makes handle_new_user() create the profile as
 // role='partner' (never staff) from the first instant; claim_partner_invite
 // then links it to the partner, and only if the email matches the invite.
 // Like the customer invite page, it only ever claims right after THIS
-// form's own signUp / signIn — never an ambient session.
+// form's own signUp / signIn, never an ambient session.
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -76,7 +76,7 @@ export default function PartnerSignupPage() {
       setErr(
         e2 instanceof Error
           ? e2.message
-          : "Still can't sign you in — make sure you clicked the confirmation link first.",
+          : "Still can't sign you in, make sure you clicked the confirmation link first.",
       );
     } finally {
       setBusy(false);
@@ -107,7 +107,7 @@ export default function PartnerSignupPage() {
           {brand}
           <h1>Invite not found</h1>
           <p className="sub">
-            This link is invalid or has already been used. Ask ExPac for a new one — or, if you
+            This link is invalid or has already been used. Ask ExPac for a new one, or, if you
             already have a login, <a href="/login">sign in</a>.
           </p>
         </div>

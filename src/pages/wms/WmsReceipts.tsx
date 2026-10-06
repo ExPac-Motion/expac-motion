@@ -313,12 +313,12 @@ function ReceiptViewModal({
     ["Pallets", String(r.pallets)],
     ["Gross kg", qty(r.gross_kg)],
     ["CBM", qty(r.volume_cbm, 3)],
-    ["Condition", CONDITION_LABEL[r.condition] + (r.condition_notes ? ` — ${r.condition_notes}` : "")],
+    ["Condition", CONDITION_LABEL[r.condition] + (r.condition_notes ? `, ${r.condition_notes}` : "")],
     ["Hazardous", r.hazardous ? "Yes" : "No"],
   ];
   return (
     <Modal
-      title={`${r.receipt_no} — ${lk.clientName(r.client_id)}`}
+      title={`${r.receipt_no}, ${lk.clientName(r.client_id)}`}
       onClose={onClose}
       wide
       headerActions={
@@ -568,7 +568,7 @@ export function ReceiptEditModal({
             >
               {lk.warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.code} — {w.name}
+                  {w.code}, {w.name}
                 </option>
               ))}
             </select>
@@ -578,7 +578,7 @@ export function ReceiptEditModal({
             <select
               value={f.location_id ?? ""}
               disabled={locked}
-              title={locked ? "Stock has moved — use Warehouse Movements" : undefined}
+              title={locked ? "Stock has moved, use Warehouse Movements" : undefined}
               onChange={(e) => set("location_id", orNull(e.target.value))}
             >
               <option value="">Unassigned</option>
@@ -638,11 +638,11 @@ export function ReceiptEditModal({
                 }));
               }}
             >
-              <option value="">No shipment — storage only</option>
+              <option value="">No shipment, storage only</option>
               {clientJobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.reference}
-                  {j.client?.company ? ` — ${j.client.company}` : ""}
+                  {j.client?.company ? `, ${j.client.company}` : ""}
                 </option>
               ))}
             </select>
@@ -790,7 +790,7 @@ export function ReceiptEditModal({
               min={0}
               value={f.pieces}
               disabled={locked}
-              title={locked ? "Stock has moved — use a cycle count to correct pieces" : undefined}
+              title={locked ? "Stock has moved, use a cycle count to correct pieces" : undefined}
               onChange={(e) => set("pieces", e.target.value as unknown as number)}
             />
           </div>

@@ -166,8 +166,8 @@ export function MoveStockModal({ onClose, receiptId }: { onClose: () => void; re
             <option value="">— pick a receipt in stock —</option>
             {inStock.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.receipt_no} — {lk.clientName(r.client_id)}
-                {r.description ? ` — ${r.description}` : ""} ({r.on_hand} pcs)
+                {r.receipt_no}, {lk.clientName(r.client_id)}
+                {r.description ? `, ${r.description}` : ""} ({r.on_hand} pcs)
               </option>
             ))}
           </select>

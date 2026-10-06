@@ -50,7 +50,7 @@ export default function TimeInput({
       return;
     }
     const parsed = parseTime(t);
-    if (!parsed) return setText(hhmm(value)); // invalid — revert
+    if (!parsed) return setText(hhmm(value)); // invalid, revert
     setText(parsed);
     if (parsed !== hhmm(value)) onChange(parsed);
   }

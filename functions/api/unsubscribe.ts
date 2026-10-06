@@ -1,9 +1,9 @@
 /**
- * Cloudflare Pages Function — RFC 8058 one-click unsubscribe endpoint.
+ * Cloudflare Pages Function, RFC 8058 one-click unsubscribe endpoint.
  *
  * This is the target of the `List-Unsubscribe` / `List-Unsubscribe-Post`
  * email headers (see send-mail.ts). Mail clients (Gmail, Outlook, Yahoo) hit
- * this with a bare server-to-server POST — no browser, no JS — so it has to
+ * this with a bare server-to-server POST, no browser, no JS, so it has to
  * do the real work itself rather than just loading the React app's
  * `/unsubscribe` page (which stays as the human-facing link inside the email
  * body; this endpoint is only ever reached automatically).

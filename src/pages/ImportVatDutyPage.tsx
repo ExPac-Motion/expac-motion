@@ -155,7 +155,7 @@ export default function ImportVatDutyPage() {
       setRoeAsOf(asOf);
       toast(
         missing.length
-          ? `Live ROE applied — no rate for ${missing.join(", ")}`
+          ? `Live ROE applied, no rate for ${missing.join(", ")}`
           : "Live ROE applied",
       );
     } catch (e) {
@@ -241,7 +241,7 @@ export default function ImportVatDutyPage() {
               {quotes.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.reference}
-                  {q.client?.company ? ` — ${q.client.company}` : ""}
+                  {q.client?.company ? `, ${q.client.company}` : ""}
                 </option>
               ))}
             </select>
@@ -449,7 +449,7 @@ export default function ImportVatDutyPage() {
                 <tfoot>
                   <tr>
                     {/* colSpan=6 covers Description/HS Code/Qty/Unit price/Cur/ROE
-                        (no total makes sense for a rate) — the column count
+                        (no total makes sense for a rate), the column count
                         must still total 15 to keep every total below it
                         aligned under the right header. */}
                     <td colSpan={6} style={{ textAlign: "right", fontWeight: 700 }}>
@@ -561,7 +561,7 @@ export default function ImportVatDutyPage() {
               <strong>DIS-01 Disbursement Fee</strong> charge lines on{" "}
               {selectedQuote?.reference ?? "the quotation"} as ZAR lines. The
               disbursement fee stays {disbRate || "2.5"}% of the VAT + Duty on
-              the quote — edit the VAT/Duty in the builder and it follows. The
+              the quote, edit the VAT/Duty in the builder and it follows. The
               worksheet is saved first so it can be reopened here and amended.
             </p>
           </div>

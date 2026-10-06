@@ -224,11 +224,11 @@ function DefaultsTab() {
   return (
     <form onSubmit={onSubmit}>
       <p className="muted" style={{ marginTop: 0 }}>
-        Seeded into every new quotation — still editable per quote.
+        Seeded into every new quotation, still editable per quote.
       </p>
       <div className="grid2">
         <div className="field">
-          <label>Default FX Rate — USD/ZAR</label>
+          <label>Default FX Rate, USD/ZAR</label>
           <input
             name="default_fx_usd_zar"
             type="number"
@@ -237,7 +237,7 @@ function DefaultsTab() {
           />
         </div>
         <div className="field">
-          <label>Default FX Rate — CNY/ZAR</label>
+          <label>Default FX Rate, CNY/ZAR</label>
           <input
             name="default_fx_cny_zar"
             type="number"
@@ -246,7 +246,7 @@ function DefaultsTab() {
           />
         </div>
         <div className="field">
-          <label>Default FX Rate — EUR/ZAR</label>
+          <label>Default FX Rate, EUR/ZAR</label>
           <input
             name="default_fx_eur_zar"
             type="number"
@@ -255,7 +255,7 @@ function DefaultsTab() {
           />
         </div>
         <div className="field">
-          <label>Default FX Rate — GBP/ZAR</label>
+          <label>Default FX Rate, GBP/ZAR</label>
           <input
             name="default_fx_gbp_zar"
             type="number"
@@ -318,7 +318,7 @@ function TeamTab() {
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
   // Every login, each under its real role: staff first (their role can be
-  // changed here), then partner-portal and customer-portal logins — those
+  // changed here), then partner-portal and customer-portal logins, those
   // are read-only here (managed on the partner / customer record), so a
   // portal login can never be turned into staff from this list.
   const rows = [...(data ?? [])].sort((a, b) => roleRank(a) - roleRank(b));
@@ -347,7 +347,7 @@ function TeamTab() {
   return (
     <>
       <p className="muted" style={{ marginTop: 0 }}>
-        Every login and its role. Only Admin can change a staff role — Standard User is full Motion
+        Every login and its role. Only Admin can change a staff role, Standard User is full Motion
         access, Restricted blocks it entirely. Partner Portal and Customer Portal logins are managed on
         the partner / customer record.
       </p>
@@ -439,7 +439,7 @@ function RolesTab() {
       setDraft(null);
       toast("Role permissions saved");
     } catch (e) {
-      toastError(e instanceof Error ? e.message : "Could not save — is migration 0131 applied?");
+      toastError(e instanceof Error ? e.message : "Could not save, is migration 0131 applied?");
     }
   }
 
@@ -495,16 +495,16 @@ function RolesTab() {
         partner logins and these settings). A single login can be given more or less on{" "}
         <strong>Team › Permissions</strong>.{!isAdmin && " Only Admin can change these."}
       </p>
-      {section("Standard User", "Staff logins — full Motion access apart from the switches below.", "user", STAFF_PERMS)}
+      {section("Standard User", "Staff logins, full Motion access apart from the switches below.", "user", STAFF_PERMS)}
       {section(
         "Partner Portal User",
-        "Agent / transporter / clearing agent / destination agent logins — they always see and edit their own rate sheets.",
+        "Agent / transporter / clearing agent / destination agent logins, they always see and edit their own rate sheets.",
         "partner",
         PARTNER_PERMS,
       )}
       {section(
         "Customer Portal",
-        "Defaults for new customer logins — each login's own sections stay editable on Customers › Portal Access.",
+        "Defaults for new customer logins, each login's own sections stay editable on Customers › Portal Access.",
         "client",
         CLIENT_PERMS,
       )}
@@ -526,7 +526,7 @@ function RolesTab() {
 
 /** Settings › Team › Access: every function a login can use, as a
  *  dropdown checklist. Ticking / unticking saves straight away as that
- *  login's own setting (Standard User / Partner Portal User — Role default
+ *  login's own setting (Standard User / Partner Portal User, Role default
  *  follows Settings › Roles & Permissions) or its portal sections
  *  (Customer Portal). Admin always has everything. */
 function AccessChecklist({ profile: p, canEdit }: { profile: Profile; canEdit: boolean }) {
@@ -667,7 +667,7 @@ function EmailTab() {
       <form onSubmit={onSubmit}>
         <p className="muted" style={{ marginTop: 0 }}>
           Applied to campaigns, follow-up emails and form notifications. The
-          sending address stays the verified domain — only the display name
+          sending address stays the verified domain, only the display name
           and reply-to change.
         </p>
         <div className="grid2">
@@ -715,7 +715,7 @@ function EmailTab() {
         >
           <strong>Resend</strong>
           <p className="muted small" style={{ margin: "4px 0 0" }}>
-            Live — sends via the Resend API. Configured in Cloudflare Pages
+            Live, sends via the Resend API. Configured in Cloudflare Pages
             environment variables.
           </p>
         </div>
@@ -743,7 +743,7 @@ function ShipmentCommsTab() {
       description={
         <>
           The customer update email sent from a shipment's Comms panel. Each
-          freight group has its own template — edit the wording and drop in{" "}
+          freight group has its own template, edit the wording and drop in{" "}
           <code>{"{{ shipment.number }}"}</code>-style codes. The preview
           renders a real shipment; missing values show blank.
         </>
@@ -771,7 +771,7 @@ function ShipmentRepliesTab() {
       render={renderShipmentEmail}
       description={
         <>
-          A quick chat-style reply within an existing thread — no
+          A quick chat-style reply within an existing thread, no
           shipment-data block, just your message and the signature. Use
           Shipment Comms instead for a full status-update notification.
         </>
@@ -799,11 +799,11 @@ function QuotationCommsTab() {
       render={renderQuoteEmail}
       description={
         <>
-          The customer update email sent from a quotation's Comms panel —
+          The customer update email sent from a quotation's Comms panel,
           same method as Shipment Comms, just with the quote's own status
           (New Lead/Quote Sent/Quote Accepted/Completed/Not Proceeding)
           instead of a shipment milestone. Each freight group has its own
-          template — edit the wording and drop in{" "}
+          template, edit the wording and drop in{" "}
           <code>{"{{ shipment.number }}"}</code>-style codes. The preview
           renders a real quotation; missing values show blank.
         </>
@@ -831,7 +831,7 @@ function QuotationRepliesTab() {
       render={renderQuoteEmail}
       description={
         <>
-          A quick chat-style reply within an existing thread — no
+          A quick chat-style reply within an existing thread, no
           quotation-data block, just your message and the signature. Use
           Quotation Comms instead for a full status-update notification.
         </>
@@ -841,10 +841,10 @@ function QuotationRepliesTab() {
   );
 }
 
-/** Shared by Shipment Comms/Replies and Quotation Comms/Replies — generic
+/** Shared by Shipment Comms/Replies and Quotation Comms/Replies, generic
  *  over the entity a template renders against (a Job or a Quote), since
  *  both share the same {id, mode, reference, client?.company} shape that
- *  the mode tabs and preview picker need. `lead?.company` is optional —
+ *  the mode tabs and preview picker need. `lead?.company` is optional,
  *  a Quote can be against a not-yet-promoted lead instead of a client;
  *  Job has no such field, so it's simply absent there. */
 function CommsTemplateEditor<
@@ -868,7 +868,7 @@ function CommsTemplateEditor<
 }: {
   config: ShipmentCommsConfig;
   entities: T[];
-  /** e.g. "shipment" / "quotation" — used in the preview-picker copy. */
+  /** e.g. "shipment" / "quotation", used in the preview-picker copy. */
   entityNoun: string;
   settingsField:
     | "shipment_comms"
@@ -977,7 +977,7 @@ function CommsTemplateEditor<
 
       <div className="field">
         <div className="merge-code-row">
-          <label>Email body — {SHIPMENT_MODE_LABEL[activeKey]}</label>
+          <label>Email body, {SHIPMENT_MODE_LABEL[activeKey]}</label>
           <MergeCodeMenu
             targetRef={bodyRef}
             onChange={(v) => setDraft({ body: v })}
@@ -1017,13 +1017,13 @@ function CommsTemplateEditor<
         >
           {modeEntities.length === 0 && entities.length > 0 && (
             <option value="">
-              (no {SHIPMENT_MODE_LABEL[activeKey]} {entityNoun}s yet — showing
+              (no {SHIPMENT_MODE_LABEL[activeKey]} {entityNoun}s yet, showing
               any)
             </option>
           )}
           {(modeEntities.length ? modeEntities : entities).map((e) => (
             <option key={e.id} value={e.id}>
-              {e.reference} — {e.client?.company ?? e.lead?.company ?? "—"}
+              {e.reference}, {e.client?.company ?? e.lead?.company ?? "—"}
             </option>
           ))}
         </select>

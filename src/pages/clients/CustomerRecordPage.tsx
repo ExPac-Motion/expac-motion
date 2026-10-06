@@ -71,7 +71,7 @@ type Draft = Partial<Record<keyof CustomerRecord, string | boolean | number | nu
 
 /**
  * Customers › <customer>: the full customer record as a tabbed page (laid out
- * after the user's reference screenshot) — General with the primary contact
+ * after the user's reference screenshot), General with the primary contact
  * and Customer Portal access, and a tab per area of the customer.
  */
 export default function CustomerRecordPage() {
@@ -327,7 +327,7 @@ export default function CustomerRecordPage() {
             </div>
             <p className="hint">
               The Rate Tier sets the margin the Quote Builder loads for this customer (Rates &amp; Tariff › Tier margins). A margin override
-              is recorded for reference — apply it on the quote's lines.
+              is recorded for reference, apply it on the quote's lines.
             </p>
           </>,
         )}
@@ -347,7 +347,7 @@ export default function CustomerRecordPage() {
           )}
         </>
       )}
-      {isNew && <p className="hint">Create the customer first — the other tabs open once it's saved.</p>}
+      {isNew && <p className="hint">Create the customer first, the other tabs open once it's saved.</p>}
       {!isNew && (
         <p className="hint" style={{ marginTop: 8 }}>
           <Link to={`/clients?tab=portal-access`}>All portal logins</Link>
@@ -357,7 +357,7 @@ export default function CustomerRecordPage() {
   );
 }
 
-/* Field helpers — labels inside the box, like the reference layout. Outside
+/* Field helpers, labels inside the box, like the reference layout. Outside
    the page component so inputs keep focus while typing. */
 const FieldCtx = createContext<{
   str: (k: keyof CustomerRecord) => string;

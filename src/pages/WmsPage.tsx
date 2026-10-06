@@ -33,7 +33,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   settings: { eyebrow: "Configuration", title: "WMS Settings" },
 };
 
-/** WMS (migration 0137) — sub-nav lives in the shared top-nav (Layout.tsx), driven by ?tab=. */
+/** WMS (migration 0137), sub-nav lives in the shared top-nav (Layout.tsx), driven by ?tab=. */
 export default function WmsPage() {
   const [params] = useSearchParams();
   const asked = params.get("tab") as Tab | null;

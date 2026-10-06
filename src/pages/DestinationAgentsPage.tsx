@@ -6,7 +6,7 @@ import {
   useUpdateContactsBulk,
 } from "../lib/hooks";
 
-/** Destination handling agents (0124) — destination handling charges. */
+/** Destination handling agents (0124), destination handling charges. */
 export default function DestinationAgentsPage() {
   return (
     <ContactsPage

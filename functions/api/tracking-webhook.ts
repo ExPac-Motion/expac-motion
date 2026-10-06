@@ -1,11 +1,11 @@
 /**
- * Cloudflare Pages Function — ShipsGo tracking webhook receiver.
+ * Cloudflare Pages Function, ShipsGo tracking webhook receiver.
  *
  * ShipsGo POSTs here whenever a tracked shipment changes. We verify the
  * call, fold the payload into our shape and write job_tracking +
  * tracking_events with the service-role key (no user session on a webhook).
  * Supabase Realtime then pushes the change to the ops board and the customer
- * portal — no polling, no Refresh button.
+ * portal, no polling, no Refresh button.
  *
  * Confirmed payload shape (captured 2026-09-11, OCEAN.SHIPMENTS.SHIPMENT_UPDATED):
  *   {
@@ -24,18 +24,18 @@
  *       created_at, updated_at, checked_at
  *     }
  *   }
- * No GPS coordinates anywhere in this payload — not for the vessel, not even
+ * No GPS coordinates anywhere in this payload, not for the vessel, not even
  * for the ports. PORT_COORDS below is our own lookup so the map has
  * something to plot; "vessel position" is the last movement whose
- * status is "ACT" (a real confirmed event), pinned at that event's port —
+ * status is "ACT" (a real confirmed event), pinned at that event's port,
  * never a fabricated live GPS fix.
  *
  * Air webhooks (AIR.SHIPMENTS.*) are presumed analogous (airline/flight
- * instead of carrier/vessel) but unconfirmed — normalised best-effort below;
+ * instead of carrier/vessel) but unconfirmed, normalised best-effort below;
  * tune once a real one lands (payloads are kept on job_tracking.raw).
  *
  * Env (Cloudflare Pages dashboard):
- *   SHIPSGO_WEBHOOK_SECRET   shared secret — matched against the
+ *   SHIPSGO_WEBHOOK_SECRET   shared secret, matched against the
  *                            X-Shipsgo-Signature HMAC, or an X-Webhook-Token
  *                            header, or a ?token= query param.
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY   (already set for mail-webhook)
@@ -89,7 +89,7 @@ async function authorised(env, req, rawBody) {
  *  Port coordinates (UN/LOCODE -> [lat, lon])
  *
  *  ShipsGo's webhook carries no GPS data at all, so this curated table is
- *  what puts POL / POD / event pins on the map. City-level accuracy — fine
+ *  what puts POL / POD / event pins on the map. City-level accuracy, fine
  *  for a small marker, not survey-grade. Covers the ports ExPac's own
  *  LOCODES list (src/lib/locodes.ts) actually quotes; extend as new lanes
  *  come up (a port missing here just renders without a map pin).
@@ -215,7 +215,7 @@ function normalise(payload) {
   const actuals = movements.filter((m) => m.isActual);
   // "Last event" reflects what has really happened (confirmed only); the
   // vessel/voyage is the booking's assigned vessel, which is known as soon as
-  // it's planned even before it sails — so pull it from the earliest
+  // it's planned even before it sails, so pull it from the earliest
   // movement that names one, actual or not.
   const latest = actuals.length ? actuals[actuals.length - 1] : movements[movements.length - 1];
   const lastActual = actuals[actuals.length - 1] || null;
@@ -250,7 +250,7 @@ function normalise(payload) {
     vesselImo: (vesselMovement && vesselMovement.vesselImo) || null,
     voyage: (vesselMovement && vesselMovement.voyage) || null,
     lastEvent: latest ? [latest.code, latest.locationName].filter(Boolean).join(" @ ") : null,
-    // The last CONFIRMED (status "ACT") event's port — never a fabricated
+    // The last CONFIRMED (status "ACT") event's port, never a fabricated
     // live GPS fix, since ShipsGo's webhook doesn't carry one.
     vesselLat: lastActual ? lastActual.lat : null,
     vesselLon: lastActual ? lastActual.lon : null,
@@ -313,7 +313,7 @@ async function findJob(env, { shipsgoId, numbers }) {
  * Push the tracked vessel / voyage / carrier / ETD / ETA back onto the job and
  * its quote, so the Quote Builder and every shipment document show the live
  * values. Tracking OVERWRITES what an operator typed (agreed 2026-09-30), but
- * only with values it actually has — a missing field never blanks one out.
+ * only with values it actually has, a missing field never blanks one out.
  * Sea: carrier -> shipping_line, plus vessel_name / voyage_no. Air / Courier:
  * carrier -> carrier_name (Agent / Airline). Failures are swallowed so the
  * tracking update itself always succeeds.

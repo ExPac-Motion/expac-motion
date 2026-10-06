@@ -129,7 +129,7 @@ export default function DashboardPage() {
     const counts = MILESTONES.map(
       (m) => jobs.filter((j) => j.milestone === m).length,
     );
-    // Scaled against every shipment, not the largest bucket here — otherwise
+    // Scaled against every shipment, not the largest bucket here, otherwise
     // whichever milestone happens to have the most shipments always renders
     // as a full bar, which says nothing about how that milestone is actually
     // doing (same "of N" idea as the Active Shipments by Mode bars above).
@@ -146,7 +146,7 @@ export default function DashboardPage() {
       return { st, count: qs.length, val };
     });
     // Scaled against total pipeline value across every stage, not just
-    // whichever single stage happens to hold the most value — same reasoning
+    // whichever single stage happens to hold the most value, same reasoning
     // as the funnel above.
     const total = rows.reduce((s, r) => s + r.val, 0);
     return { rows, max: Math.max(1, total) };
@@ -166,7 +166,7 @@ export default function DashboardPage() {
   }, [quotes]);
 
   // Active shipments whose ETA falls today .. today+10 (local dates),
-  // soonest first — the "Arrivals in the Next 10 Days" widget.
+  // soonest first, the "Arrivals in the Next 10 Days" widget.
   const arrivals = useMemo(() => {
     const d = new Date();
     const p = (n: number) => String(n).padStart(2, "0");

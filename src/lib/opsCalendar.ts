@@ -1,7 +1,7 @@
 import { isShipmentComplete } from "./types";
 import type { Job, JobTracking, OpsTask, Quote } from "./types";
 
-/** Local YYYY-MM-DD for a Y/M(0-based)/D triple — no timezone drift. */
+/** Local YYYY-MM-DD for a Y/M(0-based)/D triple, no timezone drift. */
 export function iso(y: number, m: number, d: number): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${y}-${p(m + 1)}-${p(d)}`;

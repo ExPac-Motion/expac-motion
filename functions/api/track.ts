@@ -1,24 +1,24 @@
 /**
- * Cloudflare Pages Function — scoped authenticated proxy to the ShipsGo v2 API.
+ * Cloudflare Pages Function, scoped authenticated proxy to the ShipsGo v2 API.
  *
  * The browser cannot call ShipsGo directly (CORS) and must never see the API
  * token. This function attaches `X-Shipsgo-User-Token` (kept as the
  * `SHIPSGO_TOKEN` environment variable in the Cloudflare Pages dashboard) and
  * forwards the request to https://api.shipsgo.com/v2<path>.
  *
- * The client (src/lib/tracking.ts) owns the ShipsGo-specific knowledge — which
- * path to hit and how to read the response — so this file never needs changing
+ * The client (src/lib/tracking.ts) owns the ShipsGo-specific knowledge, which
+ * path to hit and how to read the response, so this file never needs changing
  * when ShipsGo's schema shifts.
  *
  * Request (POST /api/track):
  *   { "path": "/ocean/shipments", "method": "POST", "query": {...}, "body": {...} }
  * Only GET/POST and paths under /ocean/ or /air/ are allowed. The caller must
  * be a signed-in staff login (Supabase bearer token, profiles.role admin /
- * user — same checks as functions/api/send-mail.ts).
+ * user, same checks as functions/api/send-mail.ts).
  *
  * Env: SHIPSGO_TOKEN, SUPABASE_URL, SUPABASE_ANON_KEY
  *
- * Local `npm run dev` (Vite) does not run this — the UI falls back to the cached
+ * Local `npm run dev` (Vite) does not run this, the UI falls back to the cached
  * job_tracking row and tells the user live refresh runs on the deployed site.
  *
  * Not part of the Vite build or `tsc` project (tsconfig includes only `src`);
@@ -48,7 +48,7 @@ async function verifyUser(env, authHeader) {
   }
 }
 
-/** Staff = profiles.role admin / user — mirrors public.is_staff(), including
+/** Staff = profiles.role admin / user, mirrors public.is_staff(), including
  *  treating a not-yet-created profile row as staff. Read with the caller's own
  *  token, so RLS lets them see only their own profile. */
 async function isStaffUser(env, authHeader, userId) {

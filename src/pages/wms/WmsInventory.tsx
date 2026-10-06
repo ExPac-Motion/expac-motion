@@ -176,7 +176,7 @@ export default function WmsInventory() {
       header: "Qty on hand",
       width: 110,
       render: (s) => (
-        <span title={s.estimated ? "Receipt part released — pro rata estimate" : undefined}>
+        <span title={s.estimated ? "Receipt part released, pro rata estimate" : undefined}>
           {s.qty}
           {s.estimated ? " ≈" : ""}
         </span>
@@ -288,7 +288,7 @@ export default function WmsInventory() {
           )
         ) : view === "sku" ? (
           skuRows.length === 0 ? (
-            <EmptyState>No SKUs on hand — add package items with SKU numbers on the receipts.</EmptyState>
+            <EmptyState>No SKUs on hand, add package items with SKU numbers on the receipts.</EmptyState>
           ) : (
             <DataTable tableKey="wms-inventory-sku" className="table--compact" toolsPortal={toolsSlot} columns={skuCols} rows={skuRows} rowKey={(s) => s.id} />
           )

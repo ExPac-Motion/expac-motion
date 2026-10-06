@@ -29,7 +29,7 @@ import {
 } from "../../lib/types";
 
 /** Staff always open the Share tab on the app's own origin, so the hosted
- *  form link + iframe embed are built from that — no hard-coded deploy URL.
+ *  form link + iframe embed are built from that, no hard-coded deploy URL.
  *  The pages.dev value is only a fallback for a non-browser context. */
 const SITE_URL =
   (typeof window !== "undefined" && window.location.origin) ||
@@ -496,7 +496,7 @@ function FormEditor({
         <div className="panel" style={{ maxWidth: 680 }}>
           {dirty && (
             <div className="wf-err" style={{ background: "var(--amber-tint)", color: "var(--amber-ink)" }}>
-              You have unsaved changes — Save first so the shared form matches.
+              You have unsaved changes, Save first so the shared form matches.
             </div>
           )}
           <div className="field">
@@ -545,7 +545,7 @@ function SubmissionsModal({
   const { data, isLoading } = useWebFormSubmissions(form.id);
   const rows = data ?? [];
   return (
-    <Modal title={`${form.name} — submissions`} onClose={onClose} wide>
+    <Modal title={`${form.name}, submissions`} onClose={onClose} wide>
       {isLoading ? (
         <Loading />
       ) : rows.length === 0 ? (

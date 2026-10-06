@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — send a customer email via Resend.
+ * Cloudflare Pages Function, send a customer email via Resend.
  *
  * Holds RESEND_API_KEY (Cloudflare Pages env). Verifies the caller is a
  * signed-in Supabase user, then POSTs to https://api.resend.com/emails and
@@ -7,7 +7,7 @@
  * (RLS allows it) so this stays secret-only, matching functions/api/track.ts.
  *
  * Env: RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO, SUPABASE_URL, SUPABASE_ANON_KEY,
- *      CRON_SECRET (optional — lets the follow-up pg_cron job call this with an
+ *      CRON_SECRET (optional, lets the follow-up pg_cron job call this with an
  *      `x-cron-key` header instead of a user JWT)
  *
  * Request (POST /api/send-mail):
@@ -15,12 +15,12 @@
  *     attachments?: [{ filename, content: base64 }], fromName?, replyTo?,
  *     unsubscribeUrl? }
  *
- * `unsubscribeUrl` (list mail only — campaigns / follow-ups) sets the
+ * `unsubscribeUrl` (list mail only, campaigns / follow-ups) sets the
  * `List-Unsubscribe` / `List-Unsubscribe-Post` headers so Gmail/Outlook/Yahoo
  * show their native one-click unsubscribe and count it favourably toward
  * sender reputation. It should point at /api/unsubscribe (this Pages
  * Function project's own one-click endpoint, not the browser-rendered
- * /unsubscribe page — mail clients POST to it directly with no JS).
+ * /unsubscribe page, mail clients POST to it directly with no JS).
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
@@ -32,7 +32,7 @@ function json(data, status) {
   });
 }
 
-// Default email typography — Aptos 11pt (matches Word / Outlook), with a
+// Default email typography, Aptos 11pt (matches Word / Outlook), with a
 // fallback stack for clients that don't ship Aptos. Kept in sync with
 // src/lib/mailStyle.ts (that module is in the Vite build and can't be imported
 // here).
@@ -42,7 +42,7 @@ const EMAIL_BODY_STYLE =
   "font-family:" + EMAIL_FONT_STACK + ";font-size:11pt;line-height:1.55;color:#2e2e2e";
 
 /** Wrap composed body HTML so every outgoing email defaults to Aptos 11pt.
- *  Idempotent — a body already wrapped by us is left alone. */
+ *  Idempotent, a body already wrapped by us is left alone. */
 function withDefaultFont(html) {
   if (!html) return html;
   if (String(html).includes("data-expac-mail-body")) return html;
@@ -76,7 +76,7 @@ async function verifyUser(env, authHeader) {
   }
 }
 
-/** Staff = profiles.role admin / user — mirrors public.is_staff(), including
+/** Staff = profiles.role admin / user, mirrors public.is_staff(), including
  *  treating a not-yet-created profile row as staff. Read with the caller's own
  *  token, so RLS lets them see only their own profile. */
 async function isStaffUser(env, authHeader, userId) {
@@ -95,7 +95,7 @@ async function isStaffUser(env, authHeader, userId) {
 }
 
 // Customer-portal and partner-portal logins may only email ExPac itself
-// (e.g. the "new portal signup" notice) — never send as ExPac to anyone else.
+// (e.g. the "new portal signup" notice), never send as ExPac to anyone else.
 const INTERNAL_DOMAIN = "@expac.co.za";
 
 export async function onRequestPost(context) {

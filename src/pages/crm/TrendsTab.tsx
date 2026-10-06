@@ -321,10 +321,10 @@ export default function TrendsTab() {
   const drillTitle: Record<DrillKind, string> = {
     sales: "Sales",
     revenue: "Revenue (accepted quotes)",
-    gp: "Gross Profit — accepted quotes",
+    gp: "Gross Profit, accepted quotes",
     won: "Quotes won",
     lost: "Quotes lost",
-    ratio: "Cost of Sales — accepted quotes",
+    ratio: "Cost of Sales, accepted quotes",
     leadsCreated: "Leads created",
     leadsConverted: "Leads converted to customer",
   };
@@ -642,7 +642,7 @@ export default function TrendsTab() {
 
       {drill && (
         <Modal
-          title={`${drillTitle[drill.kind]} — ${drill.bucket.label}`}
+          title={`${drillTitle[drill.kind]}, ${drill.bucket.label}`}
           onClose={() => setDrill(null)}
           wide
         >
@@ -738,7 +738,7 @@ export default function TrendsTab() {
               {drillOpportunities(drill.kind, drill.bucket).length > 0 && (
                 <div className="table-wrap" style={{ marginTop: 12 }}>
                   <p className="hint" style={{ marginBottom: 6 }}>
-                    Historical shipments (no linked quote — no cost data, excluded
+                    Historical shipments (no linked quote, no cost data, excluded
                     from Cost of Sales Ratio)
                   </p>
                   <table className="table--compact">

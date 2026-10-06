@@ -75,7 +75,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
     if (!q) return;
     try {
       await accept.mutateAsync(q.id);
-      toast("Shipment created — check Active Shipments");
+      toast("Shipment created, check Active Shipments");
       onClose();
       navigate("/jobs");
     } catch (e) {
@@ -260,7 +260,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                 </tr>
                 <tr>
                   <td colSpan={7} style={{ textAlign: "right" }} className="muted">
-                    Chg Weight (KGS) — max(actual{" "}
+                    Chg Weight (KGS), max(actual{" "}
                     {packTotals.totalActual.toFixed(2)}, volume{" "}
                     {packTotals.totalVolume.toFixed(2)})
                   </td>
@@ -425,7 +425,7 @@ function NotesField({
       className="qd-notes"
       rows={3}
       value={v}
-      placeholder="Add a follow-up note — who you spoke to, what's next…"
+      placeholder="Add a follow-up note, who you spoke to, what's next…"
       onChange={(e) => setV(e.target.value)}
       onBlur={() => {
         if (v !== (value ?? "")) onCommit(v);

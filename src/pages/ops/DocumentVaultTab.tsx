@@ -37,9 +37,9 @@ function bytesLabel(n: number | null): string {
 }
 
 /**
- * Control Tower › Document Vault: every document in one list — the generated
+ * Control Tower › Document Vault: every document in one list, the generated
  * paperwork for each active shipment (Delivery Release Order, Arrival
- * Notification, …) and every file uploaded to any shipment — each with View.
+ * Notification, …) and every file uploaded to any shipment, each with View.
  * "Document titles" edits the titles the generated documents print (0140).
  */
 export default function DocumentVaultTab() {

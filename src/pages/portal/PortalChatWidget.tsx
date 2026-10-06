@@ -4,7 +4,7 @@ import { useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
 import { formatDateTime } from "../../lib/format";
 
 /**
- * Floating chat toggle, available on every portal page — "chat to us" per
+ * Floating chat toggle, available on every portal page, "chat to us" per
  * the redesign brief. Messages are still per-shipment under the hood
  * (client_send_message needs a job_id, see 0026), so with more than one
  * shipment the panel opens with a small picker; sending still goes through
@@ -51,7 +51,7 @@ export default function PortalChatWidget() {
 
           {jobs.length === 0 ? (
             <p className="hint" style={{ padding: 14 }}>
-              You don't have any shipments yet — nothing to chat about.
+              You don't have any shipments yet, nothing to chat about.
             </p>
           ) : (
             <>
@@ -73,7 +73,7 @@ export default function PortalChatWidget() {
                   <Loading />
                 ) : messages.length === 0 ? (
                   <p className="hint">
-                    No messages yet — say hello about {jobs[0]?.reference}.
+                    No messages yet, say hello about {jobs[0]?.reference}.
                   </p>
                 ) : (
                   messages.map((m) => (

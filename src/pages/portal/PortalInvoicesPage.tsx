@@ -13,7 +13,7 @@ function bytesLabel(n: number | null): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Invoices — for now, just shipment documents staff has tagged "Invoice"
+/** Invoices, for now, just shipment documents staff has tagged "Invoice"
  *  and made visible to the customer (see DOCUMENT_TYPES / DocumentsSection
  *  in JobsBoard.tsx). No calculated billing yet, per the brief. */
 export default function PortalInvoicesPage() {

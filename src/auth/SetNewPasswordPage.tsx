@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
 
 /** Shown in place of any route while a password-recovery session is active
- *  (i.e. the user just clicked a reset link from their email) — see
+ *  (i.e. the user just clicked a reset link from their email), see
  *  AuthProvider's passwordRecovery flag. */
 export default function SetNewPasswordPage() {
   const { updatePassword, signOut } = useAuth();

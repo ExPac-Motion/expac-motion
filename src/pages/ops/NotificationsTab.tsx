@@ -90,7 +90,7 @@ export default function NotificationsTab() {
     null,
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // Snapshot "now" once per mount — keeps the feed calc pure across re-renders.
+  // Snapshot "now" once per mount, keeps the feed calc pure across re-renders.
   const [now] = useState(() => Date.now());
 
   const isLoading =

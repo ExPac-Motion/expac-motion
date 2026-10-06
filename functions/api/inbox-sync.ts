@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — sync the support@ mailbox into the Admin Inbox
+ * Cloudflare Pages Function, sync the support@ mailbox into the Admin Inbox
  * (Sales CRM › Inbox, migration 0134).
  *
  * Connects over IMAP (Workers TCP sockets), lists the last 30 days of INBOX,
@@ -7,7 +7,7 @@
  * subject / date / Message-ID / threading headers / flags) to
  * inbox_messages and the raw .eml to the private "inbox" storage bucket. The
  * app parses the .eml when a message is opened, so this function stays light
- * (no MIME decoding here). Up to BATCH new messages per run — the 5-minute
+ * (no MIME decoding here). Up to BATCH new messages per run, the 5-minute
  * cron drains any backlog. Also refreshes Seen / Answered flags (read or
  * answered in Outlook / webmail) for the 30-day window.
  *
@@ -170,7 +170,7 @@ function tokenize(text) {
       i = j + 1;
       continue;
     }
-    // atom (incl. BODY[HEADER.FIELDS (A B)] — keep bracketed parts together)
+    // atom (incl. BODY[HEADER.FIELDS (A B)], keep bracketed parts together)
     let s = "";
     let depth = 0;
     while (i < text.length) {
@@ -453,7 +453,7 @@ async function sync(env) {
         main.added += j.added;
       }
     } catch {
-      /* Junk folder unreadable or 0136 not applied yet — Inbox still synced */
+      /* Junk folder unreadable or 0136 not applied yet, Inbox still synced */
     }
     await imap.cmd("LOGOUT").catch(() => undefined);
     return { added: main.added, pending: main.pending + junkPending, uidvalidity: main.uidvalidity };
@@ -490,7 +490,7 @@ export async function onRequestPost({ request, env }) {
     return json(
       {
         error:
-          "The inbox isn't connected yet — add IMAP_HOST, IMAP_PORT, IMAP_USER and IMAP_PASSWORD " +
+          "The inbox isn't connected yet, add IMAP_HOST, IMAP_PORT, IMAP_USER and IMAP_PASSWORD " +
           "to the Cloudflare Pages project (Settings › Variables and Secrets), then redeploy.",
         notConnected: true,
       },

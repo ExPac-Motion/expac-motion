@@ -145,7 +145,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
         Notes <span className="chip sm on">{scope === "personal" ? "Personal" : "Business"}</span>
       </h3>
       <p className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
-        Private to you — never shared or linked elsewhere in the system.
+        Private to you, never shared or linked elsewhere in the system.
       </p>
 
       <div className="ct-quickadd">
@@ -286,7 +286,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
                     <button
                       className={`task-check is-${t.status}`}
                       onClick={() => cycleStatus(t)}
-                      title={`Status: ${t.status} — click to advance`}
+                      title={`Status: ${t.status}, click to advance`}
                       aria-label="Advance status"
                     />
                   ) : (
@@ -295,7 +295,7 @@ export default function VaultNotes({ scope }: { scope: VaultBudgetScope }) {
                   <span className={`prio-dot ${PRIO_DOT[t.priority]}`} />
                   <button className="task-title" onClick={() => setEdit(t)}>
                     {t.title}
-                    {t.body && <span className="task-body"> — {t.body}</span>}
+                    {t.body && <span className="task-body">, {t.body}</span>}
                   </button>
                   {t.due_date && (
                     <span className={`due-badge${overdue ? " over" : ""}`}>

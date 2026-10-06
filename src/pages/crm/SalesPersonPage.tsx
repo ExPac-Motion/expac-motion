@@ -251,7 +251,7 @@ export default function SalesPersonPage() {
           error={profilesQ.error ?? quotesQ.error ?? leadsQ.error ?? settingsQ.error}
         />
       ) : people.length === 0 ? (
-        <EmptyState>No team members yet — add one in Settings.</EmptyState>
+        <EmptyState>No team members yet, add one in Settings.</EmptyState>
       ) : (
         <DataTable
           tableKey="sales-person"
@@ -265,7 +265,7 @@ export default function SalesPersonPage() {
 
       {viewing && (
         <Modal
-          title={`${viewing.full_name || "Team member"} — Targets`}
+          title={`${viewing.full_name || "Team member"}, Targets`}
           onClose={() => setViewing(null)}
           headerActions={
             <button
@@ -369,7 +369,7 @@ function TargetsModal({
   }
 
   return (
-    <Modal title={`${profile.full_name || "Team member"} — Targets`} onClose={onClose}>
+    <Modal title={`${profile.full_name || "Team member"}, Targets`} onClose={onClose}>
       <form onSubmit={onSubmit}>
         <div className="field">
           <label>Sales Target (R)</label>

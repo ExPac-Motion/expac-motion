@@ -25,7 +25,7 @@ export const MERGE_CODES: MergeCode[] = [
   { token: "{{ today }}", label: "Today’s date" },
 ];
 
-/** The fuller code set for the Shipment Comms template editor — everything a
+/** The fuller code set for the Shipment Comms template editor, everything a
  *  shipment-notification email can reference. */
 export const SHIPMENT_MERGE_CODES: MergeCode[] = [
   { token: "{{ customer.name }}", label: "Customer name" },
@@ -54,7 +54,7 @@ export interface MergeContext {
   name?: string;
   /** contact.company */
   company?: string;
-  /** customer.name — falls back to `company` when not given */
+  /** customer.name, falls back to `company` when not given */
   customerName?: string;
   /** customer.reference / PO number */
   customerReference?: string;
@@ -81,11 +81,11 @@ export interface MergeContext {
   carrierName?: string;
   /** AWB / MBL number */
   awb?: string;
-  /** Departure from port of load — ISO date or preformatted */
+  /** Departure from port of load, ISO date or preformatted */
   etd?: string;
-  /** Arrival at port of discharge — ISO date or preformatted */
+  /** Arrival at port of discharge, ISO date or preformatted */
   eta?: string;
-  /** Provisional delivery date — ISO date or preformatted */
+  /** Provisional delivery date, ISO date or preformatted */
   deliveryDate?: string;
   shipmentStatus?: string;
   /** The operator's free-text message (already merge-resolved). */

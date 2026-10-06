@@ -13,7 +13,7 @@ import { sendMail } from "../../lib/mail";
  * company's data (see claim_client_invite in 0026_customer_portal.sql).
  *
  * Deliberately does NOT auto-claim just because a session already exists
- * on this page load — if email confirmation is required, or if someone
+ * on this page load, if email confirmation is required, or if someone
  * (e.g. a staff member) opens this link while already signed in as
  * someone else, silently attaching a random ambient session to this
  * invite would be a real privilege bug. Claiming only ever happens right
@@ -45,13 +45,13 @@ export default function PortalSignupPage() {
     setNotice("");
     setBusy(true);
     try {
-      // Re-check right before use — invites can only be claimed once.
+      // Re-check right before use, invites can only be claimed once.
       const invite = await getInvite(token);
       if (invite.claimed_at) throw new Error("This invite link has already been used.");
 
       // signup_kind: "portal" makes handle_new_user() create this profile as
       // role='client' (portal_status='pending', no client_id yet) from the
-      // very first instant the auth user exists — never role='user' (staff)
+      // very first instant the auth user exists, never role='user' (staff)
       // even momentarily. Without this, a customer who never completes the
       // claim below (e.g. email confirmation required, tab closed, claim
       // fails) is left permanently holding full staff-equivalent access,
@@ -62,7 +62,7 @@ export default function PortalSignupPage() {
       try {
         await signIn(email, password);
       } catch {
-        // Most likely "Email not confirmed" — this project requires clicking
+        // Most likely "Email not confirmed", this project requires clicking
         // a confirmation link before the new account can sign in.
         setAwaitingConfirmation(true);
         setNotice(
@@ -89,7 +89,7 @@ export default function PortalSignupPage() {
       setErr(
         e2 instanceof Error
           ? e2.message
-          : "Still can't sign you in — make sure you clicked the confirmation link first.",
+          : "Still can't sign you in, make sure you clicked the confirmation link first.",
       );
     } finally {
       setBusy(false);
@@ -112,7 +112,7 @@ export default function PortalSignupPage() {
           <h1>Not available yet</h1>
           <p className="sub">
             The ExPac customer portal is still being set up. Your invite link
-            stays valid — we'll let you know the moment it's ready.
+            stays valid, we'll let you know the moment it's ready.
           </p>
         </div>
       </div>
@@ -221,7 +221,7 @@ export default function PortalSignupPage() {
  * No-invite path: a prospective customer who reaches /portal/signup with no
  * token requests access directly. handle_new_user() (0068) creates their
  * profile as role='client', portal_status='pending' the instant the auth
- * user is created — never role='user' (staff) even momentarily, unlike the
+ * user is created, never role='user' (staff) even momentarily, unlike the
  * app's other signup path on /login. They can sign in right away, but
  * PortalProtected (App.tsx) shows only a "waiting on approval" screen until
  * staff runs approve_portal_signup() from Customers.
@@ -279,7 +279,7 @@ function SelfServeSignup() {
       setErr(
         e2 instanceof Error
           ? e2.message
-          : "Still can't sign you in — make sure you clicked the confirmation link first.",
+          : "Still can't sign you in, make sure you clicked the confirmation link first.",
       );
     } finally {
       setBusy(false);
@@ -383,7 +383,7 @@ function SelfServeSignup() {
   );
 }
 
-/** Best-effort — a failed/unavailable notification (e.g. no /api/* in dev)
+/** Best-effort, a failed/unavailable notification (e.g. no /api/* in dev)
  *  must never block the customer's own signup from completing. */
 async function notifyStaffOfSignup(
   fullName: string,

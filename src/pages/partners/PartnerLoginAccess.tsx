@@ -1,7 +1,7 @@
 // Admin-only panel on an Agent / Transporter / Clearing Agent record: invite
 // a partner-portal login (migration 0121), see who has one, and switch
 // access off / on. A partner login only ever sees this partner's own rate
-// sheets — never tier sheets, sell rates, margins, customers or quotes.
+// sheets, never tier sheets, sell rates, margins, customers or quotes.
 import { useState } from "react";
 import { useToast } from "../../components/Toast";
 import {
@@ -75,7 +75,7 @@ export default function PartnerLoginAccess({
   const [sending, setSending] = useState<string | null>(null);
   const qc = useQueryClient();
   const [generating, setGenerating] = useState(false);
-  // Shown once, right after it's made — never stored in the app.
+  // Shown once, right after it's made, never stored in the app.
   const [madeLogin, setMadeLogin] = useState<{ email: string; password: string } | null>(null);
 
   async function onGenerate() {
@@ -130,8 +130,8 @@ export default function PartnerLoginAccess({
         to: [i.email],
         bcc: SUPPORT_BCC,
         subject: `ExPac partner portal: keep your rates up to date`,
-        text: `Good day,\n\nExPac has set up a partner portal login for ${company}. Use the link below to create your login, then add or update your rate sheets — we'll use them when quoting.\n\n${url}\n\nPlease sign up with this email address (${i.email}).\n\nKind regards`,
-        html: `<p>Good day,</p><p>ExPac has set up a partner portal login for <strong>${company}</strong>. Use the link below to create your login, then add or update your rate sheets — we'll use them when quoting.</p><p><a href="${url}">Create your partner login</a></p><p>Please sign up with this email address (${i.email}).</p><p>Kind regards</p>`,
+        text: `Good day,\n\nExPac has set up a partner portal login for ${company}. Use the link below to create your login, then add or update your rate sheets, we'll use them when quoting.\n\n${url}\n\nPlease sign up with this email address (${i.email}).\n\nKind regards`,
+        html: `<p>Good day,</p><p>ExPac has set up a partner portal login for <strong>${company}</strong>. Use the link below to create your login, then add or update your rate sheets, we'll use them when quoting.</p><p><a href="${url}">Create your partner login</a></p><p>Please sign up with this email address (${i.email}).</p><p>Kind regards</p>`,
         fromName: settings?.mail_sender_name || undefined,
         replyTo: settings?.mail_reply_to || undefined,
       });
@@ -158,7 +158,7 @@ export default function PartnerLoginAccess({
         <h3>Partner Login</h3>
       </div>
       <p className="hint" style={{ marginTop: 0 }}>
-        A partner login sees and edits only {company}'s own rate sheets — never your tier sheets,
+        A partner login sees and edits only {company}'s own rate sheets, never your tier sheets,
         sell rates, margins, customers or quotes. Every change shows in each sheet's History.
       </p>
 
@@ -247,7 +247,7 @@ export default function PartnerLoginAccess({
       </div>
       <span className="hint">
         The link works once, and only for this email address. Or generate a password to create the
-        login straight away (or reset it) — sign in at {window.location.origin} to add their rates.
+        login straight away (or reset it), sign in at {window.location.origin} to add their rates.
       </span>
       {madeLogin && (
         <div className="rs-meta" style={{ marginTop: 8 }}>
@@ -276,7 +276,7 @@ export default function PartnerLoginAccess({
             ✕
           </button>
           <span className="hint" style={{ flexBasis: "100%" }}>
-            Shown once only — copy it now. Sign in as the partner in a private / incognito window,
+            Shown once only, copy it now. Sign in as the partner in a private / incognito window,
             or you'll be signed out of ExPac here.
           </span>
         </div>

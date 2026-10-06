@@ -314,12 +314,12 @@ export default function WmsPrintPage() {
     else if (doc === "loadplan") body = <LoadPlanSheet consol={c} />;
     else {
       const only = params.get("house");
-      // "All" prints only the houses ExPac issues — an origin agent's HAWB / HBL is their document.
+      // "All" prints only the houses ExPac issues, an origin agent's HAWB / HBL is their document.
       const list = c.houses
         .map((h, i) => ({ h, i }))
         .filter(({ h, i }) => (only == null ? h.issued_by !== "agent" : String(i) === only));
       if (list.length === 0)
-        return <div className="center-note">No houses to print — none yet, or every house document was issued by the origin agent</div>;
+        return <div className="center-note">No houses to print, none yet, or every house document was issued by the origin agent</div>;
       body = (
         <>
           {list.map(({ h, i }) => (
@@ -420,7 +420,7 @@ function SignOff({ left, right }: { left: string; right: string }) {
   );
 }
 
-/* ---------- Air waybill (MAWB / HAWB) — ExPac's template layout ---------- */
+/* ---------- Air waybill (MAWB / HAWB), ExPac's template layout ---------- */
 
 export const TERMS =
   "All business transactions are subject to Company’s Standard Trading Terms and Conditions and copy of which can be provided upon request";
@@ -563,7 +563,7 @@ export function AwbSheet({ consol: c, house, index = 0 }: { consol: WmsConsol; h
           <div className="awb-half awb-route">
             <Box label="Amount of Insurance" value={c.insurance} big />
             <div className="awb-cell lbl grow2">
-              INSURANCE — if carrier offers insurance, and such insurance is requested in accordance with the conditions thereof,
+              INSURANCE, if carrier offers insurance, and such insurance is requested in accordance with the conditions thereof,
               indicate amount to be insured in figures in box marked "Amount of Insurance".
             </div>
           </div>

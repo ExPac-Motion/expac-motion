@@ -183,7 +183,7 @@ function NewRunModal({ onClose, onSaved }: { onClose: () => void; onSaved: (id: 
           <select value={whId} onChange={(e) => setWhId(e.target.value)}>
             {lk.warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.code} — {w.name}
+                {w.code}, {w.name}
               </option>
             ))}
           </select>
@@ -285,9 +285,9 @@ function InvoiceModal({ run, onClose }: { run: WmsBillingRun; onClose: () => voi
   const [date, setDate] = useState(run.invoiced_at ?? todayIso());
   const [notes, setNotes] = useState(run.notes ?? "");
   return (
-    <Modal title={`${run.run_no} — invoicing`} onClose={onClose}>
+    <Modal title={`${run.run_no}, invoicing`} onClose={onClose}>
       <p className="hint" style={{ marginTop: 0 }}>
-        Invoices are raised in Sage for now — record the invoice number here once it's done.
+        Invoices are raised in Sage for now, record the invoice number here once it's done.
       </p>
       <div className="grid2">
         <div className="field">

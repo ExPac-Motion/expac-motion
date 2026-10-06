@@ -49,7 +49,7 @@ export default function PortalQuoteViewPage() {
       { quoteId: q!.id, accept, reason },
       {
         onSuccess: () => {
-          toast(accept ? "Quotation accepted — ExPac is booking your shipment" : "Quotation declined — thank you for letting us know");
+          toast(accept ? "Quotation accepted, ExPac is booking your shipment" : "Quotation declined, thank you for letting us know");
           setConfirm(null);
         },
         onError: (e) => error(e.message),
@@ -111,12 +111,12 @@ export default function PortalQuoteViewPage() {
 
         {q.status === "open" && (
           <div className="pt-note">
-            Thank you — your request is with the ExPac team. We're pricing it now and it will show here (and in your email) as soon as
+            Thank you, your request is with the ExPac team. We're pricing it now and it will show here (and in your email) as soon as
             it's ready.
           </div>
         )}
         {q.status === "accepted" && (
-          <div className="pt-note ok">Accepted — your shipment is being booked. Follow it under Shipments.</div>
+          <div className="pt-note ok">Accepted, your shipment is being booked. Follow it under Shipments.</div>
         )}
 
         <div className="pt-info">

@@ -17,7 +17,7 @@ function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
   return data as T;
 }
 
-/** client_quotes (0141) — the request / decision fields on top of ClientQuote. */
+/** client_quotes (0141), the request / decision fields on top of ClientQuote. */
 export interface PortalQuote extends ClientQuote {
   customer_reference?: string | null;
   portal_requested_at?: string | null;
@@ -207,7 +207,7 @@ export function timeGreeting(now: Date = new Date()): string {
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
-/** "Good morning, Mr Gilbert" — profiles.greeting, else the login's name. */
+/** "Good morning, Mr Gilbert", profiles.greeting, else the login's name. */
 export function greetingFor(profile: { greeting?: string | null; full_name?: string | null } | null | undefined, email?: string | null): string {
   const who = profile?.greeting?.trim() || profile?.full_name?.trim() || email?.split("@")[0] || "";
   const hello = timeGreeting();
@@ -244,7 +244,7 @@ export const usePortalTasks = () =>
     },
   });
 
-/** Every message stamp across the customer's shipments — for the unread dot. */
+/** Every message stamp across the customer's shipments, for the unread dot. */
 export const usePortalMsgStamps = () =>
   useQuery({
     queryKey: ["portal", "msgstamps"],

@@ -100,7 +100,7 @@ export default function TaskEditModal({
   defaults,
   onClose,
 }: Props) {
-  // Which task the form is editing — starts as the one passed in (null =
+  // Which task the form is editing, starts as the one passed in (null =
   // new), and switches when an existing task is picked from the panel.
   const [task, setTask] = useState<OpsTask | null>(initialTask);
   const { toast, error } = useToast();
@@ -299,7 +299,7 @@ export default function TaskEditModal({
           </div>
           {openOnRecord.length === 0 ? (
             <p className="hint" style={{ margin: 0 }}>
-              No open tasks yet — add one below.
+              No open tasks yet, add one below.
             </p>
           ) : (
             <ul>
@@ -531,7 +531,7 @@ export default function TaskEditModal({
             disabled={!!task?.from_portal}
             onChange={(e) => setF((p) => ({ ...p, portal_visible: e.target.checked }))}
           />{" "}
-          {task?.from_portal ? "Raised by the customer on the portal — they see its status" : "Show this task to the customer on the portal"}
+          {task?.from_portal ? "Raised by the customer on the portal, they see its status" : "Show this task to the customer on the portal"}
         </label>
       )}
 

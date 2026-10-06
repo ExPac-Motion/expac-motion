@@ -49,7 +49,7 @@ function routeCountries(route: string): [string | null, string | null] {
     to && KNOWN_COUNTRIES.has(to) ? to : null,
   ];
 }
-/** Port / airport options in a country ("ZAJNB — Johannesburg (OR Tambo), South Africa"). */
+/** Port / airport options in a country ("ZAJNB, Johannesburg (OR Tambo), South Africa"). */
 const placesIn = (country: string | null) =>
   LOCODES.filter((l) => !country || l.country === country).map(locodeLabel);
 
@@ -103,9 +103,9 @@ export default function PartnerRateSheets({
   kind: PartnerKind;
   partnerId: string;
   partnerName: string;
-  /** The partner's Coverage modes handled — only these get sheets. */
+  /** The partner's Coverage modes handled, only these get sheets. */
   modes?: string[] | null;
-  /** The partner's Coverage countries — each is a trade route to South Africa. */
+  /** The partner's Coverage countries, each is a trade route to South Africa. */
   countries?: string[] | null;
   /** Partner-portal logins can add and edit, never delete (0121). */
   canDelete?: boolean;
@@ -173,7 +173,7 @@ export default function PartnerRateSheets({
       </div>
       {q.isError ? (
         <p className="hint">
-          Rate sheets aren't available yet — run migration 0119 in Supabase.
+          Rate sheets aren't available yet, run migration 0119 in Supabase.
         </p>
       ) : shown.length === 0 ? (
         <p className="hint">
@@ -391,7 +391,7 @@ function describeChange(c: PartnerRateSheetChange): string[] {
     out.push(`Valid until: ${ddmmyyyy(o.valid_until) || "—"} → ${ddmmyyyy(n.valid_until) || "—"}`);
   if (o.valid_from !== n.valid_from)
     out.push(`Valid from: ${ddmmyyyy(o.valid_from) || "—"} → ${ddmmyyyy(n.valid_from) || "—"}`);
-  return out.length ? out : ["Saved — no rate changes"];
+  return out.length ? out : ["Saved, no rate changes"];
 }
 
 function SheetHistory({ sheetId }: { sheetId: string }) {
@@ -639,14 +639,14 @@ export function PartnerSheetEditor({
               <optgroup label="Any mode (incl. air)">
                 {INCOTERMS_ANY_MODE.map((i) => (
                   <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
+                    {i.code}, {i.name}
                   </option>
                 ))}
               </optgroup>
               <optgroup label="Sea / inland waterway">
                 {INCOTERMS_SEA.map((i) => (
                   <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
+                    {i.code}, {i.name}
                   </option>
                 ))}
               </optgroup>
@@ -897,8 +897,8 @@ export function PartnerSheetEditor({
           );
         })}
         <p className="hint">
-          Only ExPac's charge codes for your services are listed — add the lines you charge, ✕ the ones
-          you don't. Weight breaks are picked by the quote's chargeable weight — 35 kg uses 0-45KG.
+          Only ExPac's charge codes for your services are listed, add the lines you charge, ✕ the ones
+          you don't. Weight breaks are picked by the quote's chargeable weight, 35 kg uses 0-45KG.
         </p>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>

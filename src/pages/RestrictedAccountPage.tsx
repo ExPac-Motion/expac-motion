@@ -1,7 +1,7 @@
 import { useAuth } from "../auth/AuthProvider";
 
 /**
- * Shown instead of any app content — internal or portal — for role='restricted'
+ * Shown instead of any app content, internal or portal, for role='restricted'
  * (see 0091_role_model_v2.sql). Used both to revoke a portal client's access
  * (client_id is kept so it can be restored) and to lock out a former staff
  * login without deleting it.

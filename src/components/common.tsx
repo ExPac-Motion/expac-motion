@@ -147,18 +147,18 @@ export function RowActions({
   onDelete,
   onDuplicate,
 }: {
-  /** Controlled bulk-select state — only when `onSelectToggle` is also given. */
+  /** Controlled bulk-select state, only when `onSelectToggle` is also given. */
   selected?: boolean;
   onSelectToggle?: () => void;
   /** When set, a mail icon is shown first (after the checkbox). */
   onMail?: () => void;
   mailTitle?: string;
-  /** Badges the mail icon — an unread customer reply is waiting. */
+  /** Badges the mail icon, an unread customer reply is waiting. */
   mailUnread?: boolean;
-  /** When set, a task icon is shown — opens a new task pre-linked to this row. */
+  /** When set, a task icon is shown, opens a new task pre-linked to this row. */
   onTask?: () => void;
   taskTitle?: string;
-  /** Highlights the task icon — an open/pending task is already linked to this row. */
+  /** Highlights the task icon, an open/pending task is already linked to this row. */
   taskOpen?: boolean;
   /** Each icon is omitted when its handler isn't passed (e.g. config lists
    *  that are view + edit only, or a sent campaign that can't be edited). */
@@ -190,7 +190,7 @@ export function RowActions({
       {onMail && (
         <button
           className={`row-icon-btn${mailUnread ? " has-unread" : ""}`}
-          title={mailUnread ? `${mailTitle} — new reply` : mailTitle}
+          title={mailUnread ? `${mailTitle}, new reply` : mailTitle}
           onClick={stop(onMail)}
         >
           {ROW_ICON.mail}
@@ -200,7 +200,7 @@ export function RowActions({
       {onTask && (
         <button
           className={`row-icon-btn${taskOpen ? " has-open-task" : ""}`}
-          title={taskOpen ? `${taskTitle} — open task pending` : taskTitle}
+          title={taskOpen ? `${taskTitle}, open task pending` : taskTitle}
           onClick={stop(onTask)}
         >
           {ROW_ICON.task}
@@ -239,7 +239,7 @@ export function RowActions({
 }
 
 /** Renders its children only for a login with the "delete" permission
- *  (0131; Admin always) — wraps bulk-delete buttons. */
+ *  (0131; Admin always), wraps bulk-delete buttons. */
 export function CanDelete({ children }: { children: ReactNode }) {
   const can = useCan();
   return can("delete") ? <>{children}</> : null;
@@ -285,7 +285,7 @@ export function RowActionsHead({
  * the on-screen subset (after filters) as `visibleRows` so "select all" only
  * touches what's visible while selections survive a filter change. Rows that
  * leave the list entirely (deleted / refetched away) drop out of the count on
- * their own — the raw id set is filtered against the live rows on every read.
+ * their own, the raw id set is filtered against the live rows on every read.
  */
 export function useRowSelection<T extends { id: string }>(
   allRows: T[],
@@ -418,7 +418,7 @@ export function BulkEditModal({
       <form onSubmit={submit}>
         <p className="hint" style={{ marginTop: 0 }}>
           Changes apply to <strong>{count}</strong> selected{" "}
-          {count === 1 ? noun : `${noun}s`}. Tick a field to change it — anything
+          {count === 1 ? noun : `${noun}s`}. Tick a field to change it, anything
           left unticked stays as it is.
         </p>
         {fields.map((f) => (
@@ -522,7 +522,7 @@ export function BulkEditModal({
   );
 }
 
-/** Small inline mail icon next to an email address — opens a mailto: link. */
+/** Small inline mail icon next to an email address, opens a mailto: link. */
 export function MailLink({ email }: { email: string }) {
   return (
     <a

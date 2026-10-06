@@ -68,7 +68,7 @@ const NO_FILTERS: RouteFilters = {
   clearing_agent: "",
   destination_agent: "",
 };
-/** "CNNSA — Nansha, China" / "CNNSA" / "China" -> "China" (known countries only). */
+/** "CNNSA, Nansha, China" / "CNNSA" / "China" -> "China" (known countries only). */
 const ISO2_COUNTRY = new Map(LOCODES.map((l) => [l.code.slice(0, 2), l.country]));
 const COUNTRIES = new Set(LOCODES.map((l) => l.country));
 function countryOf(place: string | null | undefined): string | null {
@@ -163,7 +163,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
   };
   /** Every partner on the filtered trade route: linked on its tier sheets
    *  and / or with their own rate sheet for that route. */
-  // The filtered route's origin country — partner sheets from that country
+  // The filtered route's origin country, partner sheets from that country
   // count as on this route even when their route is named differently.
   const originCountry = useMemo(() => {
     if (!filters.route) return null;
@@ -235,7 +235,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
     }
   }
 
-  /** Inline partner pick on a row — saves straight away; the partner's own
+  /** Inline partner pick on a row, saves straight away; the partner's own
    *  rate sheet is linked when the tier sheet is next opened. */
   function partnerSelect(s: TariffSheet, kind: PartnerKind, list: Contact[]) {
     const idKey = partnerIdKey(kind);
@@ -522,7 +522,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
           </>
         }
         count={q.isLoading ? undefined : `${rows.length} trade route sheet${rows.length === 1 ? "" : "s"}`}
-        hint="Every tier rate sheet — one per tier per mode + trade route. Open one to edit its rates."
+        hint="Every tier rate sheet, one per tier per mode + trade route. Open one to edit its rates."
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => navigate("/rates")}>
@@ -594,7 +594,7 @@ export default function TradeRoutesList({ tabs }: { tabs: ReactNode }) {
         ) : rows.length === 0 ? (
           <EmptyState>
             {all.length === 0
-              ? "No trade routes yet — use Import routes on the Tier Rate Sheets page."
+              ? "No trade routes yet, use Import routes on the Tier Rate Sheets page."
               : "No trade routes match these filters."}
           </EmptyState>
         ) : (

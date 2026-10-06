@@ -14,7 +14,7 @@ import type {
 export type NotificationDomain = "sales" | "shipments" | "operations" | "mail";
 
 export interface NotificationItem {
-  /** Stable id — what notification_state rows key off. */
+  /** Stable id, what notification_state rows key off. */
   key: string;
   domain: NotificationDomain;
   text: string;
@@ -68,7 +68,7 @@ export function buildNotifications(
       out.push({
         key: `lead-${l.id}`,
         domain: "sales",
-        text: `New lead — ${l.company}`,
+        text: `New lead, ${l.company}`,
         when: l.created_at,
         to: "/crm?tab=leads",
         navState: { openLeadId: l.id },
@@ -79,7 +79,7 @@ export function buildNotifications(
       out.push({
         key: `leadpromo-${l.id}`,
         domain: "sales",
-        text: `Lead converted to customer — ${l.company}`,
+        text: `Lead converted to customer, ${l.company}`,
         when: l.promoted_at as string,
         to: "/clients",
         navState: l.promoted_client_id
@@ -97,7 +97,7 @@ export function buildNotifications(
       out.push({
         key: `qreq-${q.id}`,
         domain: "sales",
-        text: `Portal quote request — ${q.client?.company ?? "customer"} · ${q.reference}`,
+        text: `Portal quote request, ${q.client?.company ?? "customer"} · ${q.reference}`,
         when: q.portal_requested_at as string,
         to: `/quotes/${q.id}`,
         quoteId: q.id,
@@ -108,7 +108,7 @@ export function buildNotifications(
       out.push({
         key: `qdecl-${q.id}`,
         domain: "sales",
-        text: `Quote declined on the portal — ${q.reference}${q.portal_decline_reason ? `: ${q.portal_decline_reason}` : ""}`,
+        text: `Quote declined on the portal, ${q.reference}${q.portal_decline_reason ? `: ${q.portal_decline_reason}` : ""}`,
         when: q.portal_decided_at as string,
         to: `/quotes/${q.id}`,
         quoteId: q.id,
@@ -119,7 +119,7 @@ export function buildNotifications(
       out.push({
         key: `qwon-${q.id}`,
         domain: "sales",
-        text: `Quote won — ${q.reference}`,
+        text: `Quote won, ${q.reference}`,
         when: q.accepted_at as string,
         to: `/quotes/${q.id}`,
         quoteId: q.id,
@@ -133,7 +133,7 @@ export function buildNotifications(
       out.push({
         key: `oppwon-${o.id}`,
         domain: "sales",
-        text: `Opportunity delivered — ${
+        text: `Opportunity delivered, ${
           o.lead?.company ?? o.client?.company ?? "opportunity"
         }`,
         when: o.updated_at,
@@ -150,7 +150,7 @@ export function buildNotifications(
       out.push({
         key: `job-${j.id}`,
         domain: "shipments",
-        text: `New shipment — ${j.reference}`,
+        text: `New shipment, ${j.reference}`,
         when: j.created_at,
         to: "/jobs",
         navState: { openJobId: j.id },
@@ -164,7 +164,7 @@ export function buildNotifications(
         out.push({
           key: `jobevent-${e.id}`,
           domain: "shipments",
-          text: `${j.reference} — ${e.note || `moved to ${e.milestone}`}`,
+          text: `${j.reference}, ${e.note || `moved to ${e.milestone}`}`,
           when: e.created_at,
           to: "/jobs",
           navState: { openJobId: j.id },
@@ -180,7 +180,7 @@ export function buildNotifications(
       out.push({
         key: `ptask-${t.id}`,
         domain: "operations",
-        text: `Customer request on ${t.job?.reference ?? "a shipment"} — ${t.title}`,
+        text: `Customer request on ${t.job?.reference ?? "a shipment"}, ${t.title}`,
         when: t.created_at,
         to: "/ops?tab=tasks",
         jobId: t.job_id,
@@ -200,7 +200,7 @@ export function buildNotifications(
           isTaskOverdue(t, todayIso(), nowHHMM(new Date(now)))
             ? "Overdue task"
             : "Task due"
-        } — ${t.title}`,
+        }, ${t.title}`,
         when: t.due_date,
         to: "/ops?tab=tasks",
         navState: { openTaskId: t.id },
@@ -214,7 +214,7 @@ export function buildNotifications(
       out.push({
         key: `camp-${c.id}`,
         domain: "mail",
-        text: `Campaign sent — ${c.name}`,
+        text: `Campaign sent, ${c.name}`,
         when: c.sent_at as string,
         to: "/crm?tab=campaigns",
         navState: { openCampaignId: c.id },
@@ -228,8 +228,8 @@ export function buildNotifications(
       domain: "mail",
       text:
         m.direction === "in"
-          ? `New reply — ${j?.reference ?? "shipment"}`
-          : `Sent — ${m.subject || "email"} (${j?.reference ?? "shipment"})`,
+          ? `New reply, ${j?.reference ?? "shipment"}`
+          : `Sent, ${m.subject || "email"} (${j?.reference ?? "shipment"})`,
       when: m.created_at,
       to: "/jobs",
       navState: { openJobId: m.job_id, openComms: true },
@@ -244,7 +244,7 @@ export function buildNotifications(
       out.push({
         key: `doc-${d.id}`,
         domain: "shipments",
-        text: `Document uploaded — ${d.name} (${j?.reference ?? "shipment"})`,
+        text: `Document uploaded, ${d.name} (${j?.reference ?? "shipment"})`,
         when: d.created_at,
         to: "/jobs",
         navState: { openJobId: d.job_id },
@@ -260,10 +260,10 @@ export function buildNotifications(
         domain: "mail",
         text:
           f.status === "failed"
-            ? `Follow-up failed — ${f.email}`
+            ? `Follow-up failed, ${f.email}`
             : f.status === "skipped"
-              ? `Follow-up skipped — ${f.email}`
-              : `Follow-up sent — ${f.email}`,
+              ? `Follow-up skipped, ${f.email}`
+              : `Follow-up sent, ${f.email}`,
         when: f.created_at,
         to: f.lead_id ? "/crm?tab=leads" : "/crm?tab=followups",
         navState: f.lead_id ? { openLeadId: f.lead_id } : undefined,

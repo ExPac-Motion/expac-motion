@@ -274,9 +274,9 @@ function draftFromQuote(q: Quote): QuoteDraft {
           ? catUnit
           : storedUnit;
       // Sell-only service fees (IN-01 / FW-01 / DIS-01, and a CU-05 saved
-      // while it was still sell-only — no buy, a typed sell): the stored
+      // while it was still sell-only, no buy, a typed sell): the stored
       // sell (R) is the source of truth. Buy / margin open at 0 (the cells stay
-      // editable) — never reconstructed from the sell, and any stray legacy
+      // editable), never reconstructed from the sell, and any stray legacy
       // Buy value on the row is dropped.
       if (SERVICE_FEE_CODES.includes(l.code ?? "") || isLegacyClearanceFee(l)) {
         return {
@@ -378,9 +378,9 @@ export default function QuoteBuilderPage() {
   }
 
   // Seed a brand-new quote's FX rates / incoterm from Settings > Quote Defaults,
-  // once, as soon as they load — never touches an existing (edit) quote.
+  // once, as soon as they load, never touches an existing (edit) quote.
   // A new quote opened with { state: { prefill: { clientId | leadId } } }
-  // (Inbox › Create quotation) starts on that customer / lead — same as
+  // (Inbox › Create quotation) starts on that customer / lead, same as
   // picking it: its rate tier and (lead) sales person come along. Once.
   const location = useLocation();
   const prefill = (location.state as { prefill?: { clientId?: string; leadId?: string } } | null)?.prefill;
@@ -389,7 +389,7 @@ export default function QuoteBuilderPage() {
     if (isEdit || prefillApplied.current || !prefill || !clientsQ.data || !leadsQ.data) return;
     const client = prefill.clientId ? clientsQ.data.find((c) => c.id === prefill.clientId) : null;
     const lead = prefill.leadId ? leadsQ.data.find((l) => l.id === prefill.leadId) : null;
-    // A lead made a moment ago may not be in the cached list yet — wait for the refetch.
+    // A lead made a moment ago may not be in the cached list yet, wait for the refetch.
     if (!client && !lead && (clientsQ.isFetching || leadsQ.isFetching)) return;
     prefillApplied.current = true;
     if (!client && !lead) return;
@@ -493,7 +493,7 @@ export default function QuoteBuilderPage() {
   // Mode change: re-prefix an auto-generated reference so it tracks the mode
   // (AIR/SEA/RDX/CX) while keeping the same 6-digit sequence. Runs for any
   // quote that hasn't been won yet (accepted/completed already has a job
-  // carrying this same shipment number — that one's left alone once live).
+  // carrying this same shipment number, that one's left alone once live).
   // A hand-typed reference is always left untouched.
   function setMode(mode: QuoteDraft["mode"]) {
     setDraft((d) => {
@@ -603,7 +603,7 @@ export default function QuoteBuilderPage() {
       const lines = d.lines.map((l, i) => {
         if (i !== index) return l;
         const merged = { ...l, ...patch } as QuoteLine;
-        // Sell-only lines (service fees + Customs VAT) hold a typed sell (R) —
+        // Sell-only lines (service fees + Customs VAT) hold a typed sell (R),
         // never derive it from buy.
         const mergedCode = String(merged.code ?? "");
         const recompute =
@@ -653,7 +653,7 @@ export default function QuoteBuilderPage() {
       );
       patch.sell = prefill > 0 ? Number(prefill.toFixed(2)) : "";
     }
-    // Customs Duty: sell-only disbursement — type the amount into Sell (R).
+    // Customs Duty: sell-only disbursement, type the amount into Sell (R).
     // Billed to the client at cost (no margin) and always zero-rated for VAT.
     if (code === CUSTOMS_DUTY_CODE) {
       patch.buy = 0;
@@ -694,7 +694,7 @@ export default function QuoteBuilderPage() {
    *  code's buy follows the linked partner rate sheet (weight breaks picked
    *  by the chargeable weight) plus the tier margin; sell-only codes take the
    *  sheet's Sell (R). A partner already picked on the quote wins over the
-   *  sheet's — their rate sheet for the same mode + route is used. */
+   *  sheet's, their rate sheet for the same mode + route is used. */
   async function loadTierRates() {
     if (!draft) return;
     const sheet = (tariffQ.data ?? []).find((s) => s.id === draft.tariff_sheet_id);
@@ -767,7 +767,7 @@ export default function QuoteBuilderPage() {
           );
         }
       if (lines.length === 0) {
-        error("That tier sheet has no rates yet — fill it in on Rates & Tariff.");
+        error("That tier sheet has no rates yet, fill it in on Rates & Tariff.");
         return;
       }
       setDraft((d) =>
@@ -785,7 +785,7 @@ export default function QuoteBuilderPage() {
       );
       toast(
         `Loaded ${lines.length} line${lines.length === 1 ? "" : "s"} from ${rateTier(sheet.tier).label} · ${sheet.route}${draft.incoterms ? ` (${draft.incoterms})` : ""}` +
-          (kg > 0 ? "" : " — add the packing list, then load again to pick the right weight break"),
+          (kg > 0 ? "" : ", add the packing list, then load again to pick the right weight break"),
       );
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not load the tier rates");
@@ -880,7 +880,7 @@ export default function QuoteBuilderPage() {
     });
     toast(
       `Loaded ${fresh.length} line${fresh.length === 1 ? "" : "s"} from ${who}` +
-        (kg > 0 ? "" : " — add the packing list, then load again to pick the right weight break"),
+        (kg > 0 ? "" : ", add the packing list, then load again to pick the right weight break"),
     );
   }
 
@@ -1053,10 +1053,10 @@ export default function QuoteBuilderPage() {
           {existingQ.data.portal_decision && (
             <div>
               <b>Customer {existingQ.data.portal_decision}</b> on the portal {formatDate(existingQ.data.portal_decided_at)}
-              {existingQ.data.portal_decline_reason ? ` — "${existingQ.data.portal_decline_reason}"` : ""}
+              {existingQ.data.portal_decline_reason ? `, "${existingQ.data.portal_decline_reason}"` : ""}
             </div>
           )}
-          <div className="hint">Complete it, add the charges and set the status to Quote Sent — it appears on the customer's portal to accept.</div>
+          <div className="hint">Complete it, add the charges and set the status to Quote Sent, it appears on the customer's portal to accept.</div>
         </div>
       )}
 
@@ -1071,7 +1071,7 @@ export default function QuoteBuilderPage() {
             <input
               value={draft.reference}
               readOnly
-              title="System-generated shipment number — set by the transport mode"
+              title="System-generated shipment number, set by the transport mode"
               style={{ background: "var(--paper)", cursor: "not-allowed" }}
             />
           </div>
@@ -1100,14 +1100,14 @@ export default function QuoteBuilderPage() {
               <optgroup label="Any mode (incl. air)">
                 {INCOTERMS_ANY_MODE.map((i) => (
                   <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
+                    {i.code}, {i.name}
                   </option>
                 ))}
               </optgroup>
               <optgroup label="Sea / inland waterway">
                 {INCOTERMS_SEA.map((i) => (
                   <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
+                    {i.code}, {i.name}
                   </option>
                 ))}
               </optgroup>
@@ -1172,7 +1172,7 @@ export default function QuoteBuilderPage() {
             </select>
             {clients.length === 0 && unpromotedLeads.length === 0 && (
               <span className="hint">
-                No customers or leads yet — add one on the Customers or Leads page
+                No customers or leads yet, add one on the Customers or Leads page
                 first.
               </span>
             )}
@@ -1338,7 +1338,7 @@ export default function QuoteBuilderPage() {
               list="qb-locodes"
               value={draft.origin}
               onChange={(e) => set("origin", e.target.value)}
-              placeholder="CNSHA — Shanghai, China"
+              placeholder="CNSHA, Shanghai, China"
             />
             <span className="hint">
               Pick a UN/LOCODE or type your own (start with the 5-char code).
@@ -1350,7 +1350,7 @@ export default function QuoteBuilderPage() {
               list="qb-locodes"
               value={draft.destination}
               onChange={(e) => set("destination", e.target.value)}
-              placeholder="ZADUR — Durban, South Africa"
+              placeholder="ZADUR, Durban, South Africa"
             />
             <span className="hint">
               Pick a UN/LOCODE or type your own (start with the 5-char code).
@@ -1378,7 +1378,7 @@ export default function QuoteBuilderPage() {
             />
           </div>
 
-          {/* Mode-specific fields — only the selected mode's fields are shown
+          {/* Mode-specific fields, only the selected mode's fields are shown
               (same split as the shipment documents; Road uses Sea for now).
               Values typed under another mode are kept, just hidden. */}
           {usesSeaLayout(draft.mode) ? (
@@ -1491,7 +1491,7 @@ export default function QuoteBuilderPage() {
             </>
           )}
 
-          {/* Tier rate sheets (0119) — admin-only, like Rates & Tariff */}
+          {/* Tier rate sheets (0119), admin-only, like Rates & Tariff */}
           {canRates && (
           <>
           <div className="field">
@@ -1515,7 +1515,7 @@ export default function QuoteBuilderPage() {
                 </option>
               ))}
             </select>
-            <span className="hint">From the customer — change it for this quote if needed.</span>
+            <span className="hint">From the customer, change it for this quote if needed.</span>
           </div>
           <div className="field">
             <label>Trade route</label>
@@ -1679,7 +1679,7 @@ export default function QuoteBuilderPage() {
                               (Number(p.height_cm) || 0)) /
                             1_000_000
                           ).toFixed(2)}
-                          title="Auto from L×W×H — type to override"
+                          title="Auto from L×W×H, type to override"
                           onChange={(e) => setPacking(i, "cbm", e.target.value)}
                         />
                       </td>
@@ -1784,7 +1784,7 @@ export default function QuoteBuilderPage() {
         <div className="panel-head">
           <div>
             <h2>Charges</h2>
-            <p>Buy cost stays internal — sell price is what your customer sees</p>
+            <p>Buy cost stays internal, sell price is what your customer sees</p>
           </div>
         </div>
 
@@ -1909,7 +1909,7 @@ export default function QuoteBuilderPage() {
                     {g.lines.map(({ line: l, index: i }) => {
                       const autoQ = autoQty(l, draft.mode, packTotals);
                       const qtyDerived = autoQ != null && !l.qty_override;
-                      // Sell-only lines — the figure is typed straight into
+                      // Sell-only lines, the figure is typed straight into
                       // Sell (R), with Buy / Margin / Sell / Total Buy
                       // dashed: service fees (IN-01 / FW-01 / DIS-01, and an
                       // older sell-only CU-05),
@@ -1935,7 +1935,7 @@ export default function QuoteBuilderPage() {
                               : undefined
                         }
                         onDragOver={(e) => {
-                          // Only within the same section — a line's category
+                          // Only within the same section, a line's category
                           // decides which group it prints under.
                           if (
                             dragLine == null ||
@@ -2001,7 +2001,7 @@ export default function QuoteBuilderPage() {
                             placeholder="Charge description"
                             title={
                               catalogItem(String(l.code ?? ""), draft.mode)
-                                ? "Pre-filled from the code — edit if you need to"
+                                ? "Pre-filled from the code, edit if you need to"
                                 : undefined
                             }
                           />
@@ -2053,9 +2053,9 @@ export default function QuoteBuilderPage() {
                             }
                             title={
                               qtyDerived
-                                ? "Auto from the Packing List for this unit — type to override"
+                                ? "Auto from the Packing List for this unit, type to override"
                                 : l.qty_override
-                                  ? "Manually set — clear or change the unit to go back to auto"
+                                  ? "Manually set, clear or change the unit to go back to auto"
                                   : undefined
                             }
                           />
@@ -2068,7 +2068,7 @@ export default function QuoteBuilderPage() {
                               tabIndex={-1}
                               value=""
                               placeholder="—"
-                              title="Sell-only line — no buy cost, priced only in Sell (R)"
+                              title="Sell-only line, no buy cost, priced only in Sell (R)"
                             />
                           ) : (
                             <input
@@ -2087,7 +2087,7 @@ export default function QuoteBuilderPage() {
                               tabIndex={-1}
                               value=""
                               placeholder="—"
-                              title="Sell-only line — no markup, priced only in Sell (R)"
+                              title="Sell-only line, no markup, priced only in Sell (R)"
                             />
                           ) : (
                             <input
@@ -2127,7 +2127,7 @@ export default function QuoteBuilderPage() {
                               tabIndex={-1}
                               value=""
                               placeholder="—"
-                              title="Sell-only line — priced directly in Sell (R)"
+                              title="Sell-only line, priced directly in Sell (R)"
                             />
                           ) : (
                             <input
@@ -2149,7 +2149,7 @@ export default function QuoteBuilderPage() {
                               onChange={(e) =>
                                 setLineFields(i, { sell: e.target.value })
                               }
-                              title="Sell-only line — type the Sell (R) amount"
+                              title="Sell-only line, type the Sell (R) amount"
                             />
                           ) : (
                             <input
@@ -2169,8 +2169,8 @@ export default function QuoteBuilderPage() {
                             placeholder={isSellOnly ? "—" : undefined}
                             title={
                               isSellOnly
-                                ? "Sell-only line — no buy cost"
-                                : `Qty × Buy in ${l.cur} — foreign purchase total`
+                                ? "Sell-only line, no buy cost"
+                                : `Qty × Buy in ${l.cur}, foreign purchase total`
                             }
                             tabIndex={-1}
                           />
@@ -2183,8 +2183,8 @@ export default function QuoteBuilderPage() {
                             placeholder={isSellOnly ? "—" : undefined}
                             title={
                               isSellOnly
-                                ? "Sell-only line — priced directly in ZAR"
-                                : `Qty × Sell in ${l.cur} — foreign sell total, before ZAR conversion`
+                                ? "Sell-only line, priced directly in ZAR"
+                                : `Qty × Sell in ${l.cur}, foreign sell total, before ZAR conversion`
                             }
                             tabIndex={-1}
                           />
@@ -2364,7 +2364,7 @@ function RatePickerModal({
     (r) => r.category === category && r.mode === mode,
   );
   return (
-    <Modal title={`${category} — Rate list`} onClose={onClose} wide>
+    <Modal title={`${category}, Rate list`} onClose={onClose} wide>
       <p className="hint" style={{ marginBottom: 10 }}>
         To price the whole quote from a tier, use Rate tier / Trade route → Load rates above.
       </p>
@@ -2392,7 +2392,7 @@ function RatePickerModal({
                 {r.description}
                 {r.carrier ? ` (${r.carrier})` : ""}
                 {(r.origin || r.destination) &&
-                  ` — ${r.origin || "Any"} → ${r.destination || "Any"}`}
+                  `, ${r.origin || "Any"} → ${r.destination || "Any"}`}
               </span>
               <span className="muted">
                 {r.cur} {r.buy.toFixed(2)} · {r.margin}%
@@ -2405,7 +2405,7 @@ function RatePickerModal({
   );
 }
 
-/** Quick-create a shipper without leaving the builder — just enough to pick
+/** Quick-create a shipper without leaving the builder, just enough to pick
  *  it on this quote; the full record (VAT no, address, etc.) can be filled
  *  in later from Suppliers. Saves to the same suppliers table that page
  *  reads, so the new shipper shows up there too. */
@@ -2470,7 +2470,7 @@ function AddShipperModal({
           />
         </div>
         <span className="hint">
-          Just enough to pick it on this quote — add VAT no, address etc.
+          Just enough to pick it on this quote, add VAT no, address etc.
           later from Suppliers.
         </span>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>

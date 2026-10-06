@@ -71,7 +71,7 @@ export default function LeadSourcesPage() {
   async function onBulkDelete() {
     if (
       !window.confirm(
-        `Delete ${sel.count} source${sel.count === 1 ? "" : "s"}? Leads/customers already set to them keep the value — they just won't show as options anymore.`,
+        `Delete ${sel.count} source${sel.count === 1 ? "" : "s"}? Leads/customers already set to them keep the value, they just won't show as options anymore.`,
       )
     )
       return;
@@ -114,7 +114,7 @@ export default function LeadSourcesPage() {
   async function onDelete(s: LeadSource) {
     if (
       !window.confirm(
-        `Delete source "${s.name}"? Leads/customers already set to it keep the value — it just won't show as an option here anymore.`,
+        `Delete source "${s.name}"? Leads/customers already set to it keep the value, it just won't show as an option here anymore.`,
       )
     )
       return;

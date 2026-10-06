@@ -15,7 +15,7 @@ interface SkuRow {
 }
 
 /** Customer Portal › Items / SKU: every SKU booked into the ExPac warehouse on
- *  the customer's receipts — received and still in store. */
+ *  the customer's receipts, received and still in store. */
 export default function PortalItemsPage() {
   const receiptsQ = useWmsReceipts();
   const [search, setSearch] = useState("");
@@ -62,7 +62,7 @@ export default function PortalItemsPage() {
       header: "In store",
       width: 100,
       render: (r) => (
-        <span title={r.estimated ? "Part released — estimated" : undefined}>
+        <span title={r.estimated ? "Part released, estimated" : undefined}>
           {r.onHand}
           {r.estimated ? " ≈" : ""}
         </span>

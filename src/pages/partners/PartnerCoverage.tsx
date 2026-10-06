@@ -35,7 +35,7 @@ export function coverageOf(c: {
   };
 }
 
-/** "CNCAN — Guangzhou, China" -> "CNCAN" (ports are stored as codes). */
+/** "CNCAN, Guangzhou, China" -> "CNCAN" (ports are stored as codes). */
 const portCode = (v: string) => v.trim().split(/\s+[—-]\s+/)[0].toUpperCase();
 
 /** Free-entry list of chips with suggestions (Enter or comma adds). */
@@ -186,7 +186,7 @@ export function CoverageView({ value }: { value: Coverage }) {
       <h3>Coverage</h3>
       {empty ? (
         <p className="muted">
-          No coverage set yet — Edit to add the modes, countries and ports this
+          No coverage set yet, Edit to add the modes, countries and ports this
           partner handles.
         </p>
       ) : (

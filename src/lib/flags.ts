@@ -1,11 +1,11 @@
 /**
- * Simple compile-time feature flags. Flip a value and redeploy — no env var
+ * Simple compile-time feature flags. Flip a value and redeploy, no env var
  * or dashboard needed. Keep the list short; delete a flag once its feature
  * has fully shipped.
  */
 
 /**
- * Customer Portal sign-up — both the staff-issued invite link AND the
+ * Customer Portal sign-up, both the staff-issued invite link AND the
  * self-serve "request access" form on the same /portal/signup page. While
  * `false`, that page shows a "not yet available" notice instead of either
  * form, and staff don't see the "Invite to Portal" button on a customer.

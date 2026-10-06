@@ -68,7 +68,7 @@ function RequireAuth() {
   return <Outlet />;
 }
 
-/** Staff-only app shell — a client-role login is bounced to /portal. */
+/** Staff-only app shell, a client-role login is bounced to /portal. */
 function Protected() {
   const { session, loading } = useAuth();
   const profileQ = useMyProfile();
@@ -84,7 +84,7 @@ function Protected() {
   return <Layout />;
 }
 
-/** Partner portal (0121) — agent / transporter / clearing agent logins only. */
+/** Partner portal (0121), agent / transporter / clearing agent logins only. */
 function PartnerProtected() {
   const { session, loading } = useAuth();
   const profileQ = useMyProfile();
@@ -97,18 +97,18 @@ function PartnerProtected() {
   return <PartnerPortalPage />;
 }
 
-/** Admin-only pages (Rates & Tariff — buy rates, margins, partner rates).
+/** Admin-only pages (Rates & Tariff, buy rates, margins, partner rates).
  *  Renders inside Protected, so the profile has already loaded. The tables
  *  themselves are locked to is_admin() (0120); this just keeps other staff
  *  logins off an empty page. */
-/** A page that needs a role permission (0131) — Admin always passes. */
+/** A page that needs a role permission (0131), Admin always passes. */
 function NeedsPerm({ perm, children }: { perm: PermKey; children: ReactNode }) {
   const can = useCan();
   if (!can(perm)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
-/** Customer-facing shell — a staff login is bounced back to the main app. */
+/** Customer-facing shell, a staff login is bounced back to the main app. */
 function PortalProtected() {
   const { session, loading } = useAuth();
   const profileQ = useMyProfile();
@@ -126,7 +126,7 @@ function PortalProtected() {
   return <PortalLayout />;
 }
 
-/** Gates one portal section on the caller's own portal_permissions — set
+/** Gates one portal section on the caller's own portal_permissions, set
  *  per login from Customers > Portal Access. Renders inside PortalProtected
  *  (already confirmed role='client' + approved), so profileQ.data is
  *  populated by the time this runs; still redirects to the dashboard on a

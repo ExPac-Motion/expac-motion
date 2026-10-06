@@ -27,9 +27,9 @@ export interface Recipient {
   email: string;
 }
 
-/** The activity/comms body for one shipment — compose + full message thread.
+/** The activity/comms body for one shipment, compose + full message thread.
  *  Hosted by CommsRail (docked panel) on the Shipments board, and by the
- *  partner email dialog — there `to` replaces the customer / shipper
+ *  partner email dialog, there `to` replaces the customer / shipper
  *  recipients with the agent / transporter / clearing agent, and the message
  *  still lands on the shipment's thread. */
 export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) {
@@ -40,7 +40,7 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
   const { data: settings } = useCompanySettings();
 
   const [tab, setTab] = useState<"email" | "note">("email");
-  // 'reply' (default) = quick chat-style message, no shipment-data block —
+  // 'reply' (default) = quick chat-style message, no shipment-data block,
   // the common case once a thread is already going. 'update' is the full
   // per-mode status-update template (Settings -> Shipment Comms).
   const [template, setTemplate] = useState<"update" | "reply">("reply");
@@ -184,7 +184,7 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
             {recipients.length === 0 && (
               <span className="hint">
                 {to
-                  ? "No email on this partner's record — add one first."
+                  ? "No email on this partner's record, add one first."
                   : "No email on the customer or shipper record."}
               </span>
             )}
@@ -226,7 +226,7 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
                   checked={checked.has(r.email)}
                   onChange={() => toggle(r.email)}
                 />
-                {r.label} — {r.email}
+                {r.label}, {r.email}
               </label>
             ))}
           </div>
@@ -243,7 +243,7 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
               type="button"
               className={`chip${template === "reply" ? " on" : ""}`}
               onClick={() => setTemplate("reply")}
-              title="A quick chat-style message — no shipment-data block"
+              title="A quick chat-style message, no shipment-data block"
             >
               Reply
             </button>

@@ -135,7 +135,7 @@ export default function PortalDashboardPage() {
                 <Link key={q.id} to={`/portal/quotes?open=${q.id}`} className="pt-action amber">
                   <b>{q.reference}</b>
                   <span>
-                    Quotation ready — {portCode(q.origin)} → {portCode(q.destination)}
+                    Quotation ready, {portCode(q.origin)} → {portCode(q.destination)}
                     {q.valid_until ? ` · valid until ${formatDate(q.valid_until)}` : ""}
                   </span>
                   <em>Review &amp; accept →</em>
@@ -145,14 +145,14 @@ export default function PortalDashboardPage() {
                 <Link key={j.id} to={`/portal/shipments/${j.id}`} className="pt-action">
                   <b>{j.reference}</b>
                   <span>
-                    Arriving {formatDate(etaOf(j))} at {portCode(j.destination)} — have your documents / clearance ready
+                    Arriving {formatDate(etaOf(j))} at {portCode(j.destination)}, have your documents / clearance ready
                   </span>
                 </Link>
               ))}
               {requested.map((q) => (
                 <Link key={q.id} to={`/portal/quotes?open=${q.id}`} className="pt-action muted">
                   <b>{q.reference}</b>
-                  <span>Quote request with ExPac — we'll respond shortly</span>
+                  <span>Quote request with ExPac, we'll respond shortly</span>
                 </Link>
               ))}
             </div>
@@ -171,7 +171,7 @@ export default function PortalDashboardPage() {
           ) : jobsQ.isError ? (
             <ErrorNote error={jobsQ.error} />
           ) : jobs.length === 0 ? (
-            <p className="hint">No shipments yet — request a quote to get your first one moving.</p>
+            <p className="hint">No shipments yet, request a quote to get your first one moving.</p>
           ) : (
             <div className="table-wrap">
               <table className="table--compact">
@@ -362,7 +362,7 @@ function ShipmentCalendar({
   );
 }
 
-/** What's new — the images in Sales CRM › Media › Announcements (0144). */
+/** What's new, the images in Sales CRM › Media › Announcements (0144). */
 function WhatsNew() {
   const q = usePortalAnnouncements();
   const items = q.data ?? [];
@@ -394,7 +394,7 @@ function WhatsNew() {
         <div className="pt-news-empty">
           <img src="/Logo.jpg" alt="ExPac" />
           <p>
-            Welcome to ExPac Motion — request quotes, accept quotations and follow every shipment here. News and updates from the
+            Welcome to ExPac Motion, request quotes, accept quotations and follow every shipment here. News and updates from the
             ExPac team will show in this space.
           </p>
         </div>

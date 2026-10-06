@@ -22,7 +22,7 @@ function n2(v: number | string | null | undefined): string {
  * Generic operational-document letterhead shared by every Document Vault
  * document type: shipment info + packing list + a Received By / Name & Last
  * Name / Signature / Date / Remarks sign-off block. Print-to-PDF only, same
- * pattern as QuotePrintPage — save the PDF, then attach it to an email or
+ * pattern as QuotePrintPage, save the PDF, then attach it to an email or
  * upload it via the shipment's Documents section.
  */
 export default function ShipmentDocPrintPage() {

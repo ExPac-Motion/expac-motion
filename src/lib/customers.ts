@@ -1,7 +1,7 @@
 // Customer record (migration 0142): the full customer form behind Customers ›
-// <customer> — General, Contacts, Other Details, Bank Detail, Documents,
+// <customer>, General, Contacts, Other Details, Bank Detail, Documents,
 // Permits, Products & SKUs, Consignees & Shippers, Associated Leads,
-// Margins & Charges — plus the customer's own shippers and portal logins.
+// Margins & Charges, plus the customer's own shippers and portal logins.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./supabase";
 import type { Client, Contact } from "./types";

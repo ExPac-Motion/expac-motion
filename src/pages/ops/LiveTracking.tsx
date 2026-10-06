@@ -69,7 +69,7 @@ export default function LiveTracking() {
       const ref = trackableRef(job);
       // A stored ShipsGo id only applies to the number it was resolved
       // against. If the container/AWB/MBL on the job changed since the last
-      // sync, the id is stale — force a fresh lookup by number instead of
+      // sync, the id is stale, force a fresh lookup by number instead of
       // re-fetching whatever the old number pointed to.
       const sameRef = !!ref && existing?.ref_value === ref.value;
       await refresh.mutateAsync({
@@ -220,7 +220,7 @@ export default function LiveTracking() {
             · {summary.arriving} arriving ≤ 7 days
           </>
         }
-        hint="ShipsGo pushes updates automatically once a shipment is registered — this board and the customer portal refresh live as they arrive. Refresh registers a new number / forces a re-sync (runs on the deployed site). Click a row for the live map."
+        hint="ShipsGo pushes updates automatically once a shipment is registered, this board and the customer portal refresh live as they arrive. Refresh registers a new number / forces a re-sync (runs on the deployed site). Click a row for the live map."
         onToolsSlot={setToolsSlot}
       />
 
@@ -285,7 +285,7 @@ function TrackMapModal({
   const events = eventsQ.data ?? [];
   return (
     <Modal
-      title={`${job.reference} — live tracking`}
+      title={`${job.reference}, live tracking`}
       onClose={onClose}
       wide
       belowHeader={
@@ -352,7 +352,7 @@ function TrackDetail({
       <div className="trk-detail">
         <p className="hint">
           Not registered yet. Hit <strong>Refresh</strong> on the deployed site
-          to register {refValue} with ShipsGo — after that, updates arrive
+          to register {refValue} with ShipsGo, after that, updates arrive
           automatically.
         </p>
       </div>

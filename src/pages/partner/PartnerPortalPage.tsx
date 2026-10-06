@@ -1,5 +1,5 @@
 // Partner portal (migration 0121): an agent / transporter / clearing agent
-// login keeps ITS OWN rate sheets up to date — nothing else. The database
+// login keeps ITS OWN rate sheets up to date, nothing else. The database
 // only returns this partner's partner_rate_sheets (RLS), and they can add
 // and edit but never delete. No tier sheets, sell rates, margins, customers,
 // quotes or shipments are reachable from this login.
@@ -16,7 +16,7 @@ import type { MyPartner } from "../../lib/types";
 import { PARTNER_LABEL } from "../../lib/tariff";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 
-/** The partner's own coverage — editable with the edit_coverage permission. */
+/** The partner's own coverage, editable with the edit_coverage permission. */
 function MyCoverage({ me, canEdit }: { me: MyPartner; canEdit: boolean }) {
   const qc = useQueryClient();
   const { toast, error } = useToast();
@@ -118,7 +118,7 @@ export default function PartnerPortalPage() {
             </p>
             <h1 style={{ margin: "0 0 6px" }}>{me.company || "Your company"}</h1>
             <p className="hint" style={{ margin: "0 0 14px" }}>
-              Keep your air and sea freight rates to ExPac Forwarding up to date — one rate sheet
+              Keep your air and sea freight rates to ExPac Forwarding up to date, one rate sheet
               per mode and trade route, using ExPac's charge codes. Update them whenever your rates
               change (at least weekly); ExPac sees each change.
             </p>

@@ -1,6 +1,6 @@
 // Sales CRM › Inbox (migration 0134): the support@expac.co.za mailbox,
-// sorted by RELATIONSHIP from the CRM (not guessed) — Customers, Leads,
-// Suppliers & Agents, Other / Unknown — with Unread, Needs reply and Linked
+// sorted by RELATIONSHIP from the CRM (not guessed), Customers, Leads,
+// Suppliers & Agents, Other / Unknown, with Unread, Needs reply and Linked
 // to a shipment views across them. /api/inbox-sync copies new mail in every
 // 5 minutes (and on Sync now); a message's raw .eml is parsed here when it's
 // opened. Replies go out through /api/send-mail, threaded under the original.
@@ -117,7 +117,7 @@ const jobLabel = (j: Job) => `${j.reference}${j.client?.company ? ` · ${j.clien
 /** A parsed .eml (postal-mime), loaded when a message is opened. */
 interface Parsed {
   html: string | null;
-  /** The html as sent (cid: images untouched) — what a forward carries. */
+  /** The html as sent (cid: images untouched), what a forward carries. */
   rawHtml: string | null;
   text: string | null;
   attachments: { name: string; type: string; url: string; size: number; inline: boolean }[];
@@ -321,7 +321,7 @@ export default function InboxTab() {
               ? undefined
               : `${rows.length} message${rows.length === 1 ? "" : "s"}`
         }
-        hint={`support@expac.co.za — sorted by who the sender is in the CRM. ${syncNote}`}
+        hint={`support@expac.co.za, sorted by who the sender is in the CRM. ${syncNote}`}
         primary={
           <button className="btn" onClick={() => setCompose({})}>
             + New email
@@ -334,7 +334,7 @@ export default function InboxTab() {
       </PageTools>
 
       {st?.last_error && /isn't connected/i.test(st.last_error) && (
-        <p className="hint">The inbox isn't connected yet — add the IMAP settings in Cloudflare.</p>
+        <p className="hint">The inbox isn't connected yet, add the IMAP settings in Cloudflare.</p>
       )}
 
       <div className="panel inbox" style={{ "--inbox-list": `${listWidth}px` } as React.CSSProperties}>
@@ -428,7 +428,7 @@ export default function InboxTab() {
             <ErrorNote error={q.error} />
           ) : rows.length === 0 ? (
             <EmptyState>
-              {all.length === 0 ? "No mail yet — it arrives with the next sync." : "Nothing here."}
+              {all.length === 0 ? "No mail yet, it arrives with the next sync." : "Nothing here."}
             </EmptyState>
           ) : (
             rows.map((m) => (
@@ -564,8 +564,8 @@ export default function InboxTab() {
 const DELIVERY = {
   delivered: { label: "Delivered", dot: "cat-customer", chip: "cat-customer" },
   opened: { label: "Opened", dot: "cat-customer", chip: "cat-customer" },
-  bounced: { label: "Bounced — not delivered", dot: "cat-bounced", chip: "needs" },
-  sending: { label: "Sent — awaiting delivery", dot: "cat-unknown", chip: "" },
+  bounced: { label: "Bounced, not delivered", dot: "cat-bounced", chip: "needs" },
+  sending: { label: "Sent, awaiting delivery", dot: "cat-unknown", chip: "" },
   saved: { label: "Sent (no delivery tracking)", dot: "cat-unknown", chip: "" },
 } as const;
 type DeliveryKey = keyof typeof DELIVERY;
@@ -726,7 +726,7 @@ function Reader({
       error(e instanceof Error ? e.message : "Could not start the quotation");
     }
   }
-  /** A pipeline opportunity from this email — on the customer or lead it
+  /** A pipeline opportunity from this email, on the customer or lead it
    *  came from (an unknown sender becomes a lead first). */
   async function addOpportunity() {
     try {
@@ -748,7 +748,7 @@ function Reader({
         notes: `From the inbox (${formatDateTime(msg.sent_at)}, ${msg.from_email ?? ""})${note ? `: ${note}` : ""}`,
       });
       qc.invalidateQueries({ queryKey: ["inbox"] });
-      toast(`Opportunity added for ${who || "the sender"} — see Sales CRM › Opportunities`);
+      toast(`Opportunity added for ${who || "the sender"}, see Sales CRM › Opportunities`);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not add the opportunity");
     }
@@ -983,7 +983,7 @@ const FREE_MAIL = /^(gmail|googlemail|outlook|hotmail|live|msn|yahoo|icloud|me|a
 
 /** "Add as…": the sender as one or more supplier / partner records, filled
  *  from the email (company from the domain, contact, email, a phone number
- *  found in the message) — all editable before saving. */
+ *  found in the message), all editable before saving. */
 function AddPartnerModal({ msg, text, onClose }: { msg: InboxMessage; text: string; onClose: () => void }) {
   const saves: Record<PartnerType, ReturnType<typeof useSaveAgent>> = {
     supplier: useSaveSupplier() as unknown as ReturnType<typeof useSaveAgent>,
@@ -1041,7 +1041,7 @@ function AddPartnerModal({ msg, text, onClose }: { msg: InboxMessage; text: stri
       toast(
         `${company.trim()} added as ${types
           .map((t) => PARTNER_TYPES.find((p) => p.key === t)?.label)
-          .join(" and ")} — this email now sits under Suppliers & Agents`,
+          .join(" and ")}, this email now sits under Suppliers & Agents`,
       );
       onClose();
     } catch (err) {
@@ -1094,7 +1094,7 @@ function AddPartnerModal({ msg, text, onClose }: { msg: InboxMessage; text: stri
           <label>Address</label>
           <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} />
         </div>
-        <span className="hint">Filled from the email — check and correct before saving. Coverage can be added on the record.</span>
+        <span className="hint">Filled from the email, check and correct before saving. Coverage can be added on the record.</span>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
           <button type="button" className="btn outline" onClick={onClose}>
             Cancel
@@ -1170,7 +1170,7 @@ function ComposeModal({
     }
     const picked = fwdFiles.filter((a) => keepFiles.includes(a.url));
     if (picked.reduce((n, a) => n + a.size, 0) > FORWARD_ATTACH_LIMIT) {
-      error("The attachments are too large to forward together (max about 14 MB) — untick some");
+      error("The attachments are too large to forward together (max about 14 MB), untick some");
       return;
     }
     setSending(true);

@@ -47,7 +47,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
 };
 
 /**
- * Sales CRM — sub-nav lives in the shared top-nav (Layout.tsx), driven by
+ * Sales CRM, sub-nav lives in the shared top-nav (Layout.tsx), driven by
  * ?tab=. "Opportunities" is the original per-customer pipeline/timeline
  * page, relocated here rather than duplicated.
  */

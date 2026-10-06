@@ -1,12 +1,12 @@
 // Houses from active shipments (0139): every air / sea shipment travels on a
-// house document (HAWB / HBL) — ExPac's or the origin agent's — on its own or
+// house document (HAWB / HBL), ExPac's or the origin agent's, on its own or
 // under a master. These helpers turn a shipment into a consolidation house.
 import { VOLUMETRIC_FACTOR, packingTotals, volumetricFactor } from "../../lib/calc";
 import type { Contact, Job, Quote, QuoteMode } from "../../lib/types";
 import { round, wmCbm, type ConsolMode, type WmsConsol, type WmsConsolHouse, type WmsReceipt } from "../../lib/wms";
 import { EXPAC_NOTIFY } from "./WmsConsols";
 
-/** Which consolidation a shipment's mode belongs on (null: road — no master). */
+/** Which consolidation a shipment's mode belongs on (null: road, no master). */
 export function consolModeFor(mode: QuoteMode | string | null | undefined): ConsolMode | null {
   const m = mode ?? "";
   if (m.startsWith("Air") || m.startsWith("Courier")) return "air";

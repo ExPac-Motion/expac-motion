@@ -21,7 +21,7 @@ const blankRow = (): QuoteRequestPacking => ({ qty_ctns: "1", length_cm: "", wid
 
 /**
  * Customer Portal › Request a Quote: the basics of a shipment. Submitting
- * creates a quotation request that lands in ExPac's Quotations as a New Lead —
+ * creates a quotation request that lands in ExPac's Quotations as a New Lead,
  * ExPac completes it, adds the charges and sends it back here to accept.
  */
 export default function PortalRequestQuotePage() {
@@ -66,7 +66,7 @@ export default function PortalRequestQuotePage() {
     if (!fcl && pack.qty <= 0) return error("Add at least one cargo line (quantity and weight)");
     request.mutate(r, {
       onSuccess: (id) => {
-        toast("Quote requested — the ExPac team is on it");
+        toast("Quote requested, the ExPac team is on it");
         navigate(`/portal/quotes/${id}`);
       },
       onError: (er) => error(er.message),
@@ -109,7 +109,7 @@ export default function PortalRequestQuotePage() {
             </div>
             <div className="field">
               <label>To (destination)</label>
-              <input list="pt-locodes" value={r.destination} onChange={(e) => set("destination", e.target.value)} placeholder="ZAJNB — Johannesburg" />
+              <input list="pt-locodes" value={r.destination} onChange={(e) => set("destination", e.target.value)} placeholder="ZAJNB, Johannesburg" />
             </div>
             <div className="field">
               <label>Incoterms</label>
@@ -117,7 +117,7 @@ export default function PortalRequestQuotePage() {
                 <option value="">Not sure</option>
                 {incoterms.map((i) => (
                   <option key={i.code} value={i.code}>
-                    {i.code} — {i.name}
+                    {i.code}, {i.name}
                   </option>
                 ))}
               </select>
@@ -149,7 +149,7 @@ export default function PortalRequestQuotePage() {
             </div>
           </div>
 
-          <h3 className="pt-h3">3. Cargo {fcl && <span className="hint">(optional for full containers — add container sizes in the notes)</span>}</h3>
+          <h3 className="pt-h3">3. Cargo {fcl && <span className="hint">(optional for full containers, add container sizes in the notes)</span>}</h3>
           <table className="table--compact wms-pkg">
             <thead>
               <tr>

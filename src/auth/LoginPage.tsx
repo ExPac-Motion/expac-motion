@@ -34,7 +34,7 @@ export default function LoginPage() {
       } else {
         await requestPasswordReset(email);
         setNotice(
-          "If that email has a login, a reset link is on its way — check your inbox.",
+          "If that email has a login, a reset link is on its way, check your inbox.",
         );
       }
     } catch (e2) {

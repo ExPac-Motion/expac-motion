@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — an admin creates a partner-portal login with a
+ * Cloudflare Pages Function, an admin creates a partner-portal login with a
  * generated password (for an agent / transporter / clearing agent /
  * destination agent who can't accept an invite link), or resets that login's
  * password. The admin passes the password on (or signs in as the partner to

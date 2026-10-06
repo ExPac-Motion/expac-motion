@@ -201,7 +201,7 @@ export default function WmsReports() {
             <h2>{def.label}</h2>
             <p>
               {def.hint}
-              {def.period === "asAt" ? ` — as at ${formatDate(to)}` : def.period === "range" ? ` — ${formatDate(from)} to ${formatDate(to)}` : ""}
+              {def.period === "asAt" ? `, as at ${formatDate(to)}` : def.period === "range" ? `, ${formatDate(from)} to ${formatDate(to)}` : ""}
             </p>
           </div>
         </div>

@@ -1,8 +1,8 @@
 /* ============================================================================
- * LOCKED LAYOUT — the customer quotation is signed off (ExPac, 2026-09-09) and
+ * LOCKED LAYOUT, the customer quotation is signed off (ExPac, 2026-09-09) and
  * must render identically for every quote. Do NOT change this file, <QuoteSheet>,
- * or the `.qs-*` rules in src/index.css — layout, spacing, pagination, fonts,
- * colours — without an explicit, specific instruction from the user describing
+ * or the `.qs-*` rules in src/index.css, layout, spacing, pagination, fonts,
+ * colours, without an explicit, specific instruction from the user describing
  * the exact change. Preview any sanctioned change at /quotes/demo/print (DEV)
  * against a short and a long quote before committing.
  * ==========================================================================*/
@@ -92,7 +92,7 @@ export interface QuoteSheetData {
   pack: PackingTotals;
   groups: CategoryGroup[];
   /** When set (not null/"ZAR"), the Sell/Total figures below display converted
-   *  into this currency instead of ZAR, using `fx` — see convertZar(). */
+   *  into this currency instead of ZAR, using `fx`, see convertZar(). */
   sellCurrency: LineCurrency | null;
   fx: FxRates;
 }
@@ -114,7 +114,7 @@ type Block =
   | { t: "tail"; s: Section };
 
 /* ------------------------------------------------------------------ */
-/* The paginated sheet — pure presentation, no data fetching.          */
+/* The paginated sheet, pure presentation, no data fetching.          */
 /* ------------------------------------------------------------------ */
 export function QuoteSheet({ data }: { data: QuoteSheetData }) {
   const {
@@ -138,7 +138,7 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
 
   // Customer-facing Sell/Total figures, converted from their computed ZAR
   // amount into the quote's Sell Currency when one is set (VAT/margin math
-  // itself stays ZAR throughout — this only changes what's displayed).
+  // itself stays ZAR throughout, this only changes what's displayed).
   const disp = (zar: number) =>
     sellCurrency && sellCurrency !== "ZAR"
       ? moneyCur(convertZar(zar, sellCurrency, fx), sellCurrency)
@@ -590,7 +590,7 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
         ))}
       </div>
 
-      {/* off-screen measuring copy — every row in real tables */}
+      {/* off-screen measuring copy, every row in real tables */}
       <div className="qs-measure qs-page" ref={measureRef} aria-hidden="true">
         <div data-mk="head">
           <Header page={1} total={9} />
@@ -637,7 +637,7 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Route component — fetches the quote and feeds <QuoteSheet>.         */
+/* Route component, fetches the quote and feeds <QuoteSheet>.         */
 /* ------------------------------------------------------------------ */
 export default function QuotePrintPage() {
   const { id } = useParams();
@@ -753,7 +753,7 @@ export default function QuotePrintPage() {
       <div className="qs-note">
         Customer quotation. Sell prices are in{" "}
         {q.sell_currency && q.sell_currency !== "ZAR" ? q.sell_currency : "ZAR"}{" "}
-        — internal buy cost, margin and FX are not shown. VAT is charged per
+       , internal buy cost, margin and FX are not shown. VAT is charged per
         line at the rate set on the quotation.
       </div>
       <QuoteSheet data={data} />

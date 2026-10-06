@@ -1,4 +1,4 @@
-# Customer Portal — queued items (to discuss)
+# Customer Portal, queued items (to discuss)
 
 From the "Customer Portal EXPAC (ZAJNB)" deck, 5 Oct 2026. These headings / sections appear in the deck but are **not built yet**, because ExPac doesn't offer or capture them yet (or it needs a decision first). Everything else in the deck is live in the portal rebuild.
 
@@ -44,7 +44,7 @@ From the "Customer Portal EXPAC (ZAJNB)" deck, 5 Oct 2026. These headings / sect
 - **Mobile app** (the deck shows a phone app). The portal works in a phone browser; a native app is a separate project.
 - **Email to support@ when a customer requests a quote**. Today staff see it in Notifications and in Quotations › New Lead.
 
-## Customer record (staff side) — tabs not built yet
+## Customer record (staff side), tabs not built yet
 From the customer-record screenshot (5 Oct 2026). Built: General, Contacts, Other Details, Bank Detail, Documents, Permits / Certificates, Products & SKUs, Consignees & Shippers, Associated Leads, Margins & Charges (+ Quotes & Shipments).
 - **Integrations**: customer EDI / API / ERP links.
 - **Customer Forecast**: expected volumes per lane / month.

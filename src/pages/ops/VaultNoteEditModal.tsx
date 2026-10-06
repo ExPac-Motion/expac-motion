@@ -14,7 +14,7 @@ import {
 interface Props {
   /** null = create a new note. */
   note: VaultNote | null;
-  /** Which Personal/Business side a new note is created into — ignored
+  /** Which Personal/Business side a new note is created into, ignored
    *  when editing an existing note (its scope doesn't change). */
   scope: VaultBudgetScope;
   /** Prefill for a new note (e.g. due_date from the calendar). */

@@ -50,7 +50,7 @@ import { linkifyHtml } from "../../lib/mailStyle";
 import { formatDate, normalizeWebsite, readableText } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
 
-/** Minimal CSV parser — no quoted-comma support needed for a simple lead import. */
+/** Minimal CSV parser, no quoted-comma support needed for a simple lead import. */
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length < 2) return [];
@@ -110,7 +110,7 @@ function saveJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    /* private mode — non-fatal */
+    /* private mode, non-fatal */
   }
 }
 
@@ -128,7 +128,7 @@ export default function LeadsPage() {
   const { toast, error: toastError } = useToast();
   const [bulkOpen, setBulkOpen] = useState(false);
   // Slot in the header row (beside "+ Add Lead") that DataTable portals its
-  // Save Grid / Reset columns / Table settings controls into — keeps the
+  // Save Grid / Reset columns / Table settings controls into, keeps the
   // search-bar row free so the table starts right after it.
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
@@ -252,7 +252,7 @@ export default function LeadsPage() {
         return "";
       };
 
-      // Group CSV rows by company — the first row per company becomes the
+      // Group CSV rows by company, the first row per company becomes the
       // lead, the rest become additional contacts on it.
       const existingCompany = new Set(rows.map((l) => norm(l.company)));
       const groups = new Map<string, Record<string, string>[]>();
@@ -310,8 +310,8 @@ export default function LeadsPage() {
       if (leadRows.length === 0) {
         toastError(
           dupes > 0
-            ? `Nothing imported — all ${dupes} compan${dupes === 1 ? "y is" : "ies are"} already in Leads`
-            : "No valid rows found — check the file has a Company column",
+            ? `Nothing imported, all ${dupes} compan${dupes === 1 ? "y is" : "ies are"} already in Leads`
+            : "No valid rows found, check the file has a Company column",
         );
         return;
       }
@@ -364,9 +364,9 @@ export default function LeadsPage() {
           (contactRows.length
             ? ` (+${contactRows.length} extra contact${contactRows.length === 1 ? "" : "s"})`
             : "") +
-          (dupes > 0 ? ` — skipped ${dupes} existing` : "") +
-          (dupContacts > 0 ? ` — skipped ${dupContacts} duplicate contact(s)` : "") +
-          (skipped > 0 ? ` — skipped ${skipped} row(s) with no company` : ""),
+          (dupes > 0 ? `, skipped ${dupes} existing` : "") +
+          (dupContacts > 0 ? `, skipped ${dupContacts} duplicate contact(s)` : "") +
+          (skipped > 0 ? `, skipped ${skipped} row(s) with no company` : ""),
       );
     } catch (e2) {
       toastError(e2 instanceof Error ? e2.message : "Could not import file");
@@ -665,7 +665,7 @@ export default function LeadsPage() {
           <ErrorNote error={error} />
         ) : rows.length === 0 ? (
           <EmptyState>
-            No leads yet. Add one, or import a CSV — grab the sample for the
+            No leads yet. Add one, or import a CSV, grab the sample for the
             column layout.
           </EmptyState>
         ) : displayed.length === 0 ? (
@@ -978,7 +978,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
         />
         <span className="hint">
           {sig
-            ? "Your saved signature is included below — edit or remove it as needed. "
+            ? "Your saved signature is included below, edit or remove it as needed. "
             : ""}
           Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>

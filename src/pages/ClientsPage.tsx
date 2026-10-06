@@ -8,7 +8,7 @@ import {
   useUpdateContactsBulk,
 } from "../lib/hooks";
 
-/** Customers — sub-nav lives in the shared top-nav (Layout.tsx), driven by ?tab=. */
+/** Customers, sub-nav lives in the shared top-nav (Layout.tsx), driven by ?tab=. */
 export default function ClientsPage() {
   const [params] = useSearchParams();
   const tab = params.get("tab");

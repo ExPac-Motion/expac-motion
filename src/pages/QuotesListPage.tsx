@@ -55,7 +55,7 @@ function isQuoteStatus(v: string | null): v is QuoteStatus {
   );
 }
 
-/** Inline status dropdown for the Quotations list — lets a status change
+/** Inline status dropdown for the Quotations list, lets a status change
  * happen right from the row instead of opening the quote to edit it.
  * Moving to "accepted" runs the real accept_quote flow (creates the
  * shipment, promotes a linked lead) rather than just stamping the field,
@@ -72,7 +72,7 @@ function QuoteStatusSelect({ quote }: { quote: Quote }) {
     try {
       if (next === "accepted" && quote.status !== "completed") {
         await acceptQuote.mutateAsync(quote.id);
-        toast("Shipment created — check Active Shipments");
+        toast("Shipment created, check Active Shipments");
         return;
       }
       await bulkUpdate.mutateAsync({ ids: [quote.id], patch: { status: next } });

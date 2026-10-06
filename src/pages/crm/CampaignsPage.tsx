@@ -216,7 +216,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  // Every lead we're allowed to email — the pool the picker and Send draw from.
+  // Every lead we're allowed to email, the pool the picker and Send draw from.
   const mailable = useMemo(
     () => (leads ?? []).filter((l) => l.email && !l.unsubscribed_at),
     [leads],
@@ -280,7 +280,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
       const at = new Date(`${schedDate}T${schedTime}:00`);
       if (Number.isNaN(at.getTime())) return toastError("That date / time isn't valid");
       if (at.getTime() < Date.now() - 60_000)
-        return toastError("That time has already passed — pick a later one");
+        return toastError("That time has already passed, pick a later one");
       try {
         await schedule.mutateAsync({
           templateId: templateId || null,
@@ -355,7 +355,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
       </div>
       <div className="field">
         <label>
-          Recipients ({selectedCount} selected) — Leads only, must have an email
+          Recipients ({selectedCount} selected), Leads only, must have an email
           and not be unsubscribed
         </label>
         <div
@@ -430,7 +430,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
                   onChange={() => toggle(l.id)}
                 />
                 {l.company}
-                {l.contact ? ` — ${l.contact}` : ""}{" "}
+                {l.contact ? `, ${l.contact}` : ""}{" "}
                 <span className="hint">{l.email}</span>
               </label>
             ))
@@ -475,7 +475,7 @@ function NewCampaignModal({ onClose }: { onClose: () => void }) {
         </div>
         <span className="hint">
           {when === "later"
-            ? "Sent by the server at that time — you can close the app. Change or cancel it any time before then."
+            ? "Sent by the server at that time, you can close the app. Change or cancel it any time before then."
             : "Keep this tab open until it finishes."}
         </span>
       </div>
@@ -517,7 +517,7 @@ function RescheduleModal({
     const at = new Date(`${date}T${time}:00`);
     if (Number.isNaN(at.getTime())) return toastError("That date / time isn't valid");
     if (at.getTime() < Date.now() - 60_000)
-      return toastError("That time has already passed — pick a later one");
+      return toastError("That time has already passed, pick a later one");
     try {
       await update.mutateAsync({
         id: campaign.id,
@@ -531,7 +531,7 @@ function RescheduleModal({
   }
 
   return (
-    <Modal title={`Reschedule — ${campaign.name}`} onClose={onClose}>
+    <Modal title={`Reschedule, ${campaign.name}`} onClose={onClose}>
       <div className="field">
         <label>Send at</label>
         <div className="camp-when">
@@ -644,7 +644,7 @@ export default function CampaignsPage() {
     const n = sel.count;
     if (
       !window.confirm(
-        `Delete ${n} campaign${n === 1 ? "" : "s"}? This only removes the records here — mail already delivered stays delivered, and any scheduled ones won't go out.`,
+        `Delete ${n} campaign${n === 1 ? "" : "s"}? This only removes the records here, mail already delivered stays delivered, and any scheduled ones won't go out.`,
       )
     )
       return;
@@ -663,7 +663,7 @@ export default function CampaignsPage() {
   async function onDelete(row: MailCampaign) {
     if (
       !window.confirm(
-        `Delete campaign "${row.name}"? This only removes its record here — it does not unsend mail already delivered.`,
+        `Delete campaign "${row.name}"? This only removes its record here, it does not unsend mail already delivered.`,
       )
     )
       return;
@@ -771,7 +771,7 @@ export default function CampaignsPage() {
     <>
       <PageTools
         count={isLoading ? undefined : `${rows.length} campaign${rows.length === 1 ? "" : "s"}`}
-        hint="Send a template to a chosen set of leads — now, or scheduled for a date and time (sent by the server; the app doesn't need to be open)."
+        hint="Send a template to a chosen set of leads, now, or scheduled for a date and time (sent by the server; the app doesn't need to be open)."
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setCreating(true)}>

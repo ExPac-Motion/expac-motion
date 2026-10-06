@@ -11,7 +11,7 @@ import {
 import { useMyRateSheet } from "../../lib/hooks";
 import { money } from "../../lib/format";
 
-/** Tariff Sheet — the internal rate sheet, sell price only (client_rate_sheet
+/** Tariff Sheet, the internal rate sheet, sell price only (client_rate_sheet
  *  in 0071 collapses buy/margin into `sell` before this ever reaches the
  *  portal). */
 export default function PortalRatesPage() {

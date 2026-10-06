@@ -19,7 +19,7 @@ interface NavModule {
 /**
  * Primary top-nav modules. A module with `children` gets a secondary sub-nav
  * row underneath the top bar whenever it (or one of its children) is active.
- * Control Tower's children are query-string tabs on the same route — they
+ * Control Tower's children are query-string tabs on the same route, they
  * used to be an in-page tab bar (OpsControlTowerPage) but now live here so
  * every module's sub-pages sit in the same place.
  */
@@ -83,7 +83,7 @@ const NAV: NavModule[] = [
     label: "Customers",
     children: [
       { to: "/clients", label: "All Customers" },
-      // Shippers belong to a customer (0142) — the full list lives here now.
+      // Shippers belong to a customer (0142), the full list lives here now.
       { to: "/suppliers", label: "Shippers" },
       { to: "/clients?tab=portal-access", label: "Portal Access" },
     ],
@@ -178,7 +178,7 @@ export default function Layout() {
       )
     : NAV;
 
-  // Portal Access manages other logins' roles/permissions/passwords —
+  // Portal Access manages other logins' roles/permissions/passwords,
   // admin-only, same as the RPCs it calls (0091_role_model_v2.sql).
   if (!isAdmin) {
     nav = nav.map((m) =>

@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — an ExPac admin gives a customer contact a
+ * Cloudflare Pages Function, an ExPac admin gives a customer contact a
  * Customer Portal login from the customer record (General › Enable Customer
  * Portal Access): creates the login with the password typed (or a generated
  * one), or resets an existing customer login's password, and links it to the

@@ -73,7 +73,7 @@ function docLabel(mode: string): string {
 }
 
 /** Port fields on a job hold just the UN/LOCODE (e.g. "ZADUR"), not the
- *  "CODE — City, Country" string used on the quote. */
+ *  "CODE, City, Country" string used on the quote. */
 function codeOf(s: string | null | undefined): string {
   if (!s || !s.trim()) return "";
   const c = portCode(s);
@@ -123,12 +123,12 @@ function etaIsDue(eta: string | null | undefined): boolean {
   return n !== null && n <= 5;
 }
 
-/** Statuses at which clearance is done — nothing left to lodge before arrival. */
+/** Statuses at which clearance is done, nothing left to lodge before arrival. */
 const CLEARED_STATUSES = new Set(["Released", "On-Delivery", "Delivered"]);
 
 /**
  * ETA urgency on the Active board. "risk": ETA due (≤5 days / passed) with
- * work still outstanding — an open task, or not yet cleared (status before
+ * work still outstanding, an open task, or not yet cleared (status before
  * Released). "due": ETA due but nothing outstanding. These are the shipments
  * where a pending clearance or delivery lodgement starts costing money.
  */
@@ -317,7 +317,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   async function onDuplicateJob(j: Job) {
     try {
       // With a quote: copy the quote too and open the copy in the Quote
-      // Builder — the new shipment is created linked to it.
+      // Builder, the new shipment is created linked to it.
       if (j.quote_id) {
         const newQuoteId = await duplicateJobQuote.mutateAsync(j);
         if (newQuoteId) {
@@ -400,9 +400,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         onSuccess: () =>
           toast(
             toDone
-              ? "Shipment delivered — moved to Completed Shipments"
+              ? "Shipment delivered, moved to Completed Shipments"
               : fromDone
-                ? "Shipment reopened — moved to Active Shipments"
+                ? "Shipment reopened, moved to Active Shipments"
                 : "Shipment updated",
           ),
         onError: (e) =>
@@ -411,7 +411,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     );
 
     // Advance the milestone funnel (+ log a job_events row) whenever the
-    // Shipment Status moves into a different stage — nothing else does this.
+    // Shipment Status moves into a different stage, nothing else does this.
     if (patch.shipment_status) {
       const milestone = MILESTONE_BY_STATUS[patch.shipment_status];
       if (milestone) {
@@ -613,9 +613,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               }
               title={
                 level === "risk"
-                  ? `${when} — work outstanding (open task or not yet cleared)`
+                  ? `${when}, work outstanding (open task or not yet cleared)`
                   : level === "due"
-                    ? `${when} — nothing outstanding`
+                    ? `${when}, nothing outstanding`
                     : undefined
               }
               onCommit={(v) => save(j.id, { eta: v })}
@@ -646,7 +646,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         render: (j) => (
           <JobDateCell
             value={j.invoiced_at}
-            title="Date invoiced — blank = not yet invoiced"
+            title="Date invoiced, blank = not yet invoiced"
             onCommit={(v) => save(j.id, { invoiced_at: v })}
           />
         ),
@@ -772,7 +772,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             {q
               ? `No shipments match "${search.trim()}".`
               : recordFilter
-              ? "Nothing matches that filter — every shipment in this view has one."
+              ? "Nothing matches that filter, every shipment in this view has one."
               : modeTab !== "All" && stageRows.length > 0
                 ? `No ${modeLabel} shipments in this view.`
                 : copy.empty}
@@ -889,7 +889,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               }
               toast(
                 status === DELIVERED_STATUS
-                  ? `${n} shipment${n === 1 ? "" : "s"} delivered — moved to Completed Shipments`
+                  ? `${n} shipment${n === 1 ? "" : "s"} delivered, moved to Completed Shipments`
                   : `Updated ${n} shipment${n === 1 ? "" : "s"}`,
               );
               sel.clear();
@@ -996,7 +996,7 @@ function JobViewModal({
   );
 }
 
-/** Which master (MAWB / MBL) this shipment travels on, as a house — or a
+/** Which master (MAWB / MBL) this shipment travels on, as a house, or a
  *  button to put it on one (WMS consolidations, 0139). */
 function ConsolSection({ job }: { job: Job }) {
   const can = useCan();
@@ -1020,7 +1020,7 @@ function ConsolSection({ job }: { job: Job }) {
             onClick={() => navigate(`/wms?tab=release&consol=${c.id}`)}
           >
             {houseLabel(c.mode)} {houseNo(c, h, i)} on {c.consol_no}
-            {c.master_no ? ` — ${masterLabel(c.mode)} ${c.master_no}` : ""} ({c.status})
+            {c.master_no ? `, ${masterLabel(c.mode)} ${c.master_no}` : ""} ({c.status})
           </button>
         ))
       ) : (
@@ -1365,7 +1365,7 @@ function JobEditModal({
             name="ops_remarks"
             rows={2}
             defaultValue={job.ops_remarks ?? ""}
-            placeholder="Only used to pre-fill the Remarks line on Document Vault documents — not shown anywhere else."
+            placeholder="Only used to pre-fill the Remarks line on Document Vault documents, not shown anywhere else."
           />
         </div>
         <div

@@ -391,7 +391,7 @@ export default function OpportunitiesTab() {
         </div>
       ) : stages.length === 0 ? (
         <div className="panel">
-          <EmptyState>All stages hidden — enable some in Options.</EmptyState>
+          <EmptyState>All stages hidden, enable some in Options.</EmptyState>
         </div>
       ) : (
         <div
@@ -499,13 +499,13 @@ function OpportunityCard({
       if (synthetic) {
         if (!o.quote?.id) return;
         // Moving a quotation card to "Quote Accepted" runs the real
-        // Accept & create shipment flow — a shipment is created and shows up
+        // Accept & create shipment flow, a shipment is created and shows up
         // under Active Shipments (and the lead is promoted to a customer).
         if (status === "quote_accepted") {
           if (o.quote.status === "accepted" || o.quote.status === "completed")
             return;
           await acceptQuote.mutateAsync(o.quote.id);
-          toast("Shipment created — check Active Shipments");
+          toast("Shipment created, check Active Shipments");
           return;
         }
         // Other stages just re-stamp the quote's status; the board then
@@ -703,7 +703,7 @@ function QuoteValueEditor({
     if ((next ?? null) === (manual ?? null)) return;
     try {
       await save.mutateAsync({ id: quoteId, value: next });
-      toast(next == null ? "Value cleared — using quotation total" : "Value saved");
+      toast(next == null ? "Value cleared, using quotation total" : "Value saved");
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not save value");
       setText(manual != null ? String(manual) : "");
@@ -718,7 +718,7 @@ function QuoteValueEditor({
       // formatted currency (a plain number input can't render "R"/commas).
       value={editing ? text : manual != null ? money(manual) : ""}
       placeholder={money(computed)}
-      title="Manual opportunity value — leave blank to use the quotation total"
+      title="Manual opportunity value, leave blank to use the quotation total"
       disabled={save.isPending}
       onFocus={() => {
         setEditing(true);
@@ -844,7 +844,7 @@ function OpportunityModal({
           <label>Title (optional)</label>
           <input
             name="title"
-            placeholder="e.g. Air freight — China to SA"
+            placeholder="e.g. Air freight, China to SA"
             defaultValue={opportunity?.title ?? ""}
           />
         </div>

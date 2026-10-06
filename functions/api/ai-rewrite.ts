@@ -1,9 +1,9 @@
 /**
- * Cloudflare Pages Function — AI rewrite of mail template / campaign copy
+ * Cloudflare Pages Function, AI rewrite of mail template / campaign copy
  * via the Anthropic Messages API.
  *
  * Holds ANTHROPIC_API_KEY (Cloudflare Pages env). Verifies the caller is a
- * signed-in staff login (profiles.role admin / user — same checks as
+ * signed-in staff login (profiles.role admin / user, same checks as
  * functions/api/send-mail.ts; portal logins get 403), then asks
  * Claude Haiku to rewrite an HTML fragment per a fixed action and returns
  * the rewritten HTML. Merge-field tokens ({{ contact.name }} etc.) and
@@ -40,7 +40,7 @@ async function verifyUser(env, authHeader) {
   }
 }
 
-/** Staff = profiles.role admin / user — mirrors public.is_staff(), including
+/** Staff = profiles.role admin / user, mirrors public.is_staff(), including
  *  treating a not-yet-created profile row as staff. Read with the caller's own
  *  token, so RLS lets them see only their own profile. */
 async function isStaffUser(env, authHeader, userId) {
@@ -72,9 +72,9 @@ const SYSTEM = [
   "You are an editor that rewrites outreach email copy for ExPac Forwarding, a freight-forwarding company.",
   "You receive an HTML fragment and an instruction.",
   "Rules:",
-  "1. Return ONLY the rewritten HTML fragment — no explanation, no markdown code fences, no preamble.",
+  "1. Return ONLY the rewritten HTML fragment, no explanation, no markdown code fences, no preamble.",
   "2. Keep the same kind of HTML structure (<p>, <br>, <b>, <a>, <ul>, <li>). You may merge or split paragraphs if the instruction calls for it.",
-  "3. Never alter, remove, translate, or reformat these merge-field tokens — they must appear verbatim if present: {{ contact.name }}, {{ contact.company }}, {{ unsubscribe_link }}",
+  "3. Never alter, remove, translate, or reformat these merge-field tokens, they must appear verbatim if present: {{ contact.name }}, {{ contact.company }}, {{ unsubscribe_link }}",
   "4. Keep every <a> href attribute exactly as given.",
   "5. Keep the original language.",
 ].join("\n");

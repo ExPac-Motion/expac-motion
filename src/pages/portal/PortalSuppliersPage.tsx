@@ -3,7 +3,7 @@ import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools } from "../../components/common";
 import { useMySuppliers } from "../../lib/hooks";
 
-/** "Customer Party" — the shippers used across this customer's own
+/** "Customer Party", the shippers used across this customer's own
  *  shipments (client_suppliers, see 0071). */
 export default function PortalSuppliersPage() {
   const suppliersQ = useMySuppliers();

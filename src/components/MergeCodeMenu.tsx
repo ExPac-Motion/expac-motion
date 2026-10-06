@@ -5,9 +5,9 @@ interface Props {
   /** The input / textarea the picked code is inserted into, at the caret. */
   targetRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   /** Controlled fields: receives the full new value after insertion.
-   *  Omit for uncontrolled (FormData) fields — the DOM value is set directly. */
+   *  Omit for uncontrolled (FormData) fields, the DOM value is set directly. */
   onChange?: (value: string) => void;
-  /** Code list to offer — defaults to the generic set. */
+  /** Code list to offer, defaults to the generic set. */
   codes?: MergeCode[];
   title?: string;
 }

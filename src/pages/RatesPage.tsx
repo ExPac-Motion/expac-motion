@@ -229,7 +229,7 @@ export default function RatesPage() {
           </select>
         }
         count={isLoading ? undefined : `${rows.length} rate${rows.length === 1 ? "" : "s"}`}
-        hint="The earlier flat rate list — new rates go on the tier rate sheets."
+        hint="The earlier flat rate list, new rates go on the tier rate sheets."
         onToolsSlot={setToolsSlot}
         primary={
           <Link className="btn" to="/rates">

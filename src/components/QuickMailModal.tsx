@@ -35,7 +35,7 @@ export default function QuickMailModal({
   name?: string | null;
   /** Extra merge-code values for this record (shipment no, lane, etc.). */
   merge?: MergeContext;
-  /** When set, offers "Attach quotation" — the customer quotation PDF. */
+  /** When set, offers "Attach quotation", the customer quotation PDF. */
   quote?: { id: string; reference: string };
   onClose: () => void;
 }) {
@@ -182,7 +182,7 @@ export default function QuickMailModal({
         />
         <span className="hint">
           {sig
-            ? "Your saved signature is included below — edit or remove it as needed. "
+            ? "Your saved signature is included below, edit or remove it as needed. "
             : ""}
           Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>

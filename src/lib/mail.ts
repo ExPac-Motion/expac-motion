@@ -18,7 +18,7 @@ export interface SendMailInput {
   /** Overrides the sender display name (address stays the verified domain). */
   fromName?: string;
   replyTo?: string;
-  /** List mail only (campaigns / follow-ups) — the one-click unsubscribe API
+  /** List mail only (campaigns / follow-ups), the one-click unsubscribe API
    *  endpoint (`/api/unsubscribe?r=...`), not the human-facing page. Sets the
    *  `List-Unsubscribe` header so mail clients offer their native one-click
    *  unsubscribe. */

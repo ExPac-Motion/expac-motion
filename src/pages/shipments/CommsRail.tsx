@@ -46,7 +46,7 @@ export default function CommsRail({
           <CommsPanel key={job.id} job={job} />
         ) : (
           <p className="hint" style={{ padding: "12px 2px" }}>
-            Pick a shipment from the list — click its <strong>✉ Messages</strong>{" "}
+            Pick a shipment from the list, click its <strong>✉ Messages</strong>{" "}
             button.
           </p>
         )}

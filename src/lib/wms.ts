@@ -1,4 +1,4 @@
-// WMS — Warehouse Management System (migration 0137). Types, data access,
+// WMS, Warehouse Management System (migration 0137). Types, data access,
 // hooks and the stock / storage-billing maths for the WMS module. Stock is a
 // ledger (wms_stock_moves, pieces +in / −out); kg and CBM follow pro rata.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,7 +54,7 @@ export interface WmsLocation {
 }
 export type WmsLocationInput = Omit<WmsLocation, "id" | "created_at">;
 
-/** One package item on a receipt — SKU, description, type, qty and per-unit
+/** One package item on a receipt, SKU, description, type, qty and per-unit
  *  dims / kg (same measures as a quote's packing list). */
 export interface WmsPackage {
   sku?: string;
@@ -687,7 +687,7 @@ export function wmCbm(cbm: number, kg: number): number {
   return Math.max(n(cbm), n(kg) / 1000);
 }
 
-/** On hand per (receipt, location) from the ledger — positives only. */
+/** On hand per (receipt, location) from the ledger, positives only. */
 export function stockByLocation(
   moves: WmsMove[],
 ): { receipt_id: string; location_id: string | null; on_hand: number }[] {
@@ -775,7 +775,7 @@ export function computeStorageBilling(
           ? r.pallets / r.pieces
           : r.gross_kg / r.pieces;
     const wmPerPiece = wmCbm(r.volume_cbm, r.gross_kg) / r.pieces;
-    const label = `${r.receipt_no}${r.description ? ` — ${r.description}` : ""}`;
+    const label = `${r.receipt_no}${r.description ? `, ${r.description}` : ""}`;
 
     // Storage: walk each day of the period.
     let unitDays = 0;
@@ -890,7 +890,7 @@ export function downloadCsv(filename: string, header: string[], rows: (string | 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** "A / B03" — zone then bay code; "Unassigned" when there's no location. */
+/** "A / B03", zone then bay code; "Unassigned" when there's no location. */
 export function locationLabel(loc: Pick<WmsLocation, "zone" | "code"> | null | undefined): string {
   if (!loc) return "Unassigned";
   return loc.zone ? `${loc.zone} / ${loc.code}` : loc.code;

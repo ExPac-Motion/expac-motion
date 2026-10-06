@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — Resend webhook.
+ * Cloudflare Pages Function, Resend webhook.
  *
  *  - Delivery events (email.delivered / email.opened / email.bounced /
  *    email.complained) → update messages.status where provider_id = the id.
@@ -8,7 +8,7 @@
  *    header carrying one of our sent Resend ids, then insert an inbound row.
  *
  * Env: RESEND_WEBHOOK_SECRET (svix signing secret, `whsec_...`),
- *      SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (service role — used only here,
+ *      SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (service role, used only here,
  *      because the DB writes run without a user session).
  *
  * Inactive until the user adds the webhook (and, for replies, the inbound MX
@@ -141,7 +141,7 @@ export async function onRequestPost(context) {
         `mail_campaign_recipients?provider_id=eq.${encodeURIComponent(id)}`,
         recipientPatch,
       ),
-      // Inbox replies / forwards / new emails (0136) — Sent items.
+      // Inbox replies / forwards / new emails (0136), Sent items.
       sbPatch(env, `inbox_messages?provider_id=eq.${encodeURIComponent(id)}`, {
         delivery_status: status,
       }),

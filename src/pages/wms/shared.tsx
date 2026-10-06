@@ -78,7 +78,7 @@ export function LocationOptions({
           .map((l) => (
             <option key={l.id} value={l.id}>
               {locationLabel(l)}
-              {l.name ? ` — ${l.name}` : ""}
+              {l.name ? `, ${l.name}` : ""}
             </option>
           ));
         return z ? (

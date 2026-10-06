@@ -11,7 +11,7 @@ import type { Job, JobTracking, TrackingMovement } from "./types";
  *
  *  ⚠️  Verify these two paths and the field mapping in normaliseShipsGo()
  *  against your account's OpenAPI spec (api.shipsgo.com/docs/v2) before the
- *  first real pull — the UI already renders fine from a job_tracking row,
+ *  first real pull, the UI already renders fine from a job_tracking row,
  *  so a wrong path only breaks the Refresh button, not the page.
  * ------------------------------------------------------------------ */
 const SHIPSGO_PATH = {
@@ -20,7 +20,7 @@ const SHIPSGO_PATH = {
 };
 
 /**
- * Public ShipsGo *embed* token (the widget on expac.co.za/live-tracking) — not
+ * Public ShipsGo *embed* token (the widget on expac.co.za/live-tracking), not
  * the secret API user token. Safe in the client; override per deploy with
  * VITE_SHIPSGO_EMBED_TOKEN.
  */
@@ -90,7 +90,7 @@ const asDict = (v: unknown): Dict => (v && typeof v === "object" ? (v as Dict) :
 const str = (v: unknown): string | null => {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "object") {
-    // ShipsGo sometimes nests { name, code, scac, ... } — dig out a label.
+    // ShipsGo sometimes nests { name, code, scac, ... }, dig out a label.
     const o = v as Record<string, unknown>;
     const label = o.name ?? o.title ?? o.label ?? o.value ?? o.code ?? o.scac;
     return label != null && label !== "" ? String(label) : null;
@@ -254,7 +254,7 @@ export async function fetchTracking(
   shipsgoId: string | null,
 ): Promise<NormalisedTracking> {
   const basePath = SHIPSGO_PATH[ref.type];
-  // ShipsGo v2 create body — snake_case, confirmed from a 422:
+  // ShipsGo v2 create body, snake_case, confirmed from a 422:
   //   ocean: container_number | booking_number | bill_of_lading_number
   //   air:   awb_number
   const numberField =

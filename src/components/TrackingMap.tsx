@@ -31,7 +31,7 @@ function ok<T extends MapPoint>(
 }
 
 /**
- * Leaflet map of a shipment's route — POL → milestone events → live vessel
+ * Leaflet map of a shipment's route, POL → milestone events → live vessel
  * position → POD. Leaflet + its CSS are loaded on demand so they stay out of
  * the main bundle. Falls back to a note when no coordinates are known yet.
  */
@@ -99,12 +99,12 @@ export default function TrackingMap({
         if (ok(pol)) {
           L.circleMarker([pol.lat, pol.lon], dot("#02a5aa"))
             .addTo(map)
-            .bindPopup(`Origin — ${pol.label ?? ""}`);
+            .bindPopup(`Origin, ${pol.label ?? ""}`);
         }
         if (ok(pod)) {
           L.circleMarker([pod.lat, pod.lon], dot("#ef4910"))
             .addTo(map)
-            .bindPopup(`Destination — ${pod.label ?? ""}`);
+            .bindPopup(`Destination, ${pod.label ?? ""}`);
         }
         for (const e of events) {
           if (typeof e.lat !== "number" || typeof e.lon !== "number") continue;
@@ -160,7 +160,7 @@ export default function TrackingMap({
       <div className="trk-map-empty" style={{ height }}>
         {failed
           ? "Map could not load."
-          : "No position data yet — it appears once the carrier reports the first movement."}
+          : "No position data yet, it appears once the carrier reports the first movement."}
       </div>
     );
   }

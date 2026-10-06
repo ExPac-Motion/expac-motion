@@ -1,5 +1,5 @@
 // ExPac company details for the client-facing quotation letterhead.
-// Edit anything here — this is the only source for the FROM block, banking
+// Edit anything here, this is the only source for the FROM block, banking
 // details and footer text on the printed quotation.
 
 export const COMPANY = {
@@ -34,7 +34,7 @@ export const COMPANY = {
     "Branch Code: 250655",
     "Swift Code: FIRNZAJJ",
   ],
-  // Rendered with white-space: pre-line — these 7 line breaks are intentional.
+  // Rendered with white-space: pre-line, these 7 line breaks are intentional.
   blurb:
     "We move more than just cargo, we move trust, time,\n" +
     "and opportunity. Rooted in precision and propelled\n" +

@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — CDN proxy for the Supabase public
+ * Cloudflare Pages Function, CDN proxy for the Supabase public
  * `mail-assets` storage bucket.
  *
  * WHY: campaign / template emails embed inline images. Served straight from
@@ -16,8 +16,8 @@
  * (src/lib/db.ts `publicMailAssetUrl`) builds those URLs from
  * `VITE_MAIL_CDN_BASE`; leave that unset and nothing here is exercised.
  *
- * Reads `SUPABASE_URL` — already configured in the Pages env for the other
- * functions — so there is no project ref to hard-code here.
+ * Reads `SUPABASE_URL`, already configured in the Pages env for the other
+ * functions, so there is no project ref to hard-code here.
  *
  * GET only; the bucket is public so no auth. Long, immutable cache: the
  * app only ever uploads new objects under fresh UUID names.

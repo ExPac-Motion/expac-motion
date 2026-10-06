@@ -735,7 +735,7 @@ export async function finalizeCopiedQuote(quoteId: string): Promise<void> {
 /**
  * Give a quote-less shipment its own quote, built from the shipment's fields
  * and keeping its reference. Saved as open, linked to the job, THEN marked
- * accepted — in that order so trg_quote_won (0056) sees the linked job and
+ * accepted, in that order so trg_quote_won (0056) sees the linked job and
  * doesn't create a second shipment. Returns the new quote id.
  */
 export async function createQuoteForJob(job: Job): Promise<string> {
@@ -933,7 +933,7 @@ export async function listMessagesForJobs(jobIds: string[]): Promise<Message[]> 
   );
 }
 
-/** Unread customer replies (direction='in', read_at null) — lights up the
+/** Unread customer replies (direction='in', read_at null), lights up the
  *  mail icon on Active Shipments and feeds the notif bell. */
 export async function listUnreadMessages(): Promise<
   Pick<Message, "id" | "job_id" | "body" | "created_at">[]
@@ -948,7 +948,7 @@ export async function listUnreadMessages(): Promise<
   );
 }
 
-/** Marks every unread customer reply on a shipment as read — called when
+/** Marks every unread customer reply on a shipment as read, called when
  *  staff opens its Comms panel. */
 export async function markJobMessagesRead(jobId: string): Promise<void> {
   unwrap(
@@ -996,7 +996,7 @@ export async function updateQuoteMessage(
   );
 }
 
-/** Unread customer replies (direction='in', read_at null) — lights up the
+/** Unread customer replies (direction='in', read_at null), lights up the
  *  mail icon on Quotations and feeds the notif bell. */
 export async function listUnreadQuoteMessages(): Promise<
   Pick<QuoteMessage, "id" | "quote_id" | "body" | "created_at">[]
@@ -1011,7 +1011,7 @@ export async function listUnreadQuoteMessages(): Promise<
   );
 }
 
-/** Marks every unread customer reply on a quote as read — called when
+/** Marks every unread customer reply on a quote as read, called when
  *  staff opens its Comms panel. */
 export async function markQuoteMessagesRead(quoteId: string): Promise<void> {
   unwrap(
@@ -1050,7 +1050,7 @@ export async function getMyProfile(): Promise<Profile | null> {
 
 /** email is optional so existing callers keep working; pass the intended
  *  contact's address (primary or a secondary client_contacts row) so the
- *  invite — and later, Portal Access — can show who it's actually for. */
+ *  invite, and later, Portal Access, can show who it's actually for. */
 export async function createClientInvite(
   clientId: string,
   email?: string | null,
@@ -1103,7 +1103,7 @@ export async function rejectPortalSignup(profileId: string): Promise<void> {
   );
 }
 
-/** Admin-only — every profile linked to a customer: approved, revoked
+/** Admin-only, every profile linked to a customer: approved, revoked
  *  ('restricted' with a client_id), or a pending self-serve request. */
 export async function listPortalUsers(): Promise<PortalUser[]> {
   return unwrap<PortalUser[]>(await supabase.rpc("list_portal_users"));
@@ -1129,7 +1129,7 @@ export async function setPortalPermissions(
   );
 }
 
-/** Triggers Supabase's own password-recovery email — staff never sees or
+/** Triggers Supabase's own password-recovery email, staff never sees or
  *  sets the customer's password directly, only asks them to reset it. */
 export async function sendPortalPasswordReset(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -1275,7 +1275,7 @@ export async function getMyDocumentUrl(storagePath: string): Promise<string> {
   return data.signedUrl;
 }
 
-/** Every document across all of this client's shipments — the portal's
+/** Every document across all of this client's shipments, the portal's
  *  Invoices page filters this to doc_type = 'Invoice' client-side. */
 export async function listMyDocumentsAll(): Promise<ClientDocument[]> {
   return unwrap<ClientDocument[]>(
@@ -1472,7 +1472,7 @@ export async function updateLeadsBulk(
   unwrap(await supabase.from("leads").update(row).in("id", ids).select("id"));
 }
 
-/** Bulk create from a CSV/Excel import — bad rows are skipped, not fatal. */
+/** Bulk create from a CSV/Excel import, bad rows are skipped, not fatal. */
 export async function createLeadsBulk(
   rows: Array<
     Pick<LeadPatch, "company" | "contact" | "email" | "phone" | "website" | "source">
@@ -1725,7 +1725,7 @@ export async function renameMediaAsset(
   );
 }
 
-/** Move an asset into a different folder (metadata only — the stored file
+/** Move an asset into a different folder (metadata only, the stored file
  *  keeps its path; folders here are just a `folder` label). */
 export async function moveMediaAsset(
   id: string,
@@ -1759,7 +1759,7 @@ export async function createMediaFolder(name: string): Promise<void> {
 }
 
 /** Renames a folder: moves every asset filed under the old name and the
- *  folder row itself (if one exists — a folder that only ever held assets,
+ *  folder row itself (if one exists, a folder that only ever held assets,
  *  never explicitly created, has none). Merges into an existing folder of
  *  the new name rather than erroring. */
 export async function renameMediaFolder(
@@ -2096,7 +2096,7 @@ export async function deleteShipmentDocument(
   unwrap(await supabase.from("shipment_documents").delete().eq("id", doc.id));
 }
 
-/** Private bucket — a short-lived signed URL is needed to view/download. */
+/** Private bucket, a short-lived signed URL is needed to view/download. */
 export async function getShipmentDocumentUrl(
   storagePath: string,
 ): Promise<string> {
@@ -2161,7 +2161,7 @@ export async function listVaultTodos(): Promise<VaultTodo[]> {
   );
 }
 /** Creates the vault_budget_entries row for an Expense Control item's
- *  transfer — kind 'expense', the item's own scope, category = the
+ *  transfer, kind 'expense', the item's own scope, category = the
  *  expense's name (the "reference" the Budget board shows it by). */
 async function postExpenseControlTransfer(input: {
   title: string;
@@ -2219,7 +2219,7 @@ export async function addVaultTodo(input: {
 }
 /** Plain field edits pass straight through. A `transferred_to` edit also
  *  keeps the linked Budget entry in sync: created the first time it's
- *  transferred, updated in place (category/amount_paid/note only — the
+ *  transferred, updated in place (category/amount_paid/note only, the
  *  entry's own date and scope are left alone once posted, and Amount stays
  *  0 since a transfer is money already paid out, not still due) while it
  *  stays transferred, deleted if the transfer is cleared. */
@@ -2666,7 +2666,7 @@ export async function listPartnerSheetHistory(sheetId: string): Promise<PartnerR
   );
 }
 
-/** Customer rate tier — saved on its own so a not-yet-applied 0119 never
+/** Customer rate tier, saved on its own so a not-yet-applied 0119 never
  *  blocks saving the rest of the customer. */
 export async function setClientRateTier(id: string, tier: RateTierId): Promise<void> {
   const { error } = await supabase.from("clients").update({ rate_tier: tier }).eq("id", id);

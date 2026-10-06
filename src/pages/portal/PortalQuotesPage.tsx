@@ -108,7 +108,7 @@ export default function PortalQuotesPage() {
           <ErrorNote error={quotesQ.error} />
         ) : rows.length === 0 ? (
           <EmptyState>
-            {quotes.length === 0 ? "No quotations yet — + Request Quote and ExPac will price it for you." : "No quotations match."}
+            {quotes.length === 0 ? "No quotations yet, + Request Quote and ExPac will price it for you." : "No quotations match."}
           </EmptyState>
         ) : (
           <DataTable

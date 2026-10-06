@@ -23,7 +23,7 @@ import { ReceiptStatusBadge } from "../wms/shared";
 type View = "stock" | "all" | "releases" | "statements";
 
 /** Customer Portal > Warehouse (0138): the customer's own goods in the
- *  ExPac warehouse, releases and storage statements — read only. */
+ *  ExPac warehouse, releases and storage statements, read only. */
 export default function PortalWarehousePage() {
   const navigate = useNavigate();
   const receiptsQ = useWmsReceipts();
@@ -161,7 +161,7 @@ export default function PortalWarehousePage() {
 function PortalReceiptModal({ receipt: r, warehouse, onClose }: { receipt: WmsReceipt; warehouse: string; onClose: () => void }) {
   const navigate = useNavigate();
   const movesQ = useWmsMoves();
-  // Customers see goods in and out — not internal bay moves or count adjustments.
+  // Customers see goods in and out, not internal bay moves or count adjustments.
   const history = (movesQ.data ?? []).filter((m) => m.receipt_id === r.id && (m.kind === "receipt" || m.kind === "release"));
   const fields: [string, string][] = [
     ["Received", formatDateTime(r.received_at)],
@@ -174,7 +174,7 @@ function PortalReceiptModal({ receipt: r, warehouse, onClose }: { receipt: WmsRe
     ["Pallets", String(r.pallets)],
     ["Gross kg", qty(r.gross_kg)],
     ["CBM", qty(r.volume_cbm, 3)],
-    ["Condition", CONDITION_LABEL[r.condition] + (r.condition_notes ? ` — ${r.condition_notes}` : "")],
+    ["Condition", CONDITION_LABEL[r.condition] + (r.condition_notes ? `, ${r.condition_notes}` : "")],
     ["Days in store", r.on_hand > 0 ? String(daysBetween(r.received_at, new Date())) : "—"],
   ];
   return (

@@ -42,7 +42,7 @@ const VIEWS: [View, string][] = [
   ["fcl", "FCL consolidations"],
 ];
 
-/** WMS > Warehouse Release: goods out (RL000001) and consolidations — air
+/** WMS > Warehouse Release: goods out (RL000001) and consolidations, air
  *  (MAWB / HAWB), LCL groupage and FCL consolidation (MBL / HBL). */
 export default function WmsReleases() {
   const [view, setView] = useState<View>("releases");
@@ -110,7 +110,7 @@ function ReleasesList({ toggle }: { toggle: ReactNode }) {
           onView={() => navigate(`/wms/print/release/${r.id}`)}
           onDelete={() => {
             if (!confirm(`Undo ${r.release_no}? Its goods go back into stock.`)) return;
-            undo.mutate(r.id, { onSuccess: () => toast("Release undone — goods back in stock"), onError: (e) => error(e.message) });
+            undo.mutate(r.id, { onSuccess: () => toast("Release undone, goods back in stock"), onError: (e) => error(e.message) });
           }}
         />
       ),
@@ -274,7 +274,7 @@ function NewReleaseModal({ onClose, onDone }: { onClose: () => void; onDone: (id
         </div>
       </div>
 
-      <h4 className="wms-subhead">Goods on hand — tick what's going out</h4>
+      <h4 className="wms-subhead">Goods on hand, tick what's going out</h4>
       {stock.length === 0 ? (
         <p className="hint">Nothing on hand{clientId ? " for this customer" : ""}.</p>
       ) : (

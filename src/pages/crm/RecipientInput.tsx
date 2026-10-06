@@ -1,4 +1,4 @@
-// Inbox address book: a To / Cc field that suggests people as you type —
+// Inbox address book: a To / Cc field that suggests people as you type,
 // everyone you've emailed or received mail from, plus CRM contacts
 // (customers, leads, suppliers & agents). Matches the email, name or company
 // of the address being typed (after the last comma); Enter / Tab / click

@@ -33,9 +33,9 @@ const PERMISSION_LABELS: { key: keyof Profile["portal_permissions"]; label: stri
 
 /**
  * Customers > Portal Access. Admin-only (every action here calls an
- * is_admin()-gated RPC — see 0091_role_model_v2.sql): self-serve signups
+ * is_admin()-gated RPC, see 0091_role_model_v2.sql): self-serve signups
  * (0068) awaiting review, plus every active/revoked portal login with its
- * own settings — permissions, last login, revoke/restore, and a
+ * own settings, permissions, last login, revoke/restore, and a
  * "send password reset" trigger (staff never sees or sets a customer's
  * password directly, only asks Supabase to email them a reset link).
  */
@@ -174,7 +174,7 @@ function ActivePortalUsers() {
   const { toast, error: toastError } = useToast();
   const [editingName, setEditingName] = useState<string | null>(null);
 
-  // Approved/restricted only — pending self-serve requests are handled
+  // Approved/restricted only, pending self-serve requests are handled
   // above, in the "Awaiting approval" table.
   const rows = (usersQ.data ?? []).filter(
     (u) => u.role === "client" || u.role === "restricted",
@@ -252,7 +252,7 @@ function ActivePortalUsers() {
       <p className="muted" style={{ marginTop: -8 }}>
         Every customer login, active or revoked. Toggle which sections of
         the portal a login can see, send them a password-reset email, or
-        revoke access entirely — reversible any time.
+        revoke access entirely, reversible any time.
       </p>
       {usersQ.isLoading ? (
         <Loading />

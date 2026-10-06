@@ -4,7 +4,7 @@ import { useAuth } from "../../auth/AuthProvider";
  * Shown instead of the portal dashboard while a self-serve signup
  * (portal_status='pending', see 0068_portal_self_signup.sql) hasn't been
  * approved yet, or after staff rejects one. The account can sign in the
- * whole time — is_staff() is false either way — it just can't see any
+ * whole time, is_staff() is false either way, it just can't see any
  * client data until approve_portal_signup() runs.
  */
 export default function PortalPendingPage({
@@ -36,7 +36,7 @@ export default function PortalPendingPage({
             <h1>Waiting on approval</h1>
             <p className="sub">
               Thanks for signing up. ExPac Forwarding has been notified and
-              will approve your access shortly — check back soon, or we'll
+              will approve your access shortly, check back soon, or we'll
               be in touch.
             </p>
           </>

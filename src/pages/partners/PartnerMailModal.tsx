@@ -109,7 +109,7 @@ export default function PartnerMailModal({
         />
       ) : (
         <p className="hint">
-          Pick a shipment to send a Reply or Full Update to {partner.company} — it's logged on the
+          Pick a shipment to send a Reply or Full Update to {partner.company}, it's logged on the
           shipment's message thread. For anything else, use General message.
         </p>
       )}

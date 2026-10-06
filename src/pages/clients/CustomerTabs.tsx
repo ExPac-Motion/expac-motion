@@ -456,7 +456,7 @@ export function PartiesTab({ clientId }: { clientId: string }) {
       </div>
       {kind === "shipper" && (
         <p className="hint" style={{ marginTop: 0 }}>
-          This customer's own shippers — they show in its portal under Customer Party and in the Quote Builder.
+          This customer's own shippers, they show in its portal under Customer Party and in the Quote Builder.
         </p>
       )}
       {loading ? (

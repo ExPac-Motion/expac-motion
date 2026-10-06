@@ -72,7 +72,7 @@ export default function WmsCycleCount() {
     <>
       <PageTools
         count={countsQ.isLoading ? undefined : `${rows.length} count${rows.length === 1 ? "" : "s"}`}
-        hint="Start a count to snapshot what the system holds, enter what's physically there, then Complete — differences post as stock adjustments."
+        hint="Start a count to snapshot what the system holds, enter what's physically there, then Complete, differences post as stock adjustments."
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setCreating(true)} disabled={lk.warehouses.length === 0}>
@@ -120,7 +120,7 @@ function NewCountModal({ onClose, onStarted }: { onClose: () => void; onStarted:
           <select value={wh} onChange={(e) => { setWh(e.target.value); setLoc(""); }}>
             {lk.warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.code} — {w.name}
+                {w.code}, {w.name}
               </option>
             ))}
           </select>
@@ -188,7 +188,7 @@ function CountSheetModal({ count, onClose }: { count: WmsCount; onClose: () => v
 
   return (
     <Modal
-      title={`${count.count_no} — ${lk.whCode(count.warehouse_id)} ${count.location_id ? lk.locName(count.location_id) : "(whole warehouse)"}`}
+      title={`${count.count_no}, ${lk.whCode(count.warehouse_id)} ${count.location_id ? lk.locName(count.location_id) : "(whole warehouse)"}`}
       onClose={onClose}
       wide
       stickyHeader
@@ -282,10 +282,10 @@ function CountSheetModal({ count, onClose }: { count: WmsCount; onClose: () => v
             className="btn"
             disabled={complete.isPending || saveLines.isPending}
             onClick={() => {
-              if (!confirm(`Complete ${count.count_no}? ${counted} of ${count.lines.length} lines counted — differences against what's on hand now post as adjustments; uncounted lines are left alone.`)) return;
+              if (!confirm(`Complete ${count.count_no}? ${counted} of ${count.lines.length} lines counted, differences against what's on hand now post as adjustments; uncounted lines are left alone.`)) return;
               saveThen(async () => {
                 const n = await complete.mutateAsync(count.id);
-                toast(`Count completed — ${n} adjustment${n === 1 ? "" : "s"} posted`);
+                toast(`Count completed, ${n} adjustment${n === 1 ? "" : "s"} posted`);
                 onClose();
               });
             }}

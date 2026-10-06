@@ -237,13 +237,13 @@ export default function WmsSettings() {
             <option value="">All warehouses</option>
             {lk.warehouses.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.code} — {w.name}
+                {w.code}, {w.name}
               </option>
             ))}
           </select>
         </div>
         {locRows.length === 0 ? (
-          <EmptyState>No bays yet — add the zones and bays goods are stored in.</EmptyState>
+          <EmptyState>No bays yet, add the zones and bays goods are stored in.</EmptyState>
         ) : (
           <DataTable tableKey="wms-locations" className="table--compact" columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
         )}
@@ -338,7 +338,7 @@ export default function WmsSettings() {
               <select name="warehouse_id" defaultValue={loc?.warehouse_id ?? whFilter ?? lk.warehouses[0]?.id}>
                 {lk.warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.code} — {w.name}
+                    {w.code}, {w.name}
                   </option>
                 ))}
               </select>

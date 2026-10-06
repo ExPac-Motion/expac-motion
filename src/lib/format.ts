@@ -37,7 +37,7 @@ export function num(n: number | string | null | undefined): number {
   return Number(n) || 0;
 }
 
-/** Plain comma-grouped amount, no currency symbol — for a figure that isn't
+/** Plain comma-grouped amount, no currency symbol, for a figure that isn't
  *  always in the same currency (e.g. Commercial Value). "—" when unset. */
 export function plainAmount(n: number | string | null | undefined): string {
   if (n === null || n === undefined || n === "") return "—";
@@ -48,7 +48,7 @@ export function plainAmount(n: number | string | null | undefined): string {
   });
 }
 
-/** Comma-grouped amount with its currency code appended, e.g. "25 000.00 USD" —
+/** Comma-grouped amount with its currency code appended, e.g. "25 000.00 USD",
  *  for a figure like Commercial Value that isn't always in the same currency.
  *  "—" when unset. */
 export function currencyAmount(
@@ -77,7 +77,7 @@ export function usd(n: number | string | null | undefined): string {
   );
 }
 
-/** dd/mm/yyyy — the house date format used everywhere dates are displayed. */
+/** dd/mm/yyyy, the house date format used everywhere dates are displayed. */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -157,7 +157,7 @@ export function normalizeWebsite(
 /**
  * Port code for the big FROM → TO line on the quotation. Expects a UN/LOCODE
  * (2-letter country + 3-char location, e.g. "CNSNZ", "ZAJNB") at the start of
- * the Origin/Destination text — "CNSNZ — Shenzhen, China" -> "CNSNZ". Falls back
+ * the Origin/Destination text, "CNSNZ, Shenzhen, China" -> "CNSNZ". Falls back
  * to the first token capped at 5 chars.
  */
 export function portCode(place: string | null | undefined): string {
@@ -172,7 +172,7 @@ export function portCode(place: string | null | undefined): string {
 /**
  * App-wide naming for a generated/saved document: "<description> - <shipment
  * number>", e.g. docName("Quotation", "SEA174070") -> "Quotation - SEA174070".
- * No file extension — the caller (or the browser's Save dialog) adds it.
+ * No file extension, the caller (or the browser's Save dialog) adds it.
  */
 export function docName(
   description: string,
@@ -183,7 +183,7 @@ export function docName(
 }
 
 /** Black or white text, whichever reads better on a given hex background
- *  (e.g. a Lead Status colour badge) — plain luminance check. */
+ *  (e.g. a Lead Status colour badge), plain luminance check. */
 export function readableText(hex: string): string {
   const h = hex.replace("#", "");
   if (h.length !== 6) return "#fff";

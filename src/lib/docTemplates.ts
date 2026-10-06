@@ -5,7 +5,7 @@ export interface DocumentTypeDef {
   slug: string;
   title: string;
   /** Letter-style documents also show a free-text body section (job.notes)
-   *  between Shipment Information and the Packing List — every other
+   *  between Shipment Information and the Packing List, every other
    *  document is shipment info + packing list + sign-off only. */
   showNotes?: boolean;
   /** Heading for that free-text section. Defaults to `title` when unset. */
@@ -96,7 +96,7 @@ export function shipmentPartyRows(job: Job): [string, string][] {
   ];
 }
 
-/** Every shipment field worth printing on operational paperwork — deliberately
+/** Every shipment field worth printing on operational paperwork, deliberately
  *  excludes commercial value / insurance (those only ever live on the quote,
  *  and never belong on ops-facing documents). Sea and Air each print a fixed
  *  sequence using the Quote Builder's labels: Sea has Shipping Line, Vessel,
