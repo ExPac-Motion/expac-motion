@@ -20,10 +20,11 @@ import {
 import { PackagesTable } from "../wms/WmsReceipts";
 import { ReceiptStatusBadge } from "../wms/shared";
 import ReceiptImages from "../wms/ReceiptImages";
+import PortalReleaseRequests from "./PortalReleaseRequests";
 import PortalWmsOverview, { JourneySteps, useWmsJourney } from "./PortalWmsOverview";
 import { WMS_STAGE_LABEL, wmsStage } from "../../lib/portal";
 
-type View = "overview" | "stock" | "all" | "releases" | "statements";
+type View = "overview" | "stock" | "all" | "releases" | "requests" | "statements";
 
 /** Customer Portal > Warehouse (0138): the customer's own goods in the
  *  ExPac warehouse, releases and storage statements, read only. */
@@ -36,7 +37,7 @@ export default function PortalWarehousePage() {
   // The sidebar's Warehouse › Receipt / Release / Inventory / Storage statements set ?view=.
   const [params, setParams] = useSearchParams();
   const asked = params.get("view") as View | null;
-  const view: View = asked && ["overview", "stock", "all", "releases", "statements"].includes(asked) ? asked : "overview";
+  const view: View = asked && ["overview", "stock", "all", "releases", "requests", "statements"].includes(asked) ? asked : "overview";
   const setView = (v: View) => setParams({ view: v }, { replace: true });
   const [search, setSearch] = useState("");
   const [viewing, setViewing] = useState<WmsReceipt | null>(null);
@@ -103,7 +104,7 @@ export default function PortalWarehousePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Warehouse" title={view === "overview" ? "Warehouse Overview" : view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
+      <PageHeader eyebrow="Warehouse" title={view === "overview" ? "Warehouse Overview" : view === "requests" ? "Release Requests" : view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search receipt, SKU, reference…" />}
         filters={
@@ -114,6 +115,7 @@ export default function PortalWarehousePage() {
                 ["stock", "In store"],
                 ["all", "All receipts"],
                 ["releases", "Releases"],
+                ["requests", "Release requests"],
                 ["statements", "Storage statements"],
               ] as [View, string][]
             ).map(([v, label]) => (
@@ -128,6 +130,8 @@ export default function PortalWarehousePage() {
       />
       {view === "overview" ? (
         <PortalWmsOverview receipts={receipts} loading={receiptsQ.isLoading} search={search} onOpen={setViewing} toolsSlot={toolsSlot} />
+      ) : view === "requests" ? (
+        <PortalReleaseRequests receipts={receipts} toolsSlot={toolsSlot} />
       ) : (
       <div className="panel">
         {loading ? (

@@ -180,7 +180,9 @@ export function buildNotifications(
       out.push({
         key: `ptask-${t.id}`,
         domain: "operations",
-        text: `Customer request on ${t.job?.reference ?? "a shipment"}, ${t.title}`,
+        text: t.job?.reference
+          ? `Customer request on ${t.job.reference}, ${t.title}`
+          : `Customer request: ${t.title}${t.client?.company ? `, ${t.client.company}` : ""}`,
         when: t.created_at,
         to: "/ops?tab=tasks",
         jobId: t.job_id,

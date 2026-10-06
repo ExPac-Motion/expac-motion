@@ -28,15 +28,20 @@ import {
   type WmsRelease,
   type WmsReleaseHeader,
   type WmsReleaseLineInput,
+  type WmsReleaseRequest,
+  RELEASE_REQUEST_STATUS,
+  closeReleaseRequest,
+  useWmsReleaseRequests,
   type ConsolMode,
 } from "../../lib/wms";
 import WmsConsols from "./WmsConsols";
 import { orNull, useWmsLookups } from "./shared";
 
-type View = "releases" | ConsolMode;
+type View = "releases" | "requests" | ConsolMode;
 
 const VIEWS: [View, string][] = [
   ["releases", "Releases"],
+  ["requests", "Release requests"],
   ["air", "Air consolidations"],
   ["lcl", "LCL groupage"],
   ["fcl", "FCL consolidations"],
@@ -72,6 +77,7 @@ export default function WmsReleases() {
       ))}
     </div>
   );
+  if (view === "requests") return <RequestsList toggle={toggle} />;
   return view === "releases" ? <ReleasesList toggle={toggle} /> : <WmsConsols key={view} toggle={toggle} mode={view} openId={pendingOpen} onOpened={() => setPendingOpen(null)} />;
 }
 
@@ -178,7 +184,16 @@ function ReleasesList({ toggle }: { toggle: ReactNode }) {
   );
 }
 
-function NewReleaseModal({ onClose, onDone }: { onClose: () => void; onDone: (id: string) => void }) {
+function NewReleaseModal({
+  onClose,
+  onDone,
+  request,
+}: {
+  onClose: () => void;
+  onDone: (id: string) => void;
+  /** Booking a customer's release request (0148): pre-fills goods + collection / delivery. */
+  request?: WmsReleaseRequest;
+}) {
   const lk = useWmsLookups();
   const { error, toast } = useToast();
   const receiptsQ = useWmsReceipts();
@@ -186,9 +201,36 @@ function NewReleaseModal({ onClose, onDone }: { onClose: () => void; onDone: (id
   const create = useWmsMutation((v: { header: WmsReleaseHeader; lines: WmsReleaseLineInput[] }) =>
     wmsDb.createRelease(v.header, v.lines),
   );
-  const [clientId, setClientId] = useState("");
-  const [picked, setPicked] = useState<Record<string, number>>({});
-  const [h, setH] = useState<WmsReleaseHeader>({ released_at: todayIso() });
+  const [clientId, setClientId] = useState(request?.client_id ?? "");
+  const [picked, setPicked] = useState<Record<string, number>>(() => {
+    if (!request) return {};
+    // Spread each requested quantity over the bays the receipt sits in.
+    const out: Record<string, number> = {};
+    const stockNow = stockByLocation(movesQ.data ?? []);
+    for (const l of request.lines) {
+      let left = l.pieces;
+      for (const st of stockNow.filter((x) => x.receipt_id === l.receipt_id)) {
+        if (left <= 0) break;
+        const take = Math.min(left, st.on_hand);
+        out[st.receipt_id + "|" + (st.location_id ?? "")] = take;
+        left -= take;
+      }
+    }
+    return out;
+  });
+  const [h, setH] = useState<WmsReleaseHeader>(() =>
+    request
+      ? {
+          released_at: todayIso(),
+          collected_by: request.collector_name,
+          vehicle_reg: request.collector_vehicle,
+          driver_id_no: request.collector_id_no,
+          deliver_to: request.method === "deliver" ? request.deliver_to : null,
+          outbound_ref: request.request_no,
+          notes: ["Release request " + request.request_no, request.notes].filter(Boolean).join(". "),
+        }
+      : { released_at: todayIso() },
+  );
   const setHf = (k: keyof WmsReleaseHeader, v: string) => setH((p) => ({ ...p, [k]: orNull(v) }));
 
   const recById = new Map((receiptsQ.data ?? []).map((r) => [r.id, r]));
@@ -366,5 +408,128 @@ function NewReleaseModal({ onClose, onDone }: { onClose: () => void; onDone: (id
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** Release requests from the customer portal (0148): book the release from
+ *  the request, or decline it with a reason. */
+function RequestsList({ toggle }: { toggle: ReactNode }) {
+  const navigate = useNavigate();
+  const lk = useWmsLookups();
+  const { toast, error } = useToast();
+  const reqQ = useWmsReleaseRequests();
+  const receiptsQ = useWmsReceipts();
+  const [booking, setBooking] = useState<WmsReleaseRequest | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const recById = useMemo(() => new Map((receiptsQ.data ?? []).map((r) => [r.id, r])), [receiptsQ.data]);
+  const rows = (reqQ.data ?? []).filter((r) => showAll || r.status === "requested");
+
+  async function decline(r: WmsReleaseRequest) {
+    const reason = prompt(`Decline ${r.request_no}? Tell the customer why:`);
+    if (reason === null) return;
+    try {
+      await closeReleaseRequest(r, { status: "declined", decline_reason: reason.trim() || null });
+      toast("Request declined, the customer sees the reason on the portal");
+      reqQ.refetch();
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not decline");
+    }
+  }
+
+  const columns: DataColumn<WmsReleaseRequest>[] = [
+    {
+      key: "actions",
+      header: "Actions",
+      fixed: true,
+      width: 190,
+      render: (r) =>
+        r.status === "requested" ? (
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-sm" onClick={() => setBooking(r)}>
+              Book release
+            </button>
+            <button className="btn outline warn btn-sm" onClick={() => void decline(r)}>
+              Decline
+            </button>
+          </div>
+        ) : r.release_id ? (
+          <button className="link-btn" onClick={() => navigate(`/wms/print/release/${r.release_id}`)}>
+            Release note
+          </button>
+        ) : (
+          "—"
+        ),
+    },
+    { key: "no", header: "Request No", width: 110, render: (r) => <b>{r.request_no}</b>, sortValue: (r) => r.request_no },
+    { key: "date", header: "Requested", width: 100, render: (r) => formatDate(r.created_at), sortValue: (r) => r.created_at },
+    { key: "client", header: "Customer", width: 180, render: (r) => lk.clientName(r.client_id), sortValue: (r) => lk.clientName(r.client_id) },
+    {
+      key: "status",
+      header: "Status",
+      width: 110,
+      render: (r) => <span className={`badge ${RELEASE_REQUEST_STATUS[r.status].cls}`}>{RELEASE_REQUEST_STATUS[r.status].label}</span>,
+    },
+    { key: "method", header: "Collect / Deliver", width: 120, render: (r) => (r.method === "deliver" ? "Deliver" : "Collect") },
+    { key: "needed", header: "Needed by", width: 100, render: (r) => formatDate(r.required_date), sortValue: (r) => r.required_date ?? "" },
+    {
+      key: "goods",
+      header: "Goods",
+      width: 240,
+      render: (r) => r.lines.map((l) => `${recById.get(l.receipt_id)?.receipt_no ?? "?"} × ${l.pieces}`).join(", "),
+    },
+    {
+      key: "who",
+      header: "Collector / Deliver to",
+      width: 240,
+      render: (r) =>
+        r.method === "deliver"
+          ? r.deliver_to || "—"
+          : [r.collector_name, r.collector_vehicle, r.collector_id_no].filter(Boolean).join(", ") || "—",
+    },
+    { key: "notes", header: "Notes", width: 200, render: (r) => r.notes || r.decline_reason || "—" },
+  ];
+
+  return (
+    <>
+      <PageTools
+        filters={
+          <>
+            {toggle}
+            <label className="check" style={{ margin: 0 }}>
+              <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show handled
+            </label>
+          </>
+        }
+        count={reqQ.isLoading ? undefined : `${rows.length} request${rows.length === 1 ? "" : "s"}`}
+        hint="Customers ask for goods to be released from the portal (Warehouse > Release requests)."
+        onToolsSlot={setToolsSlot}
+      />
+      <div className="panel">
+        {reqQ.isLoading ? (
+          <Loading />
+        ) : rows.length === 0 ? (
+          <EmptyState>{showAll ? "No release requests yet." : "No open release requests."}</EmptyState>
+        ) : (
+          <DataTable tableKey="wms-release-requests" className="table--compact" toolsPortal={toolsSlot} columns={columns} rows={rows} rowKey={(r) => r.id} />
+        )}
+      </div>
+      {booking && (
+        <NewReleaseModal
+          request={booking}
+          onClose={() => setBooking(null)}
+          onDone={async (id) => {
+            try {
+              await closeReleaseRequest(booking, { status: "released", release_id: id });
+            } catch (e) {
+              error(e instanceof Error ? e.message : "Released, but the request could not be closed");
+            }
+            setBooking(null);
+            reqQ.refetch();
+            navigate(`/wms/print/release/${id}`);
+          }}
+        />
+      )}
+    </>
   );
 }

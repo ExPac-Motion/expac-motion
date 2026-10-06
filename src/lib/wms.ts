@@ -952,3 +952,53 @@ export const useReceiptImages = (receiptId: string | undefined) =>
     queryFn: () => listReceiptImages(receiptId as string),
     enabled: !!receiptId,
   });
+
+/* ---------- Release requests from the customer portal (0148) ---------- */
+export interface WmsReleaseRequest {
+  id: string;
+  request_no: string;
+  client_id: string;
+  status: "requested" | "released" | "declined" | "cancelled";
+  method: "collect" | "deliver";
+  required_date: string | null;
+  deliver_to: string | null;
+  collector_name: string | null;
+  collector_vehicle: string | null;
+  collector_id_no: string | null;
+  contact: string | null;
+  notes: string | null;
+  lines: { receipt_id: string; pieces: number }[];
+  release_id: string | null;
+  decline_reason: string | null;
+  task_id: string | null;
+  processed_at: string | null;
+  created_at: string;
+}
+export const RELEASE_REQUEST_STATUS: Record<WmsReleaseRequest["status"], { label: string; cls: string }> = {
+  requested: { label: "Requested", cls: "sent" },
+  released: { label: "Released", cls: "completed" },
+  declined: { label: "Declined", cls: "lost" },
+  cancelled: { label: "Cancelled", cls: "open" },
+};
+export const useWmsReleaseRequests = () =>
+  useQuery({
+    queryKey: ["wms", "release-requests"],
+    queryFn: async (): Promise<WmsReleaseRequest[]> => {
+      const { data, error } = await supabase.from("wms_release_requests").select("*").order("created_at", { ascending: false });
+      if (error) return []; // before 0148 is applied
+      return (data ?? []) as WmsReleaseRequest[];
+    },
+  });
+export async function closeReleaseRequest(
+  req: WmsReleaseRequest,
+  patch: { status: "released" | "declined"; release_id?: string | null; decline_reason?: string | null },
+) {
+  unwrap(await supabase.from("wms_release_requests").update({ ...patch, processed_at: new Date().toISOString() }).eq("id", req.id));
+  if (req.task_id) await supabase.from("ops_tasks").update({ status: "done", done_at: new Date().toISOString() }).eq("id", req.task_id);
+}
+export async function requestRelease(p: Record<string, unknown>): Promise<string> {
+  return unwrap(await supabase.rpc("portal_request_release", { p })) as string;
+}
+export async function cancelReleaseRequest(id: string) {
+  unwrap(await supabase.rpc("portal_cancel_release_request", { p_id: id }));
+}
