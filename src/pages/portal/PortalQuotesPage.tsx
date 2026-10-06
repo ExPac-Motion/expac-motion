@@ -26,10 +26,10 @@ export default function PortalQuotesPage() {
   }, [params, navigate]);
 
   const totals = useMemo(() => {
-    const m = new Map<string, number>();
+    const m = new Map<string, { net: number; vat: number; total: number }>();
     const by = new Map<string, typeof linesQ.data>();
     for (const l of linesQ.data ?? []) by.set(l.quote_id, [...(by.get(l.quote_id) ?? []), l]);
-    for (const [id, ls] of by) m.set(id, portalTotals(ls ?? []).total);
+    for (const [id, ls] of by) m.set(id, portalTotals(ls ?? []));
     return m;
   }, [linesQ.data]);
 
@@ -50,7 +50,7 @@ export default function PortalQuotesPage() {
   const count = (f: Filter) => quotes.filter((q) => group(q) === f).length;
 
   const columns: DataColumn<PortalQuote>[] = [
-    { key: "ref", header: "Quotation No", width: 130, render: (q) => <b>{q.reference}</b>, sortValue: (q) => q.reference },
+    { key: "ref", header: "Quotation No", width: 130, render: (q) => <span className="ref-link">{q.reference}</span>, sortValue: (q) => q.reference },
     {
       key: "status",
       header: "Status",
@@ -61,17 +61,31 @@ export default function PortalQuotesPage() {
       },
       sortValue: (q) => label(q),
     },
-    { key: "yourref", header: "Your reference", width: 140, render: (q) => q.customer_reference || "—" },
+    { key: "yourref", header: "Ref", width: 120, render: (q) => q.customer_reference || "—" },
     { key: "mode", header: "Mode", width: 150, render: (q) => q.mode, sortValue: (q) => q.mode },
     { key: "origin", header: "Origin", width: 170, render: (q) => q.origin || "—", sortValue: (q) => q.origin ?? "" },
     { key: "dest", header: "Destination", width: 170, render: (q) => q.destination || "—", sortValue: (q) => q.destination ?? "" },
     { key: "commodity", header: "Commodity", width: 160, render: (q) => q.commodity || "—" },
     {
+      key: "net",
+      header: "TTL (excl. VAT)",
+      width: 130,
+      render: (q) => (totals.has(q.id) ? money(totals.get(q.id)?.net) : "—"),
+      sortValue: (q) => totals.get(q.id)?.net ?? 0,
+    },
+    {
+      key: "vat",
+      header: "TTL VAT",
+      width: 110,
+      render: (q) => (totals.has(q.id) ? money(totals.get(q.id)?.vat) : "—"),
+      sortValue: (q) => totals.get(q.id)?.vat ?? 0,
+    },
+    {
       key: "total",
-      header: "Total (incl. VAT)",
-      width: 140,
-      render: (q) => (totals.has(q.id) ? money(totals.get(q.id)) : "—"),
-      sortValue: (q) => totals.get(q.id) ?? 0,
+      header: "TTL (incl. VAT)",
+      width: 130,
+      render: (q) => (totals.has(q.id) ? money(totals.get(q.id)?.total) : "—"),
+      sortValue: (q) => totals.get(q.id)?.total ?? 0,
     },
     { key: "date", header: "Date", width: 100, render: (q) => formatDate(q.portal_requested_at ?? q.created_at), sortValue: (q) => q.created_at },
     { key: "valid", header: "Valid until", width: 110, render: (q) => formatDate(q.valid_until), sortValue: (q) => q.valid_until ?? "" },
