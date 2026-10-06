@@ -7447,6 +7447,9 @@ td.vault-part-paid input {
   gap: 0 18px;
   align-items: start;
 }
+.pt-report-grid {
+  align-items: stretch;
+}
 .pt-span2 {
   grid-column: span 2;
 }

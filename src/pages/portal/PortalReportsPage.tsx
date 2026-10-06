@@ -89,7 +89,7 @@ export default function PortalReportsPage() {
           </select>
         }
       />
-      <div className="pt-dash-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="pt-dash-grid pt-report-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <div className="panel">
           <div className="panel-head">
             <h2>🚚 Shipments per month</h2>
