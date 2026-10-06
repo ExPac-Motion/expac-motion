@@ -30,6 +30,24 @@ export interface PortalQuote extends ClientQuote {
   portal_decline_reason?: string | null;
   sell_currency?: string | null;
   accepted_at?: string | null;
+  /* quotation document (0152) */
+  value_currency?: string | null;
+  consignee_company?: string | null;
+  /** FX rate of the sell currency only (null for ZAR). */
+  sell_fx?: number | null;
+}
+
+/** ExPac's quotation letterhead for the portal (0152). */
+export interface PortalLetterhead {
+  legal_name: string;
+  reg_no: string;
+  vat_no: string;
+  tel: string;
+  email: string;
+  postal_address: string;
+  strapline: string;
+  blurb: string;
+  bank_details: string;
 }
 
 export interface PortalPackingItem {
@@ -143,6 +161,13 @@ export const portalDb = {
     unwrap(await supabase.from("profiles").update({ greeting: greeting.trim() || null }).eq("id", profileId));
   },
 };
+
+export const usePortalLetterhead = () =>
+  useQuery({
+    queryKey: ["portal", "letterhead"],
+    queryFn: async (): Promise<PortalLetterhead | null> =>
+      unwrap(await supabase.from("client_letterhead").select("*").maybeSingle()) as PortalLetterhead | null,
+  });
 
 export const usePortalMe = () => useQuery({ queryKey: ["portal", "me"], queryFn: portalDb.me });
 export const usePortalQuotes = () => useQuery({ queryKey: ["portal", "quotes"], queryFn: portalDb.quotes });

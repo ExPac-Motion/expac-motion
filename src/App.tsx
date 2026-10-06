@@ -47,7 +47,7 @@ import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import PortalSuppliersPage from "./pages/portal/PortalSuppliersPage";
 import PortalRatesPage from "./pages/portal/PortalRatesPage";
 import PortalWarehousePage from "./pages/portal/PortalWarehousePage";
-import PortalQuoteViewPage from "./pages/portal/PortalQuoteViewPage";
+import PortalQuotePrintPage from "./pages/portal/PortalQuotePrintPage";
 import PortalRequestQuotePage from "./pages/portal/PortalRequestQuotePage";
 import PortalItemsPage from "./pages/portal/PortalItemsPage";
 import PortalReportsPage from "./pages/portal/PortalReportsPage";
@@ -271,7 +271,7 @@ function AppRoutes() {
               path="portal/quotes/:id"
               element={
                 <PortalSection permission="quotes">
-                  <PortalQuoteViewPage />
+                  <PortalQuotesPage />
                 </PortalSection>
               }
             />
@@ -295,6 +295,7 @@ function AppRoutes() {
           </Route>
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />
+            <Route path="portal/quotes/:id/print" element={<PortalQuotePrintPage />} />
             <Route
               path="jobs/:id/documents/:doc/print"
               element={<ShipmentDocPrintPage />}

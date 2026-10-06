@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import PortalQuoteModal from "./PortalQuoteViewPage";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, SearchInput } from "../../components/common";
 import { formatDate, money } from "../../lib/format";
@@ -17,6 +18,8 @@ export default function PortalQuotesPage() {
   const linesQ = usePortalLines(quotes.filter((q) => q.status !== "open").map((q) => q.id));
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("");
+  // /portal/quotes/:id opens that quotation over the list, like Motion.
+  const { id: openId } = useParams();
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   // ?open=<id> (dashboard / search) jumps straight to that quotation.
@@ -140,6 +143,7 @@ export default function PortalQuotesPage() {
       <p className="hint" style={{ marginTop: 4 }}>
         Amounts in ZAR, including VAT where it applies.
       </p>
+      {openId && <PortalQuoteModal quoteId={openId} onClose={() => navigate("/portal/quotes")} />}
     </>
   );
 }
