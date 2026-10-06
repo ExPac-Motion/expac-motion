@@ -510,7 +510,7 @@ export default function QuotesListPage() {
       },
       {
         key: "shipping_line",
-        header: "Carrier / Shipping Line",
+        header: "Shipping Line",
         width: 150,
         defaultHidden: true,
         sortValue: (q) => q.shipping_line ?? "",
@@ -518,8 +518,8 @@ export default function QuotesListPage() {
       },
       {
         key: "carrier_name",
-        header: "Agent/Airline Name",
-        label: "Agent/Airline Name (internal)",
+        header: "Airline Name",
+        label: "Airline Name (internal)",
         width: 170,
         defaultHidden: true,
         sortValue: (q) => q.carrier_name ?? "",

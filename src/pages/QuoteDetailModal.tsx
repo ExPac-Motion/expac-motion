@@ -187,7 +187,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
           label="Clearing Agent (internal)"
           value={q.clearing_agent?.company ?? "—"}
         />
-        <Field label="Agent/Airline Name" value={q.carrier_name || "—"} />
+        <Field label="Airline Name" value={q.carrier_name || "—"} />
         <Field
           label="Transporter (internal)"
           value={q.transporter?.company ?? "—"}

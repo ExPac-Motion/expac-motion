@@ -65,10 +65,11 @@ export function usesSeaLayout(mode: string | null | undefined): boolean {
   return m.startsWith("Sea Freight") || m.startsWith("Road Freight");
 }
 
-/** Label for the `shipping_line` field: "Shipping Line" on Sea Freight,
- *  "Carrier" on every other mode. */
+/** Label for the `shipping_line` field: "Shipping Line" on every mode. */
 export function carrierLabel(mode: string | null | undefined): string {
-  return (mode ?? "").startsWith("Sea") ? "Shipping Line" : "Carrier";
+  // "Shipping Line" on every mode (user, 2026-10-06: the old Carrier label is retired).
+  void mode;
+  return "Shipping Line";
 }
 
 /** Top row of Shipment Information: Shipper / Exporter then Customer /
@@ -101,7 +102,7 @@ export function shipmentPartyRows(job: Job): [string, string][] {
  *  and never belong on ops-facing documents). Sea and Air each print a fixed
  *  sequence using the Quote Builder's labels: Sea has Shipping Line, Vessel,
  *  Voyage No, Container No/Type, MBL No, HBL No; Air (Air Freight + Courier CX; Road uses Sea for now) has
- *  Agent / Airline, Flight No/Date, Routing, Transit Time, MAWB No, HAWB No. Both then share
+ *  Airline, Flight No/Date, Routing, Transit Time, MAWB No, HAWB No. Both then share
  *  Incoterms → Prepared By (the quote's sales person). */
 export function shipmentInfoRows(
   job: Job,
@@ -148,7 +149,7 @@ export function shipmentInfoRows(
         ["HBL No", quote?.hbl_no || "—"],
       ]
     : [
-        ["Agent / Airline", t?.carrier || quote?.carrier_name || job.carrier_name || "—"],
+        ["Airline", t?.carrier || quote?.carrier_name || job.carrier_name || "—"],
         ["Flight No", quote?.flight_no || "—"],
         ["Flight Date", formatDate(quote?.flight_date)],
         ["Routing", quote?.routing || "—"],
