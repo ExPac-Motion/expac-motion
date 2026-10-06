@@ -20,6 +20,7 @@ import {
 import { PackagesTable } from "../wms/WmsReceipts";
 import { ReceiptStatusBadge } from "../wms/shared";
 import ReceiptImages from "../wms/ReceiptImages";
+import { supabase } from "../../lib/supabase";
 import PortalReleaseRequests from "./PortalReleaseRequests";
 import PortalPreadvices from "./PortalPreadvices";
 import { PortalExceptions, PortalServices } from "./PortalWmsExtras";
@@ -92,6 +93,30 @@ export default function PortalWarehousePage() {
     { key: "cbm", header: "CBM", width: 80, render: (r) => qty(sum(r, "volume_cbm"), 3) },
     { key: "coll", header: "Collected by", width: 160, render: (r) => r.collected_by || "—" },
     { key: "out", header: "Reference", width: 130, render: (r) => r.outbound_ref || "—" },
+    {
+      key: "pod",
+      header: "POD",
+      width: 130,
+      render: (r) =>
+        r.pod_path ? (
+          <button
+            type="button"
+            className="link-btn"
+            title={r.pod_signed_by ? "Signed for by " + r.pod_signed_by : "Proof of delivery"}
+            onClick={async (e) => {
+              e.stopPropagation();
+              const tab = window.open("", "_blank");
+              const { data } = await supabase.storage.from("shipment-documents").createSignedUrl(r.pod_path as string, 300);
+              if (tab && data) tab.location.href = data.signedUrl;
+              else tab?.close();
+            }}
+          >
+            ✓ {formatDate(r.pod_delivered_at)}
+          </button>
+        ) : (
+          "—"
+        ),
+    },
   ];
   const runCols: DataColumn<WmsBillingRun>[] = [
     { key: "no", header: "Statement No", width: 120, render: (r) => <b>{r.run_no}</b>, sortValue: (r) => r.run_no },

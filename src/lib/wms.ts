@@ -175,6 +175,11 @@ export interface WmsRelease {
   outbound_ref: string | null;
   notes: string | null;
   created_at: string;
+  /** Proof of delivery / collection (0151). */
+  pod_path?: string | null;
+  pod_name?: string | null;
+  pod_signed_by?: string | null;
+  pod_delivered_at?: string | null;
   lines: WmsReleaseLine[];
 }
 export interface WmsReleaseHeader {

@@ -113,7 +113,6 @@ const NAV: NavItem[] = [
   { to: "/portal/suppliers", label: "Customer Party", icon: "party", permission: "suppliers" },
   { to: "/portal/rates", label: "Tariff Sheet", icon: "tariff", permission: "rates" },
   { to: "/portal/items", label: "Items / SKU", icon: "items", permission: "warehouse" },
-  { to: "/portal/reports", label: "Reports", icon: "reports" },
   {
     to: "/portal/warehouse",
     label: "Warehouse",
@@ -131,6 +130,7 @@ const NAV: NavItem[] = [
       { to: "/portal/warehouse?view=statements", label: "Storage statements" },
     ],
   },
+  { to: "/portal/reports", label: "Reports", icon: "reports" },
 ];
 
 function isActive(to: string, pathname: string): boolean {
@@ -153,6 +153,7 @@ export default function PortalLayout() {
   const [greetOpen, setGreetOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   // Pinned = full sidebar; unpinned = a slim icon rail that opens on hover. Per browser.
   const [pinned, setPinned] = useState<boolean>(() => {
     try {
@@ -209,14 +210,33 @@ export default function PortalLayout() {
         <nav className="pt-nav">
           {nav.map((n) => {
             const active = isActive(n.to, pathname);
+            // A group (Warehouse) opens with its page; clicking it again folds it away.
+            const expanded = active && !collapsed.has(n.to);
             return (
               <div key={n.to}>
-                <Link to={n.children ? n.children[0].to : n.to} className={`pt-nav-item${active ? " active" : ""}`} onClick={() => setNavOpen(false)}>
+                <Link
+                  to={n.children ? n.children[0].to : n.to}
+                  className={`pt-nav-item${active ? " active" : ""}`}
+                  onClick={(e) => {
+                    if (n.children && active) {
+                      e.preventDefault();
+                      setCollapsed((p) => {
+                        const next = new Set(p);
+                        if (next.has(n.to)) next.delete(n.to);
+                        else next.add(n.to);
+                        return next;
+                      });
+                      return;
+                    }
+                    setCollapsed(new Set());
+                    setNavOpen(false);
+                  }}
+                >
                   <PortalIcon name={n.icon} />
                   <span>{n.label}</span>
-                  {n.children && <span className="pt-caret">{active ? "▾" : "▸"}</span>}
+                  {n.children && <span className="pt-caret">{expanded ? "▾" : "▸"}</span>}
                 </Link>
-                {n.children && active && (
+                {n.children && expanded && (
                   <div className="pt-subnav">
                     {n.children.map((c) => {
                       const want = new URLSearchParams(c.to.split("?")[1]).get("view");

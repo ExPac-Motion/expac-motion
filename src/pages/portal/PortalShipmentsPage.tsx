@@ -6,7 +6,7 @@ import DataTable, { type DataColumn } from "../../components/DataTable";
 import DateInput from "../../components/DateInput";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, RowActions, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
-import { useMyDocuments, useMyJobTracking, useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
+import { useMyDocuments, useMyDocumentsAll, useMyJobTracking, useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
 import { getMyDocumentUrl } from "../../lib/db";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import { DELIVERED_STATUS, shipmentStatusSlug, type ClientJob } from "../../lib/types";
@@ -64,6 +64,13 @@ export default function PortalShipmentsPage() {
   const [, bump] = useState(0);
 
   const jobs = useMemo(() => jobsQ.data ?? [], [jobsQ.data]);
+  // Proof of delivery documents (0151), newest per shipment.
+  const allDocsQ = useMyDocumentsAll();
+  const podDocs = useMemo(() => {
+    const m = new Map<string, { storage_path: string; created_at: string }>();
+    for (const d of allDocsQ.data ?? []) if (d.doc_type === "Proof of Delivery" && !m.has(d.job_id)) m.set(d.job_id, d);
+    return m;
+  }, [allDocsQ.data]);
   const track = useMemo(() => new Map((trackQ.data ?? []).map((t) => [t.job_id, t])), [trackQ.data]);
   const etaOf = (j: ClientJob) => track.get(j.id)?.pod_eta || track.get(j.id)?.eta || j.eta;
   const etdOf = (j: ClientJob) => track.get(j.id)?.etd || j.etd;
@@ -128,7 +135,7 @@ export default function PortalShipmentsPage() {
       sortValue: (j) => j.reference,
     },
     { key: "shipper", header: "Shipper", width: 180, render: (j) => j.supplier_company || "—", sortValue: (j) => j.supplier_company ?? "" },
-    { key: "reference", header: "Your Reference", width: 140, render: (j) => j.po_no || "—", sortValue: (j) => j.po_no ?? "" },
+    { key: "reference", header: "REF", width: 120, render: (j) => j.po_no || "—", sortValue: (j) => j.po_no ?? "" },
     { key: "mode", header: "Mode", width: 140, render: (j) => j.mode, sortValue: (j) => j.mode },
     {
       key: "status",
@@ -164,6 +171,37 @@ export default function PortalShipmentsPage() {
         );
       },
       sortValue: (j) => etaOf(j) ?? "",
+    },
+    {
+      key: "pod",
+      header: "POD",
+      width: 110,
+      render: (j) => {
+        const doc = podDocs.get(j.id);
+        if (!doc && !j.pod_delivered_at) return "—";
+        return doc ? (
+          <button
+            type="button"
+            className="link-btn"
+            title={j.pod_signed_by ? "Signed for by " + j.pod_signed_by : "Proof of delivery"}
+            onClick={async (e) => {
+              e.stopPropagation();
+              const tab = window.open("", "_blank");
+              try {
+                const url = await getMyDocumentUrl(doc.storage_path);
+                if (tab) tab.location.href = url;
+              } catch {
+                tab?.close();
+              }
+            }}
+          >
+            ✓ {formatDate(j.pod_delivered_at ?? doc.created_at)}
+          </button>
+        ) : (
+          "✓ " + formatDate(j.pod_delivered_at)
+        );
+      },
+      sortValue: (j) => j.pod_delivered_at ?? "",
     },
     { key: "pdd", header: "PDD", width: 110, render: (j) => formatDate(j.provisional_delivery_date), sortValue: (j) => j.provisional_delivery_date ?? "" },
     { key: "pol", header: "POL", width: 100, render: (j) => code(j.origin) || "—" },
@@ -447,7 +485,7 @@ export function PortalShipmentViewModal({
         <ViewField label="Mode" value={job.mode} />
         <ViewField label="Milestone" value={job.milestone} />
         <ViewField label="Shipment Status" value={job.shipment_status || "—"} />
-        <ViewField label="Your Reference" value={job.po_no || "—"} />
+        <ViewField label="REF" value={job.po_no || "—"} />
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
         <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
@@ -469,6 +507,12 @@ export function PortalShipmentViewModal({
       )}
 
       <div style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+        {(job.pod_delivered_at || job.pod_signed_by) && (
+          <p className="pt-note ok" style={{ marginTop: 0 }}>
+            Delivered {formatDate(job.pod_delivered_at)}
+            {job.pod_signed_by ? ", signed for by " + job.pod_signed_by : ""}. The signed proof of delivery is in the documents below.
+          </p>
+        )}
         <strong>Documents</strong>
         {docsQ.isLoading ? (
           <Loading />

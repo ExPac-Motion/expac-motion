@@ -293,6 +293,9 @@ export interface ClientJob {
   id: string;
   /** The customer's own reference / PO (0143). */
   po_no?: string | null;
+  /** Proof of delivery (0151). */
+  pod_signed_by?: string | null;
+  pod_delivered_at?: string | null;
   reference: string;
   client_id: string;
   mode: QuoteMode;
@@ -382,6 +385,7 @@ export interface ShipmentDocument {
 export const DOCUMENT_TYPES = [
   "Invoice",
   "Packing List",
+  "Proof of Delivery",
   "Bill of Lading / AWB",
   "Customs",
   "Other",
@@ -1395,6 +1399,9 @@ export interface Job {
   invoice_no?: string | null;
   /** Carrier / airline name, seeded from the quote; shown on the board. */
   carrier_name: string | null;
+  /** Proof of delivery (0151): who signed, and the delivery date. */
+  pod_signed_by?: string | null;
+  pod_delivered_at?: string | null;
   /** Carrier SCAC, set for a bill-of-lading tracking registration. */
   scac: string | null;
   etd: string | null;
@@ -1455,6 +1462,8 @@ export type JobPatch = Partial<
     | "eta"
     | "origin"
     | "destination"
+    | "pod_signed_by"
+    | "pod_delivered_at"
   >
 >;
 

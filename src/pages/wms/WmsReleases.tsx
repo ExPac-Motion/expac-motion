@@ -37,6 +37,10 @@ import {
 import WmsConsols from "./WmsConsols";
 import { orNull, useWmsLookups } from "./shared";
 import { notifyWms } from "../../lib/wmsNotify";
+import PodModal from "../../components/PodModal";
+import { saveReleasePod } from "../../lib/pod";
+import { supabase } from "../../lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 
 type View = "releases" | "requests" | ConsolMode;
 
@@ -90,6 +94,8 @@ function ReleasesList({ toggle }: { toggle: ReactNode }) {
   const receiptsQ = useWmsReceipts();
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [podFor, setPodFor] = useState<WmsRelease | null>(null);
+  const qc = useQueryClient();
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const undo = useWmsMutation(wmsDb.deleteRelease);
   const recById = useMemo(() => new Map((receiptsQ.data ?? []).map((r) => [r.id, r])), [receiptsQ.data]);
@@ -138,6 +144,37 @@ function ReleasesList({ toggle }: { toggle: ReactNode }) {
     { key: "coll", header: "Collected by", width: 150, render: (r) => r.collected_by || "—" },
     { key: "veh", header: "Vehicle", width: 100, render: (r) => r.vehicle_reg || "—" },
     { key: "out", header: "Outbound ref", width: 120, render: (r) => r.outbound_ref || "—" },
+    {
+      key: "pod",
+      header: "POD",
+      width: 150,
+      render: (r) =>
+        r.pod_path ? (
+          <button
+            type="button"
+            className="link-btn"
+            onClick={async (e) => {
+              e.stopPropagation();
+              const tab = window.open("", "_blank");
+              const { data } = await supabase.storage.from("shipment-documents").createSignedUrl(r.pod_path as string, 300);
+              if (tab && data) tab.location.href = data.signedUrl;
+            }}
+          >
+            ✓ {formatDate(r.pod_delivered_at)}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn outline btn-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPodFor(r);
+            }}
+          >
+            Upload POD
+          </button>
+        ),
+    },
   ];
 
   return (
@@ -172,6 +209,18 @@ function ReleasesList({ toggle }: { toggle: ReactNode }) {
           />
         )}
       </div>
+      {podFor && (
+        <PodModal
+          title={"Proof of " + (podFor.deliver_to ? "delivery" : "collection") + ", " + podFor.release_no}
+          customerEmail={lk.client(podFor.client_id)?.email ?? null}
+          onClose={() => setPodFor(null)}
+          onSave={async (pod) => {
+            const res = await saveReleasePod(podFor, pod);
+            qc.invalidateQueries({ queryKey: ["wms"] });
+            return res;
+          }}
+        />
+      )}
       {creating && (
         <NewReleaseModal
           onClose={() => setCreating(false)}

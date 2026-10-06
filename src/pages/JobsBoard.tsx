@@ -45,6 +45,9 @@ import {
   useDocumentTypes,
 } from "../lib/hooks";
 import ConsolidateModal from "./wms/ConsolidateModal";
+import PodModal from "../components/PodModal";
+import { saveShipmentPod } from "../lib/pod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useWmsConsols } from "../lib/wms";
 import { houseLabel, houseNo, masterLabel } from "./wms/WmsConsols";
 import { consolModeFor } from "./wms/houseFromShipment";
@@ -238,6 +241,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [taskingJob, setTaskingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [consolidating, setConsolidating] = useState<Job[] | null>(null);
+  // Proof of delivery (0151): asked for when a shipment is set to Delivered.
+  const [podJob, setPodJob] = useState<Job | null>(null);
   const canWms = useCan()("warehouse");
   const unreadMessagesQ = useUnreadMessages();
   const unreadJobIds = useMemo(
@@ -390,6 +395,10 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   function save(id: string, patch: JobPatch) {
     const toDone = patch.shipment_status === DELIVERED_STATUS;
+    if (toDone) {
+      const j = (jobs ?? []).find((x) => x.id === id);
+      if (j && !j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
+    }
     const fromDone =
       mode === "completed" &&
       patch.shipment_status !== undefined &&
@@ -835,6 +844,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         />
       )}
 
+      {podJob && <ShipmentPodModal job={podJob} onClose={() => setPodJob(null)} />}
       {consolidating && (
         <ConsolidateModal
           jobs={consolidating}
@@ -990,6 +1000,7 @@ function JobViewModal({
         <CreateQuoteForJob job={job} onDone={onClose} />
       )}
 
+      <PodSection job={job} />
       <ConsolSection job={job} />
       <DocumentsSection job={job} />
     </Modal>
@@ -1395,6 +1406,48 @@ function ViewField({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+/** Proof of delivery upload for a shipment (0151). */
+function ShipmentPodModal({ job, onClose }: { job: Job; onClose: () => void }) {
+  const qc = useQueryClient();
+  return (
+    <PodModal
+      title={"Proof of delivery, " + job.reference}
+      intro="Delivered. Upload the signed POD now, or later from the shipment's View."
+      customerEmail={job.client?.email}
+      onClose={onClose}
+      onSave={async (pod) => {
+        const r = await saveShipmentPod(job, pod);
+        qc.invalidateQueries({ queryKey: ["jobs"] });
+        qc.invalidateQueries({ queryKey: ["shipment_documents"] });
+        return r;
+      }}
+    />
+  );
+}
+
+/** Shipment view: POD status + upload (0151). */
+function PodSection({ job }: { job: Job }) {
+  const [open, setOpen] = useState(false);
+  const has = !!(job.pod_signed_by || job.pod_delivered_at);
+  return (
+    <div className="job-consol">
+      <span className="k">Proof of delivery</span>
+      {has ? (
+        <span>
+          ✓ Delivered {formatDate(job.pod_delivered_at)}
+          {job.pod_signed_by ? ", signed for by " + job.pod_signed_by : ""} (in Documents below)
+        </span>
+      ) : (
+        <span className="hint">Not uploaded yet</span>
+      )}
+      <button type="button" className="btn outline btn-sm" onClick={() => setOpen(true)}>
+        {has ? "Replace POD" : "Upload POD"}
+      </button>
+      {open && <ShipmentPodModal job={job} onClose={() => setOpen(false)} />}
     </div>
   );
 }
