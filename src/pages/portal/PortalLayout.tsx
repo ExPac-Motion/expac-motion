@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { useMyJobs, useMyProfile } from "../../lib/hooks";
 import type { Profile } from "../../lib/types";
-import { useWmsReceipts } from "../../lib/wms";
 import { useUpdateCompany, type CompanyDetails, type PortalMe, usePortalMe, usePortalQuotes, useSetGreeting } from "../../lib/portal";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
@@ -103,8 +102,6 @@ interface NavItem {
   label: string;
   icon: string;
   permission?: keyof Profile["portal_permissions"];
-  /** Only for customers with goods in the ExPac warehouse. */
-  warehouse?: boolean;
   children?: { to: string; label: string }[];
 }
 
@@ -115,14 +112,13 @@ const NAV: NavItem[] = [
   { to: "/portal/quotes", label: "Quotations", icon: "quotes", permission: "quotes" },
   { to: "/portal/suppliers", label: "Customer Party", icon: "party", permission: "suppliers" },
   { to: "/portal/rates", label: "Tariff Sheet", icon: "tariff", permission: "rates" },
-  { to: "/portal/items", label: "Items / SKU", icon: "items", permission: "warehouse", warehouse: true },
+  { to: "/portal/items", label: "Items / SKU", icon: "items", permission: "warehouse" },
   { to: "/portal/reports", label: "Reports", icon: "reports" },
   {
     to: "/portal/warehouse",
     label: "Warehouse",
     icon: "warehouse",
     permission: "warehouse",
-    warehouse: true,
     children: [
       { to: "/portal/warehouse?view=all", label: "Receipt" },
       { to: "/portal/warehouse?view=releases", label: "Release" },
@@ -148,8 +144,6 @@ export default function PortalLayout() {
   const profileQ = useMyProfile();
   const meQ = usePortalMe();
   const permissions = profileQ.data?.portal_permissions;
-  const wmsQ = useWmsReceipts();
-  const hasWarehouse = (wmsQ.data ?? []).length > 0;
   const [menuOpen, setMenuOpen] = useState(false);
   const [greetOpen, setGreetOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -176,7 +170,7 @@ export default function PortalLayout() {
   // Hidden (not just disabled) when switched off for this login in Customers ›
   // Portal Access; a permission missing on an older login counts as on.
   const nav = NAV.filter(
-    (n) => (!n.permission || !permissions || permissions[n.permission] !== false) && (!n.warehouse || hasWarehouse),
+    (n) => (!n.permission || !permissions || permissions[n.permission] !== false),
   );
   const showChat = permissions?.messaging !== false;
   const name = profileQ.data?.full_name || user?.email || "";
