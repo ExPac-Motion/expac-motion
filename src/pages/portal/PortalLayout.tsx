@@ -154,6 +154,24 @@ export default function PortalLayout() {
   const [greetOpen, setGreetOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  // Pinned = full sidebar; unpinned = a slim icon rail that opens on hover. Per browser.
+  const [pinned, setPinned] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("pt-side-pinned") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  function togglePin() {
+    setPinned((p) => {
+      try {
+        localStorage.setItem("pt-side-pinned", p ? "0" : "1");
+      } catch {
+        /* private mode */
+      }
+      return !p;
+    });
+  }
 
   // Hidden (not just disabled) when switched off for this login in Customers ›
   // Portal Access; a permission missing on an older login counts as on.
@@ -170,11 +188,25 @@ export default function PortalLayout() {
     .join("");
 
   return (
-    <div className={`pt-shell${navOpen ? " nav-open" : ""}`}>
+    <div className={`pt-shell${navOpen ? " nav-open" : ""}${pinned ? "" : " unpinned"}`}>
       <aside className="pt-side">
-        <Link to="/portal" className="pt-brand" onClick={() => setNavOpen(false)}>
-          <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac" />
-        </Link>
+        <div className="pt-brand-row">
+          <Link to="/portal" className="pt-brand" onClick={() => setNavOpen(false)}>
+            <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac" />
+          </Link>
+          <button
+            type="button"
+            className={`pt-pin${pinned ? " on" : ""}`}
+            onClick={togglePin}
+            title={pinned ? "Unpin the sidebar (shrink to icons)" : "Pin the sidebar open"}
+            aria-label={pinned ? "Unpin sidebar" : "Pin sidebar"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 3h6l-1 6 4 4H6l4-4z" />
+              <path d="M12 13v8" />
+            </svg>
+          </button>
+        </div>
         <nav className="pt-nav">
           {nav.map((n) => {
             const active = isActive(n.to, pathname);
