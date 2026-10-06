@@ -569,10 +569,13 @@ export function PageHeader({
   eyebrow,
   title,
   actions,
+  center,
 }: {
   eyebrow: string;
   title: string;
   actions?: ReactNode;
+  /** Optional widget in the open space between the title and the actions. */
+  center?: ReactNode;
 }) {
   const navigate = useNavigate();
   // BrowserRouter stamps history.state.idx with this tab's position in its
@@ -606,6 +609,7 @@ export function PageHeader({
         {/* PageTools: search box, record count, filters */}
         <div className="topbar-lead" ref={leadRef} />
       </div>
+      {center && <div className="topbar-center">{center}</div>}
       <div className="row-actions">
         {/* PageTools: table settings + page buttons, then the page's own */}
         <div className="dt-tools-slot" ref={actionsRef} />

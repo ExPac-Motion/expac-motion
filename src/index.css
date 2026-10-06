@@ -358,6 +358,56 @@ input[type="number"] {
 }
 /* Title block + the page's search / filters / record count (PageTools),
    bottom-aligned with the title, like the CTAs on the right. */
+.topbar-center {
+  flex: 1 1 320px;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+.pt-tip {
+  width: 100%;
+  max-width: 560px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.pt-tip.pending {
+  background: var(--amber-tint);
+  border-color: var(--amber);
+}
+.pt-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+.pt-tip-next {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.pt-tip-next:hover {
+  color: var(--ink);
+}
+.pt-tip p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.pt-tip.pending p {
+  color: var(--amber-ink);
+}
+.pt-tip p a {
+  font-weight: 700;
+  color: var(--green-dark);
+  white-space: nowrap;
+}
 .topbar-left {
   display: flex;
   align-items: flex-end;

@@ -17,6 +17,7 @@ import {
   type WmsReceipt,
 } from "../../lib/wms";
 import { JourneySteps, useWmsJourney } from "./PortalWmsOverview";
+import PortalTip, { type Tip } from "./PortalTip";
 import { PortalIcon, modeEmoji } from "./PortalLayout";
 import { usePortalAnnouncements } from "../../lib/portal";
 
@@ -83,11 +84,27 @@ export default function PortalDashboardPage() {
     return days >= -1 && days <= 7;
   });
 
+  // Tip of the Day: what's waiting for the customer comes first.
+  const pendingTips: Tip[] = [
+    ...responses.map((q) => ({
+      text: `Quotation ${q.reference} is ready for you${q.valid_until ? `, valid until ${formatDate(q.valid_until)}` : ""}. Accept it, or request a revision.`,
+      to: `/portal/quotes/${q.id}`,
+    })),
+    ...exceptions.map((r) => ({
+      text: `Receipt ${r.receipt_no} arrived ${r.condition}. Please review the photos and ExPac's notes, and acknowledge it.`,
+      to: "/portal/warehouse?view=exceptions",
+    })),
+    ...soon.map((j) => ({
+      text: `${j.reference} arrives ${formatDate(etaOf(j))} at ${portCode(j.destination)}. Make sure your documents and clearance are ready.`,
+      to: "/portal/shipments",
+    })),
+  ];
   return (
     <>
       <PageHeader
         eyebrow="ExPac Motion · your supply chain"
         title={`${greetingFor(profileQ.data, user?.email)}! 👋`}
+        center={<PortalTip pending={pendingTips} />}
         actions={
           <>
             <button className="btn outline" onClick={() => navigate("/portal/rates")}>
