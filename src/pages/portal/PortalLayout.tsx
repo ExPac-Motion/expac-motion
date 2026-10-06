@@ -92,7 +92,33 @@ const I: Record<string, ReactNode> = {
     </>
   ),
 };
-export const PortalIcon = ({ name }: { name: string }) => (
+/* Colour icons (emoji) for the sidebar, KPI cards and mode picker; the
+ * search box keeps its line icon. */
+const EMOJI: Record<string, string> = {
+  dashboard: "📊",
+  shipments: "🚚",
+  invoices: "🧾",
+  quotes: "🏷️",
+  party: "👥",
+  tariff: "📋",
+  items: "📦",
+  reports: "📈",
+  warehouse: "🏭",
+  calendar: "📅",
+  plane: "✈️",
+  ship: "🚢",
+};
+/** Colour icon for a shipping mode ("Air Freight", "Sea Freight (LCL)" ...). */
+export function modeEmoji(mode: string | null | undefined): string {
+  const m = mode ?? "";
+  return m.startsWith("Air") ? "✈️" : m.startsWith("Sea") ? "🚢" : m.startsWith("Road") ? "🚚" : m ? "📦" : "";
+}
+export const PortalIcon = ({ name }: { name: string }) =>
+  EMOJI[name] ? (
+    <span className="pt-emoji" aria-hidden>
+      {EMOJI[name]}
+    </span>
+  ) : (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     {I[name]}
   </svg>

@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { modeEmoji } from "./PortalLayout";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import Modal from "../../components/Modal";
@@ -136,7 +137,7 @@ export default function PortalShipmentsPage() {
     },
     { key: "shipper", header: "Shipper", width: 180, render: (j) => j.supplier_company || "—", sortValue: (j) => j.supplier_company ?? "" },
     { key: "reference", header: "REF", width: 120, render: (j) => j.po_no || "—", sortValue: (j) => j.po_no ?? "" },
-    { key: "mode", header: "Mode", width: 140, render: (j) => j.mode, sortValue: (j) => j.mode },
+    { key: "mode", header: "Mode", width: 140, render: (j) => `${modeEmoji(j.mode)} ${j.mode}`, sortValue: (j) => j.mode },
     {
       key: "status",
       header: view === "completed" ? "Shipment Status" : "Status",

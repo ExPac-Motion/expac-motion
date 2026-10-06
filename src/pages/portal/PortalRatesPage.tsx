@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { modeEmoji } from "./PortalLayout";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import {
   EmptyState,
@@ -33,7 +34,7 @@ export default function PortalRatesPage() {
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const columns = useMemo<DataColumn<(typeof rates)[number]>[]>(
     () => [
-      { key: "mode", header: "Mode", width: 160, sortValue: (r) => r.mode, render: (r) => r.mode },
+      { key: "mode", header: "Mode", width: 160, sortValue: (r) => r.mode, render: (r) => `${modeEmoji(r.mode)} ${r.mode}` },
       { key: "origin", header: "Origin", width: 110, sortValue: (r) => r.origin ?? "", render: (r) => r.origin || "Any" },
       { key: "destination", header: "Destination", width: 110, sortValue: (r) => r.destination ?? "", render: (r) => r.destination || "Any" },
       { key: "carrier", header: "Carrier", width: 150, sortValue: (r) => r.carrier ?? "", render: (r) => r.carrier || "—" },

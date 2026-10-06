@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { modeEmoji } from "./PortalLayout";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import PortalQuoteModal from "./PortalQuoteViewPage";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -65,7 +66,7 @@ export default function PortalQuotesPage() {
       sortValue: (q) => label(q),
     },
     { key: "yourref", header: "Ref", width: 120, render: (q) => q.customer_reference || "—" },
-    { key: "mode", header: "Mode", width: 150, render: (q) => q.mode, sortValue: (q) => q.mode },
+    { key: "mode", header: "Mode", width: 150, render: (q) => `${modeEmoji(q.mode)} ${q.mode}`, sortValue: (q) => q.mode },
     { key: "origin", header: "Origin", width: 170, render: (q) => q.origin || "—", sortValue: (q) => q.origin ?? "" },
     { key: "dest", header: "Destination", width: 170, render: (q) => q.destination || "—", sortValue: (q) => q.destination ?? "" },
     { key: "commodity", header: "Commodity", width: 160, render: (q) => q.commodity || "—" },

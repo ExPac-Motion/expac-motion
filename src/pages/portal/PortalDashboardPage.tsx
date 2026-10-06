@@ -3,11 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { ErrorNote, Loading, PageHeader } from "../../components/common";
 import { useMyJobTracking, useMyJobs, useMyProfile } from "../../lib/hooks";
-import { formatDate, portCode } from "../../lib/format";
+import { formatDate, money, portCode } from "../../lib/format";
 import { DELIVERED_STATUS, type ClientJob } from "../../lib/types";
-import { greetingFor, portalQuoteStatus, usePortalQuotes } from "../../lib/portal";
-import { useWmsReceipts } from "../../lib/wms";
-import { PortalIcon } from "./PortalLayout";
+import { WMS_STAGE_LABEL, greetingFor, portalQuoteStatus, usePortalQuotes, wmsStage } from "../../lib/portal";
+import {
+  accruedThisMonth,
+  useWmsMoves,
+  useWmsPreadvices,
+  useWmsReleaseRequests,
+  useWmsReceipts,
+  useWmsServices,
+  useWmsWarehouses,
+  type WmsReceipt,
+} from "../../lib/wms";
+import { JourneySteps, useWmsJourney } from "./PortalWmsOverview";
+import { PortalIcon, modeEmoji } from "./PortalLayout";
 import { usePortalAnnouncements } from "../../lib/portal";
 
 const isDone = (j: ClientJob) => j.shipment_status === DELIVERED_STATUS || j.milestone === "Delivered";
@@ -54,6 +64,18 @@ export default function PortalDashboardPage() {
   const responses = quotes.filter((q) => portalQuoteStatus(q).label === "Response available");
   const requested = quotes.filter((q) => q.status === "open");
   const inStore = (wmsQ.data ?? []).filter((r) => r.on_hand > 0);
+  // Motion Warehouse (0147-0150): requests, expected goods, services, exceptions.
+  const relReqQ = useWmsReleaseRequests();
+  const preQ = useWmsPreadvices();
+  const svcQ = useWmsServices();
+  const pendingReleases = (relReqQ.data ?? []).filter((r) => r.status === "requested");
+  const expected = (preQ.data ?? []).filter((p) => p.status === "expected");
+  const openServices = (svcQ.data ?? []).filter((s) => s.status === "requested" || s.status === "in_progress");
+  const exceptions = (wmsQ.data ?? []).filter((r) => r.condition !== "good" && !r.exception_ack_at);
+  const delivered = jobs
+    .filter(isDone)
+    .sort((a, b) => (b.pod_delivered_at ?? b.created_at).localeCompare(a.pod_delivered_at ?? a.created_at))
+    .slice(0, 5);
   const soon = active.filter((j) => {
     const e = etaOf(j);
     if (!e) return false;
@@ -65,7 +87,7 @@ export default function PortalDashboardPage() {
     <>
       <PageHeader
         eyebrow="ExPac Motion · your supply chain"
-        title={`${greetingFor(profileQ.data, user?.email)}!`}
+        title={`${greetingFor(profileQ.data, user?.email)}! 👋`}
         actions={
           <>
             <button className="btn outline" onClick={() => navigate("/portal/rates")}>
@@ -98,7 +120,7 @@ export default function PortalDashboardPage() {
 
         <div className="panel">
           <div className="panel-head">
-            <h2>Active shipments by mode</h2>
+            <h2>📊 Active shipments by mode</h2>
           </div>
           <Donut
             parts={byMode.filter((b) => b.n).map((b) => ({ label: b.m, value: b.n, color: MODE_COLOR[b.m] }))}
@@ -108,7 +130,7 @@ export default function PortalDashboardPage() {
 
         <div className="panel">
           <div className="panel-head">
-            <h2>Quotations</h2>
+            <h2>🏷️ Quotations</h2>
             <Link to="/portal/quotes" className="link-btn">
               View all
             </Link>
@@ -125,9 +147,9 @@ export default function PortalDashboardPage() {
 
         <div className="panel pt-span3">
           <div className="panel-head">
-            <h2>Action required</h2>
+            <h2>🔔 Action required</h2>
           </div>
-          {responses.length === 0 && requested.length === 0 && soon.length === 0 ? (
+          {responses.length === 0 && requested.length === 0 && soon.length === 0 && exceptions.length === 0 && pendingReleases.length === 0 ? (
             <p className="hint">Nothing waiting on you right now.</p>
           ) : (
             <div className="pt-actions">
@@ -139,6 +161,13 @@ export default function PortalDashboardPage() {
                     {q.valid_until ? ` · valid until ${formatDate(q.valid_until)}` : ""}
                   </span>
                   <em>Review &amp; accept →</em>
+                </Link>
+              ))}
+              {exceptions.map((r) => (
+                <Link key={r.id} to="/portal/warehouse?view=exceptions" className="pt-action amber">
+                  <b>{r.receipt_no}</b>
+                  <span>Goods received {r.condition}, please review the photos and ExPac's notes</span>
+                  <em>Acknowledge →</em>
                 </Link>
               ))}
               {soon.map((j) => (
@@ -155,13 +184,19 @@ export default function PortalDashboardPage() {
                   <span>Quote request with ExPac, we'll respond shortly</span>
                 </Link>
               ))}
+              {pendingReleases.map((r) => (
+                <Link key={r.id} to="/portal/warehouse?view=requests" className="pt-action muted">
+                  <b>{r.request_no}</b>
+                  <span>Release request with ExPac, we'll confirm the release shortly</span>
+                </Link>
+              ))}
             </div>
           )}
         </div>
 
         <div className="panel pt-span3">
           <div className="panel-head">
-            <h2>Shipment activity</h2>
+            <h2>🚚 Shipment activity</h2>
             <Link className="btn outline btn-sm" to="/portal/shipments">
               View all
             </Link>
@@ -193,7 +228,9 @@ export default function PortalDashboardPage() {
                       <td>
                         <b>{j.reference}</b>
                       </td>
-                      <td>{j.mode}</td>
+                      <td>
+                        {modeEmoji(j.mode)} {j.mode}
+                      </td>
                       <td>
                         <span className="badge sent">{j.shipment_status || j.milestone}</span>
                       </td>
@@ -209,8 +246,161 @@ export default function PortalDashboardPage() {
             </div>
           )}
         </div>
+
+        <WarehousePanel
+          receipts={wmsQ.data ?? []}
+          pendingReleases={pendingReleases.length}
+          expected={expected.length}
+          openServices={openServices.length}
+        />
+
+        <div className="panel pt-span3">
+          <div className="panel-head">
+            <h2>✅ Delivered</h2>
+            <Link className="btn outline btn-sm" to="/portal/shipments">
+              View all
+            </Link>
+          </div>
+          {delivered.length === 0 ? (
+            <p className="hint">No deliveries yet. Once a shipment is delivered, the signed proof of delivery shows here and on the shipment.</p>
+          ) : (
+            <div className="table-wrap">
+              <table className="table--compact">
+                <thead>
+                  <tr>
+                    <th>Shipment</th>
+                    <th>Mode</th>
+                    <th>Origin</th>
+                    <th>Destination</th>
+                    <th>Delivered</th>
+                    <th>Signed for by</th>
+                    <th>Proof of Delivery</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {delivered.map((j) => (
+                    <tr key={j.id} className="clickable" onClick={() => navigate("/portal/shipments")}>
+                      <td>
+                        <span className="ref-link">{j.reference}</span>
+                      </td>
+                      <td>
+                        {modeEmoji(j.mode)} {j.mode}
+                      </td>
+                      <td>{portCode(j.origin) || "—"}</td>
+                      <td>{portCode(j.destination) || "—"}</td>
+                      <td>{formatDate(j.pod_delivered_at)}</td>
+                      <td>{j.pod_signed_by || "—"}</td>
+                      <td>{j.pod_delivered_at || j.pod_signed_by ? "✓ In the shipment's documents" : "Awaiting POD"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </>
+  );
+}
+
+/** Dashboard › Motion Warehouse: what's in store, where it is in its
+ *  journey, storage so far this month and open requests. */
+function WarehousePanel({
+  receipts,
+  pendingReleases,
+  expected,
+  openServices,
+}: {
+  receipts: WmsReceipt[];
+  pendingReleases: number;
+  expected: number;
+  openServices: number;
+}) {
+  const navigate = useNavigate();
+  const j = useWmsJourney();
+  const whQ = useWmsWarehouses();
+  const movesQ = useWmsMoves();
+  const accrued = useMemo(() => accruedThisMonth(whQ.data ?? [], receipts, movesQ.data ?? []), [whQ.data, receipts, movesQ.data]);
+  const inStore = receipts.filter((r) => r.on_hand > 0);
+  const preparing = inStore.filter((r) => wmsStage(r, j.tracker.get(r.id)) === "preparing").length;
+  const storage = inStore.reduce((t, r) => t + (accrued.get(r.id) ?? 0), 0);
+  const latest = [...receipts].sort((a, b) => b.received_at.localeCompare(a.received_at)).slice(0, 6);
+  const stats: [string, string, string][] = [
+    ["In Motion Warehouse", String(inStore.length), "/portal/warehouse?view=stock"],
+    ["Pieces in store", String(inStore.reduce((t, r) => t + r.on_hand, 0)), "/portal/warehouse?view=stock"],
+    ["Being prepared for shipping", String(preparing), "/portal/warehouse"],
+    ["Storage this month (est., excl. VAT)", money(storage), "/portal/warehouse?view=statements"],
+    ["Release requests pending", String(pendingReleases), "/portal/warehouse?view=requests"],
+    ["Goods expected (pre-advised)", String(expected), "/portal/warehouse?view=preadvice"],
+    ["Services in progress", String(openServices), "/portal/warehouse?view=services"],
+  ];
+  return (
+    <div className="panel pt-span3">
+      <div className="panel-head">
+        <h2>🏭 Motion Warehouse</h2>
+        <span style={{ display: "flex", gap: 8 }}>
+          <Link className="btn outline btn-sm" to="/portal/warehouse?view=preadvice">
+            Pre-advise goods
+          </Link>
+          <Link className="btn outline btn-sm" to="/portal/warehouse?view=requests">
+            Request a release
+          </Link>
+          <Link className="btn outline btn-sm" to="/portal/warehouse">
+            View all
+          </Link>
+        </span>
+      </div>
+      <div className="pt-mini-stats">
+        {stats.map(([k, v, to]) => (
+          <Link key={k} to={to}>
+            <span>{k}</span>
+            <b>{v}</b>
+          </Link>
+        ))}
+      </div>
+      {latest.length === 0 ? (
+        <p className="hint">Nothing received for you yet. Pre-advise goods you're sending to ExPac and follow them here from receipt to shipment.</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="table--compact">
+            <thead>
+              <tr>
+                <th>Receipt</th>
+                <th>Received</th>
+                <th>Description</th>
+                <th>Pieces</th>
+                <th>Where</th>
+                <th>Journey</th>
+                <th>Shipment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {latest.map((r) => {
+                const t = j.tracker.get(r.id);
+                const stage = wmsStage(r, t);
+                return (
+                  <tr key={r.id} className="clickable" onClick={() => navigate("/portal/warehouse")} title={WMS_STAGE_LABEL[stage]}>
+                    <td>
+                      <b>{r.receipt_no}</b>
+                    </td>
+                    <td>{formatDate(r.received_at)}</td>
+                    <td>{r.description || "—"}</td>
+                    <td>
+                      {r.on_hand} / {r.pieces}
+                    </td>
+                    <td>{r.on_hand > 0 ? j.whereOf(r) : "Shipped"}</td>
+                    <td>
+                      <JourneySteps stage={stage} />
+                    </td>
+                    <td>{t?.shipment_ref ? <span className="ref-link">{t.shipment_ref}</span> : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -305,7 +495,7 @@ function ShipmentCalendar({
   return (
     <>
       <div className="panel-head">
-        <h2>Shipments calendar</h2>
+        <h2>📅 Shipments calendar</h2>
         <div className="wms-seg">
           {(
             [
@@ -372,7 +562,7 @@ function WhatsNew() {
   return (
     <div className="panel pt-news">
       <div className="panel-head">
-        <h2>Announcements</h2>
+        <h2>📣 Announcements</h2>
         {items.length > 1 && (
           <span className="pt-news-nav">
             <button type="button" className="link-btn" onClick={() => setI((i - 1 + items.length) % items.length)} aria-label="Previous">
