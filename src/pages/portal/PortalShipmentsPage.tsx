@@ -141,11 +141,11 @@ export default function PortalShipmentsPage() {
     { key: "container", header: "Container No", width: 150, render: (j) => j.container_no || "—" },
     {
       key: "line",
-      header: modeTab === "Sea" ? "Shipping Line" : modeTab === "All" ? "Carrier / Shipping Line" : "Carrier",
+      header: "Shipping Line",
       width: 150,
       render: (j) => j.shipping_line || "—",
     },
-    { key: "carrier", header: "Agent/Airline", width: 150, render: (j) => j.carrier_name || "—" },
+    { key: "carrier", header: "Airline", width: 150, render: (j) => j.carrier_name || "—" },
     { key: "etd", header: "ETD", width: 110, render: (j) => formatDate(etdOf(j)), sortValue: (j) => etdOf(j) ?? "" },
     {
       key: "eta",
@@ -450,8 +450,8 @@ export function PortalShipmentViewModal({
         <ViewField label="Your Reference" value={job.po_no || "—"} />
         <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
         <ViewField label="Container No" value={job.container_no || "—"} />
-        <ViewField label={job.mode.startsWith("Sea") ? "Shipping Line" : "Carrier"} value={job.shipping_line || "—"} />
-        <ViewField label="Agent/Airline" value={job.carrier_name || "—"} />
+        <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
+        <ViewField label="Airline" value={job.carrier_name || "—"} />
         <ViewField label="Vessel" value={job.vessel_name || "—"} />
         <ViewField label="POL" value={code(job.origin) || "—"} />
         <ViewField label="POD" value={code(job.destination) || "—"} />
