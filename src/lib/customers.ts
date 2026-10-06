@@ -55,6 +55,8 @@ export interface CustomerFields {
   margin_override_pct?: number | null;
   charges_note?: string | null;
   rate_tier?: string | null;
+  /** Last time the customer edited its details on the portal (0145). */
+  portal_updated_at?: string | null;
 }
 export type CustomerRecord = Client & CustomerFields;
 

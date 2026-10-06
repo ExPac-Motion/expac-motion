@@ -4,7 +4,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { useMyJobs, useMyProfile } from "../../lib/hooks";
 import type { Profile } from "../../lib/types";
 import { useWmsReceipts } from "../../lib/wms";
-import { usePortalMe, usePortalQuotes, useSetGreeting } from "../../lib/portal";
+import { useUpdateCompany, type CompanyDetails, type PortalMe, usePortalMe, usePortalQuotes, useSetGreeting } from "../../lib/portal";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import PortalChatWidget from "./PortalChatWidget";
@@ -152,6 +152,7 @@ export default function PortalLayout() {
   const hasWarehouse = (wmsQ.data ?? []).length > 0;
   const [menuOpen, setMenuOpen] = useState(false);
   const [greetOpen, setGreetOpen] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
   // Hidden (not just disabled) when switched off for this login in Customers ›
@@ -240,7 +241,11 @@ export default function PortalLayout() {
           </button>
           <PortalSearch />
           <div className="pt-top-right">
-            {meQ.data?.company && <span>{meQ.data.company}</span>}
+            {meQ.data && (
+              <button type="button" className="pt-company-btn" onClick={() => setCompanyOpen(true)} title="Your company details — click to update">
+                {meQ.data.company} <span aria-hidden>✎</span>
+              </button>
+            )}
           </div>
         </header>
         <main className="main pt-main">
@@ -248,6 +253,7 @@ export default function PortalLayout() {
         </main>
       </div>
       {showChat && <PortalChatWidget />}
+      {companyOpen && meQ.data && <CompanyDetailsModal me={meQ.data} onClose={() => setCompanyOpen(false)} />}
       {greetOpen && profileQ.data && (
         <GreetingModal profileId={profileQ.data.id} current={profileQ.data.greeting ?? profileQ.data.full_name ?? ""} onClose={() => setGreetOpen(false)} />
       )}
@@ -350,6 +356,81 @@ function GreetingModal({ profileId, current, onClose }: { profileId: string; cur
           }
         >
           Save
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Top-right company name -> the customer's own company details; saving
+ *  updates its customer record at ExPac (0145). */
+function CompanyDetailsModal({ me, onClose }: { me: PortalMe; onClose: () => void }) {
+  const save = useUpdateCompany();
+  const { toast, error } = useToast();
+  const [v, setV] = useState<CompanyDetails>({
+    company: me.company ?? "",
+    registration_no: me.registration_no ?? "",
+    vat_no: me.vat_no ?? "",
+    import_code: me.import_code ?? "",
+    email: me.email ?? "",
+    company_phone: me.company_phone ?? "",
+    contact_mobile: me.contact_mobile ?? "",
+    address: me.address ?? "",
+    physical_address: me.physical_address ?? "",
+  });
+  const set = (k: keyof CompanyDetails, x: string) => setV((p) => ({ ...p, [k]: x }));
+  const field = (k: keyof CompanyDetails, label: string, type = "text") => (
+    <div className="field">
+      <label>{label}</label>
+      <input type={type} value={(v[k] as string) ?? ""} onChange={(e) => set(k, e.target.value)} />
+    </div>
+  );
+  const area = (k: keyof CompanyDetails, label: string) => (
+    <div className="field">
+      <label>{label}</label>
+      <textarea rows={3} value={(v[k] as string) ?? ""} onChange={(e) => set(k, e.target.value)} />
+    </div>
+  );
+  return (
+    <Modal title="Your company details" onClose={onClose} wide>
+      <div className="field">
+        <label>Company Name *</label>
+        <input value={v.company} onChange={(e) => set("company", e.target.value)} autoFocus />
+      </div>
+      <div className="grid3">
+        {field("registration_no", "Registration Number")}
+        {field("vat_no", "VAT Number")}
+        {field("import_code", "Customs Import Number")}
+      </div>
+      <div className="grid3">
+        {field("email", "Email Address", "email")}
+        {field("company_phone", "Tel Number")}
+        {field("contact_mobile", "Mobile Number")}
+      </div>
+      <div className="grid2">
+        {area("address", "Company Address")}
+        {area("physical_address", "Delivery Address")}
+      </div>
+      <p className="hint">These details update your customer account with ExPac — they're used on your quotations, documents and invoices.</p>
+      <div className="modal-foot-row">
+        <button type="button" className="btn outline" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          className="btn"
+          disabled={save.isPending}
+          onClick={() => {
+            if (!v.company.trim()) return error("Company name is required");
+            save.mutate(v, {
+              onSuccess: () => {
+                toast("Company details updated");
+                onClose();
+              },
+              onError: (e) => error(e.message),
+            });
+          }}
+        >
+          {save.isPending ? "Saving…" : "Save details"}
         </button>
       </div>
     </Modal>

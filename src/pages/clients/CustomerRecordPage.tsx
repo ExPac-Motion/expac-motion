@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { PageHeader } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useAgents, useClients, useMyProfile, useProfiles } from "../../lib/hooks";
-import { normalizeWebsite } from "../../lib/format";
+import { formatDateTime, normalizeWebsite } from "../../lib/format";
 import { RATE_TIERS, type RateTierId } from "../../lib/types";
 import { setClientRateTier } from "../../lib/db";
 import {
@@ -183,6 +183,11 @@ export default function CustomerRecordPage() {
         }
       />
 
+      {customerQ.data?.portal_updated_at && (
+        <p className="hint" style={{ margin: "-8px 0 10px" }}>
+          The customer last updated these details on the portal on {formatDateTime(customerQ.data.portal_updated_at)}.
+        </p>
+      )}
       <div className="cr-tabs" role="tablist">
         {TABS.filter(([t]) => !isNew || t === "general").map(([t, label]) => (
           <button key={t} type="button" className={tab === t ? "active" : ""} onClick={() => setTab(t)}>

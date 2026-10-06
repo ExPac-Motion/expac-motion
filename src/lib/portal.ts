@@ -91,6 +91,25 @@ export interface PortalMe {
   phone: string | null;
   address: string | null;
   account_manager: string | null;
+  /* editable from the portal (0145) */
+  registration_no?: string | null;
+  vat_no?: string | null;
+  import_code?: string | null;
+  company_phone?: string | null;
+  contact_mobile?: string | null;
+  physical_address?: string | null;
+  portal_updated_at?: string | null;
+}
+
+export type CompanyDetails = Pick<PortalMe, "company" | "registration_no" | "vat_no" | "import_code" | "email" | "company_phone" | "contact_mobile" | "address" | "physical_address">;
+
+/** Customer updates its own company details -> its clients row (0145). */
+export function useUpdateCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: CompanyDetails) => unwrap(await supabase.rpc("portal_update_company", { p: v })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "me"] }),
+  });
 }
 
 export const portalDb = {

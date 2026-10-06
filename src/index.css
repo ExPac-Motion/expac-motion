@@ -8026,3 +8026,22 @@ tr.clickable:hover td {
   width: 100%;
   margin-bottom: 6px;
 }
+.pt-company-btn {
+  border: 1px solid var(--line);
+  background: var(--white);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.pt-company-btn:hover {
+  border-color: var(--teal);
+  color: var(--teal-ink);
+}
+.pt-company-btn span {
+  color: var(--muted);
+  margin-left: 4px;
+}
