@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, Loading } from "../../components/common";
 import { useMyJobs } from "../../lib/hooks";
-import { formatDate } from "../../lib/format";
+import { formatDate, money } from "../../lib/format";
 import {
   WMS_STAGE_LABEL,
   usePortalWmsTracker,
@@ -14,6 +14,7 @@ import {
 import {
   locationLabel,
   qty,
+  accruedThisMonth,
   stockByLocation,
   useWmsLocations,
   useWmsMoves,
@@ -97,6 +98,15 @@ export default function PortalWmsOverview({
       return n2;
     });
   const myJobs = new Set((jobsQ.data ?? []).map((x) => x.id));
+  // Running storage + handling this month (estimate from the warehouse rates, 0150).
+  const whQ = useWmsWarehouses();
+  const movesQ = useWmsMoves();
+  const accrued = useMemo(
+    () => accruedThisMonth(whQ.data ?? [], receipts, movesQ.data ?? []),
+    [whQ.data, receipts, movesQ.data],
+  );
+  const accruedTotal = [...accrued.values()].reduce((a, b) => a + b, 0);
+  const exceptions = receipts.filter((r) => r.condition !== "good" && !r.exception_ack_at);
 
   const rows = receipts.map((r) => ({ r, t: j.tracker.get(r.id), stage: wmsStage(r, j.tracker.get(r.id)) }));
   const count = (st: WmsStage[]) => rows.filter((x) => st.includes(x.stage)).length;
@@ -153,6 +163,13 @@ export default function PortalWmsOverview({
     { key: "desc", header: "Description", width: 200, render: (x) => x.r.description || "—" },
     { key: "pcs", header: "In Motion Warehouse / received", width: 130, render: (x) => `${x.r.on_hand} / ${x.r.pieces} pcs`, sortValue: (x) => x.r.on_hand },
     { key: "cbm", header: "CBM", width: 80, render: (x) => qty(x.r.volume_cbm, 3) },
+    {
+      key: "storage",
+      header: "Storage this month",
+      width: 130,
+      render: (x) => (accrued.get(x.r.id) ? money(accrued.get(x.r.id)) : "—"),
+      sortValue: (x) => accrued.get(x.r.id) ?? 0,
+    },
     { key: "stage", header: "Stage", width: 320, render: (x) => <JourneySteps stage={x.stage} />, sortValue: (x) => ORDER[x.stage] },
     { key: "ship", header: "Shipment No", width: 120, render: (x) => shipmentCell(x.t), sortValue: (x) => x.t?.shipment_ref ?? "" },
     {
@@ -174,7 +191,20 @@ export default function PortalWmsOverview({
         <Kpi label="Checked" value={count(["checked"])} />
         <Kpi label="Being prepared for shipping" value={count(["preparing", "part_shipped"])} />
         <Kpi label="Shipped" value={count(["shipped"])} on={filter === "shipped"} onClick={() => setFilter("shipped")} />
+        <div className="pt-kpi" title="Storage and handling so far this month, excl. VAT, estimated from the warehouse rates">
+          <span className="pt-kpi-label">Storage this month (est.)</span>
+          <span />
+          <span className="pt-kpi-value" style={{ fontSize: "1.3rem" }}>{money(accruedTotal)}</span>
+        </div>
       </div>
+      {exceptions.length > 0 && (
+        <div className="pt-note warn">
+          {exceptions.length} receipt{exceptions.length === 1 ? "" : "s"} arrived with an exception (damaged, wet, short or over).{" "}
+          <button type="button" className="link-btn" onClick={() => navigate("/portal/warehouse?view=exceptions")}>
+            Review and acknowledge
+          </button>
+        </div>
+      )}
       <div className="panel">
         <div className="panel-head">
           <h2>Your goods with ExPac</h2>

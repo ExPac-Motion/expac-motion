@@ -147,6 +147,14 @@ export default function WmsReceipts() {
       render: (r) => <span className={r.condition !== "good" ? "wms-warn" : undefined}>{CONDITION_LABEL[r.condition]}</span>,
     },
     {
+      key: "exack",
+      header: "Exception",
+      width: 130,
+      render: (r) =>
+        r.condition === "good" ? "—" : r.exception_ack_at ? <span className="wms-ok">✓ Acknowledged</span> : <span className="wms-warn">Awaiting customer</span>,
+      sortValue: (r) => (r.condition === "good" ? "" : r.exception_ack_at ?? "0"),
+    },
+    {
       key: "checked",
       header: "Checked",
       width: 100,
@@ -335,6 +343,16 @@ function ReceiptViewModal({
     ["CBM", qty(r.volume_cbm, 3)],
     ["Condition", CONDITION_LABEL[r.condition] + (r.condition_notes ? `, ${r.condition_notes}` : "")],
     ["Hazardous", r.hazardous ? "Yes" : "No"],
+    ...(r.condition !== "good"
+      ? ([
+          [
+            "Customer acknowledged",
+            r.exception_ack_at
+              ? formatDateTime(r.exception_ack_at) + (r.exception_customer_note ? ", " + r.exception_customer_note : "")
+              : "Not yet",
+          ],
+        ] as [string, string][])
+      : []),
     ["Checked", r.checked_at ? `${formatDateTime(r.checked_at)}, ${lk.person(r.checked_by)}` : "Not yet"],
   ];
   const qc = useQueryClient();
@@ -519,7 +537,7 @@ export function ReceiptEditModal({
       ? (() => {
           // Only the table's own columns go back on save (not the view's on-hand / status).
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { id, receipt_no, created_at, received_by, on_hand, on_hand_kg, on_hand_cbm, last_out_at, status, checked_at, checked_by, notified, ...rest } = receipt as WmsReceipt & { notified?: unknown };
+          const { id, receipt_no, created_at, received_by, on_hand, on_hand_kg, on_hand_cbm, last_out_at, status, checked_at, checked_by, notified, exception_ack_at, exception_ack_by, exception_customer_note, ...rest } = receipt as WmsReceipt & { notified?: unknown };
           return rest;
         })()
       : {

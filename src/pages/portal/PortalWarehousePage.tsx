@@ -22,10 +22,11 @@ import { ReceiptStatusBadge } from "../wms/shared";
 import ReceiptImages from "../wms/ReceiptImages";
 import PortalReleaseRequests from "./PortalReleaseRequests";
 import PortalPreadvices from "./PortalPreadvices";
+import { PortalExceptions, PortalServices } from "./PortalWmsExtras";
 import PortalWmsOverview, { JourneySteps, useWmsJourney } from "./PortalWmsOverview";
 import { WMS_STAGE_LABEL, wmsStage } from "../../lib/portal";
 
-type View = "overview" | "stock" | "all" | "preadvice" | "releases" | "requests" | "statements";
+type View = "overview" | "stock" | "all" | "preadvice" | "releases" | "requests" | "services" | "exceptions" | "statements";
 
 /** Customer Portal > Warehouse (0138): the customer's own goods in the
  *  ExPac warehouse, releases and storage statements, read only. */
@@ -38,7 +39,7 @@ export default function PortalWarehousePage() {
   // The sidebar's Warehouse › Receipt / Release / Inventory / Storage statements set ?view=.
   const [params, setParams] = useSearchParams();
   const asked = params.get("view") as View | null;
-  const view: View = asked && ["overview", "stock", "all", "preadvice", "releases", "requests", "statements"].includes(asked) ? asked : "overview";
+  const view: View = asked && ["overview", "stock", "all", "preadvice", "releases", "requests", "services", "exceptions", "statements"].includes(asked) ? asked : "overview";
   const setView = (v: View) => setParams({ view: v }, { replace: true });
   const [search, setSearch] = useState("");
   const [viewing, setViewing] = useState<WmsReceipt | null>(null);
@@ -105,7 +106,7 @@ export default function PortalWarehousePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Warehouse" title={view === "overview" ? "Warehouse Overview" : view === "requests" ? "Release Requests" : view === "preadvice" ? "Pre-advise Goods" : view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
+      <PageHeader eyebrow="Warehouse" title={view === "overview" ? "Warehouse Overview" : view === "requests" ? "Release Requests" : view === "preadvice" ? "Pre-advise Goods" : view === "services" ? "Warehouse Services" : view === "exceptions" ? "Exceptions" : view === "releases" ? "Warehouse Release" : view === "statements" ? "Storage Statements" : view === "all" ? "Warehouse Receipt" : "Inventory"} />
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search receipt, SKU, reference…" />}
         filters={
@@ -116,6 +117,8 @@ export default function PortalWarehousePage() {
                 ["stock", "In Motion Warehouse"],
                 ["all", "All receipts"],
                 ["preadvice", "Pre-advise"],
+                ["services", "Services"],
+                ["exceptions", "Exceptions"],
                 ["releases", "Releases"],
                 ["requests", "Release requests"],
                 ["statements", "Storage statements"],
@@ -136,6 +139,10 @@ export default function PortalWarehousePage() {
         <PortalReleaseRequests receipts={receipts} toolsSlot={toolsSlot} />
       ) : view === "preadvice" ? (
         <PortalPreadvices receipts={receipts} toolsSlot={toolsSlot} />
+      ) : view === "services" ? (
+        <PortalServices receipts={receipts} toolsSlot={toolsSlot} />
+      ) : view === "exceptions" ? (
+        <PortalExceptions receipts={receipts} toolsSlot={toolsSlot} />
       ) : (
       <div className="panel">
         {loading ? (

@@ -8244,3 +8244,7 @@ tr.clickable:hover td {
   cursor: pointer;
   font-size: 0.7rem;
 }
+.pt-note.warn {
+  background: var(--orange-tint);
+  color: var(--orange-ink);
+}

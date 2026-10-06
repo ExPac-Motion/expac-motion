@@ -97,6 +97,10 @@ export interface WmsReceipt {
   /** "Checked" step (0147): goods inspected / measured after receiving. */
   checked_at?: string | null;
   checked_by?: string | null;
+  /** Customer acknowledged the exception (damaged / short …), 0150. */
+  exception_ack_at?: string | null;
+  exception_ack_by?: string | null;
+  exception_customer_note?: string | null;
   created_at: string;
   /* computed by wms_receipts_v */
   on_hand: number;
@@ -113,6 +117,9 @@ export type WmsReceiptInput = Omit<
   | "received_by"
   | "checked_at"
   | "checked_by"
+  | "exception_ack_at"
+  | "exception_ack_by"
+  | "exception_customer_note"
   | "on_hand"
   | "on_hand_kg"
   | "on_hand_cbm"
@@ -305,7 +312,7 @@ export interface WmsBillingLine {
   receipt_id: string;
   receipt_no: string;
   description: string;
-  kind: "storage" | "handling_in" | "handling_out" | "minimum";
+  kind: "storage" | "handling_in" | "handling_out" | "minimum" | "service";
   code: string;
   qty: number;
   unit: string;
@@ -1043,4 +1050,72 @@ export async function cancelPreadvice(id: string) {
 export async function markPreadviceReceived(pa: WmsPreadvice, receiptId: string) {
   unwrap(await supabase.from("wms_preadvices").update({ status: "received", receipt_id: receiptId }).eq("id", pa.id));
   if (pa.task_id) await supabase.from("ops_tasks").update({ status: "done", done_at: new Date().toISOString() }).eq("id", pa.task_id);
+}
+
+/* ---------- Value-added service requests (0150) ---------- */
+export interface WmsServiceRequest {
+  id: string;
+  service_no: string;
+  client_id: string;
+  receipt_ids: string[];
+  service: string;
+  qty: number | null;
+  notes: string | null;
+  required_date: string | null;
+  status: "requested" | "in_progress" | "done" | "declined" | "cancelled";
+  charge_code: string | null;
+  charge_amount: number | null;
+  staff_note: string | null;
+  completed_at: string | null;
+  billed_run_id: string | null;
+  task_id: string | null;
+  created_at: string;
+}
+export const SERVICE_TYPES = ["Labelling", "Repacking", "Palletising / wrapping", "Extra photos", "Inspection / count", "Sorting", "Other"];
+export const SERVICE_STATUS: Record<WmsServiceRequest["status"], { label: string; cls: string }> = {
+  requested: { label: "Requested", cls: "sent" },
+  in_progress: { label: "In progress", cls: "accepted" },
+  done: { label: "Done", cls: "completed" },
+  declined: { label: "Declined", cls: "lost" },
+  cancelled: { label: "Cancelled", cls: "open" },
+};
+export const useWmsServices = () =>
+  useQuery({
+    queryKey: ["wms", "services"],
+    queryFn: async (): Promise<WmsServiceRequest[]> => {
+      const { data, error } = await supabase.from("wms_service_requests").select("*").order("created_at", { ascending: false });
+      if (error) return []; // before 0150 is applied
+      return ((data ?? []) as WmsServiceRequest[]).map((x) => ({
+        ...x,
+        receipt_ids: x.receipt_ids ?? [],
+        charge_amount: x.charge_amount == null ? null : Number(x.charge_amount),
+      }));
+    },
+  });
+export async function requestService(p: Record<string, unknown>): Promise<string> {
+  return unwrap(await supabase.rpc("portal_request_service", { p })) as string;
+}
+export async function cancelService(id: string) {
+  unwrap(await supabase.rpc("portal_cancel_service", { p_id: id }));
+}
+export async function updateService(req: WmsServiceRequest, patch: Partial<WmsServiceRequest>) {
+  unwrap(await supabase.from("wms_service_requests").update(patch).eq("id", req.id));
+  if (req.task_id && patch.status && ["done", "declined"].includes(patch.status))
+    await supabase.from("ops_tasks").update({ status: "done", done_at: new Date().toISOString() }).eq("id", req.task_id);
+}
+export async function ackException(receiptId: string, note: string) {
+  unwrap(await supabase.rpc("portal_ack_exception", { p_receipt: receiptId, p_note: note }));
+}
+
+/** Storage + handling so far this month for these receipts (portal estimate, 0150). */
+export function accruedThisMonth(warehouses: WmsWarehouse[], receipts: WmsReceipt[], moves: WmsMove[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const from = firstOfMonthIso();
+  const to = todayIso();
+  for (const wh of warehouses) {
+    for (const l of computeStorageBilling(wh, receipts, moves, from, to)) {
+      out.set(l.receipt_id, (out.get(l.receipt_id) ?? 0) + l.amount);
+    }
+  }
+  return out;
 }

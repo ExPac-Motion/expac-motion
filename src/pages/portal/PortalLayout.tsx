@@ -125,6 +125,8 @@ const NAV: NavItem[] = [
       { to: "/portal/warehouse?view=all", label: "Receipt" },
       { to: "/portal/warehouse?view=releases", label: "Release" },
       { to: "/portal/warehouse?view=requests", label: "Release requests" },
+      { to: "/portal/warehouse?view=services", label: "Services" },
+      { to: "/portal/warehouse?view=exceptions", label: "Exceptions" },
       { to: "/portal/warehouse?view=stock", label: "Inventory" },
       { to: "/portal/warehouse?view=statements", label: "Storage statements" },
     ],

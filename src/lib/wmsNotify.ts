@@ -22,6 +22,8 @@ interface Row {
   volume_cbm: number;
   received_at: string;
   notified: Record<string, string> | null;
+  condition: string;
+  condition_notes: string | null;
 }
 interface ClientRow {
   id: string;
@@ -46,6 +48,8 @@ const INTRO: Record<WmsNoticeStage, string> = {
   shipped: "The goods below have left the Motion Warehouse.",
 };
 
+const CONDITION_TEXT: Record<string, string> = { damaged: "Damaged", wet: "Wet", short: "Short delivered", over: "Over delivered", repacked: "Repacked" };
+
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
@@ -59,7 +63,7 @@ export async function notifyWms(stage: WmsNoticeStage, receiptIds: string[], det
     if (ids.length === 0) return 0;
     const { data: recs } = await supabase
       .from("wms_receipts_v")
-      .select("id, receipt_no, client_id, job_id, description, pieces, on_hand, gross_kg, volume_cbm, received_at, notified")
+      .select("id, receipt_no, client_id, job_id, description, pieces, on_hand, gross_kg, volume_cbm, received_at, notified, condition, condition_notes")
       .in("id", ids);
     let rows = ((recs ?? []) as Row[]).filter((r) => r.client_id && !(r.notified ?? {})[stage]);
     // "Shipped" = nothing of the receipt left in store.
@@ -86,8 +90,12 @@ export async function notifyWms(stage: WmsNoticeStage, receiptIds: string[], det
       if (mine.length === 0) continue;
       const who = [c.contact_salutation, c.contact_last_name].filter(Boolean).join(" ") || c.contact || c.company;
       const line = (r: Row) => {
+        const exception =
+          stage === "received" && r.condition && r.condition !== "good"
+            ? `Exception: ${CONDITION_TEXT[r.condition] ?? r.condition}${r.condition_notes ? `, ${r.condition_notes}` : ""}`
+            : "";
         const extra =
-          detail[r.id] || (stage === "shipped" && r.job_id && jobRef.get(r.job_id) ? `Shipment ${jobRef.get(r.job_id)}` : "");
+          detail[r.id] || exception || (stage === "shipped" && r.job_id && jobRef.get(r.job_id) ? `Shipment ${jobRef.get(r.job_id)}` : "");
         return { r, extra };
       };
       const items = mine.map(line);
@@ -107,12 +115,16 @@ export async function notifyWms(stage: WmsNoticeStage, receiptIds: string[], det
           .join("") +
         `</table>`;
       const nos = mine.map((r) => r.receipt_no).join(", ");
+      const hasException = stage === "received" && mine.some((r) => r.condition && r.condition !== "good");
+      const exceptionNote = hasException
+        ? "<p><b>Some goods arrived with an exception.</b> Please review the photos and acknowledge it on your portal (Warehouse, Exceptions).</p>"
+        : "";
       const shipNo = stage === "shipped" ? items.map((i) => i.extra).find(Boolean) : "";
       await sendMail({
         to: [c.email],
         subject: `${SUBJECT[stage]}: ${nos}${shipNo ? `, ${shipNo}` : ""}`,
         html:
-          `<div style="${EMAIL_BODY_STYLE}"><p>Good day ${esc(who)},</p><p>${INTRO[stage]}</p>${table}` +
+          `<div style="${EMAIL_BODY_STYLE}"><p>Good day ${esc(who)},</p><p>${INTRO[stage]}</p>${table}${exceptionNote}` +
           `<p>${emailButtonHtml(url, "View in your portal")}</p><p>Kind regards,<br>ExPac Forwarding</p></div>`,
         text:
           `Good day ${who},\n\n${INTRO[stage]}\n\n` +
