@@ -215,18 +215,19 @@ export default function PortalDashboardPage() {
                     <th>Shipment</th>
                     <th>Mode</th>
                     <th>Status</th>
+                    <th>Shipper</th>
                     <th>Origin</th>
-                    <th />
                     <th>Destination</th>
                     <th>ETD</th>
                     <th>ETA</th>
+                    <th>PDD</th>
                   </tr>
                 </thead>
                 <tbody>
                   {active.slice(0, 8).map((j) => (
                     <tr key={j.id} className="clickable" onClick={() => navigate(`/portal/shipments/${j.id}`)}>
                       <td>
-                        <b>{j.reference}</b>
+                        <span className="ref-link">{j.reference}</span>
                       </td>
                       <td>
                         {modeEmoji(j.mode)} {j.mode}
@@ -234,11 +235,12 @@ export default function PortalDashboardPage() {
                       <td>
                         <span className="badge sent">{j.shipment_status || j.milestone}</span>
                       </td>
+                      <td>{j.supplier_company || "—"}</td>
                       <td>{j.origin || "—"}</td>
-                      <td>→</td>
                       <td>{j.destination || "—"}</td>
                       <td>{formatDate(etdOf(j))}</td>
                       <td>{formatDate(etaOf(j))}</td>
+                      <td>{formatDate(j.provisional_delivery_date)}</td>
                     </tr>
                   ))}
                 </tbody>
