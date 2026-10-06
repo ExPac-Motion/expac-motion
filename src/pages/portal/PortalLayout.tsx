@@ -7,6 +7,7 @@ import { useUpdateCompany, type CompanyDetails, type PortalMe, usePortalMe, useP
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import PortalChatWidget from "./PortalChatWidget";
+import { supabase } from "../../lib/supabase";
 
 /* Line icons for the sidebar (24×24, stroke = currentColor). */
 const I: Record<string, ReactNode> = {
@@ -463,6 +464,7 @@ function CompanyDetailsModal({ me, onClose }: { me: PortalMe; onClose: () => voi
         {area("physical_address", "Delivery Address")}
       </div>
       <p className="hint">These details update your customer account with ExPac, they're used on your quotations, documents and invoices.</p>
+      <ChangePassword />
       <div className="modal-foot-row">
         <button type="button" className="btn outline" onClick={onClose}>
           Cancel
@@ -485,5 +487,45 @@ function CompanyDetailsModal({ me, onClose }: { me: PortalMe; onClose: () => voi
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** Company details › change the signed-in customer's own login password. */
+function ChangePassword() {
+  const { toast, error } = useToast();
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function change() {
+    if (pw.length < 8) return error("Use at least 8 characters");
+    if (pw !== pw2) return error("The two passwords don't match");
+    setBusy(true);
+    const { error: e } = await supabase.auth.updateUser({ password: pw });
+    setBusy(false);
+    if (e) return error(e.message);
+    setPw("");
+    setPw2("");
+    toast("Password changed, use it next time you sign in");
+  }
+  return (
+    <div className="pt-pw-box">
+      <strong>Change your login password</strong>
+      <div className="grid3">
+        <div className="field">
+          <label>New password</label>
+          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" />
+        </div>
+        <div className="field">
+          <label>Confirm new password</label>
+          <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
+        </div>
+        <div className="field">
+          <label>&nbsp;</label>
+          <button type="button" className="btn outline" disabled={busy || !pw} onClick={() => void change()}>
+            {busy ? "Changing…" : "Change password"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

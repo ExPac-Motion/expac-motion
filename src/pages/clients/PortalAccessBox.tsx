@@ -53,7 +53,7 @@ export default function PortalAccessBox({
     );
   }
 
-  function issue(reset: boolean) {
+  function issue(reset: boolean, then?: (r: { email: string; password: string }) => void) {
     if (!email.trim()) return error("Add the contact's email first (and save)");
     login.mutate(
       { clientId: client.id, email: email.trim(), fullName: name || client.company, password: password || undefined, greeting: greeting || undefined },
@@ -62,15 +62,32 @@ export default function PortalAccessBox({
           setIssued({ email: r.email, password: r.password });
           setPassword("");
           setEnabling(false);
-          toast(reset ? "Password reset" : r.created ? "Portal login created" : "Portal access enabled");
+          if (then) then(r);
+          else toast(reset ? "Password reset" : r.created ? "Portal login created" : "Portal access enabled");
         },
         onError: (e) => error(e.message),
       },
     );
   }
 
-  async function sendDetails() {
-    if (!issued) return;
+  // The password is only known right after it's set. If ExPac signed in to
+  // check the portal first and came back later, Send sets a fresh password
+  // (or the one typed in the box) and emails that.
+  function send() {
+    if (issued) return void sendDetails(issued);
+    if (
+      !confirm(
+        (password ? "Set the password you typed" : "Generate a new password") +
+          " for " +
+          email.trim() +
+          " and email the login details? The earlier password stops working.",
+      )
+    )
+      return;
+    issue(true, (r) => void sendDetails(r));
+  }
+
+  async function sendDetails(issued: { email: string; password: string }) {
     setSending(true);
     const hello = greeting ? `Good day ${greeting},` : "Good day,";
     const url = `${PUBLIC_APP_URL}/login`;
@@ -84,11 +101,11 @@ export default function PortalAccessBox({
           `<p>Your ExPac Motion customer portal is ready, request quotes, accept quotations, track every shipment and see your goods in our warehouse, all in one place.</p>` +
           `<p><b>Sign in:</b> ${url}<br><b>Email:</b> ${issued.email}<br><b>Password:</b> ${issued.password}</p>` +
           `<p>${emailButtonHtml(url, "Open the portal")}</p>` +
-          `<p>Please change your password after your first sign-in (Forgot password on the sign-in page).</p>` +
+          `<p>Please change your password after your first sign-in: click your company name at the top right of the portal, then Change your login password.</p>` +
           `<p>Kind regards,<br>ExPac Forwarding</p></div>`,
         text:
           `${hello}\n\nYour ExPac Motion customer portal is ready.\n\nSign in: ${url}\nEmail: ${issued.email}\nPassword: ${issued.password}\n\n` +
-          `Please change your password after your first sign-in.\n\nKind regards,\nExPac Forwarding`,
+          `Please change your password after your first sign-in: click your company name at the top right of the portal, then Change your login password.\n\nKind regards,\nExPac Forwarding`,
       });
       toast(`Login details sent to ${issued.email}`);
     } catch (e) {
@@ -142,9 +159,9 @@ export default function PortalAccessBox({
           <button
             type="button"
             className="btn outline btn-sm"
-            disabled={!issued || sending}
-            title={issued ? undefined : "Create the login or reset the password first, the email includes the password"}
-            onClick={sendDetails}
+            disabled={(!issued && !active) || sending || login.isPending}
+            title={issued || active ? undefined : "Create the login first"}
+            onClick={send}
           >
             {sending ? "Sending…" : "Send Login Details To Customer"}
           </button>
@@ -152,7 +169,7 @@ export default function PortalAccessBox({
       )}
       {issued && (
         <p className="cr-portal-issued">
-          Login: <b>{issued.email}</b> · Password: <b>{issued.password}</b>, shown once; send it to the customer or note it now.
+          Login: <b>{issued.email}</b> · Password: <b>{issued.password}</b>. Sign in to the portal with it (private window) to check everything, then Send Login Details To Customer.
         </p>
       )}
       {logins.length > 0 && (
