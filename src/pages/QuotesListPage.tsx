@@ -349,7 +349,15 @@ export default function QuotesListPage() {
         header: "Status",
         width: 160,
         sortValue: (q) => STATUS_ORDER.indexOf(q.status),
-        render: (q) => <QuoteStatusSelect quote={q} />,
+        render: (q) =>
+          q.revision_pending ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }} title="The customer asked for a revision on the portal, see the Quote Builder">
+              <QuoteStatusSelect quote={q} />
+              <span className="badge open">Revision</span>
+            </span>
+          ) : (
+            <QuoteStatusSelect quote={q} />
+          ),
       },
       {
         key: "notes",

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useQuoteRevisions } from "../lib/portal";
 import DateInput from "../components/DateInput";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Modal from "../components/Modal";
@@ -1044,6 +1045,8 @@ export default function QuoteBuilderPage() {
           </>
         }
       />
+
+      <RevisionRequests quoteId={existingQ.data?.id} revisionNo={existingQ.data?.revision_no ?? 1} pending={!!existingQ.data?.revision_pending} />
 
       {existingQ.data?.portal_requested_at && (
         <div className="panel portal-request-note">
@@ -2492,5 +2495,27 @@ function AddShipperModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/** Customer revision requests from the portal (0153), newest first. */
+function RevisionRequests({ quoteId, revisionNo, pending }: { quoteId: string | undefined; revisionNo: number; pending: boolean }) {
+  const revQ = useQuoteRevisions(quoteId);
+  const list = revQ.data ?? [];
+  if (list.length === 0) return null;
+  return (
+    <div className="panel portal-request-note">
+      <b>{pending ? "The customer asked for a revision on the portal" : "Revision history"}</b>
+      {revisionNo > 1 ? <> · now Revision {revisionNo}</> : null}
+      {list.map((r) => (
+        <div key={r.id}>
+          {formatDate(r.requested_at)}, on Revision {r.revision_no}: {r.reasons.join(", ") || "see note"}
+          {r.target_price != null ? <>, target price {money(r.target_price)}</> : null}
+          {r.note ? <>, "{r.note}"</> : null}
+          {r.answered_at ? <span className="hint"> (answered {formatDate(r.answered_at)})</span> : <b> (waiting)</b>}
+        </div>
+      ))}
+      {pending && <div className="hint">Revise the charges, save, and set the status to Quote Sent. It goes back to the customer as Revision {revisionNo + 1}.</div>}
+    </div>
   );
 }

@@ -6,13 +6,26 @@ import { useToast } from "../../components/Toast";
 import { currencyAmount, formatDate, money } from "../../lib/format";
 import { groupByCategory, lineNet, lineTotalIncl, lineVatPct, packingRow, packingTotals, volumetricFactor } from "../../lib/calc";
 import type { PackingItem, QuoteLine } from "../../lib/types";
-import { portalQuoteStatus, portalTotals, usePortalLines, usePortalMe, usePortalPacking, usePortalQuotes, useQuoteDecision } from "../../lib/portal";
+import {
+  REVISION_REASONS,
+  portalQuoteStatus,
+  portalTotals,
+  usePortalLines,
+  usePortalMe,
+  usePortalPacking,
+  usePortalQuotes,
+  useQuoteDecision,
+  useQuoteRevisions,
+  useRequestRevision,
+} from "../../lib/portal";
 
 /**
  * Customer Portal › Quotations › one quotation, the same view as Motion's
  * quotation detail (QuoteDetailModal) without anything internal: no buy cost,
  * margin, FX, agents / transporter, notes, edit or delete. A sent, valid
- * quotation can be accepted (creates the shipment) or declined.
+ * quotation can be accepted (creates the shipment) or declined; a sent or
+ * not proceeding one can go back to ExPac for a revision, and a declined one
+ * that is still valid can be accepted after all (0153).
  */
 export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string; onClose: () => void }) {
   const navigate = useNavigate();
@@ -24,6 +37,8 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
   const { toast, error } = useToast();
   const [confirm, setConfirm] = useState<"accept" | "decline" | null>(null);
   const [reason, setReason] = useState("");
+  const [revising, setRevising] = useState(false);
+  const revQ = useQuoteRevisions(quoteId);
 
   const q = quotesQ.data?.find((x) => x.id === quoteId);
   if (quotesQ.isLoading || linesQ.isLoading || packQ.isLoading) {
@@ -49,6 +64,10 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
   const vFactor = volumetricFactor(q.mode);
   const packTotals = packingTotals(packing, vFactor);
   const canDecide = st.label === "Response available";
+  const expired = !!q.valid_until && q.valid_until < new Date().toISOString().slice(0, 10);
+  const canRevise = q.status === "sent" || q.status === "lost";
+  const acceptAfterAll = q.status === "lost" && !expired;
+  const revNo = q.revision_no ?? 1;
   const priced = q.status !== "open" && lines.length > 0;
 
   function submit(accept: boolean) {
@@ -66,7 +85,7 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
 
   return (
     <Modal
-      title={q.reference}
+      title={revNo > 1 ? `${q.reference} · Revision ${revNo}` : q.reference}
       onClose={onClose}
       wide
       stickyHeader
@@ -80,6 +99,11 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
               Quotation document
             </button>
           )}
+          {canRevise && (
+            <button className="btn outline" onClick={() => setRevising(true)}>
+              Request a revision
+            </button>
+          )}
           {canDecide ? (
             <>
               <button className="btn outline warn" onClick={() => setConfirm("decline")}>
@@ -89,6 +113,10 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
                 Accept quotation
               </button>
             </>
+          ) : acceptAfterAll ? (
+            <button className="btn" onClick={() => setConfirm("accept")}>
+              Accept quotation
+            </button>
           ) : (
             <span className={`badge ${st.cls}`}>{st.label}</span>
           )}
@@ -100,7 +128,11 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
         </p>
       }
     >
-      {q.status === "open" && (
+      {q.status === "open" && q.revision_pending ? (
+        <div className="pt-note">
+          Thank you, your revision request is with the ExPac team. The revised quotation shows here (and in your email) as soon as it's ready.
+        </div>
+      ) : q.status === "open" && (
         <div className="pt-note">
           Thank you, your request is with the ExPac team. We're pricing it now and it will show here (and in your email) as soon as it's
           ready.
@@ -288,6 +320,22 @@ export default function PortalQuoteModal({ quoteId, onClose }: { quoteId: string
         </div>
       )}
       {q.portal_decline_reason && <p className="hint">Your note: {q.portal_decline_reason}</p>}
+      {(revQ.data ?? []).length > 0 && (
+        <div className="charge-group">
+          <div className="charge-group-head">
+            <h3>REVISION REQUESTS</h3>
+          </div>
+          {(revQ.data ?? []).map((r) => (
+            <p key={r.id} className="hint" style={{ margin: "4px 0" }}>
+              {formatDate(r.requested_at)}, on Revision {r.revision_no}: {r.reasons.join(", ") || "see note"}
+              {r.target_price != null ? `, target price ${money(r.target_price)}` : ""}
+              {r.note ? `, "${r.note}"` : ""}
+              {r.answered_at ? `. Revised ${formatDate(r.answered_at)}.` : ". With ExPac."}
+            </p>
+          ))}
+        </div>
+      )}
+      {revising && <RevisionModal quoteId={q.id} reference={q.reference} onClose={() => setRevising(false)} />}
 
       {confirm && (
         <Modal title={confirm === "accept" ? `Accept ${q.reference}?` : `Decline ${q.reference}?`} onClose={() => setConfirm(null)}>
@@ -324,5 +372,63 @@ function Field({ label, value }: { label: string; value: string }) {
       </div>
       <div className="pre">{value}</div>
     </div>
+  );
+}
+
+/** Ask ExPac to revise a quotation (0153). */
+function RevisionModal({ quoteId, reference, onClose }: { quoteId: string; reference: string; onClose: () => void }) {
+  const req = useRequestRevision();
+  const { toast, error } = useToast();
+  const [reasons, setReasons] = useState<string[]>([]);
+  const [target, setTarget] = useState("");
+  const [note, setNote] = useState("");
+  const toggle = (r: string) => setReasons((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
+  return (
+    <Modal title={`Request a revision, ${reference}`} onClose={onClose}>
+      <p className="hint" style={{ marginTop: 0 }}>
+        Tell us what you'd like changed. The quotation goes back to the ExPac team and the revised one shows here, same quotation number.
+      </p>
+      <div className="field">
+        <label>What would you like changed?</label>
+        {REVISION_REASONS.map((r) => (
+          <label key={r} className="check">
+            <input type="checkbox" checked={reasons.includes(r)} onChange={() => toggle(r)} /> {r}
+          </label>
+        ))}
+      </div>
+      <div className="field">
+        <label>Target price, incl. VAT (optional)</label>
+        <input inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="e.g. 65000" />
+      </div>
+      <div className="field">
+        <label>Note</label>
+        <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. another forwarder quoted less, we can ship a week later, the cargo is now 2 pallets" />
+      </div>
+      <div className="modal-foot-row">
+        <button type="button" className="btn outline" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          className="btn"
+          disabled={req.isPending}
+          onClick={() => {
+            if (reasons.length === 0 && !note.trim()) return error("Tell us what you'd like changed");
+            const t = Number(target.replace(/[^\d.]/g, ""));
+            req.mutate(
+              { quoteId, reasons, target: target.trim() && t > 0 ? t : null, note },
+              {
+                onSuccess: () => {
+                  toast("Revision requested, ExPac will send the revised quotation shortly");
+                  onClose();
+                },
+                onError: (e) => error(e.message),
+              },
+            );
+          }}
+        >
+          {req.isPending ? "Sending…" : "Request revision"}
+        </button>
+      </div>
+    </Modal>
   );
 }

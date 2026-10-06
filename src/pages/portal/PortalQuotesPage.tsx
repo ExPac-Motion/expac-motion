@@ -40,7 +40,7 @@ export default function PortalQuotesPage() {
   const label = (q: PortalQuote) => portalQuoteStatus(q).label;
   const group = (q: PortalQuote): Filter => {
     const l = label(q);
-    if (l === "Requested" || l === "Being prepared") return "Requested";
+    if (l === "Requested" || l === "Being prepared" || l === "Revision requested") return "Requested";
     if (l === "Response available") return "Response available";
     if (l === "Accepted" || l === "Completed") return "Accepted";
     return "Closed";

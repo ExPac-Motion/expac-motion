@@ -1261,6 +1261,9 @@ export interface Quote {
   portal_decline_reason?: string | null;
   /** Ship from stock (0149): warehouse receipts this quote is for. */
   wms_receipt_ids?: string[] | null;
+  /** Revisions (0153): revision number, and a customer revision request waiting. */
+  revision_no?: number;
+  revision_pending?: boolean;
   /** First time the quote reached Sent / Not Proceeding, stamped by
    *  trigger (migration 0111); null on quotes from before it. */
   sent_at?: string | null;

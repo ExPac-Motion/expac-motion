@@ -35,6 +35,49 @@ export interface PortalQuote extends ClientQuote {
   consignee_company?: string | null;
   /** FX rate of the sell currency only (null for ZAR). */
   sell_fx?: number | null;
+  /* revisions (0153) */
+  revision_no?: number;
+  revision_pending?: boolean;
+}
+
+/** A customer's request to revise a quotation (0153). */
+export interface QuoteRevisionRequest {
+  id: string;
+  quote_id: string;
+  revision_no: number;
+  reasons: string[];
+  target_price: number | null;
+  note: string | null;
+  requested_at: string;
+  answered_at: string | null;
+}
+export const REVISION_REASONS = ["Better price", "Different route or mode", "Different dates or transit time", "Cargo details changed", "Other"];
+
+export const useQuoteRevisions = (quoteId: string | undefined) =>
+  useQuery({
+    queryKey: ["quote-revisions", quoteId],
+    enabled: !!quoteId,
+    queryFn: async (): Promise<QuoteRevisionRequest[]> => {
+      const { data, error } = await supabase
+        .from("quote_revision_requests")
+        .select("*")
+        .eq("quote_id", quoteId as string)
+        .order("requested_at", { ascending: false });
+      if (error) return []; // before 0153 is applied
+      return (data ?? []) as QuoteRevisionRequest[];
+    },
+  });
+
+export function useRequestRevision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { quoteId: string; reasons: string[]; target: number | null; note: string }) =>
+      unwrap(await supabase.rpc("portal_request_revision", { p_quote: v.quoteId, p_reasons: v.reasons, p_target: v.target, p_note: v.note })),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portal"] });
+      qc.invalidateQueries({ queryKey: ["quote-revisions"] });
+    },
+  });
 }
 
 /** ExPac's quotation letterhead for the portal (0152). */
@@ -89,10 +132,11 @@ export interface QuoteRequest {
 }
 
 /** How the customer sees a quotation's status. */
-export function portalQuoteStatus(q: Pick<PortalQuote, "status" | "portal_requested_at" | "portal_decision" | "valid_until">): {
+export function portalQuoteStatus(q: Pick<PortalQuote, "status" | "portal_requested_at" | "portal_decision" | "valid_until" | "revision_pending">): {
   label: string;
   cls: string;
 } {
+  if (q.status === "open" && q.revision_pending) return { label: "Revision requested", cls: "open" };
   if (q.status === "open") return q.portal_requested_at ? { label: "Requested", cls: "open" } : { label: "Being prepared", cls: "open" };
   if (q.status === "sent") {
     if (q.valid_until && q.valid_until < new Date().toISOString().slice(0, 10)) return { label: "Expired", cls: "lost" };
