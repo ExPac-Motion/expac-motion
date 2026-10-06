@@ -172,10 +172,13 @@ export default function PortalShipmentsPage() {
       },
       sortValue: (j) => etaOf(j) ?? "",
     },
+    { key: "pdd", header: "PDD", width: 110, render: (j) => formatDate(j.provisional_delivery_date), sortValue: (j) => j.provisional_delivery_date ?? "" },
+    { key: "pol", header: "POL", width: 100, render: (j) => code(j.origin) || "—" },
+    { key: "pod", header: "POD", width: 100, render: (j) => code(j.destination) || "—" },
     {
-      key: "pod",
-      header: "POD",
-      width: 110,
+      key: "proof",
+      header: "Proof of Delivery",
+      width: 150,
       render: (j) => {
         const doc = podDocs.get(j.id);
         if (!doc && !j.pod_delivered_at) return "—";
@@ -203,9 +206,6 @@ export default function PortalShipmentsPage() {
       },
       sortValue: (j) => j.pod_delivered_at ?? "",
     },
-    { key: "pdd", header: "PDD", width: 110, render: (j) => formatDate(j.provisional_delivery_date), sortValue: (j) => j.provisional_delivery_date ?? "" },
-    { key: "pol", header: "POL", width: 100, render: (j) => code(j.origin) || "—" },
-    { key: "pod", header: "POD", width: 100, render: (j) => code(j.destination) || "—" },
   ];
 
   return (
