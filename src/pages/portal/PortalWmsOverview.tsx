@@ -87,6 +87,15 @@ export default function PortalWmsOverview({
   const jobsQ = useMyJobs();
   const j = useWmsJourney();
   const [filter, setFilter] = useState<Filter>("warehouse");
+  // Ship from stock (0149): tick goods in store, then request a quote to ship them.
+  const [sel, setSel] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) =>
+    setSel((p) => {
+      const n2 = new Set(p);
+      if (n2.has(id)) n2.delete(id);
+      else n2.add(id);
+      return n2;
+    });
   const myJobs = new Set((jobsQ.data ?? []).map((x) => x.id));
 
   const rows = receipts.map((r) => ({ r, t: j.tracker.get(r.id), stage: wmsStage(r, j.tracker.get(r.id)) }));
@@ -122,11 +131,27 @@ export default function PortalWmsOverview({
 
   type Row = (typeof rows)[number];
   const columns: DataColumn<Row>[] = [
+    {
+      key: "pick",
+      header: "Ship",
+      fixed: true,
+      width: 50,
+      render: (x) =>
+        x.r.on_hand > 0 ? (
+          <input
+            type="checkbox"
+            checked={sel.has(x.r.id)}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => toggle(x.r.id)}
+            title="Tick to request a quote to ship these goods"
+          />
+        ) : null,
+    },
     { key: "no", header: "Receipt No", width: 110, render: (x) => <b>{x.r.receipt_no}</b>, sortValue: (x) => x.r.receipt_no },
     { key: "date", header: "Received", width: 100, render: (x) => formatDate(x.r.received_at), sortValue: (x) => x.r.received_at },
     { key: "where", header: "Where", width: 230, render: (x) => (x.stage === "shipped" ? "Left the warehouse" : j.whereOf(x.r)) },
     { key: "desc", header: "Description", width: 200, render: (x) => x.r.description || "—" },
-    { key: "pcs", header: "In store / received", width: 130, render: (x) => `${x.r.on_hand} / ${x.r.pieces} pcs`, sortValue: (x) => x.r.on_hand },
+    { key: "pcs", header: "In Motion Warehouse / received", width: 130, render: (x) => `${x.r.on_hand} / ${x.r.pieces} pcs`, sortValue: (x) => x.r.on_hand },
     { key: "cbm", header: "CBM", width: 80, render: (x) => qty(x.r.volume_cbm, 3) },
     { key: "stage", header: "Stage", width: 320, render: (x) => <JourneySteps stage={x.stage} />, sortValue: (x) => ORDER[x.stage] },
     { key: "ship", header: "Shipment No", width: 120, render: (x) => shipmentCell(x.t), sortValue: (x) => x.t?.shipment_ref ?? "" },
@@ -144,7 +169,7 @@ export default function PortalWmsOverview({
   return (
     <>
       <div className="pt-kpis">
-        <Kpi label="In the warehouse" value={count(["received", "checked", "preparing", "part_shipped"])} on={filter === "warehouse"} onClick={() => setFilter("warehouse")} />
+        <Kpi label="In Motion Warehouse" value={count(["received", "checked", "preparing", "part_shipped"])} on={filter === "warehouse"} onClick={() => setFilter("warehouse")} />
         <Kpi label="Received" value={count(["received"])} />
         <Kpi label="Checked" value={count(["checked"])} />
         <Kpi label="Being prepared for shipping" value={count(["preparing", "part_shipped"])} />
@@ -153,10 +178,20 @@ export default function PortalWmsOverview({
       <div className="panel">
         <div className="panel-head">
           <h2>Your goods with ExPac</h2>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn"
+            disabled={sel.size === 0}
+            title={sel.size ? undefined : "Tick goods in the Ship column first"}
+            onClick={() => navigate("/portal/quotes/new", { state: { fromStock: [...sel] } })}
+          >
+            Request a quote to ship{sel.size ? ` (${sel.size})` : ""}
+          </button>
           <div className="wms-seg">
             {(
               [
-                ["warehouse", "In the warehouse"],
+                ["warehouse", "In Motion Warehouse"],
                 ["shipped", "Shipped"],
                 ["all", "All"],
               ] as [Filter, string][]
@@ -165,6 +200,7 @@ export default function PortalWmsOverview({
                 {l}
               </button>
             ))}
+          </div>
           </div>
         </div>
         {loading || j.loading ? (

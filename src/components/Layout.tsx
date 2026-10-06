@@ -63,7 +63,7 @@ const NAV: NavModule[] = [
   },
   {
     to: "/wms",
-    label: "WMS",
+    label: "Motion WMS",
     children: [
       { to: "/wms", label: "Dashboard" },
       { to: "/wms?tab=reports", label: "Reports" },

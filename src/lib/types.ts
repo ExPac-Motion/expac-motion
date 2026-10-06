@@ -1255,6 +1255,8 @@ export interface Quote {
   portal_decision?: "accepted" | "declined" | null;
   portal_decided_at?: string | null;
   portal_decline_reason?: string | null;
+  /** Ship from stock (0149): warehouse receipts this quote is for. */
+  wms_receipt_ids?: string[] | null;
   /** First time the quote reached Sent / Not Proceeding, stamped by
    *  trigger (migration 0111); null on quotes from before it. */
   sent_at?: string | null;

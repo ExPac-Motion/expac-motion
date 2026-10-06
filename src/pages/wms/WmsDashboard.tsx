@@ -165,7 +165,7 @@ export default function WmsDashboard() {
             </Link>
           </div>
           {d.util.length === 0 ? (
-            <p className="hint">Give bays a capacity (CBM) in WMS › Settings to see how full they are.</p>
+            <p className="hint">Give bays a capacity (CBM) in Motion WMS › Settings to see how full they are.</p>
           ) : (
             d.util.map(({ loc, used, cap }) => {
               const pct = Math.round((used / cap) * 100);

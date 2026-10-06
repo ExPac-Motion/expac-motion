@@ -95,7 +95,7 @@ export default function PortalReleaseRequests({
           <h2>Release requests</h2>
           <p>Ask ExPac to release goods from the warehouse, for collection or delivery.</p>
         </div>
-        <button className="btn" onClick={() => setCreating(true)} disabled={inStore.length === 0} title={inStore.length ? undefined : "Nothing of yours is in store"}>
+        <button className="btn" onClick={() => setCreating(true)} disabled={inStore.length === 0} title={inStore.length ? undefined : "Nothing of yours is in the Motion Warehouse"}>
           + Request release
         </button>
       </div>
@@ -181,7 +181,7 @@ function RequestModal({ inStore, onClose, onDone }: { inStore: WmsReceipt[]; onC
             <th>Receipt</th>
             <th>Description</th>
             <th>SKUs</th>
-            <th>In store</th>
+            <th>In Motion Warehouse</th>
             <th style={{ width: 100 }}>Release (pcs)</th>
           </tr>
         </thead>

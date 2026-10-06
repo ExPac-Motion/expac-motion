@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useWmsReceipts, useWmsWarehouses } from "../../lib/wms";
 import { PageHeader } from "../../components/common";
 import DateInput from "../../components/DateInput";
 import { useToast } from "../../components/Toast";
@@ -26,6 +27,12 @@ const blankRow = (): QuoteRequestPacking => ({ qty_ctns: "1", length_cm: "", wid
  */
 export default function PortalRequestQuotePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Ship from stock (0149): goods ticked on Warehouse > Overview.
+  const fromStock = ((location.state as { fromStock?: string[] } | null)?.fromStock ?? []) as string[];
+  const receiptsQ = useWmsReceipts();
+  const whQ = useWmsWarehouses();
+  const [prefilled, setPrefilled] = useState(false);
   const { toast, error } = useToast();
   const request = useRequestQuote();
   const [r, setR] = useState<QuoteRequest>({
@@ -43,6 +50,45 @@ export default function PortalRequestQuotePage() {
     notes: "",
     packing: [blankRow()],
   });
+  useEffect(() => {
+    if (prefilled || fromStock.length === 0 || !receiptsQ.data) return;
+    const recs = receiptsQ.data.filter((x) => fromStock.includes(x.id) && x.on_hand > 0);
+    if (recs.length === 0) return;
+    const packing: QuoteRequestPacking[] = recs.flatMap((x) => {
+      const share = x.pieces > 0 ? x.on_hand / x.pieces : 1;
+      const withDims = x.packages.filter((p) => Number(p.qty) > 0);
+      if (withDims.length)
+        return withDims.map((p) => ({
+          qty_ctns: String(Math.max(1, Math.round((Number(p.qty) || 0) * share))),
+          length_cm: String(p.length_cm ?? ""),
+          width_cm: String(p.width_cm ?? ""),
+          height_cm: String(p.height_cm ?? ""),
+          actual_kg: String(p.actual_kg ?? ""),
+        }));
+      return [
+        {
+          qty_ctns: String(x.on_hand),
+          length_cm: "",
+          width_cm: "",
+          height_cm: "",
+          actual_kg: x.on_hand ? String(Math.round((x.on_hand_kg / x.on_hand) * 100) / 100) : "",
+        },
+      ];
+    });
+    const wh = whQ.data?.find((w) => w.id === recs[0].warehouse_id);
+    const list = recs.map((x) => x.receipt_no + " (" + x.on_hand + " pcs)").join(", ");
+    setR((p) => ({
+      ...p,
+      origin: p.origin || (wh ? wh.name : "Motion Warehouse"),
+      commodity: p.commodity || [...new Set(recs.map((x) => x.description).filter(Boolean))].join(", "),
+      pickup: "Motion Warehouse" + (wh ? ", " + wh.name : "") + ": " + list,
+      notes: (p.notes ? p.notes + ". " : "") + "Ship from stock: " + list,
+      packing,
+      receipt_ids: recs.map((x) => x.id),
+    }));
+    setPrefilled(true);
+  }, [prefilled, fromStock, receiptsQ.data, whQ.data]);
+
   const set = <K extends keyof QuoteRequest>(k: K, v: QuoteRequest[K]) => setR((p) => ({ ...p, [k]: v }));
   const setRow = (i: number, patch: Partial<QuoteRequestPacking>) =>
     set(
@@ -76,6 +122,12 @@ export default function PortalRequestQuotePage() {
   return (
     <>
       <PageHeader eyebrow="Quotations" title="Request a Quote" />
+      {r.receipt_ids && r.receipt_ids.length > 0 && (
+        <div className="pt-note">
+          Shipping goods from the Motion Warehouse: <b>{(receiptsQ.data ?? []).filter((x) => r.receipt_ids?.includes(x.id)).map((x) => x.receipt_no).join(", ")}</b>.
+          The cargo below is filled in from them, adjust anything you need.
+        </div>
+      )}
       <form onSubmit={submit} className="pt-rq">
         <div className="panel">
           <h3 className="pt-h3" style={{ marginTop: 0 }}>

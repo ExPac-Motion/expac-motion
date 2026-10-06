@@ -59,7 +59,7 @@ export default function PortalItemsPage() {
     { key: "desc", header: "Description", width: 260, render: (r) => r.description, sortValue: (r) => r.description },
     {
       key: "onhand",
-      header: "In store",
+      header: "In Motion Warehouse",
       width: 100,
       render: (r) => (
         <span title={r.estimated ? "Part released, estimated" : undefined}>
@@ -81,7 +81,7 @@ export default function PortalItemsPage() {
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search SKU, description, receipt…" />}
         filters={
           <label className="check" style={{ margin: 0 }}>
-            <input type="checkbox" checked={onlyStock} onChange={(e) => setOnlyStock(e.target.checked)} /> In store only
+            <input type="checkbox" checked={onlyStock} onChange={(e) => setOnlyStock(e.target.checked)} /> In Motion Warehouse only
           </label>
         }
         count={`${shown.length} SKU${shown.length === 1 ? "" : "s"}`}
@@ -93,7 +93,7 @@ export default function PortalItemsPage() {
           onClick={() =>
             downloadCsv(
               `skus-${todayIso()}.csv`,
-              ["SKU", "Description", "In store", "Received", "Receipts", "Last received"],
+              ["SKU", "Description", "In Motion Warehouse", "Received", "Receipts", "Last received"],
               shown.map((r) => [r.sku, r.description, r.onHand, r.received, [...new Set(r.receipts)].join(" "), formatDate(r.lastIn)]),
             )
           }

@@ -22,7 +22,7 @@ type Tab =
   | "settings";
 
 const COPY: Record<Tab, { eyebrow: string; title: string }> = {
-  dashboard: { eyebrow: "Warehouse Management", title: "WMS Dashboard" },
+  dashboard: { eyebrow: "Warehouse Management", title: "Motion WMS Dashboard" },
   reports: { eyebrow: "Warehouse Management", title: "Reports" },
   receipt: { eyebrow: "Goods in", title: "Warehouse Receipt" },
   movements: { eyebrow: "Inside the warehouse", title: "Warehouse Movements" },
@@ -30,7 +30,7 @@ const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   inventory: { eyebrow: "On hand", title: "Warehouse Inventory" },
   billing: { eyebrow: "Storage charges", title: "Warehouse Billing (Storage)" },
   count: { eyebrow: "Stock accuracy", title: "Cycle Count" },
-  settings: { eyebrow: "Configuration", title: "WMS Settings" },
+  settings: { eyebrow: "Configuration", title: "Motion WMS Settings" },
 };
 
 /** WMS (migration 0137), sub-nav lives in the shared top-nav (Layout.tsx), driven by ?tab=. */

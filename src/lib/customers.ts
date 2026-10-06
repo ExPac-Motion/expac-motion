@@ -35,6 +35,8 @@ export interface CustomerFields {
   contact_role?: string | null;
   contact_mobile?: string | null;
   mailing_list?: boolean;
+  /** Warehouse stage emails (received / checked / preparing / shipped), 0149. */
+  wms_notify?: boolean;
   additional_emails?: string | null;
   registration_no?: string | null;
   industry?: string | null;

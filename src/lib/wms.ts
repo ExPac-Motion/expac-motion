@@ -1002,3 +1002,45 @@ export async function requestRelease(p: Record<string, unknown>): Promise<string
 export async function cancelReleaseRequest(id: string) {
   unwrap(await supabase.rpc("portal_cancel_release_request", { p_id: id }));
 }
+
+/* ---------- Pre-advised incoming goods (0149) ---------- */
+export interface WmsPreadvice {
+  id: string;
+  preadvice_no: string;
+  client_id: string;
+  status: "expected" | "received" | "cancelled";
+  supplier: string | null;
+  eta: string | null;
+  inbound_ref: string | null;
+  carrier: string | null;
+  description: string | null;
+  packages: WmsPackage[];
+  notes: string | null;
+  receipt_id: string | null;
+  task_id: string | null;
+  created_at: string;
+}
+export const PREADVICE_STATUS: Record<WmsPreadvice["status"], { label: string; cls: string }> = {
+  expected: { label: "Expected", cls: "sent" },
+  received: { label: "Received", cls: "completed" },
+  cancelled: { label: "Cancelled", cls: "open" },
+};
+export const useWmsPreadvices = () =>
+  useQuery({
+    queryKey: ["wms", "preadvices"],
+    queryFn: async (): Promise<WmsPreadvice[]> => {
+      const { data, error } = await supabase.from("wms_preadvices").select("*").order("created_at", { ascending: false });
+      if (error) return []; // before 0149 is applied
+      return ((data ?? []) as WmsPreadvice[]).map((p) => ({ ...p, packages: Array.isArray(p.packages) ? p.packages : [] }));
+    },
+  });
+export async function createPreadvice(p: Record<string, unknown>): Promise<string> {
+  return unwrap(await supabase.rpc("portal_create_preadvice", { p })) as string;
+}
+export async function cancelPreadvice(id: string) {
+  unwrap(await supabase.rpc("portal_cancel_preadvice", { p_id: id }));
+}
+export async function markPreadviceReceived(pa: WmsPreadvice, receiptId: string) {
+  unwrap(await supabase.from("wms_preadvices").update({ status: "received", receipt_id: receiptId }).eq("id", pa.id));
+  if (pa.task_id) await supabase.from("ops_tasks").update({ status: "done", done_at: new Date().toISOString() }).eq("id", pa.task_id);
+}

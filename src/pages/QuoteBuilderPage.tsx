@@ -68,6 +68,7 @@ import {
   type PartnerSheets,
 } from "../lib/tariff";
 import { TierDot } from "./rates/TierSheetsPage";
+import { useWmsReceipts } from "../lib/wms";
 import {
   AUTO_REFERENCE,
   formatDate,
@@ -334,6 +335,7 @@ export default function QuoteBuilderPage() {
   const destinationAgentsQ = useDestinationAgents();
   const clearingAgentsQ = useClearingAgents();
   const existingQ = useQuote(id);
+  const wmsReceiptsQ = useWmsReceipts();
   const saveQuote = useSaveQuote();
   const finalizeCopied = useFinalizeCopiedQuote();
   const saveSupplier = useSaveSupplier();
@@ -1054,6 +1056,16 @@ export default function QuoteBuilderPage() {
             <div>
               <b>Customer {existingQ.data.portal_decision}</b> on the portal {formatDate(existingQ.data.portal_decided_at)}
               {existingQ.data.portal_decline_reason ? `, "${existingQ.data.portal_decline_reason}"` : ""}
+            </div>
+          )}
+          {(existingQ.data.wms_receipt_ids ?? []).length > 0 && (
+            <div>
+              <b>Ship from stock:</b>{" "}
+              {(wmsReceiptsQ.data ?? [])
+                .filter((x) => existingQ.data?.wms_receipt_ids?.includes(x.id))
+                .map((x) => x.receipt_no + " (" + x.on_hand + " pcs in store)")
+                .join(", ") || (existingQ.data.wms_receipt_ids ?? []).length + " warehouse receipt(s)"}
+              . When this quote is won, the shipment is linked to these receipts.
             </div>
           )}
           <div className="hint">Complete it, add the charges and set the status to Quote Sent, it appears on the customer's portal to accept.</div>

@@ -121,6 +121,7 @@ const NAV: NavItem[] = [
     permission: "warehouse",
     children: [
       { to: "/portal/warehouse?view=overview", label: "Overview" },
+      { to: "/portal/warehouse?view=preadvice", label: "Pre-advise goods" },
       { to: "/portal/warehouse?view=all", label: "Receipt" },
       { to: "/portal/warehouse?view=releases", label: "Release" },
       { to: "/portal/warehouse?view=requests", label: "Release requests" },

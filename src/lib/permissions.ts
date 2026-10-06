@@ -33,7 +33,7 @@ export const STAFF_PERMS: PermDef<StaffPerm>[] = [
   { key: "ops", label: "Control Tower", hint: "Tasks & notes, notifications, calendar, live tracking, document vault" },
   { key: "shipments", label: "Shipments", hint: "Active and completed shipments, every mode" },
   { key: "quotes", label: "Quotations", hint: "Quote list and Quote Builder" },
-  { key: "warehouse", label: "WMS (warehouse)", hint: "Receipts, movements, releases, inventory, storage billing, cycle counts" },
+  { key: "warehouse", label: "Motion WMS (warehouse)", hint: "Receipts, movements, releases, inventory, storage billing, cycle counts" },
   { key: "customs", label: "Customs Charges", hint: "Import VAT and duty calculator" },
   { key: "customers", label: "Customers", hint: "Customer records (Portal Access stays Admin only)" },
   { key: "suppliers", label: "Suppliers and partners", hint: "Shippers, agents, transporters, clearing and destination agents" },

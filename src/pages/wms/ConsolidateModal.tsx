@@ -14,7 +14,8 @@ import {
   type ConsolMode,
   type WmsConsolHouse,
 } from "../../lib/wms";
-import { blankConsol, houseLabel, masterLabel } from "./WmsConsols";
+import { blankConsol, consolNoticeDetail, houseLabel, masterLabel } from "./WmsConsols";
+import { notifyWms } from "../../lib/wmsNotify";
 import { consolModeFor, houseFromShipment, jobsOnMasters, shipmentFitsConsol } from "./houseFromShipment";
 import { useWmsLookups } from "./shared";
 
@@ -78,6 +79,7 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
       {
         onSuccess: (id) => {
           toast(`${houses.length} ${HL}${houses.length === 1 ? "" : "s"} added`);
+          void notifyWms("preparing", houses.flatMap((h) => h.receipt_ids), consolNoticeDetail({ ...blankConsol(mode), consol_no: null }, houses, lk.jobRef, "preparing"));
           onClose();
           navigate(`/wms?tab=release&consol=${id}`);
         },

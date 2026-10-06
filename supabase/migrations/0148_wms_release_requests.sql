@@ -102,10 +102,10 @@ begin
   -- A Control Tower task for the team (shows as a customer request).
   insert into public.ops_tasks (kind, title, body, status, priority, due_date, client_id,
                                 from_portal, portal_visible, created_by)
-  values ('task', 'Release request ' || rno || ', book the release in WMS',
+  values ('task', 'Release request ' || rno || ', book the release in Motion WMS',
           'Customer requested a warehouse release (' ||
             case when p ->> 'method' = 'deliver' then 'deliver' else 'collect' end ||
-            '), see WMS > Warehouse Release > Release requests.',
+            '), see Motion WMS > Warehouse Release > Release requests.',
           'open', 'high', nullif(p ->> 'required_date', '')::date, cid, true, false, auth.uid())
   returning id into tid;
   update public.wms_release_requests set task_id = tid where id = rid;

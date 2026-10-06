@@ -34,6 +34,7 @@ import {
   type WmsReceipt,
 } from "../../lib/wms";
 import { orNull, useWmsLookups } from "./shared";
+import { notifyWms } from "../../lib/wmsNotify";
 import { useQuotes } from "../../lib/hooks";
 import { isShipmentComplete, type Job } from "../../lib/types";
 import { houseFromShipment, jobsOnMasters, shipmentFitsConsol, shipmentHouseNo } from "./houseFromShipment";
@@ -94,6 +95,7 @@ export default function WmsConsols({
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const del = useWmsMutation(wmsDb.deleteConsol);
   const ship = useWmsMutation(wmsDb.releaseConsol);
+  const lk = useWmsLookups();
   useEffect(() => {
     if (!openId) return;
     const c = consolsQ.data?.find((x) => x.id === openId);
@@ -247,7 +249,10 @@ export default function WmsConsols({
               e.stopPropagation();
               if (!confirm(`Release every receipt on ${c.consol_no} from the warehouse and mark it departed?`)) return;
               ship.mutate(c.id, {
-                onSuccess: () => toast(`${c.consol_no} released from the warehouse`),
+                onSuccess: () => {
+                  toast(`${c.consol_no} released from the warehouse`);
+                  void notifyWms("shipped", c.houses.flatMap((h) => h.receipt_ids), consolNoticeDetail(c, c.houses, lk.jobRef, "shipped"));
+                },
                 onError: (er) => error(er.message),
               });
             }}
@@ -480,6 +485,12 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
       {
         onSuccess: () => {
           toast("Consolidation saved");
+          // Customer email: being prepared for shipping (0149), once per receipt.
+          void notifyWms(
+            "preparing",
+            houses.flatMap((h) => h.receipt_ids),
+            consolNoticeDetail({ ...values, consol_no: consol?.consol_no ?? null }, houses, lk.jobRef, "preparing"),
+          );
           onClose();
         },
         onError: (e) => error(e.message),
@@ -970,4 +981,43 @@ function AddFromShipments({
       </div>
     </div>
   );
+}
+
+/** One line per receipt for the customer's warehouse email (0149). */
+export function consolNoticeDetail(
+  c: Pick<WmsConsolInput, "mode" | "master_no" | "flight_no" | "vessel" | "voyage_no" | "etd" | "flight_date" | "job_id"> & { consol_no?: string | null },
+  houses: WmsConsolHouse[],
+  jobRef: (id: string | null | undefined) => string,
+  stage: "preparing" | "shipped",
+): Record<string, string> {
+  const ref = (id: string | null | undefined) => {
+    const r = id ? jobRef(id) : "";
+    return r && r !== "—" ? r : "";
+  };
+  const HL = houseLabel(c.mode);
+  const transport = c.mode === "air" ? c.flight_no : [c.vessel, c.voyage_no].filter(Boolean).join(" / ");
+  const etd = c.mode === "air" ? c.flight_date : c.etd;
+  const out: Record<string, string> = {};
+  for (const h of houses) {
+    let line: string;
+    if (stage === "shipped") {
+      const shipment = ref(h.job_id) || ref(c.job_id);
+      line = shipment
+        ? "Shipment " + shipment
+        : c.master_no
+          ? masterLabel(c.mode) + " " + c.master_no
+          : CONSOL_MODE_LABEL[c.mode] + (c.consol_no ? " " + c.consol_no : "");
+    } else {
+      line = [
+        CONSOL_MODE_LABEL[c.mode] + (c.consol_no ? " " + c.consol_no : ""),
+        h.house_no ? HL + " " + h.house_no : null,
+        transport || null,
+        etd ? "ETD " + formatDate(etd) : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+    }
+    for (const rid of h.receipt_ids) out[rid] = line;
+  }
+  return out;
 }

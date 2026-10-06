@@ -88,7 +88,7 @@ export default function WmsBilling() {
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search run, customer, invoice…" />}
         count={runsQ.isLoading ? undefined : `${filtered.length} run${filtered.length === 1 ? "" : "s"} · ${money(unbilled)} not invoiced`}
-        hint="Storage is charged per day on hand after the warehouse's free days (rates in WMS > Settings); handling in / out per W/M CBM."
+        hint="Storage is charged per day on hand after the warehouse's free days (rates in Motion WMS > Settings); handling in / out per W/M CBM."
         onToolsSlot={setToolsSlot}
         primary={
           <button className="btn" onClick={() => setCreating(true)} disabled={lk.warehouses.length === 0}>
@@ -202,7 +202,7 @@ function NewRunModal({ onClose, onSaved }: { onClose: () => void; onSaved: (id: 
           {wh.code}: {money(wh.storage_rate)} per {BASIS_LABEL[wh.storage_basis]} per {PERIOD_LABEL[wh.storage_period]} after {wh.free_days} free day
           {wh.free_days === 1 ? "" : "s"}
           {wh.min_charge ? `, minimum ${money(wh.min_charge)} per receipt` : ""}; handling in {money(wh.handling_in_rate)} / out {money(wh.handling_out_rate)} per CBM.
-          {!wh.storage_rate && !wh.handling_in_rate && !wh.handling_out_rate && " Set the rates in WMS > Settings first."}
+          {!wh.storage_rate && !wh.handling_in_rate && !wh.handling_out_rate && " Set the rates in Motion WMS > Settings first."}
         </p>
       )}
       {clientId && lines.length === 0 ? (

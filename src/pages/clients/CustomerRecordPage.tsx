@@ -60,7 +60,7 @@ const EDITABLE: (keyof CustomerRecord)[] = [
   "is_also_agent", "linked_agent_id", "sales_person_id", "customer_support_id", "notes", "quote_note",
   "bill_to_name", "import_code", "parent_client_id",
   "contact_salutation", "contact_first_name", "contact_last_name", "contact", "contact_role", "email",
-  "phone", "contact_mobile", "mailing_list", "additional_emails",
+  "phone", "contact_mobile", "mailing_list", "wms_notify", "additional_emails",
   "registration_no", "vat_no", "industry", "source", "description", "address", "physical_address",
   "postal_address", "city", "country", "payment_terms", "credit_limit", "billing_currency",
   "bank_name", "bank_branch", "bank_branch_code", "bank_account_name", "bank_account_no",
@@ -246,7 +246,14 @@ export default function CustomerRecordPage() {
                     <option value="no">Not subscribed</option>
                   </select>
                 </label>
-                <F k="additional_emails" label="Additional Emails (comma separated)" span={4} />
+                <label className="cr-field">
+                  <span>Warehouse Emails</span>
+                  <select value={d.wms_notify === false ? "no" : "yes"} onChange={(e) => set("wms_notify", e.target.value === "yes")}>
+                    <option value="yes">On (received, checked, shipping, shipped)</option>
+                    <option value="no">Off</option>
+                  </select>
+                </label>
+                <F k="additional_emails" label="Additional Emails (comma separated)" span={3} />
               </div>
               {!isNew && customerQ.data && (
                 <PortalAccessBox

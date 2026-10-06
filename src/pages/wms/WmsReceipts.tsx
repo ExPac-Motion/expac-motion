@@ -22,6 +22,10 @@ import {
   PACKAGE_TYPES,
   bulkUpdateReceipts,
   setReceiptChecked,
+  useWmsPreadvices,
+  markPreadviceReceived,
+  PREADVICE_STATUS,
+  type WmsPreadvice,
   daysBetween,
   packageTotals,
   qty,
@@ -36,9 +40,10 @@ import {
 } from "../../lib/wms";
 import { LocationOptions, ReceiptStatusBadge, orNull, useWmsLookups } from "./shared";
 import ReceiptImages from "./ReceiptImages";
+import { notifyWms } from "../../lib/wmsNotify";
 import { useQueryClient } from "@tanstack/react-query";
 
-type StatusFilter = "stock" | "in_store" | "part_released" | "released" | "all";
+type StatusFilter = "stock" | "in_store" | "part_released" | "released" | "all" | "expected";
 
 /** WMS > Warehouse Receipt: goods received into a warehouse (WR000001). */
 export default function WmsReceipts() {
@@ -195,6 +200,7 @@ export default function WmsReceipts() {
               <option value="part_released">Part released</option>
               <option value="released">Released</option>
               <option value="all">All receipts</option>
+              <option value="expected">Expected (pre-advised)</option>
             </select>
             {lk.warehouses.length > 1 && (
               <select value={whId} onChange={(e) => setWhId(e.target.value)} style={{ width: "auto" }}>
@@ -221,6 +227,9 @@ export default function WmsReceipts() {
         </button>
       </PageTools>
 
+      {status === "expected" ? (
+        <ExpectedList toolsSlot={toolsSlot} />
+      ) : (
       <div className="panel">
         {receiptsQ.isLoading ? (
           <Loading />
@@ -242,6 +251,7 @@ export default function WmsReceipts() {
           />
         )}
       </div>
+      )}
 
       {editing !== null && (
         <ReceiptEditModal
@@ -334,6 +344,7 @@ function ReceiptViewModal({
     setChecking(true);
     try {
       await setReceiptChecked(r.id, !r.checked_at);
+      if (!r.checked_at) void notifyWms("checked", [r.id]);
       qc.invalidateQueries({ queryKey: ["wms"] });
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not update");
@@ -508,7 +519,7 @@ export function ReceiptEditModal({
       ? (() => {
           // Only the table's own columns go back on save (not the view's on-hand / status).
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { id, receipt_no, created_at, received_by, on_hand, on_hand_kg, on_hand_cbm, last_out_at, status, ...rest } = receipt;
+          const { id, receipt_no, created_at, received_by, on_hand, on_hand_kg, on_hand_cbm, last_out_at, status, checked_at, checked_by, notified, ...rest } = receipt as WmsReceipt & { notified?: unknown };
           return rest;
         })()
       : {
@@ -579,6 +590,8 @@ export function ReceiptEditModal({
       {
         onSuccess: (id) => {
           toast(receipt ? "Receipt saved" : "Goods received");
+          // Customer email: goods received (0149), once per receipt.
+          if (!receipt) void notifyWms("received", [id]);
           onSaved?.(id);
           if (!onSaved) onClose();
         },
@@ -868,5 +881,105 @@ export function ReceiptEditModal({
         {!receipt && <p className="hint" style={{ textAlign: "right" }}>The Warehouse Receipt opens to print once saved.</p>}
       </form>
     </Modal>
+  );
+}
+
+/* ---------- Expected goods (pre-advised by the customer, 0149) ---------- */
+
+function ExpectedList({ toolsSlot }: { toolsSlot: HTMLDivElement | null }) {
+  const navigate = useNavigate();
+  const lk = useWmsLookups();
+  const { toast, error } = useToast();
+  const q = useWmsPreadvices();
+  const [receiving, setReceiving] = useState<WmsPreadvice | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const rows = (q.data ?? []).filter((p) => showAll || p.status === "expected");
+
+  const columns: DataColumn<WmsPreadvice>[] = [
+    {
+      key: "actions",
+      header: "Actions",
+      fixed: true,
+      width: 110,
+      render: (p) =>
+        p.status === "expected" ? (
+          <button className="btn btn-sm" onClick={() => setReceiving(p)}>
+            Receive
+          </button>
+        ) : (
+          <span className={"badge " + PREADVICE_STATUS[p.status].cls}>{PREADVICE_STATUS[p.status].label}</span>
+        ),
+    },
+    { key: "no", header: "Pre-advice No", width: 120, render: (p) => <b>{p.preadvice_no}</b>, sortValue: (p) => p.preadvice_no },
+    { key: "client", header: "Customer", width: 180, render: (p) => lk.clientName(p.client_id), sortValue: (p) => lk.clientName(p.client_id) },
+    { key: "eta", header: "ETA", width: 100, render: (p) => formatDate(p.eta), sortValue: (p) => p.eta ?? "" },
+    { key: "supplier", header: "From (supplier)", width: 180, render: (p) => p.supplier || "—" },
+    { key: "carrier", header: "Delivered by", width: 150, render: (p) => p.carrier || "—" },
+    { key: "ref", header: "Waybill / tracking", width: 150, render: (p) => p.inbound_ref || "—" },
+    { key: "desc", header: "Description", width: 200, render: (p) => p.description || "—" },
+    {
+      key: "pk",
+      header: "Packages",
+      width: 140,
+      render: (p) => {
+        const t = packageTotals(p.packages);
+        return t.pieces ? `${t.pieces} pcs, ${qty(t.kg)} kg` : "—";
+      },
+    },
+    { key: "sent", header: "Sent", width: 100, render: (p) => formatDate(p.created_at), sortValue: (p) => p.created_at },
+  ];
+
+  const pk = receiving ? packageTotals(receiving.packages) : null;
+  return (
+    <>
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Expected goods</h2>
+            <p>Pre-advised by customers on the portal. Receive opens a receipt filled in from the pre-advice.</p>
+          </div>
+          <label className="check" style={{ margin: 0 }}>
+            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show received / cancelled
+          </label>
+        </div>
+        {q.isLoading ? (
+          <Loading />
+        ) : rows.length === 0 ? (
+          <EmptyState>No goods expected.</EmptyState>
+        ) : (
+          <DataTable tableKey="wms-preadvices" className="table--compact" toolsPortal={toolsSlot} columns={columns} rows={rows} rowKey={(p) => p.id} />
+        )}
+      </div>
+      {receiving && pk && (
+        <ReceiptEditModal
+          receipt={null}
+          defaults={{
+            client_id: receiving.client_id,
+            inbound_ref: receiving.inbound_ref,
+            delivered_by: receiving.carrier,
+            description: receiving.description,
+            packages: receiving.packages,
+            pieces: pk.pieces,
+            gross_kg: Math.round(pk.kg * 100) / 100,
+            volume_cbm: Math.round(pk.cbm * 1000) / 1000,
+            notes: ["Pre-advice " + receiving.preadvice_no, receiving.supplier ? "from " + receiving.supplier : null, receiving.notes]
+              .filter(Boolean)
+              .join(", "),
+          }}
+          onClose={() => setReceiving(null)}
+          onSaved={async (id) => {
+            try {
+              await markPreadviceReceived(receiving, id);
+            } catch (e) {
+              error(e instanceof Error ? e.message : "Received, but the pre-advice could not be closed");
+            }
+            toast("Received against " + receiving.preadvice_no);
+            setReceiving(null);
+            q.refetch();
+            navigate(`/wms/print/receipt/${id}`);
+          }}
+        />
+      )}
+    </>
   );
 }

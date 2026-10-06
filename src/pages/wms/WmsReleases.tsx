@@ -36,6 +36,7 @@ import {
 } from "../../lib/wms";
 import WmsConsols from "./WmsConsols";
 import { orNull, useWmsLookups } from "./shared";
+import { notifyWms } from "../../lib/wmsNotify";
 
 type View = "releases" | "requests" | ConsolMode;
 
@@ -269,6 +270,9 @@ function NewReleaseModal({
       {
         onSuccess: (id) => {
           toast(`${tot.pcs} piece${tot.pcs === 1 ? "" : "s"} released`);
+          // Customer email: shipped (0149), for receipts with nothing left in store.
+          const ship = header.job_id && lk.jobRef(header.job_id) !== "—" ? "Shipment " + lk.jobRef(header.job_id) : header.outbound_ref ? "Ref " + header.outbound_ref : "";
+          void notifyWms("shipped", lines.map((l) => l.receipt_id), ship ? Object.fromEntries(lines.map((l) => [l.receipt_id, ship])) : {});
           onDone(id);
         },
         onError: (e) => error(e.message),

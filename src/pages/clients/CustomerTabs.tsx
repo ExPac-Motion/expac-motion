@@ -372,7 +372,7 @@ export function SkusTab({ clientId }: { clientId: string }) {
       <div className="cr-section-head">
         <h3>Products &amp; SKUs</h3>
         <Link to="/wms?tab=inventory" className="link-btn">
-          WMS inventory
+          Motion WMS inventory
         </Link>
       </div>
       <p className="hint" style={{ marginTop: 0 }}>

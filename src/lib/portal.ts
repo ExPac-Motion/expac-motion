@@ -66,6 +66,8 @@ export interface QuoteRequest {
   delivery: string;
   notes: string;
   packing: QuoteRequestPacking[];
+  /** Ship from stock (0149): the warehouse receipts this request is for. */
+  receipt_ids?: string[];
 }
 
 /** How the customer sees a quotation's status. */
