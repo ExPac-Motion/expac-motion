@@ -126,7 +126,7 @@ export default function PortalWmsOverview({
     return t.shipment_id && myJobs.has(t.shipment_id) ? (
       <button
         type="button"
-        className="link-btn job-ref"
+        className="ref-link pt-ref-btn"
         onClick={(e) => {
           e.stopPropagation();
           navigate(`/portal/shipments/${t.shipment_id}`);

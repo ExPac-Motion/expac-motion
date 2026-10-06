@@ -128,7 +128,7 @@ export default function PortalShipmentsPage() {
       header: "Shipment",
       width: 130,
       render: (j) => (
-        <button type="button" className="link-btn job-ref" onClick={() => setViewJob(j)}>
+        <button type="button" className="ref-link pt-ref-btn" onClick={() => setViewJob(j)}>
           {j.reference}
         </button>
       ),
