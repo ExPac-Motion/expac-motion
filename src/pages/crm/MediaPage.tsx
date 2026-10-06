@@ -252,7 +252,7 @@ export default function MediaPage() {
             ? undefined
             : `${shown.length} image${shown.length === 1 ? "" : "s"} · ${folder === ALL ? "All media" : folder}`
         }
-        hint={`Reusable images for campaigns and templates. Uploads land in ${uploadFolder}. Images in the Announcements folder show on the customer portal under What's new (newest first, the image name as the headline).`}
+        hint={`Reusable images for campaigns and templates. Uploads land in ${uploadFolder}. Images in the Announcements folder show on the customer portal under Announcements (newest first).`}
         primary={
           <button
             className="btn"

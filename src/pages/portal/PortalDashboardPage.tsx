@@ -372,7 +372,7 @@ function WhatsNew() {
   return (
     <div className="panel pt-news">
       <div className="panel-head">
-        <h2>What's new</h2>
+        <h2>Announcements</h2>
         {items.length > 1 && (
           <span className="pt-news-nav">
             <button type="button" className="link-btn" onClick={() => setI((i - 1 + items.length) % items.length)} aria-label="Previous">
@@ -400,7 +400,7 @@ function WhatsNew() {
         </div>
       )}
       {zoom && cur && (
-        <div className="pt-lightbox" onClick={() => setZoom(false)} role="dialog" aria-label="What's new">
+        <div className="pt-lightbox" onClick={() => setZoom(false)} role="dialog" aria-label="Announcements">
           <img src={cur.url} alt={cur.title} />
           <button type="button" className="pt-lightbox-x" aria-label="Close">
             ✕
