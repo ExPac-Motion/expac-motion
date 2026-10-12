@@ -219,6 +219,28 @@ export default function PortalShipmentPage() {
             </p>
           )}
         </Card>
+        <Card title="Documents">
+          {docsQ.isLoading ? (
+            <Loading />
+          ) : (docsQ.data ?? []).length === 0 ? (
+            <p className="hint" style={{ margin: 0 }}>No documents shared yet.</p>
+          ) : (
+            <div className="sp-docs">
+              {(docsQ.data ?? []).map((d) => (
+                <button key={d.id} type="button" className="sp-doc" onClick={() => onDownload(d.storage_path)} title={d.name}>
+                  <span className="sp-doc-ico" aria-hidden>
+                    📄
+                  </span>
+                  <span className="sp-doc-name">{d.name}</span>
+                  <span className="sp-doc-meta">
+                    {d.doc_type ? `${d.doc_type} · ` : ""}
+                    {formatDate(d.created_at)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
 
       <div className="panel">
@@ -269,73 +291,43 @@ export default function PortalShipmentPage() {
         )}
       </div>
 
-      <div className="sp-two">
-        <div className="panel">
-          <div className="panel-head">
-            <div>
-              <h2>Documents</h2>
-            </div>
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Messages</h2>
           </div>
-          {docsQ.isLoading ? (
-            <Loading />
-          ) : (docsQ.data ?? []).length === 0 ? (
-            <EmptyState>No documents shared yet.</EmptyState>
-          ) : (
-            <div className="sp-docs">
-              {(docsQ.data ?? []).map((d) => (
-                <button key={d.id} type="button" className="sp-doc" onClick={() => onDownload(d.storage_path)}>
-                  <span className="sp-doc-ico" aria-hidden>
-                    📄
-                  </span>
-                  <span className="sp-doc-name">{d.name}</span>
-                  <span className="sp-doc-meta">
-                    {d.doc_type ? `${d.doc_type} · ` : ""}
-                    {formatDate(d.created_at)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-
-        <div className="panel">
-          <div className="panel-head">
-            <div>
-              <h2>Messages</h2>
-            </div>
-          </div>
-          <form onSubmit={onSend} style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Message ExPac about this shipment…"
-              style={{ flex: 1 }}
-            />
-            <button className="btn" type="submit" disabled={sendMessage.isPending}>
-              Send
-            </button>
-          </form>
-          {messagesQ.isLoading ? (
-            <Loading />
-          ) : (messagesQ.data ?? []).length === 0 ? (
-            <EmptyState>No messages yet.</EmptyState>
-          ) : (
-            <div className="stack-sm">
-              {(messagesQ.data ?? [])
-                .slice()
-                .reverse()
-                .map((m) => (
-                  <div key={m.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-                    <div className="muted small">
-                      {m.direction === "in" ? "You" : "ExPac"} · {formatDate(m.created_at)}
-                    </div>
-                    <div>{m.subject && <strong>{m.subject}</strong>}</div>
-                    <div style={{ whiteSpace: "pre-line" }}>{m.body}</div>
+        <form onSubmit={onSend} style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Message ExPac about this shipment…"
+            style={{ flex: 1 }}
+          />
+          <button className="btn" type="submit" disabled={sendMessage.isPending}>
+            Send
+          </button>
+        </form>
+        {messagesQ.isLoading ? (
+          <Loading />
+        ) : (messagesQ.data ?? []).length === 0 ? (
+          <EmptyState>No messages yet.</EmptyState>
+        ) : (
+          <div className="stack-sm">
+            {(messagesQ.data ?? [])
+              .slice()
+              .reverse()
+              .map((m) => (
+                <div key={m.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                  <div className="muted small">
+                    {m.direction === "in" ? "You" : "ExPac"} · {formatDate(m.created_at)}
                   </div>
-                ))}
-            </div>
-          )}
-        </div>
+                  <div>{m.subject && <strong>{m.subject}</strong>}</div>
+                  <div style={{ whiteSpace: "pre-line" }}>{m.body}</div>
+                </div>
+              ))}
+          </div>
+        )}
       </div>
 
       {showQuote && quote && <PortalQuoteModal quoteId={quote.id} onClose={() => setShowQuote(false)} />}
