@@ -201,6 +201,7 @@ function AppRoutes() {
               <Route index element={<PortalDashboardPage />} />
               <Route path="invoices" element={<PortalInvoicesPage />} />
               <Route path="party" element={<PortalSuppliersPage />} />
+              <Route path="shipments/:id" element={<PortalShipmentPage />} />
               <Route path="quote" element={<PortalRequestQuotePage />} />
             </Route>
           )}

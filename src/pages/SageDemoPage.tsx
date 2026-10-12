@@ -109,7 +109,7 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
       { id: "c-2", company: "Highveld Outdoor Gear", sage_customer_id: 502 },
     ]);
     seed(["jobs"], JOBS);
-    seed(["my_jobs"], JOBS.map((j, i) => ({ ...j, client_id: CLIENT, milestone: "In Transit", shipment_status: null, created_at: day(-60 + i * 7), etd: day(-50 + i * 7), origin: i % 2 ? "CNSZX, Shenzhen, China" : "CNNGB, Ningbo, China", supplier_company: i % 2 ? "Brilliant Rays Wheels Trading Co. Ltd" : "Shenzhen Bright Lighting Co." })));
+    seed(["my_jobs"], JOBS.map((j, i) => ({ ...j, quote_id: j.id === "job-2" ? "q-2" : null, eta: j.id === "job-2" ? day(9) : null, client_id: CLIENT, milestone: "In Transit", shipment_status: null, created_at: day(-60 + i * 7), etd: day(-50 + i * 7), origin: i % 2 ? "CNSZX, Shenzhen, China" : "CNNGB, Ningbo, China", supplier_company: i % 2 ? "Brilliant Rays Wheels Trading Co. Ltd" : "Shenzhen Bright Lighting Co." })));
     seed(["my_documents_all"], []);
     const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
     const CHAT = [
@@ -124,6 +124,28 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
       { id: "g9", client_id: "c-2", direction: "in", body: "Please update our delivery address for future shipments.", sender_name: "Thandi", sender_email: "thandi@highveld.co.za", created_at: ago(60 * 26), read_at: ago(60 * 25), clients: { company: "Highveld Outdoor Gear", email: "finance@highveld.co.za" } },
     ]);
     seed(["client_chat", "c-2"], []);
+    // Portal shipment page (/dev/portal/shipments/job-2)
+    seed(["my_job_events", "job-2"], [
+      { id: "e1", job_id: "job-2", milestone: "Booked", created_at: ago(60 * 24 * 20) },
+      { id: "e2", job_id: "job-2", milestone: "In Transit", created_at: ago(60 * 24 * 12) },
+    ]);
+    seed(["my_job_tracking"], []);
+    seed(["my_tracking_events", "job-2"], []);
+    seed(["my_documents", "job-2"], [
+      { id: "d1", job_id: "job-2", name: "Commercial Invoice CI-2087.pdf", storage_path: "x", doc_type: "Commercial Invoice", created_at: ago(60 * 24 * 18) },
+      { id: "d2", job_id: "job-2", name: "House Bill of Lading.pdf", storage_path: "y", doc_type: "Bill of Lading", created_at: ago(60 * 24 * 11) },
+    ]);
+    seed(["my_messages", "job-2"], []);
+    seed(["portal", "quotes"], [
+      { id: "q-2", reference: "EXP-S2087", client_id: CLIENT, mode: "Sea Freight (LCL)", commodity: "General Cargo", origin: "CNNGB, Ningbo, China", destination: "ZADUR, Durban, South Africa", delivery_terms: "Door to Door", incoterms: "FOB", commercial_value: 12500, value_currency: "USD", insurance_amount: 0, status: "accepted", accepted_at: ago(60 * 24 * 21), customer_reference: "PO-5521", consignee_company: "Demo Imports (Pty) Ltd", revision_no: 1, created_at: ago(60 * 24 * 25) },
+    ]);
+    seed(["portal", "lines", ["q-2"]], [
+      { id: "l1", quote_id: "q-2", position: 0, category: "International Freight Charges", code: "OF-06", description: "Ocean Freight (LCL-DDP)", unit: "W/M", qty: 1, cur: "ZAR", vat_pct: 0, sell: 18500 },
+      { id: "l2", quote_id: "q-2", position: 1, category: "Destination Handling and Delivery Charges", code: "TR-01", description: "Transfer & Cartage Fee", unit: "AWB", qty: 1, cur: "ZAR", vat_pct: 15, sell: 3200 },
+    ]);
+    seed(["portal", "packing", "q-2"], [
+      { position: 0, length_cm: 120, width_cm: 100, height_cm: 110, actual_kg: 420, qty_ctns: 3, cbm: null },
+    ]);
     seed(["my_suppliers"], [
       { id: "s-1", company: "Brilliant Rays Wheels Trading Co. Ltd", contact: "Steven", email: null, phone: "+86-13258156783", address: "No. 18 Industrial Rd\nNingbo, Zhejiang", vat_no: null, editable: true },
       { id: "s-2", company: "Shenzhen Bright Lighting Co.", contact: "Lily Chen", email: "lily@brightlighting.cn", phone: "+86 755 8888 1234" },

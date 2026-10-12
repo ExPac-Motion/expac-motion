@@ -56,6 +56,7 @@ import type {
   ClientRateSheetItem,
   ClientSupplier,
   ClientSupplierInput,
+  ClientJobEvent,
   Profile,
   ProfilePatch,
   PortalUser,
@@ -1227,6 +1228,13 @@ export async function listMyJobs(): Promise<ClientJob[]> {
 export async function listMyJobTracking(): Promise<ClientJobTracking[]> {
   return unwrap<ClientJobTracking[]>(
     await supabase.from("client_job_tracking").select("*"),
+  );
+}
+
+/** When a shipment reached each milestone (0159). */
+export async function listMyJobEvents(jobId: string): Promise<ClientJobEvent[]> {
+  return unwrap<ClientJobEvent[]>(
+    await supabase.from("client_job_events").select("*").eq("job_id", jobId).order("created_at", { ascending: true }),
   );
 }
 

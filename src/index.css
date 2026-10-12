@@ -8749,3 +8749,285 @@ th.sage-num {
 .cmsg-item-top .cmsg-unread {
   color: #fff;
 }
+
+/* ---------- Portal › shipment page (0159) ---------- */
+.sp-progress-panel {
+  padding: 18px 22px 20px;
+}
+.sp-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.sp-progress-head > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sp-mode {
+  font-weight: 700;
+}
+.sp-status {
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.sp-status.done {
+  background: var(--green-tint);
+  color: var(--green-dark);
+}
+.sp-eta {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.sp-steps {
+  --sp-dot: 30px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* the track behind the dots, and its filled part up to the current stage */
+.sp-steps::before,
+.sp-steps::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--sp-dot) / 2 - 2px);
+  left: calc(100% / 14);
+  height: 4px;
+  border-radius: 2px;
+}
+.sp-steps::before {
+  right: calc(100% / 14);
+  background: var(--line);
+}
+.sp-steps::after {
+  width: calc((100% - 100% / 7) * var(--sp-frac, 0));
+  background: var(--green);
+}
+.sp-step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  min-width: 0;
+}
+.sp-dot {
+  width: var(--sp-dot);
+  height: var(--sp-dot);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--white);
+  border: 2px solid var(--line);
+  color: var(--muted);
+}
+.sp-step.done .sp-dot {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.sp-step.current .sp-dot {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+  box-shadow: 0 0 0 5px var(--teal-tint);
+}
+.sp-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.sp-step.todo .sp-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+.sp-when {
+  font-size: 0.72rem;
+  color: var(--muted);
+  min-height: 1em;
+}
+.sp-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+}
+.sp-port {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.sp-port.end {
+  text-align: right;
+}
+.sp-port-code {
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.sp-port-name {
+  font-size: 0.82rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-port-date {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+.sp-port-date b {
+  color: var(--ink);
+}
+.sp-route-line {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+.sp-route-line::before {
+  content: "";
+  position: absolute;
+  top: 0.75em;
+  left: 0;
+  right: 0;
+  border-top: 2px dashed var(--line);
+}
+.sp-route-line span {
+  position: relative;
+  padding: 0 10px;
+  background: var(--white);
+  font-size: 1.3rem;
+  line-height: 1.5;
+}
+.sp-route-line em {
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.sp-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.sp-cards .panel {
+  margin-bottom: 0;
+}
+.sp-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.sp-card-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.sp-rows {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.sp-rows dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+.sp-rows dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sp-rows dd.strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.sp-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.sp-docs {
+  display: grid;
+  gap: 8px;
+}
+.sp-doc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sp-doc:hover {
+  background: var(--paper);
+}
+.sp-doc-ico {
+  grid-row: span 2;
+  font-size: 1.3rem;
+  align-self: center;
+}
+.sp-doc-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-doc-meta {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+@media (max-width: 1100px) {
+  .sp-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .sp-steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .sp-steps::before,
+  .sp-steps::after {
+    display: none;
+  }
+  .sp-step {
+    flex-direction: row;
+    text-align: left;
+  }
+  .sp-route {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-port.end {
+    text-align: left;
+  }
+}

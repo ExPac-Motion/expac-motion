@@ -289,8 +289,18 @@ export interface ClientQuoteLine {
   sell: number;
 }
 
+/** When a shipment reached a milestone (client_job_events, 0159). */
+export interface ClientJobEvent {
+  id: string;
+  job_id: string;
+  milestone: string;
+  created_at: string;
+}
+
 export interface ClientJob {
   id: string;
+  /** The quotation it was booked from (0159). */
+  quote_id?: string | null;
   /** The customer's own reference / PO (0143). */
   po_no?: string | null;
   /** Proof of delivery (0151). */

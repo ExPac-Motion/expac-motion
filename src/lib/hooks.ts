@@ -906,6 +906,13 @@ export function useMyJobTracking() {
     refetchInterval: 120_000,
   });
 }
+export function useMyJobEvents(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["my_job_events", jobId],
+    queryFn: () => db.listMyJobEvents(jobId as string),
+    enabled: Boolean(jobId),
+  });
+}
 export function useMyTrackingEvents(jobId: string | undefined) {
   return useQuery({
     queryKey: ["my_tracking_events", jobId],
