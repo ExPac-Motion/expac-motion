@@ -52,7 +52,8 @@ export default function PortalInvoicesPage() {
   });
 
   async function onDownload(storagePath: string) {
-    const tab = window.open("", "_blank", "noopener");
+    const tab = window.open("", "_blank");
+    if (tab) tab.opener = null;
     try {
       const url = await getMyDocumentUrl(storagePath);
       if (tab) tab.location.href = url;

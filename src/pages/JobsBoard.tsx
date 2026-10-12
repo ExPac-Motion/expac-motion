@@ -1093,7 +1093,8 @@ function DocumentsSection({ job }: { job: Job }) {
   async function onDownload(doc: ShipmentDocument) {
     // Open the tab synchronously (still inside the click gesture) so the
     // browser doesn't block it as a popup once the signed URL is awaited.
-    const tab = window.open("", "_blank", "noopener");
+    const tab = window.open("", "_blank");
+    if (tab) tab.opener = null;
     try {
       const url = await getShipmentDocumentUrl(doc.storage_path);
       if (tab) tab.location.href = url;
