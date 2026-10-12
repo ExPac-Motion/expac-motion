@@ -839,14 +839,12 @@ export type ChargeCategory =
   | "Ex-Works Charges"
   | "FOB Charges"
   | "Destination Handling and Delivery Charges"
-  | "Cartage and Road Freight Charges"
   | "Customs Clearance, VAT and Duty Charges";
 export const CHARGE_CATEGORIES: ChargeCategory[] = [
   "International Freight Charges",
   "Ex-Works Charges",
   "FOB Charges",
   "Destination Handling and Delivery Charges",
-  "Cartage and Road Freight Charges",
   "Customs Clearance, VAT and Duty Charges",
 ];
 
@@ -1102,7 +1100,7 @@ export interface TariffSheetLine {
   /** Overrides of the code's default description / unit (as on a quote). */
   description?: string;
   unit?: string;
-  /** Section, when not the code's own (warehousing codes on Cartage). */
+  /** Section, when not the code's own (warehousing codes on Destination Handling). */
   category?: ChargeCategory;
   /** null = the sheet's tier margin. */
   margin: number | null;

@@ -28,7 +28,7 @@ import {
   type PartnerSheetLine,
 } from "../../lib/types";
 import {
-  CATEGORY_SOURCE,
+  codeSource,
   ddmmyyyy,
   PARTNER_LABEL,
   partnerSectionsForIncoterm,
@@ -459,10 +459,12 @@ export function PartnerSheetEditor({
   const originPlaces = placesIn(originCountry);
   const destPlaces = placesIn(destCountry ?? HOME_COUNTRY);
   const originListId = `ps-origin-${kind}`;
-  // Only this partner's own sections (agent: freight + ex-works, transporter:
-  // destination, clearing agent: customs), ExPac's codes for the mode.
+  // Only the codes this partner prices (agent: freight + ex-works, transporter:
+  // transport + local warehousing, clearing agent: customs), for the mode.
   const groupsFor = (mode: string) =>
-    worksheetGroups(mode, { sellOnly: false }).filter((g) => CATEGORY_SOURCE[g.category] === kind);
+    worksheetGroups(mode, { sellOnly: false })
+      .map((g) => ({ ...g, items: g.items.filter((i) => codeSource(i.code, g.category) === kind) }))
+      .filter((g) => g.items.length > 0);
   const groups = groupsFor(d.mode);
   // The sheet's incoterm decides which of those sections it prices (an
   // agent's EXW sheet = freight + ex-works, FOB = freight + FOB charges).

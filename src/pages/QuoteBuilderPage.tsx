@@ -57,6 +57,7 @@ import {
   PARTNER_KINDS,
   PARTNER_LABEL,
   PARTNER_SECTIONS,
+  codeSource,
   isSellOnlyCode,
   partnerIdKey,
   partnerRate,
@@ -634,7 +635,7 @@ export default function QuoteBuilderPage() {
       ? {
           code,
           description: item.description,
-          // Warehousing: USD on Ex-Works (origin), ZAR on Cartage (local).
+          // Warehousing: USD on Ex-Works (origin), ZAR on Destination Handling (local).
           cur: itemCur(item, draft?.lines[index]?.category as ChargeCategory | undefined),
           unit: item.unit,
           qty_override: false,
@@ -838,7 +839,12 @@ export default function QuoteBuilderPage() {
     const seen = new Set<string>();
     for (const g of worksheetGroups(draft.mode))
       for (const item of g.items) {
-        if (!sections.includes(g.category) || seen.has(item.code) || isSellOnlyCode(item.code))
+        if (
+          !sections.includes(g.category) ||
+          codeSource(item.code, g.category) !== kind ||
+          seen.has(item.code) ||
+          isSellOnlyCode(item.code)
+        )
           continue;
         const pLine = sheet.lines[item.code];
         const r = partnerRate(pLine, kg);
@@ -864,8 +870,13 @@ export default function QuoteBuilderPage() {
       );
       return;
     }
+    // This partner's lines: its codes in its sections (Destination Handling is
+    // shared, the transporter's TR / WH lines vs the destination agent's rest).
+    const owned = (l: QuoteLine) =>
+      sections.includes(l.category as ChargeCategory) &&
+      codeSource(String(l.code ?? ""), l.category as ChargeCategory) === kind;
     const replacing = draft.lines.some(
-      (l) => sections.includes(l.category as ChargeCategory) && (l.code || String(l.description ?? "").trim()),
+      (l) => owned(l) && (l.code || String(l.description ?? "").trim()),
     );
     if (
       replacing &&
@@ -874,7 +885,7 @@ export default function QuoteBuilderPage() {
       return;
     setDraft((d) => {
       if (!d) return d;
-      const keep = d.lines.filter((l) => !sections.includes(l.category as ChargeCategory));
+      const keep = d.lines.filter((l) => !owned(l));
       const lines = CHARGE_CATEGORIES.flatMap((c) => [
         ...keep.filter((l) => l.category === c),
         ...fresh.filter((l) => l.category === c),

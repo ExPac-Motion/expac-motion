@@ -41,30 +41,41 @@ export function isSellOnlyCode(code: string): boolean {
 /** The charge sections each partner type quotes (their rate sheets show only
  *  these): shipping agents = freight, ex-works (+ origin warehousing codes)
  *  and FOB charges (on their FOB sheets); destination agents = destination
- *  handling; transporters = cartage & road freight (+ local warehousing
- *  codes); clearing = customs. */
+ *  handling; transporters = the transport (TR) and local warehousing (WH)
+ *  codes within destination handling; clearing = customs. */
 export const PARTNER_SECTIONS: Record<PartnerKind, ChargeCategory[]> = {
   agent: ["International Freight Charges", "Ex-Works Charges", "FOB Charges"],
   destination_agent: ["Destination Handling and Delivery Charges"],
-  transporter: ["Cartage and Road Freight Charges"],
+  transporter: ["Destination Handling and Delivery Charges"],
   clearing_agent: ["Customs Clearance, VAT and Duty Charges"],
 };
 
 /** Which partner a section's buy rates come from by default. */
-export const CATEGORY_SOURCE = Object.fromEntries(
-  PARTNER_KINDS.flatMap((k) => PARTNER_SECTIONS[k].map((c) => [c, k])),
-) as Partial<Record<ChargeCategory, PartnerKind>>;
+export const CATEGORY_SOURCE: Partial<Record<ChargeCategory, PartnerKind>> = {
+  "International Freight Charges": "agent",
+  "Ex-Works Charges": "agent",
+  "FOB Charges": "agent",
+  "Destination Handling and Delivery Charges": "destination_agent",
+  "Customs Clearance, VAT and Duty Charges": "clearing_agent",
+};
+
+/** Which partner prices a code in a section: the section's own partner,
+ *  except transport and local warehousing on Destination Handling, which
+ *  come from the transporter. */
+export function codeSource(code: string, category: ChargeCategory): PartnerKind | undefined {
+  if (category === "Destination Handling and Delivery Charges" && /^(TR|WH)-/.test(code))
+    return "transporter";
+  return CATEGORY_SOURCE[category];
+}
 
 const ORIGIN_ON: ChargeCategory[] = [
   "International Freight Charges",
   "FOB Charges",
   "Destination Handling and Delivery Charges",
-  "Cartage and Road Freight Charges",
   "Customs Clearance, VAT and Duty Charges",
 ];
 const C_TERMS: ChargeCategory[] = [
   "Destination Handling and Delivery Charges",
-  "Cartage and Road Freight Charges",
   "Customs Clearance, VAT and Duty Charges",
 ];
 
@@ -72,7 +83,7 @@ const C_TERMS: ChargeCategory[] = [
  * Which charge sections ExPac quotes under each incoterm (importer side):
  * EXW = everything from pick-up; FCA / FAS / FOB drop the Ex-Works charges
  * and keep the FOB charges (the agent's release / B/L fees); C-terms (seller
- * also pays the main freight) leave destination, cartage and clearance;
+ * also pays the main freight) leave destination handling and clearance;
  * DAP / DPU leave only clearance; DDP = ExPac's all-in door-to-door
  * duty-paid service.
  * Blank = every section.
@@ -127,7 +138,7 @@ export function worksheetGroups(
 }
 
 /** The section a tier-sheet line sits in (a warehousing code can be on
- *  either Ex-Works or Cartage). */
+ *  either Ex-Works or Destination Handling). */
 export function lineSection(item: CatalogItem, line: TariffSheetLine | undefined): ChargeCategory {
   return line?.category ?? item.category;
 }
@@ -255,7 +266,7 @@ export function tierLine(
 export function defaultTierLine(item: CatalogItem, section?: ChargeCategory): TariffSheetLine {
   const category = section ?? item.category;
   return {
-    source: isSellOnlyCode(item.code) ? "manual" : (CATEGORY_SOURCE[category] ?? "manual"),
+    source: isSellOnlyCode(item.code) ? "manual" : (codeSource(item.code, category) ?? "manual"),
     buy: null,
     margin: null,
     sell: null,
@@ -331,7 +342,7 @@ export function tariffLinesFromQuote(q: Quote): Record<string, TariffSheetLine> 
           cur: l.cur,
           margin: null,
           sell: null,
-          // A warehousing code quoted under Cartage stays there.
+          // A warehousing code quoted under Destination Handling stays there.
           ...(cat && cat !== lines[code].category && cat !== catalogItem(code)?.category
             ? { category: cat }
             : {}),
