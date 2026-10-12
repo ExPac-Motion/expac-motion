@@ -8050,6 +8050,7 @@ tr.clickable:hover td {
 .pt-news-item {
   flex: 1;
   min-height: 260px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8068,6 +8069,10 @@ tr.clickable:hover td {
   height: 100%;
   object-fit: contain;
   display: block;
+  /* fills the box without setting its height, so the panel ends level
+     with the boxes on its left */
+  position: absolute;
+  inset: 0;
 }
 .pt-lightbox {
   position: fixed;
