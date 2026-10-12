@@ -108,8 +108,13 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
       { id: "c-2", company: "Highveld Outdoor Gear", sage_customer_id: 502 },
     ]);
     seed(["jobs"], JOBS);
-    seed(["my_jobs"], JOBS.map((j) => ({ ...j, client_id: CLIENT, milestone: "In Transit", shipment_status: null, created_at: day(-60) })));
+    seed(["my_jobs"], JOBS.map((j, i) => ({ ...j, client_id: CLIENT, milestone: "In Transit", shipment_status: null, created_at: day(-60 + i * 7), etd: day(-50 + i * 7), origin: i % 2 ? "CNSZX, Shenzhen, China" : "CNNGB, Ningbo, China", supplier_company: i % 2 ? "Brilliant Rays Wheels Trading Co. Ltd" : "Shenzhen Bright Lighting Co." })));
     seed(["my_documents_all"], []);
+    seed(["my_suppliers"], [
+      { id: "s-1", company: "Brilliant Rays Wheels Trading Co. Ltd", contact: "Steven", email: null, phone: "+86-13258156783" },
+      { id: "s-2", company: "Shenzhen Bright Lighting Co.", contact: "Lily Chen", email: "lily@brightlighting.cn", phone: "+86 755 8888 1234" },
+      { id: "s-3", company: "Ningbo Ocean Tools", contact: null, email: "export@oceantools.com", phone: null },
+    ]);
     return true;
   });
   return <>{children}</>;

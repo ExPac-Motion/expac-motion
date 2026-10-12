@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { modeEmoji } from "./PortalLayout";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import Modal from "../../components/Modal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -57,7 +57,9 @@ export default function PortalShipmentsPage() {
   const stampsQ = usePortalMsgStamps();
   const [view, setView] = useState<"active" | "completed">("active");
   const [modeTab, setModeTab] = useState<ModeTab>("All");
-  const [search, setSearch] = useState("");
+  // Customer Party › View shipments arrives with { search: <shipper> }.
+  const location = useLocation();
+  const [search, setSearch] = useState(() => (location.state as { search?: string } | null)?.search ?? "");
   const [commsJob, setCommsJob] = useState<ClientJob | null>(null);
   const [taskJob, setTaskJob] = useState<ClientJob | null>(null);
   const [viewJob, setViewJob] = useState<ClientJob | null>(null);

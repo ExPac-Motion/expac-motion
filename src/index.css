@@ -8508,3 +8508,86 @@ th.sage-num {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ---------- Portal › Customer Party (shipper cards) ---------- */
+.pt-parties {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+.pt-party {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.pt-party-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pt-party-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+.pt-party-avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.pt-party-role {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--green-dark);
+}
+.pt-party-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.pt-party-details dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+.pt-party-details dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pt-party-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.pt-party-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.pt-party-stats b {
+  color: var(--ink);
+}
+.pt-party-foot .link-btn {
+  flex: none;
+  white-space: nowrap;
+}

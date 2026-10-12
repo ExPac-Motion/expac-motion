@@ -99,7 +99,7 @@ const EMOJI: Record<string, string> = {
   shipments: "🚚",
   invoices: "🧾",
   quotes: "🏷️",
-  party: "👥",
+  party: "🤝",
   tariff: "📋",
   items: "📦",
   reports: "📈",
