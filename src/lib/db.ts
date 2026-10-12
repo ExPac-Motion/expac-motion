@@ -55,6 +55,7 @@ import type {
   ClientQuoteLine,
   ClientRateSheetItem,
   ClientSupplier,
+  ClientSupplierInput,
   Profile,
   ProfilePatch,
   PortalUser,
@@ -1291,6 +1292,15 @@ export async function listMySuppliers(): Promise<ClientSupplier[]> {
   return unwrap<ClientSupplier[]>(
     await supabase.from("client_suppliers").select("*").order("company"),
   );
+}
+
+/** Portal › Customer Party: add (id null) or edit one of the customer's own shippers (0157). */
+export async function saveMyShipper(id: string | null, input: ClientSupplierInput): Promise<string> {
+  return unwrap<string>(await supabase.rpc("portal_save_shipper", { p_id: id, p: input }));
+}
+/** Removes one of the customer's own shippers that nothing uses yet (0157). */
+export async function deleteMyShipper(id: string): Promise<void> {
+  unwrap(await supabase.rpc("portal_delete_shipper", { p_id: id }));
 }
 
 /** The internal rate sheet, sell-only (see client_rate_sheet in 0071). */

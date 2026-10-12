@@ -8591,3 +8591,6 @@ th.sage-num {
   flex: none;
   white-space: nowrap;
 }
+.pt-party-address {
+  white-space: pre-line;
+}

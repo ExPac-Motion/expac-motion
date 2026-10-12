@@ -10,6 +10,7 @@ import { supabase } from "./supabase";
 import { applyTierMargins } from "./types";
 import { DEFAULT_ROLE_PERMISSIONS, type PermKey } from "./permissions";
 import type {
+  ClientSupplierInput,
   InboxMessagePatch,
   RateTierId,
   MailCampaignPatch,
@@ -946,6 +947,20 @@ export function useMyDocumentsAll() {
 /** "Customer Party", shippers used on this client's own shipments. */
 export function useMySuppliers() {
   return useQuery({ queryKey: ["my_suppliers"], queryFn: db.listMySuppliers });
+}
+export function useSaveMyShipper() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string | null; input: ClientSupplierInput }) => db.saveMyShipper(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my_suppliers"] }),
+  });
+}
+export function useDeleteMyShipper() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteMyShipper,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my_suppliers"] }),
+  });
 }
 /** "Tariff Sheet", the internal rate sheet, sell-only. */
 export function useMyRateSheet() {

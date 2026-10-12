@@ -55,11 +55,13 @@ export default function PortalShipmentsPage() {
   const trackQ = useMyJobTracking();
   const tasksQ = usePortalTasks();
   const stampsQ = usePortalMsgStamps();
-  const [view, setView] = useState<"active" | "completed">("active");
-  const [modeTab, setModeTab] = useState<ModeTab>("All");
-  // Customer Party › View shipments arrives with { search: <shipper> }.
+  // Customer Party › View shipments arrives with { search: <shipper> } and
+  // shows the active and completed shipments together.
   const location = useLocation();
-  const [search, setSearch] = useState(() => (location.state as { search?: string } | null)?.search ?? "");
+  const arrivedSearch = (location.state as { search?: string } | null)?.search ?? "";
+  const [view, setView] = useState<"all" | "active" | "completed">(arrivedSearch ? "all" : "active");
+  const [modeTab, setModeTab] = useState<ModeTab>("All");
+  const [search, setSearch] = useState(arrivedSearch);
   const [commsJob, setCommsJob] = useState<ClientJob | null>(null);
   const [taskJob, setTaskJob] = useState<ClientJob | null>(null);
   const [viewJob, setViewJob] = useState<ClientJob | null>(null);
@@ -87,7 +89,7 @@ export default function PortalShipmentsPage() {
     return (stampsQ.data ?? []).some((m) => m.job_id === j.id && m.direction === "out" && m.created_at > seen);
   };
 
-  const stageRows = jobs.filter((j) => (view === "completed" ? isDone(j) : !isDone(j)));
+  const stageRows = jobs.filter((j) => (view === "all" ? true : view === "completed" ? isDone(j) : !isDone(j)));
   const n = search.trim().toLowerCase();
   const rows = stageRows.filter(
     (j) =>
@@ -163,7 +165,7 @@ export default function PortalShipmentsPage() {
       width: 120,
       render: (j) => {
         const d = daysUntil(etaOf(j));
-        const flag = view === "active" && d !== null && d <= 5;
+        const flag = view !== "completed" && !isDone(j) && d !== null && d <= 5;
         return (
           <span
             className={flag ? "job-eta is-due" : undefined}
@@ -214,12 +216,15 @@ export default function PortalShipmentsPage() {
   return (
     <>
       <div className={commsJob ? "board-shift" : ""}>
-        <PageHeader eyebrow="Your shipments" title={view === "completed" ? "Completed Shipments" : "Active Shipments"} />
+        <PageHeader eyebrow="Your shipments" title={view === "completed" ? "Completed Shipments" : view === "all" ? "All Shipments" : "Active Shipments"} />
         <PageTools
           search={<SearchInput value={search} onChange={setSearch} placeholder="Search shipment, shipper, PO, AWB / B/L, container…" />}
           filters={
             <>
               <div className="wms-seg">
+                <button type="button" className={view === "all" ? "active" : ""} onClick={() => setView("all")}>
+                  All
+                </button>
                 <button type="button" className={view === "active" ? "active" : ""} onClick={() => setView("active")}>
                   Active
                 </button>
@@ -246,7 +251,7 @@ export default function PortalShipmentsPage() {
             <ErrorNote error={jobsQ.error} />
           ) : rows.length === 0 ? (
             <EmptyState>
-              {n ? `No shipments match "${search.trim()}".` : view === "completed" ? "No completed shipments yet." : "No active shipments right now."}
+              {n ? `No shipments match "${search.trim()}".` : view === "completed" ? "No completed shipments yet." : view === "all" ? "No shipments yet." : "No active shipments right now."}
             </EmptyState>
           ) : (
             <DataTable

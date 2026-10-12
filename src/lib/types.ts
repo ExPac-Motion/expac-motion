@@ -345,7 +345,12 @@ export interface ClientSupplier {
   contact: string | null;
   email: string | null;
   phone: string | null;
+  /** 0157: address / VAT no, and whether the customer may edit it (its own shipper). */
+  address?: string | null;
+  vat_no?: string | null;
+  editable?: boolean;
 }
+export type ClientSupplierInput = Pick<ClientSupplier, "company" | "contact" | "email" | "phone" | "address" | "vat_no">;
 
 /** Tariff Sheet, the internal rate_sheet with buy/margin collapsed into a
  *  single sell rate (see client_rate_sheet in 0071). */
