@@ -1,3 +1,4 @@
+import { BRAND_LOGO_URL } from "../../lib/supabase";
 import { useAuth } from "../../auth/AuthProvider";
 
 /**
@@ -20,7 +21,7 @@ export default function PortalPendingPage({
         <div className="brand">
           <div className="brand-mark">
             <img
-              src="https://fdzwnvinqiqrexhzgqkp.supabase.co/storage/v1/object/public/mail-assets/media/d2dbb470-55b1-483c-92ff-0cba3a2756b5.png"
+              src={BRAND_LOGO_URL}
               alt="EXPAC"
             />
           </div>

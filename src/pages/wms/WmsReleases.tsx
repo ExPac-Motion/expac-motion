@@ -39,7 +39,7 @@ import { orNull, useWmsLookups } from "./shared";
 import { notifyWms } from "../../lib/wmsNotify";
 import PodModal from "../../components/PodModal";
 import { saveReleasePod } from "../../lib/pod";
-import { supabase } from "../../lib/supabase";
+import { supabase, brandStorageUrl } from "../../lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 
 type View = "releases" | "requests" | ConsolMode;
@@ -157,7 +157,7 @@ function ReleasesList({ toggle }: { toggle: ReactNode }) {
               e.stopPropagation();
               const tab = window.open("", "_blank");
               const { data } = await supabase.storage.from("shipment-documents").createSignedUrl(r.pod_path as string, 300);
-              if (tab && data) tab.location.href = data.signedUrl;
+              if (tab && data) tab.location.href = brandStorageUrl(data.signedUrl);
             }}
           >
             ✓ {formatDate(r.pod_delivered_at)}

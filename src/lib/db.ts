@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, brandPublicUrl, brandStorageUrl } from "./supabase";
 import type { PermKey } from "./permissions";
 import { duplicateQuoteDraft, quoteDraftFromJob } from "./quoteDraft";
 import {
@@ -1281,7 +1281,7 @@ export async function getMyDocumentUrl(storagePath: string): Promise<string> {
     .from(DOCS_BUCKET)
     .createSignedUrl(storagePath, 300);
   if (error || !data) throw error ?? new Error("Could not create download link");
-  return data.signedUrl;
+  return brandStorageUrl(data.signedUrl);
 }
 
 /** Portal › shipment › Shipment Documents: the customer uploads a
@@ -1660,7 +1660,7 @@ export function publicMailAssetUrl(storagePath: string): string {
   const { data } = supabase.storage
     .from(MAIL_ASSETS_BUCKET)
     .getPublicUrl(storagePath);
-  if (!MAIL_CDN_BASE) return data.publicUrl;
+  if (!MAIL_CDN_BASE) return brandPublicUrl(data.publicUrl);
   const marker = `/object/public/${MAIL_ASSETS_BUCKET}/`;
   const i = data.publicUrl.indexOf(marker);
   return i === -1
@@ -2150,7 +2150,7 @@ export async function getShipmentDocumentUrl(
     .from(DOCS_BUCKET)
     .createSignedUrl(storagePath, 300);
   if (error || !data) throw error ?? new Error("Could not create download link");
-  return data.signedUrl;
+  return brandStorageUrl(data.signedUrl);
 }
 
 /* ---------- Personal Vault (Control Tower) ---------- */

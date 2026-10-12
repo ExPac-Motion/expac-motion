@@ -2,7 +2,7 @@
 // accept / decline of sent quotations, the customer's own packing lines and
 // the portal greeting.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "./supabase";
+import { brandPublicUrl, supabase } from "./supabase";
 import type { ClientQuote, ClientQuoteLine, QuoteLine, QuoteMode } from "./types";
 import { lineNet, lineVat } from "./calc";
 
@@ -480,7 +480,7 @@ export const usePortalAnnouncements = () =>
       if (error) return []; // before 0144 is applied
       return ((data ?? []) as { id: string; name: string; url: string; created_at: string }[]).map((a) => ({
         id: a.id,
-        url: a.url,
+        url: brandPublicUrl(a.url),
         created_at: a.created_at,
         // "new-lcl-service.png" -> "new lcl service"
         title: a.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " "),

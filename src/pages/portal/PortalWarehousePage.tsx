@@ -20,7 +20,7 @@ import {
 import { PackagesTable } from "../wms/WmsReceipts";
 import { ReceiptStatusBadge } from "../wms/shared";
 import ReceiptImages from "../wms/ReceiptImages";
-import { supabase } from "../../lib/supabase";
+import { supabase, brandStorageUrl } from "../../lib/supabase";
 import PortalReleaseRequests from "./PortalReleaseRequests";
 import PortalPreadvices from "./PortalPreadvices";
 import { PortalExceptions, PortalServices } from "./PortalWmsExtras";
@@ -107,7 +107,7 @@ export default function PortalWarehousePage() {
               e.stopPropagation();
               const tab = window.open("", "_blank");
               const { data } = await supabase.storage.from("shipment-documents").createSignedUrl(r.pod_path as string, 300);
-              if (tab && data) tab.location.href = data.signedUrl;
+              if (tab && data) tab.location.href = brandStorageUrl(data.signedUrl);
               else tab?.close();
             }}
           >

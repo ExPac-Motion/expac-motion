@@ -2,7 +2,7 @@
 // hooks and the stock / storage-billing maths for the WMS module. Stock is a
 // ledger (wms_stock_moves, pieces +in / −out); kg and CBM follow pro rata.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "./supabase";
+import { supabase, brandStorageUrl } from "./supabase";
 import { VAT_RATE } from "./calc";
 
 /* ---------- Types ---------- */
@@ -944,7 +944,7 @@ export async function listReceiptImages(receiptId: string): Promise<(WmsReceiptI
   ) as WmsReceiptImage[];
   if (rows.length === 0) return [];
   const { data } = await supabase.storage.from(IMG_BUCKET).createSignedUrls(rows.map((r) => r.storage_path), 3600);
-  const byPath = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
+  const byPath = new Map((data ?? []).map((d) => [d.path, d.signedUrl ? brandStorageUrl(d.signedUrl) : ""]));
   return rows.map((r) => ({ ...r, url: byPath.get(r.storage_path) ?? "" }));
 }
 export async function uploadReceiptImages(receiptId: string, files: File[]) {

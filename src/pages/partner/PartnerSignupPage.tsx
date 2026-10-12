@@ -1,3 +1,4 @@
+import { BRAND_LOGO_URL } from "../../lib/supabase";
 // /partner/signup?token=…, an agent / transporter / clearing agent creates
 // their partner-portal login from an ExPac invite (migration 0121).
 // signup_kind "partner" makes handle_new_user() create the profile as
@@ -87,7 +88,7 @@ export default function PartnerSignupPage() {
     <div className="brand">
       <div className="brand-mark">
         <img
-          src="https://fdzwnvinqiqrexhzgqkp.supabase.co/storage/v1/object/public/mail-assets/media/d2dbb470-55b1-483c-92ff-0cba3a2756b5.png"
+          src={BRAND_LOGO_URL}
           alt="EXPAC"
         />
       </div>

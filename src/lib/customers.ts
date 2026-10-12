@@ -3,7 +3,7 @@
 // Permits, Products & SKUs, Consignees & Shippers, Associated Leads,
 // Margins & Charges, plus the customer's own shippers and portal logins.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "./supabase";
+import { brandStorageUrl, supabase } from "./supabase";
 import type { Client, Contact } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -173,7 +173,7 @@ export const customersDb = {
   async fileUrl(path: string): Promise<string> {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 300);
     if (error || !data) throw error ?? new Error("Could not open the file");
-    return data.signedUrl;
+    return brandStorageUrl(data.signedUrl);
   },
   /** /api/customer-login (admin): create or reset a contact's portal login. */
   async portalLogin(v: { clientId: string; email: string; fullName?: string; password?: string; greeting?: string }): Promise<{ email: string; password: string; created: boolean }> {
