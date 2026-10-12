@@ -1284,6 +1284,34 @@ export async function getMyDocumentUrl(storagePath: string): Promise<string> {
   return data.signedUrl;
 }
 
+/** Portal › shipment › Shipment Documents: the customer uploads a
+ *  Commercial Invoice / Packing List / HAWB / HBL (0161). */
+export async function uploadMyShipmentDocument(jobId: string, file: File, docType: string): Promise<string> {
+  const safe = file.name.replace(/[^\w.() -]+/g, "_");
+  const path = `portal/${jobId}/${Date.now()}-${safe}`;
+  const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
+  if (up.error) throw up.error;
+  try {
+    return unwrap<string>(
+      await supabase.rpc("portal_add_shipment_document", {
+        p_job: jobId,
+        p_name: file.name,
+        p_path: path,
+        p_doc_type: docType,
+        p_size: file.size,
+      }),
+    );
+  } catch (e) {
+    await supabase.storage.from(DOCS_BUCKET).remove([path]);
+    throw e;
+  }
+}
+/** Removes one of the customer's own uploads (0161). */
+export async function deleteMyShipmentDocument(id: string): Promise<void> {
+  const path = unwrap<string>(await supabase.rpc("portal_delete_shipment_document", { p_id: id }));
+  if (path) await supabase.storage.from(DOCS_BUCKET).remove([path]);
+}
+
 /** Every document across all of this client's shipments, the portal's
  *  Invoices page filters this to doc_type = 'Invoice' client-side. */
 export async function listMyDocumentsAll(): Promise<ClientDocument[]> {

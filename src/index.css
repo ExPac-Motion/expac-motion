@@ -9041,3 +9041,85 @@ th.sage-num {
     text-align: left;
   }
 }
+
+/* Portal shipment page: Shipment Documents slots (0161) + wide Documents */
+.sp-slots {
+  display: grid;
+  gap: 10px;
+}
+.sp-slot {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.sp-slot.has {
+  border-style: solid;
+  background: var(--white);
+}
+.sp-slot-head {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.sp-slot-head b {
+  font-size: 0.88rem;
+}
+.sp-slot-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 2px solid var(--line);
+  color: #fff;
+}
+.sp-slot.has .sp-slot-mark {
+  background: var(--green);
+  border-color: var(--green);
+}
+.sp-slot-empty {
+  padding-left: 28px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.sp-slot-file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding-left: 28px;
+  font-size: 0.82rem;
+}
+.sp-slot-file .link-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.sp-slot-meta {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sp-slot-x {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 4px;
+}
+.sp-slot-x:hover {
+  color: var(--orange-ink);
+}
+.sp-docs-wide {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}

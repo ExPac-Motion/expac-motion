@@ -1,8 +1,9 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import {
+  useDeleteMyShipmentDocument,
   useMyDocuments,
   useMyJobEvents,
   useMyJobs,
@@ -10,12 +11,13 @@ import {
   useMyMessages,
   useMyTrackingEvents,
   useSendMyMessage,
+  useUploadMyShipmentDocument,
 } from "../../lib/hooks";
 import { getMyDocumentUrl } from "../../lib/db";
 import { carrierLabel } from "../../lib/docTemplates";
 import { currencyAmount, formatDate, formatDateTime, money, portCode } from "../../lib/format";
 import { packingTotals, volumetricFactor } from "../../lib/calc";
-import { MILESTONES, type Milestone, type PackingItem } from "../../lib/types";
+import { MILESTONES, type ClientDocument, type Milestone, type PackingItem } from "../../lib/types";
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
 import PortalQuoteModal from "./PortalQuoteViewPage";
@@ -45,6 +47,9 @@ export default function PortalShipmentPage() {
   const sendMessage = useSendMyMessage();
   const [draft, setDraft] = useState("");
   const [showQuote, setShowQuote] = useState(false);
+  const upload = useUploadMyShipmentDocument();
+  const remove = useDeleteMyShipmentDocument();
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const quotesQ = usePortalQuotes();
   const quote = (quotesQ.data ?? []).find((q) => q.id === job?.quote_id) ?? null;
@@ -71,6 +76,30 @@ export default function PortalShipmentPage() {
       tab?.close();
       toastError(err instanceof Error ? err.message : "Could not open document");
     }
+  }
+
+  function onUpload(docType: string, file: File) {
+    if (!id) return;
+    if (file.size > 20 * 1024 * 1024) return toastError("That file is over 20 MB, please send a smaller one.");
+    setUploading(docType);
+    upload.mutate(
+      { jobId: id, file, docType },
+      {
+        onSuccess: () => toast(`${docType} uploaded, ExPac has been notified`),
+        onError: (e) => toastError(e instanceof Error ? e.message : "Could not upload"),
+        onSettled: () => setUploading(null),
+      },
+    );
+  }
+  function onRemove(docId: string, name: string) {
+    if (!id || !window.confirm(`Remove ${name}?`)) return;
+    remove.mutate(
+      { id: docId, jobId: id },
+      {
+        onSuccess: () => toast("Removed"),
+        onError: (e) => toastError(e instanceof Error ? e.message : "Could not remove"),
+      },
+    );
   }
 
   async function onSend(e: FormEvent) {
@@ -100,6 +129,14 @@ export default function PortalShipmentPage() {
   const packing: PackingItem[] = (packQ.data ?? []).map((p) => ({ ...p, cbm: p.cbm ?? "" }));
   const pack = packingTotals(packing, volumetricFactor(job.mode));
   const tot = portalTotals(linesQ.data ?? []);
+  // Shipment Documents: the three the customer sends; everything else ExPac shares below.
+  const slots = [
+    { type: "Commercial Invoice", label: "Commercial Invoice" },
+    { type: "Packing List", label: "Packing List" },
+    air ? { type: "HAWB", label: "HAWB (House Air Waybill)" } : { type: "HBL", label: "HBL (House Bill of Lading)" },
+  ];
+  const docs = docsQ.data ?? [];
+  const otherDocs = docs.filter((d) => !slots.some((x) => x.type === d.doc_type));
 
   return (
     <>
@@ -219,29 +256,49 @@ export default function PortalShipmentPage() {
             </p>
           )}
         </Card>
-        <Card title="Documents">
-          {docsQ.isLoading ? (
-            <Loading />
-          ) : (docsQ.data ?? []).length === 0 ? (
-            <p className="hint" style={{ margin: 0 }}>No documents shared yet.</p>
-          ) : (
-            <div className="sp-docs">
-              {(docsQ.data ?? []).map((d) => (
-                <button key={d.id} type="button" className="sp-doc" onClick={() => onDownload(d.storage_path)} title={d.name}>
-                  <span className="sp-doc-ico" aria-hidden>
-                    📄
-                  </span>
-                  <span className="sp-doc-name">{d.name}</span>
-                  <span className="sp-doc-meta">
-                    {d.doc_type ? `${d.doc_type} · ` : ""}
-                    {formatDate(d.created_at)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+        <Card title="Shipment Documents" plain>
+          <div className="sp-slots">
+            {slots.map((slot) => (
+              <DocSlot
+                key={slot.type}
+                label={slot.label}
+                files={docs.filter((d) => d.doc_type === slot.type)}
+                busy={upload.isPending && uploading === slot.type}
+                onOpen={onDownload}
+                onUpload={(file) => onUpload(slot.type, file)}
+                onRemove={onRemove}
+              />
+            ))}
+          </div>
         </Card>
       </div>
+
+      {otherDocs.length > 0 && (
+        <div className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Documents</h2>
+            </div>
+            <span className="hint">
+              {otherDocs.length} file{otherDocs.length === 1 ? "" : "s"} shared by ExPac
+            </span>
+          </div>
+          <div className="sp-docs-wide">
+            {otherDocs.map((d) => (
+              <button key={d.id} type="button" className="sp-doc" onClick={() => onDownload(d.storage_path)} title={d.name}>
+                <span className="sp-doc-ico" aria-hidden>
+                  {fileIcon(d.name)}
+                </span>
+                <span className="sp-doc-name">{d.name}</span>
+                <span className="sp-doc-meta">
+                  {d.doc_type ? `${d.doc_type} · ` : ""}
+                  {formatDate(d.created_at)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <div className="panel-head">
@@ -335,14 +392,79 @@ export default function PortalShipmentPage() {
   );
 }
 
-function Card({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function Card({ title, action, plain, children }: { title: string; action?: ReactNode; plain?: boolean; children: ReactNode }) {
   return (
     <div className="panel sp-card">
       <div className="sp-card-head">
         <h3>{title}</h3>
         {action}
       </div>
-      <dl className="sp-rows">{children}</dl>
+      {plain ? children : <dl className="sp-rows">{children}</dl>}
+    </div>
+  );
+}
+
+const fileIcon = (name: string) =>
+  /\.(jpe?g|png|gif|webp|heic)$/i.test(name) ? "🖼️" : /\.(xlsx?|csv)$/i.test(name) ? "📊" : "📄";
+
+/** One Shipment Documents slot: its files (open, remove your own) and Upload. */
+function DocSlot({
+  label,
+  files,
+  busy,
+  onOpen,
+  onUpload,
+  onRemove,
+}: {
+  label: string;
+  files: ClientDocument[];
+  busy: boolean;
+  onOpen: (path: string) => void;
+  onUpload: (file: File) => void;
+  onRemove: (id: string, name: string) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className={`sp-slot${files.length ? " has" : ""}`}>
+      <div className="sp-slot-head">
+        <span className="sp-slot-mark" aria-hidden>
+          {files.length ? "✓" : ""}
+        </span>
+        <b>{label}</b>
+        <button type="button" className="link-btn" disabled={busy} onClick={() => input.current?.click()}>
+          {busy ? "Uploading…" : files.length ? "Add" : "Upload"}
+        </button>
+        <input
+          ref={input}
+          type="file"
+          hidden
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) onUpload(f);
+          }}
+        />
+      </div>
+      {files.length === 0 ? (
+        <span className="sp-slot-empty">Not uploaded yet</span>
+      ) : (
+        files.map((d) => (
+          <div key={d.id} className="sp-slot-file">
+            <button type="button" className="link-btn" onClick={() => onOpen(d.storage_path)} title={d.name}>
+              {d.name}
+            </button>
+            <span className="sp-slot-meta">
+              {d.from_client ? "You" : "ExPac"} · {formatDate(d.created_at)}
+            </span>
+            {d.from_client && (
+              <button type="button" className="sp-slot-x" aria-label={`Remove ${d.name}`} onClick={() => onRemove(d.id, d.name)}>
+                ✕
+              </button>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }

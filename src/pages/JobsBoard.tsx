@@ -1213,6 +1213,7 @@ function DocumentsSection({ job }: { job: Job }) {
                 {doc.doc_type && (
                   <span className="muted small"> · {doc.doc_type}</span>
                 )}
+                {doc.from_client && <span className="badge sent" style={{ marginLeft: 6 }}>From customer</span>}
               </button>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className="muted small">

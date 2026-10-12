@@ -906,6 +906,26 @@ export function useMyJobTracking() {
     refetchInterval: 120_000,
   });
 }
+export function useUploadMyShipmentDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { jobId: string; file: File; docType: string }) => db.uploadMyShipmentDocument(v.jobId, v.file, v.docType),
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ["my_documents", v.jobId] });
+      qc.invalidateQueries({ queryKey: ["my_documents_all"] });
+    },
+  });
+}
+export function useDeleteMyShipmentDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; jobId: string }) => db.deleteMyShipmentDocument(v.id),
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ["my_documents", v.jobId] });
+      qc.invalidateQueries({ queryKey: ["my_documents_all"] });
+    },
+  });
+}
 export function useMyJobEvents(jobId: string | undefined) {
   return useQuery({
     queryKey: ["my_job_events", jobId],

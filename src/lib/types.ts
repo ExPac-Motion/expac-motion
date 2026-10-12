@@ -346,6 +346,8 @@ export interface ClientDocument {
   doc_type: string | null;
   size_bytes: number | null;
   created_at: string;
+  /** Uploaded by the customer on the portal (0161). */
+  from_client?: boolean;
 }
 
 /** "Customer Party", a shipper used on one of this client's own shipments. */
@@ -394,12 +396,17 @@ export interface ShipmentDocument {
   size_bytes: number | null;
   created_by: string | null;
   created_at: string;
+  /** Uploaded by the customer on the portal (0161). */
+  from_client?: boolean;
 }
 
 /** Options for the "Type" picker on a shipment document upload. */
 export const DOCUMENT_TYPES = [
   "Invoice",
+  "Commercial Invoice",
   "Packing List",
+  "HAWB",
+  "HBL",
   "Proof of Delivery",
   "Bill of Lading / AWB",
   "Customs",
