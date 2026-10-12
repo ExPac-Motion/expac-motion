@@ -20,6 +20,7 @@ import { JourneySteps, useWmsJourney } from "./PortalWmsOverview";
 import PortalTip, { type Tip } from "./PortalTip";
 import { PortalIcon, modeEmoji } from "./PortalLayout";
 import { usePortalAnnouncements } from "../../lib/portal";
+import { invoiceStatus, useCustomerInvoices } from "../../lib/sage";
 
 const isDone = (j: ClientJob) => j.shipment_status === DELIVERED_STATUS || j.milestone === "Delivered";
 const modeKey = (m: string) =>
@@ -55,6 +56,10 @@ export default function PortalDashboardPage() {
   const quotes = quotesQ.data ?? [];
   const perms = profileQ.data?.portal_permissions;
   const canQuote = perms?.quotes !== false;
+  const canInvoices = perms?.invoices !== false;
+  const invQ = useCustomerInvoices();
+  const invoices = canInvoices ? invQ.data ?? [] : [];
+  const invCount = (s: string) => invoices.filter((i) => invoiceStatus(i) === s).length;
 
   const track = useMemo(() => new Map((trackQ.data ?? []).map((t) => [t.job_id, t])), [trackQ.data]);
   const etaOf = (j: ClientJob) => track.get(j.id)?.pod_eta || track.get(j.id)?.eta || j.eta;
@@ -161,6 +166,25 @@ export default function PortalDashboardPage() {
             total={quotes.length}
           />
         </div>
+
+        {invoices.length > 0 && (
+          <div className="panel">
+            <div className="panel-head">
+              <h2>🧾 Total Invoices</h2>
+              <Link to="/portal/invoices" className="link-btn">
+                View all
+              </Link>
+            </div>
+            <Donut
+              parts={[
+                { label: "Paid", value: invCount("Paid"), color: "var(--green)" },
+                { label: "Due", value: invCount("Due") + invCount("Partially paid"), color: "var(--amber)" },
+                { label: "Overdue", value: invCount("Overdue"), color: "var(--orange)" },
+              ].filter((p) => p.value)}
+              total={invoices.length}
+            />
+          </div>
+        )}
 
         <div className="panel pt-span3">
           <div className="panel-head">

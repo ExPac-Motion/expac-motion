@@ -53,6 +53,7 @@ import {
   type PermKey,
   type RolePermissions,
 } from "../lib/permissions";
+import SageSettingsTab from "./SageSettingsTab";
 
 type Tab =
   | "company"
@@ -63,7 +64,8 @@ type Tab =
   | "comms"
   | "replies"
   | "qcomms"
-  | "qreplies";
+  | "qreplies"
+  | "sage";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company Details" },
@@ -75,6 +77,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "replies", label: "Shipment Replies" },
   { key: "qcomms", label: "Quotation Comms" },
   { key: "qreplies", label: "Quotation Replies" },
+  { key: "sage", label: "Sage Accounting" },
 ];
 
 export default function SettingsPage() {
@@ -105,6 +108,7 @@ export default function SettingsPage() {
         {tab === "replies" && <ShipmentRepliesTab />}
         {tab === "qcomms" && <QuotationCommsTab />}
         {tab === "qreplies" && <QuotationRepliesTab />}
+        {tab === "sage" && <SageSettingsTab />}
       </div>
     </>
   );

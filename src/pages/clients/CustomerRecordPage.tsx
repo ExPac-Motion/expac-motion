@@ -19,6 +19,7 @@ import {
 } from "../../lib/customers";
 import ClientActivity from "../ClientActivity";
 import PortalAccessBox from "./PortalAccessBox";
+import SageAccountTab from "./SageAccountTab";
 import {
   AssociatedLeadsTab,
   ContactsTab,
@@ -38,7 +39,8 @@ type Tab =
   | "parties"
   | "leads"
   | "margins"
-  | "activity";
+  | "activity"
+  | "account";
 
 const TABS: [Tab, string][] = [
   ["general", "General"],
@@ -52,6 +54,7 @@ const TABS: [Tab, string][] = [
   ["leads", "Associated Leads"],
   ["margins", "Margins & Charges"],
   ["activity", "Quotes & Shipments"],
+  ["account", "Invoices & Account"],
 ];
 
 /** Fields saved by the record's Save button (the field tabs). */
@@ -347,6 +350,7 @@ export default function CustomerRecordPage() {
           {tab === "skus" && <SkusTab clientId={id} />}
           {tab === "parties" && <PartiesTab clientId={id} />}
           {tab === "leads" && <AssociatedLeadsTab client={customerQ.data} />}
+          {tab === "account" && <SageAccountTab client={customerQ.data} />}
           {tab === "activity" && (
             <div className="panel">
               <ClientActivity clientId={id} />

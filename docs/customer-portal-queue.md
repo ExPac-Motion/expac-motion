@@ -5,7 +5,6 @@ From the "Customer Portal EXPAC (ZAJNB)" deck, 5 Oct 2026. These headings / sect
 ## Dashboard
 - **Drag-and-drop widget layout** (rearrange / add / remove dashboard cards per customer). Today the layout is fixed.
 - **CO2 emissions** widgets: "CO2 Emissions Avg (kg/TTW)" and "Cumulative CO2 emissions". These need an emissions source per shipment (distance × mode factor, or a carrier API).
-- **Total Invoices donut (Paid / Due / Overdue)**. This needs payment status, which only exists once invoices come from Sage.
 - **Rate Search bar on the dashboard** (shipment type, origin port, destination port, pick-up date, cargo → instant rates). Today "Search Rates" opens the Tariff Sheet. Live rate search needs published buy/sell rates per lane.
 - **Create Booking** (customer books directly, without a quotation). Today every booking goes through Request a Quote, then acceptance.
 - **Shipments Calendar "Pick Up / Deliveries" filter**. Today the calendar shows Departures (ETD) and Arrivals (ETA). Pick-up and delivery dates per shipment aren't captured yet.
@@ -25,9 +24,8 @@ From the "Customer Portal EXPAC (ZAJNB)" deck, 5 Oct 2026. These headings / sect
 - **Pin / duplicate / edit a quotation** from the list (re-request a similar quote).
 
 ## Invoices
-- **Invoice amounts, due dates, statuses (Due / Paid / Partially paid / Disputed) and ageing (10–19 / 20–29 / 30–39 / 40+ days)**. Waiting on the Sage integration; today Invoices lists the invoice documents shared on shipments.
+- **Disputed** invoice status. Sage has no dispute flag; amounts, due dates, Due / Paid / Partially paid / Overdue, ageing, invoice PDFs, the Statement of Account and the dashboard Total Invoices donut are built from the Sage sync (0156).
 - **Pay online** ("Pay USD …" / "Pay AED …"). Needs a payment gateway (e.g. PayFast / Peach / Stripe) and a decision on currencies.
-- **Statement of Account & Ageing** report.
 
 ## Warehouse
 - **Product expiry dates and batch numbers** per SKU (receipts capture SKU, qty and dimensions, but not batch or expiry).

@@ -19,6 +19,8 @@ function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
 
 /** Every customer-record field beyond the basic contact-book ones. */
 export interface CustomerFields {
+  /** The linked Sage Accounting customer (0156). */
+  sage_customer_id?: number | null;
   client_code?: string | null;
   fax?: string | null;
   customer_segment?: string | null;

@@ -8379,3 +8379,128 @@ tr.clickable:hover td {
   font: inherit;
   font-weight: 700;
 }
+
+/* ---------- Sage Accounting invoices (0156) ---------- */
+.badge.inv-paid {
+  background: var(--green-tint);
+  color: var(--green-dark);
+}
+.badge.inv-part {
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+}
+.badge.inv-due {
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+}
+.badge.inv-overdue {
+  background: var(--orange-tint);
+  color: var(--orange-ink);
+}
+td.sage-num,
+th.sage-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.sage-summary {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.sage-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+}
+.sage-tile {
+  flex: 1 1 170px;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+}
+.sage-tile span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.sage-tile b {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.sage-tile em {
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.sage-tile.overdue {
+  border-color: var(--orange);
+}
+.sage-tile.overdue b {
+  color: var(--orange-ink);
+}
+.sage-tile-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+.sage-ageing {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.sage-age {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--paper);
+}
+.sage-age span {
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.sage-age b {
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+.sage-age.late b {
+  color: var(--orange-ink);
+}
+.sage-age-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.sage-age-bar i {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+}
+.sage-age.late .sage-age-bar i {
+  background: var(--orange);
+}
+.sage-state {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 18px;
+  margin: 0 0 14px;
+}
+.sage-state dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+.sage-state dd {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .sage-ageing {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
