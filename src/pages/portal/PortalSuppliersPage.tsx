@@ -83,7 +83,7 @@ export default function PortalSuppliersPage() {
                   {initials(p.company)}
                 </span>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h3>{p.company}</h3>
+                  <h3 title={p.company}>{p.company}</h3>
                   <span className="pt-party-role">Shipper / Exporter</span>
                 </div>
                 {p.editable !== false && (

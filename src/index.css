@@ -8545,6 +8545,10 @@ th.sage-num {
   margin: 0;
   font-size: 1rem;
   line-height: 1.25;
+  /* one line, a very long name ends in … (full name on hover) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .pt-party-avatar {
   flex: none;
