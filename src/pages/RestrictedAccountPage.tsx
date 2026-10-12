@@ -26,8 +26,9 @@ export default function RestrictedAccountPage() {
         </div>
         <h1>Access restricted</h1>
         <p className="sub">
-          This login's access has been restricted. Contact ExPac Forwarding
-          if you believe this is a mistake.
+          This login isn't active yet, or its access has been restricted. An
+          ExPac admin activates new logins under Settings › Team. Contact
+          ExPac Forwarding if you believe this is a mistake.
         </p>
         <button className="btn outline" onClick={() => signOut()}>
           Sign out

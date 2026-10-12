@@ -29,7 +29,7 @@ export default function LoginPage() {
       } else if (mode === "up") {
         await signUp(email, password, fullName);
         setNotice(
-          "Account created. If email confirmation is on, check your inbox, then sign in.",
+          "Account created. An ExPac admin needs to activate it (Settings › Team) before you can use Motion. Customers: please use the Customer Portal sign-up instead.",
         );
         setMode("in");
       } else {

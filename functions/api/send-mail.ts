@@ -134,6 +134,31 @@ export async function onRequestPost(context) {
   ) {
     return json({ error: "Not allowed to send email." }, 403);
   }
+  // A portal / partner login only sends the portal's own notices to
+  // support@: one recipient, no cc / bcc / attachments, plain text only (the
+  // HTML is built here from the escaped text, so nothing can be injected).
+  if (internalOnly) {
+    if (
+      to.length !== 1 ||
+      String(to[0]).trim().toLowerCase() !== "support@expac.co.za" ||
+      cc.length ||
+      bcc.length ||
+      (Array.isArray(body.attachments) && body.attachments.length)
+    ) {
+      return json({ error: "Not allowed to send email." }, 403);
+    }
+    const text = String(body.text || "").slice(0, 5000);
+    const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    body.text = text;
+    body.html = "<p>" + esc(text).replace(/\n/g, "<br>") + "</p>";
+    body.subject = "[Portal] " + String(body.subject || "Message").slice(0, 150).replace(/^\[Portal\]\s*/, "");
+    body.fromName = "ExPac Motion Portal";
+    delete body.replyTo;
+    delete body.unsubscribeUrl;
+    delete body.inReplyTo;
+    delete body.references;
+    delete body.jobId;
+  }
   if (!body.subject || (!body.html && !body.text)) {
     return json({ error: "subject and html/text are required." }, 400);
   }
