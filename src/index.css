@@ -8512,8 +8512,19 @@ th.sage-num {
 /* ---------- Portal › Customer Party (shipper cards) ---------- */
 .pt-parties {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  /* three cards per row, each a third of the page (fewer on small screens) */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+@media (max-width: 1100px) {
+  .pt-parties {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .pt-parties {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .pt-party {
   display: flex;
