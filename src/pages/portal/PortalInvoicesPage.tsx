@@ -95,7 +95,7 @@ export default function PortalInvoicesPage() {
     <>
       <PageHeader eyebrow="Your account" title="Invoices" />
       <PageTools
-        count={invQ.isLoading ? undefined : `${shown.length} invoice${shown.length === 1 ? "" : "s"}`}
+        count={invQ.isLoading ? undefined : linked ? `${shown.length} invoice${shown.length === 1 ? "" : "s"}` : `${documents.length} invoice${documents.length === 1 ? "" : "s"}`}
         filters={
           linked ? (
             <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label="Show">
