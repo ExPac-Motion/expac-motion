@@ -1,13 +1,13 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { modeEmoji } from "./PortalLayout";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import Modal from "../../components/Modal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import DateInput from "../../components/DateInput";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, RowActions, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
-import { useMyDocuments, useMyDocumentsAll, useMyJobTracking, useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
+import { useMyDocumentsAll, useMyJobTracking, useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
 import { getMyDocumentUrl } from "../../lib/db";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import { DELIVERED_STATUS, shipmentStatusSlug, type ClientJob } from "../../lib/types";
@@ -16,7 +16,6 @@ import {
   markCommsSeen,
   useCreatePortalTask,
   usePortalMsgStamps,
-  usePortalQuotes,
   usePortalTasks,
   type PortalTask,
 } from "../../lib/portal";
@@ -58,13 +57,13 @@ export default function PortalShipmentsPage() {
   // Customer Party › View shipments arrives with { search: <shipper> } and
   // shows the active and completed shipments together.
   const location = useLocation();
+  const navigate = useNavigate();
   const arrivedSearch = (location.state as { search?: string } | null)?.search ?? "";
   const [view, setView] = useState<"all" | "active" | "completed">(arrivedSearch ? "all" : "active");
   const [modeTab, setModeTab] = useState<ModeTab>("All");
   const [search, setSearch] = useState(arrivedSearch);
   const [commsJob, setCommsJob] = useState<ClientJob | null>(null);
   const [taskJob, setTaskJob] = useState<ClientJob | null>(null);
-  const [viewJob, setViewJob] = useState<ClientJob | null>(null);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const [, bump] = useState(0);
 
@@ -122,7 +121,7 @@ export default function PortalShipmentsPage() {
             onTask={() => setTaskJob(j)}
             taskTitle="Tasks, ask ExPac for something on this shipment"
             taskOpen={openTaskJobs.has(j.id)}
-            onView={() => setViewJob(j)}
+            onView={() => navigate(`/portal/shipments/${j.id}`)}
           />
         </div>
       ),
@@ -133,7 +132,7 @@ export default function PortalShipmentsPage() {
       header: "Shipment",
       width: 130,
       render: (j) => (
-        <button type="button" className="ref-link pt-ref-btn" onClick={() => setViewJob(j)}>
+        <button type="button" className="ref-link pt-ref-btn" onClick={() => navigate(`/portal/shipments/${j.id}`)}>
           {j.reference}
         </button>
       ),
@@ -261,13 +260,12 @@ export default function PortalShipmentsPage() {
               columns={columns}
               rows={rows}
               rowKey={(j) => j.id}
-              onRowClick={(j) => setViewJob(j)}
+              onRowClick={(j) => navigate(`/portal/shipments/${j.id}`)}
             />
           )}
         </div>
       </div>
       {commsJob && <PortalCommsRail job={commsJob} onClose={() => setCommsJob(null)} />}
-      {viewJob && <PortalShipmentViewModal job={viewJob} eta={etaOf(viewJob)} etd={etdOf(viewJob)} onClose={() => setViewJob(null)} />}
       {taskJob && <PortalTasksModal job={taskJob} tasks={(tasksQ.data ?? []).filter((t) => t.job_id === taskJob.id && (t.kind ?? "task") === "task")} onClose={() => setTaskJob(null)} />}
     </>
   );
@@ -428,122 +426,6 @@ function PortalTasksModal({ job, tasks, onClose }: { job: ClientJob; tasks: Port
           </button>
         </div>
       </form>
-    </Modal>
-  );
-}
-
-const docLabel = (mode: string) =>
-  mode.startsWith("Air") || mode.startsWith("Courier") ? "AWB No" : mode.startsWith("Sea") ? "MBL No" : "Ref No";
-
-function ViewField({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div className="hint" style={{ marginBottom: 4 }}>
-        {label}
-      </div>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-/** The shipment View, same layout as ExPac's Active Shipments view (no
- *  notes / customer field); documents are the ones ExPac shares. */
-export function PortalShipmentViewModal({
-  job,
-  eta,
-  etd,
-  onClose,
-}: {
-  job: ClientJob;
-  eta: string | null | undefined;
-  etd: string | null | undefined;
-  onClose: () => void;
-}) {
-  const navigate = useNavigate();
-  const { error } = useToast();
-  const docsQ = useMyDocuments(job.id);
-  const quotesQ = usePortalQuotes();
-  // A shipment keeps its quotation's system number.
-  const quote = (quotesQ.data ?? []).find((q) => q.reference === job.reference);
-
-  async function open(path: string) {
-    const tab = window.open("", "_blank");
-    try {
-      const url = await getMyDocumentUrl(path);
-      if (tab) tab.location.href = url;
-    } catch (e) {
-      tab?.close();
-      error(e instanceof Error ? e.message : "Could not open the document");
-    }
-  }
-
-  return (
-    <Modal
-      title={job.reference}
-      onClose={onClose}
-      wide
-      headerActions={
-        <button className="btn outline" onClick={() => navigate(`/portal/shipments/${job.id}`)}>
-          Track shipment
-        </button>
-      }
-    >
-      <div className="grid2">
-        <ViewField label="Shipper" value={job.supplier_company ?? "—"} />
-        <ViewField label="Mode" value={job.mode} />
-        <ViewField label="Milestone" value={job.milestone} />
-        <ViewField label="Shipment Status" value={job.shipment_status || "—"} />
-        <ViewField label="REF" value={job.po_no || "—"} />
-        <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
-        <ViewField label="Container No" value={job.container_no || "—"} />
-        <ViewField label="Shipping Line" value={job.shipping_line || "—"} />
-        <ViewField label="Airline" value={job.carrier_name || "—"} />
-        <ViewField label="Vessel" value={job.vessel_name || "—"} />
-        <ViewField label="POL" value={code(job.origin) || "—"} />
-        <ViewField label="POD" value={code(job.destination) || "—"} />
-        <ViewField label="ETD" value={formatDate(etd)} />
-        <ViewField label="ETA" value={formatDate(eta)} />
-        <ViewField label="PDD" value={formatDate(job.provisional_delivery_date)} />
-        <ViewField label="Created On" value={formatDate(job.created_at)} />
-      </div>
-      {quote && (
-        <p style={{ marginTop: 8 }}>
-          <Link to={`/portal/quotes/${quote.id}`} onClick={onClose}>
-            View originating quotation →
-          </Link>
-        </p>
-      )}
-
-      <div style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
-        {(job.pod_delivered_at || job.pod_signed_by) && (
-          <p className="pt-note ok" style={{ marginTop: 0 }}>
-            Delivered {formatDate(job.pod_delivered_at)}
-            {job.pod_signed_by ? ", signed for by " + job.pod_signed_by : ""}. The signed proof of delivery is in the documents below.
-          </p>
-        )}
-        <strong>Documents</strong>
-        {docsQ.isLoading ? (
-          <Loading />
-        ) : (docsQ.data ?? []).length === 0 ? (
-          <p className="hint">No documents shared on this shipment yet.</p>
-        ) : (
-          <table className="table--compact" style={{ marginTop: 8 }}>
-            <tbody>
-              {(docsQ.data ?? []).map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    <button type="button" className="link-btn" onClick={() => void open(d.storage_path)}>
-                      {d.name}
-                    </button>
-                  </td>
-                  <td>{d.doc_type || "—"}</td>
-                  <td>{formatDate(d.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
     </Modal>
   );
 }
