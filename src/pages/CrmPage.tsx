@@ -11,6 +11,7 @@ import LeadSourcesPage from "./crm/LeadSourcesPage";
 import OpportunitiesTab from "./crm/OpportunitiesTab";
 import SalesDashboardTab from "./crm/SalesDashboardTab";
 import InboxTab from "./crm/InboxTab";
+import CustomerMessagesTab from "./crm/CustomerMessagesTab";
 import SalesPersonPage from "./crm/SalesPersonPage";
 import TemplatesPage from "./crm/TemplatesPage";
 import TrendsTab from "./crm/TrendsTab";
@@ -18,6 +19,7 @@ import TrendsTab from "./crm/TrendsTab";
 type Tab =
   | "dashboard"
   | "inbox"
+  | "messages"
   | "trends"
   | "leads"
   | "opportunities"
@@ -33,6 +35,7 @@ type Tab =
 const COPY: Record<Tab, { eyebrow: string; title: string }> = {
   dashboard: { eyebrow: "Sales performance", title: "Sales CRM" },
   inbox: { eyebrow: "support@expac.co.za", title: "Inbox" },
+  messages: { eyebrow: "Customer Portal chat", title: "Customer Messages" },
   trends: { eyebrow: "Sales performance", title: "Trends" },
   leads: { eyebrow: "Prospects", title: "Leads" },
   opportunities: { eyebrow: "Client relationships", title: "Opportunities" },
@@ -58,7 +61,7 @@ export default function CrmPage() {
   // Dashboard / Trends (sales performance, financials) need "crm" (0131);
   // every other tab needs "leads" (0133).
   const allowed = (t: Tab) =>
-    t === "inbox" ? can("inbox") : t === "dashboard" || t === "trends" ? can("crm") : can("leads");
+    t === "inbox" ? can("inbox") : t === "messages" ? can("customers") : t === "dashboard" || t === "trends" ? can("crm") : can("leads");
   const tab: Tab | null = allowed(asked)
     ? asked
     : can("leads")
@@ -74,6 +77,7 @@ export default function CrmPage() {
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
       {tab === "dashboard" && <SalesDashboardTab />}
       {tab === "inbox" && <InboxTab />}
+      {tab === "messages" && <CustomerMessagesTab />}
       {tab === "trends" && <TrendsTab />}
       {tab === "leads" && <LeadsPage />}
       {tab === "opportunities" && <OpportunitiesTab />}

@@ -42,6 +42,8 @@ export interface NotificationSources {
   /** All shipment messages (both directions), not just unread. */
   messages?: Message[];
   documents?: ShipmentDocument[];
+  /** Unread General portal chat messages (0158). */
+  generalMessages?: { id: string; client_id: string; created_at: string; company: string | null }[];
 }
 
 const DAY = 86_400_000;
@@ -239,6 +241,18 @@ export function buildNotifications(
       clientId: j?.client_id ?? null,
     });
   }
+
+  for (const g of src.generalMessages ?? [])
+    if (recent(g.created_at))
+      out.push({
+        key: `gen-${g.id}`,
+        domain: "mail",
+        text: `New portal message, ${g.company ?? "customer"}`,
+        when: g.created_at,
+        to: "/crm?tab=messages",
+        navState: { openClientId: g.client_id },
+        clientId: g.client_id,
+      });
 
   for (const d of src.documents ?? [])
     if (recent(d.created_at)) {

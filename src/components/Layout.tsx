@@ -104,6 +104,7 @@ const NAV: NavModule[] = [
     children: [
       { to: "/crm", label: "Dashboard" },
       { to: "/crm?tab=inbox", label: "Inbox" },
+      { to: "/crm?tab=messages", label: "Customer Messages" },
       { to: "/crm?tab=trends", label: "Trends" },
       { to: "/crm?tab=leads", label: "Leads" },
       { to: "/crm?tab=opportunities", label: "Opportunities" },
@@ -208,7 +209,7 @@ export default function Layout() {
     .map((m) => {
       if (m.to !== "/crm") return m;
       const children = m.children?.filter((c) =>
-        c.to.includes("tab=inbox") ? can("inbox") : crmTab(c.to) ? can("crm") : can("leads"),
+        c.to.includes("tab=inbox") ? can("inbox") : c.to.includes("tab=messages") ? can("customers") : crmTab(c.to) ? can("crm") : can("leads"),
       );
       return { ...m, to: children?.[0]?.to ?? m.to, children };
     })

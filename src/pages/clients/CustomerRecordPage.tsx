@@ -20,6 +20,7 @@ import {
 import ClientActivity from "../ClientActivity";
 import PortalAccessBox from "./PortalAccessBox";
 import SageAccountTab from "./SageAccountTab";
+import ClientChatThread from "../../components/ClientChatThread";
 import {
   AssociatedLeadsTab,
   ContactsTab,
@@ -40,7 +41,8 @@ type Tab =
   | "leads"
   | "margins"
   | "activity"
-  | "account";
+  | "account"
+  | "messages";
 
 const TABS: [Tab, string][] = [
   ["general", "General"],
@@ -55,6 +57,7 @@ const TABS: [Tab, string][] = [
   ["margins", "Margins & Charges"],
   ["activity", "Quotes & Shipments"],
   ["account", "Invoices & Account"],
+  ["messages", "Messages"],
 ];
 
 /** Fields saved by the record's Save button (the field tabs). */
@@ -351,6 +354,14 @@ export default function CustomerRecordPage() {
           {tab === "parties" && <PartiesTab clientId={id} />}
           {tab === "leads" && <AssociatedLeadsTab client={customerQ.data} />}
           {tab === "account" && <SageAccountTab client={customerQ.data} />}
+          {tab === "messages" && (
+            <div className="panel cr-section">
+              <div className="cr-section-head">
+                <h3>Portal messages (General, not about a shipment)</h3>
+              </div>
+              <ClientChatThread clientId={id} company={customerQ.data.company} clientEmail={customerQ.data.email} />
+            </div>
+          )}
           {tab === "activity" && (
             <div className="panel">
               <ClientActivity clientId={id} />

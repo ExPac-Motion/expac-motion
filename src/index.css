@@ -8609,3 +8609,143 @@ th.sage-num {
 .pt-party-address {
   white-space: pre-line;
 }
+
+/* ---------- General portal chat in Motion (0158) ---------- */
+.cchat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.cchat-body {
+  flex: 1;
+  min-height: 220px;
+  max-height: 520px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 2px 12px;
+}
+.cchat-msg {
+  align-self: flex-start;
+  max-width: 78%;
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.cchat-msg.ours {
+  align-self: flex-end;
+  background: var(--green-tint);
+}
+.cchat-meta {
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.cchat-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.cchat-form {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.cchat-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.cmsg-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.cmsg-list {
+  display: grid;
+  gap: 4px;
+  max-height: 640px;
+  overflow-y: auto;
+}
+.cmsg-item {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.cmsg-item:hover {
+  background: var(--paper);
+}
+.cmsg-item.active {
+  background: var(--teal-tint);
+  border-color: var(--teal);
+}
+.cmsg-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cmsg-item-top b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmsg-item-top span {
+  flex: none;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.cmsg-preview {
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmsg-unread {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .cmsg-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.cmsg-list {
+  overflow-x: hidden;
+}
+.cmsg-item,
+.cmsg-item-top,
+.cmsg-preview {
+  min-width: 0;
+}
+.cmsg-item {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+.cmsg-item-top .cmsg-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+.cmsg-item-top .cmsg-unread {
+  color: #fff;
+}

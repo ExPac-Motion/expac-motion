@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useUnreadClientChat } from "../lib/clientChat";
 import { useNavigate } from "react-router-dom";
 import {
   useFollowUpLog,
@@ -74,6 +75,7 @@ export default function NotificationsBell() {
   const campaigns = useMailCampaigns().data;
   const followUps = useFollowUpLog().data;
   const unreadMessages = useUnreadMessages().data;
+  const unreadGeneral = useUnreadClientChat().data;
   const stateQ = useNotificationState();
   const setState = useSetNotificationState();
 
@@ -101,8 +103,9 @@ export default function NotificationsBell() {
       campaigns,
       followUps,
       messages,
+      generalMessages: (unreadGeneral ?? []).map((g) => ({ ...g, company: g.clients?.company ?? null })),
     });
-  }, [now, leads, quotes, jobs, opps, tasks, campaigns, followUps, unreadMessages]);
+  }, [now, leads, quotes, jobs, opps, tasks, campaigns, followUps, unreadMessages, unreadGeneral]);
 
   const visible = items.filter((n) => !stateByKey.get(n.key)?.archived_at);
   const unread = visible.filter((n) => !stateByKey.get(n.key)?.read_at);

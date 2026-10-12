@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import SageSettingsTab from "./SageSettingsTab";
 import SageAccountTab from "./clients/SageAccountTab";
+import CustomerMessagesTab from "./crm/CustomerMessagesTab";
 import type { CustomerRecord } from "../lib/customers";
 import type { CustomerInvoice, SageCustomer, SageState } from "../lib/sage";
 
@@ -110,6 +111,19 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
     seed(["jobs"], JOBS);
     seed(["my_jobs"], JOBS.map((j, i) => ({ ...j, client_id: CLIENT, milestone: "In Transit", shipment_status: null, created_at: day(-60 + i * 7), etd: day(-50 + i * 7), origin: i % 2 ? "CNSZX, Shenzhen, China" : "CNNGB, Ningbo, China", supplier_company: i % 2 ? "Brilliant Rays Wheels Trading Co. Ltd" : "Shenzhen Bright Lighting Co." })));
     seed(["my_documents_all"], []);
+    const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+    const CHAT = [
+      { id: "g1", client_id: CLIENT, direction: "in", body: "Hi, can you send us your latest LCL rates from Ningbo to Durban?", sender_name: "Mr. Gilbert", sender_email: "gilbert@demoimports.co.za", created_at: ago(180), read_at: ago(170) },
+      { id: "g2", client_id: CLIENT, direction: "out", body: "Morning Mr. Gilbert, the updated tariff is on your portal under Tariff Sheet. Shout if you need a quote.", sender_name: "Elvis Mondlana", sender_email: null, created_at: ago(160), read_at: null },
+      { id: "g3", client_id: CLIENT, direction: "in", body: "Thanks! Also, who do we speak to about our account statement?", sender_name: "Mr. Gilbert", sender_email: "gilbert@demoimports.co.za", created_at: ago(12), read_at: null },
+    ];
+    seed(["my_general_chat"], CHAT);
+    seed(["client_chat", CLIENT], CHAT);
+    seed(["client_chat"], [
+      ...CHAT.slice().reverse().map((m) => ({ ...m, clients: { company: "Demo Imports (Pty) Ltd", email: "accounts@demoimports.co.za" } })),
+      { id: "g9", client_id: "c-2", direction: "in", body: "Please update our delivery address for future shipments.", sender_name: "Thandi", sender_email: "thandi@highveld.co.za", created_at: ago(60 * 26), read_at: ago(60 * 25), clients: { company: "Highveld Outdoor Gear", email: "finance@highveld.co.za" } },
+    ]);
+    seed(["client_chat", "c-2"], []);
     seed(["my_suppliers"], [
       { id: "s-1", company: "Brilliant Rays Wheels Trading Co. Ltd", contact: "Steven", email: null, phone: "+86-13258156783", address: "No. 18 Industrial Rd\nNingbo, Zhejiang", vat_no: null, editable: true },
       { id: "s-2", company: "Shenzhen Bright Lighting Co.", contact: "Lily Chen", email: "lily@brightlighting.cn", phone: "+86 755 8888 1234" },
@@ -127,6 +141,17 @@ export function SageSettingsDemo() {
         <div className="panel">
           <SageSettingsTab />
         </div>
+      </SageDemoSeed>
+    </div>
+  );
+}
+
+export function CustomerMessagesDemo() {
+  return (
+    <div className="main">
+      <SageDemoSeed>
+        <h1 style={{ marginTop: 0 }}>Customer Messages</h1>
+        <CustomerMessagesTab />
       </SageDemoSeed>
     </div>
   );
