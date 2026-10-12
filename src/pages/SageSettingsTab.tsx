@@ -89,8 +89,8 @@ export default function SageSettingsTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" }}>
-        <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 16, marginBottom: 12 }}>
+        <div style={{ flex: "1 1 auto", minWidth: 0 }}>
           <h3 style={{ margin: "0 0 4px" }}>Sage Business Cloud Accounting</h3>
           <p className="muted" style={{ marginTop: 0 }}>
             Read-only. Invoices, payments and balances come in from Sage every 30 minutes and show on the customer record
@@ -98,7 +98,7 @@ export default function SageSettingsTab() {
             shipment number in its Reference, and fills in the shipment's Invoiced / Invoice No when blank.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flex: "none" }}>
           <button type="button" className="btn outline" onClick={runMatch} disabled={match.isPending || customers.length === 0}>
             {match.isPending ? "Matching…" : "Link by name"}
           </button>

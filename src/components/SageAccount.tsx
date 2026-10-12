@@ -120,7 +120,7 @@ export function InvoiceTable({
     {
       key: "invoice",
       header: "Invoice No",
-      width: 130,
+      width: 120,
       sortValue: (i) => i.document_number ?? "",
       render: (i) => (
         <button type="button" className="btn ghost small" style={{ textAlign: "left" }} onClick={() => open(i)}>
@@ -131,7 +131,7 @@ export function InvoiceTable({
     {
       key: "shipment",
       header: "Shipment No",
-      width: 130,
+      width: 120,
       sortValue: (i) => (i.job_id ? shipments.get(i.job_id) ?? "" : i.reference ?? ""),
       render: (i) =>
         i.job_id && shipments.get(i.job_id) ? (
@@ -140,12 +140,12 @@ export function InvoiceTable({
           i.reference || ""
         ),
     },
-    { key: "date", header: "Date", width: 110, sortValue: (i) => i.invoice_date ?? "", render: (i) => formatDate(i.invoice_date) },
-    { key: "due", header: "Due Date", width: 110, sortValue: (i) => i.due_date ?? "", render: (i) => formatDate(i.due_date) },
+    { key: "date", header: "Date", width: 100, sortValue: (i) => i.invoice_date ?? "", render: (i) => formatDate(i.invoice_date) },
+    { key: "due", header: "Due Date", width: 100, sortValue: (i) => i.due_date ?? "", render: (i) => formatDate(i.due_date) },
     {
       key: "total",
       header: "Total (incl. VAT)",
-      width: 140,
+      width: 130,
       cellClass: "sage-num",
       sortValue: (i) => Number(i.total) || 0,
       render: (i) => money(i.total),
@@ -153,7 +153,7 @@ export function InvoiceTable({
     {
       key: "amount_due",
       header: "Amount Due",
-      width: 130,
+      width: 120,
       cellClass: "sage-num",
       sortValue: (i) => Number(i.amount_due) || 0,
       render: (i) => money(i.amount_due),
@@ -161,7 +161,7 @@ export function InvoiceTable({
     {
       key: "status",
       header: "Status",
-      width: 140,
+      width: 130,
       sortValue: (i) => invoiceStatus(i),
       render: (i) => <InvoiceStatusBadge invoice={i} />,
     },

@@ -16,6 +16,7 @@ import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
+import { SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
@@ -196,11 +197,14 @@ function AppRoutes() {
           )}
           {import.meta.env.DEV && <Route path="/dev/customer/:id" element={<div className="main"><CustomerRecordPage /></div>} />}
           {import.meta.env.DEV && (
-            <Route path="/dev/portal" element={<PortalLayout />}>
+            <Route path="/dev/portal" element={<SageDemoSeed><PortalLayout /></SageDemoSeed>}>
               <Route index element={<PortalDashboardPage />} />
+              <Route path="invoices" element={<PortalInvoicesPage />} />
               <Route path="quote" element={<PortalRequestQuotePage />} />
             </Route>
           )}
+          {import.meta.env.DEV && <Route path="/dev/sage-settings" element={<SageSettingsDemo />} />}
+          {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
           {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}

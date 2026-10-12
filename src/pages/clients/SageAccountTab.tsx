@@ -24,6 +24,7 @@ export default function SageAccountTab({ client }: { client: CustomerRecord }) {
   const link = useLinkSageCustomer();
   const linkedId = client.sage_customer_id ?? null;
   const [pick, setPick] = useState<string>("");
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
   const sageCustomers = customersQ.data ?? [];
   const linked = sageCustomers.find((c) => c.sage_id === linkedId) ?? null;
@@ -117,6 +118,7 @@ export default function SageAccountTab({ client }: { client: CustomerRecord }) {
         <div className="panel cr-section">
           <div className="cr-section-head">
             <h3>Invoices</h3>
+            <div ref={setToolsSlot} />
           </div>
           {invQ.isLoading ? (
             <Loading />
@@ -131,6 +133,7 @@ export default function SageAccountTab({ client }: { client: CustomerRecord }) {
                 <InvoiceTable
                   invoices={invQ.data ?? []}
                   tableKey="customer-sage-invoices"
+                  toolsPortal={toolsSlot}
                   shipments={shipments}
                   shipmentLink={(id) => ({ to: "/jobs", state: { openJobId: id } })}
                 />
