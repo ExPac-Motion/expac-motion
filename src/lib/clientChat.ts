@@ -161,6 +161,13 @@ export function useReplyClientChat() {
   });
 }
 
+/** A staff sender's label: their name plus `suffix` (", ExPac" / " (ExPac)"),
+ *  unless the name already says ExPac ("Oliver | EXPAC (ZAJNB)"). */
+export function expacLabel(name: string | null | undefined, suffix: string): string {
+  if (!name) return "ExPac";
+  return /expac/i.test(name) ? name : name + suffix;
+}
+
 /** Where a reply's email goes: the logins that wrote in, else the customer's email. */
 export function replyEmails(thread: ClientChatMessage[], fallback: string | null | undefined): string[] {
   const fromThread = [

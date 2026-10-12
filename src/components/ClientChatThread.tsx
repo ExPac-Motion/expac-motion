@@ -6,7 +6,7 @@ import { ErrorNote, Loading } from "./common";
 import { useToast } from "./Toast";
 import { formatDateTime } from "../lib/format";
 import { useMyProfile } from "../lib/hooks";
-import { replyEmails, useClientThread, useMarkClientChatRead, useReplyClientChat } from "../lib/clientChat";
+import { expacLabel, replyEmails, useClientThread, useMarkClientChatRead, useReplyClientChat } from "../lib/clientChat";
 
 export default function ClientChatThread({
   clientId,
@@ -71,7 +71,7 @@ export default function ClientChatThread({
           thread.map((m) => (
             <div key={m.id} className={`cchat-msg${m.direction === "out" ? " ours" : ""}`}>
               <div className="cchat-meta">
-                {m.direction === "out" ? `${m.sender_name || "ExPac"} (ExPac)` : m.sender_name || m.sender_email || company} ·{" "}
+                {m.direction === "out" ? expacLabel(m.sender_name, " (ExPac)") : m.sender_name || m.sender_email || company} ·{" "}
                 {formatDateTime(m.created_at)}
               </div>
               <div className="cchat-text">{m.body}</div>

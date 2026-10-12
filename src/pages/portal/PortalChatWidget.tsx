@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Loading } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { useMyJobs, useMyMessages, useSendMyMessage } from "../../lib/hooks";
-import { useMyGeneralChat, useSendGeneral } from "../../lib/clientChat";
+import { expacLabel, useMyGeneralChat, useSendGeneral } from "../../lib/clientChat";
 import { formatDateTime } from "../../lib/format";
 
 const GENERAL = "general";
@@ -93,7 +93,7 @@ export default function PortalChatWidget() {
               thread.map((m) => (
                 <div key={m.id} className={`portal-chat-msg${m.mine ? " me" : ""}`}>
                   <div className="muted small">
-                    {m.mine ? "You" : m.who ? `${m.who}, ExPac` : "ExPac"} · {formatDateTime(m.at)}
+                    {m.mine ? "You" : expacLabel(m.who, ", ExPac")} · {formatDateTime(m.at)}
                   </div>
                   <div style={{ whiteSpace: "pre-line" }}>{m.body}</div>
                 </div>
