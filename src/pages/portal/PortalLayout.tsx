@@ -577,7 +577,7 @@ function PreviewBanner({ company, clientId }: { company?: string; clientId: stri
     <div className="pt-preview-banner" role="status">
       <span>
         👁 <b>Preview</b>: you're viewing the portal as <b>{company || "this customer"}</b>. Read-only, nothing can be accepted, sent or
-        uploaded. Ends automatically after 2 hours.
+        uploaded. While previewing, Motion shows no data (in any tab) until you exit. Ends automatically after 2 hours.
       </span>
       <button type="button" className="btn outline btn-sm" onClick={() => void exit()}>
         Exit preview
