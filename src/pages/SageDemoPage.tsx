@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import SageSettingsTab from "./SageSettingsTab";
 import SageAccountTab from "./clients/SageAccountTab";
 import CustomerMessagesTab from "./crm/CustomerMessagesTab";
+import MastersPage from "./shipments/MastersPage";
 import type { CustomerRecord } from "../lib/customers";
 import type { CustomerInvoice, SageCustomer, SageState } from "../lib/sage";
 
@@ -136,6 +137,22 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
       { id: "d2", job_id: "job-2", name: "House Bill of Lading.pdf", storage_path: "y", doc_type: "Bill of Lading", created_at: ago(60 * 24 * 11) },
     ]);
     seed(["my_messages", "job-2"], []);
+    {
+      const job = { id: "job-m", reference: "SEA160984", mode: "Sea Freight (LCL)", milestone: "Booked", shipment_status: "Booked", etd: day(6), eta: day(34), awb_mbl: "MEDUNB123456", container_no: null, quote_id: "q-m", client_id: CLIENT, client: { id: CLIENT, company: "Connell Investment Holdings", email: "gilbert@connell.co.za" } };
+      const base = { job_id: "job-m", commodity: null, commercial_value: null, value_currency: "USD", notes: null, cargo_ready_date: null, hbl_issued_at: null, loaded_at: null, job };
+      seed(["job_houses", "board"], {
+        houses: [
+          { ...base, id: "mh1", position: 1, house_no: "SEA160984-1", supplier_id: "s1", supplier: { id: "s1", company: "Brilliant Rays Wheels Trading Co. Ltd", email: "steven@brilliantrays.cn", contact: "Steven" }, pieces: 4, gross_kg: 180, volume_cbm: 0.6, carrier_house_no: "NGB2410331", cargo_ready_date: day(-2) },
+          { ...base, id: "mh2", position: 2, house_no: "SEA160984-2", supplier_id: "s2", supplier: { id: "s2", company: "Shenzhen Grepow Battery Co Ltd", email: null, contact: null }, pieces: 2, gross_kg: 95, volume_cbm: 0.4, carrier_house_no: null },
+        ],
+        receipts: [{ id: "r1", receipt_no: "WR000214", house_id: "mh1", pieces: 4, gross_kg: 182, volume_cbm: 0.62, received_at: ago(60 * 24) }],
+        docs: [
+          { id: "x1", house_id: "mh1", doc_type: "Commercial Invoice" },
+          { id: "x2", house_id: "mh1", doc_type: "Packing List" },
+        ],
+        quoted: [{ quote_id: "q-m", position: 0, length_cm: 100, width_cm: 100, height_cm: 100, actual_kg: 275, qty_ctns: 1, cbm: 1 }],
+      });
+    }
     seed(["my_job_houses", "job-2"], [
       { id: "h1", job_id: "job-2", position: 1, house_no: "EXP-S2087-1", supplier_company: "Shenzhen Bright Lighting Co.", pieces: 2, gross_kg: 280, volume_cbm: 0.6, commodity: "LED panels", commercial_value: 7400, value_currency: "USD", carrier_house_no: "NGB2410331" },
       { id: "h2", job_id: "job-2", position: 2, house_no: "EXP-S2087-2", supplier_company: "Ningbo Ocean Tools", pieces: 1, gross_kg: 140, volume_cbm: 0.4, commodity: "Hand tools", commercial_value: 5100, value_currency: "USD", carrier_house_no: null },
@@ -178,6 +195,16 @@ export function CustomerMessagesDemo() {
       <SageDemoSeed>
         <h1 style={{ marginTop: 0 }}>Customer Messages</h1>
         <CustomerMessagesTab />
+      </SageDemoSeed>
+    </div>
+  );
+}
+
+export function MastersDemo() {
+  return (
+    <div className="main">
+      <SageDemoSeed>
+        <MastersPage />
       </SageDemoSeed>
     </div>
   );

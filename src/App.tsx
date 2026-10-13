@@ -16,11 +16,12 @@ import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
-import { CustomerMessagesDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
+import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
 import CompletedJobsPage from "./pages/CompletedJobsPage";
+import MastersPage from "./pages/shipments/MastersPage";
 import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import AgentsPage from "./pages/AgentsPage";
@@ -107,6 +108,13 @@ function PartnerProtected() {
 function NeedsPerm({ perm, children }: { perm: PermKey; children: ReactNode }) {
   const can = useCan();
   if (!can(perm)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/** Masters & Houses: ops (shipments) or the warehouse team. */
+function NeedsAnyPerm({ perms, children }: { perms: PermKey[]; children: ReactNode }) {
+  const can = useCan();
+  if (!perms.some((p) => can(p))) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -208,6 +216,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/sage-settings" element={<SageSettingsDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/customer-messages" element={<CustomerMessagesDemo />} />}
+          {import.meta.env.DEV && <Route path="/dev/masters" element={<MastersDemo />} />}
           {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}
@@ -321,6 +330,7 @@ function AppRoutes() {
             <Route path="quotes/:id" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
             <Route path="jobs" element={<NeedsPerm perm="shipments"><JobsPage /></NeedsPerm>} />
             <Route path="jobs/completed" element={<NeedsPerm perm="shipments"><CompletedJobsPage /></NeedsPerm>} />
+            <Route path="jobs/masters" element={<NeedsAnyPerm perms={["shipments", "warehouse"]}><MastersPage /></NeedsAnyPerm>} />
             <Route path="clients" element={<NeedsPerm perm="customers"><ClientsPage /></NeedsPerm>} />
             <Route path="clients/:id" element={<NeedsPerm perm="customers"><CustomerRecordPage /></NeedsPerm>} />
             <Route path="crm" element={<CrmPage />} />

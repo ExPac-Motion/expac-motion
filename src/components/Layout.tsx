@@ -47,6 +47,7 @@ const NAV: NavModule[] = [
       { to: "/jobs?mode=sea", label: "Sea Freight" },
       { to: "/jobs?mode=road", label: "Road Freight" },
       { to: "/jobs/completed", label: "Completed Shipments" },
+      { to: "/jobs/masters", label: "Masters & Houses" },
     ],
   },
   {
@@ -68,6 +69,7 @@ const NAV: NavModule[] = [
       { to: "/wms", label: "Dashboard" },
       { to: "/wms?tab=reports", label: "Reports" },
       { to: "/wms?tab=receipt", label: "Warehouse Receipt" },
+      { to: "/jobs/masters", label: "Masters & Houses" },
       { to: "/wms?tab=movements", label: "Warehouse Movements" },
       { to: "/wms?tab=release", label: "Warehouse Release" },
       { to: "/wms?tab=inventory", label: "Warehouse Inventory" },

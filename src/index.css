@@ -9206,3 +9206,154 @@ th.sage-num {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- Shipments › Masters & Houses (0165) ---------- */
+.ms-master {
+  padding: 16px 18px;
+}
+.ms-master-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ms-ref {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--teal-ink);
+  cursor: pointer;
+}
+.ms-ref:hover {
+  text-decoration: underline;
+}
+.ms-cust {
+  font-weight: 700;
+}
+.ms-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.ms-status {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.ms-rollup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 12px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+.ms-rollup b {
+  color: var(--ink);
+}
+.ms-rollup .ok b {
+  color: var(--green-dark);
+}
+.ms-rollup .warn b,
+.ms-rollup .ms-tot.warn {
+  color: var(--orange-ink);
+}
+.ms-tot {
+  margin-left: auto;
+}
+.ms-houses {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.ms-houses th,
+.ms-houses td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.ms-houses th {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.ms-houses .num {
+  text-align: right;
+}
+.ms-houses td input {
+  min-width: 0;
+  width: 104px;
+}
+.ms-houses th,
+.ms-houses td {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.ms-diff {
+  color: var(--orange-ink);
+  font-weight: 700;
+}
+.ms-doc {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.ms-doc.on {
+  background: var(--green-tint);
+  color: var(--green-dark);
+}
+.badge.hs-wait {
+  background: var(--paper);
+  color: var(--muted);
+}
+.badge.hs-recv {
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+}
+.badge.hs-docs {
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+}
+.badge.hs-bill {
+  background: var(--green-tint);
+  color: var(--green-dark);
+}
+.badge.hs-loaded {
+  background: var(--green);
+  color: #fff;
+}
+.ms-preview {
+  white-space: pre-wrap;
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+}
+.modal .field label.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2px 0;
+}

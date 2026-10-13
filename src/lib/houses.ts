@@ -123,3 +123,118 @@ export function useMyJobHouses(jobId: string | undefined) {
     },
   });
 }
+
+/* ---------- Masters & Houses board (0165) ---------- */
+
+export interface BoardHouse extends JobHouse {
+  cargo_ready_date: string | null;
+  hbl_issued_at: string | null;
+  loaded_at: string | null;
+  supplier: { id: string; company: string; email: string | null; contact: string | null } | null;
+  job: {
+    id: string;
+    reference: string;
+    mode: string;
+    milestone: string;
+    shipment_status: string | null;
+    etd: string | null;
+    eta: string | null;
+    awb_mbl: string | null;
+    container_no: string | null;
+    quote_id: string | null;
+    client_id: string | null;
+    client: { id: string; company: string; email: string | null } | null;
+  } | null;
+}
+export interface BoardReceipt {
+  id: string;
+  receipt_no: string;
+  house_id: string;
+  pieces: number;
+  gross_kg: number;
+  volume_cbm: number;
+  received_at: string;
+}
+export interface BoardDoc {
+  id: string;
+  house_id: string;
+  doc_type: string | null;
+}
+export interface QuotedCargo {
+  quote_id: string;
+  length_cm: number | string;
+  width_cm: number | string;
+  height_cm: number | string;
+  actual_kg: number | string;
+  qty_ctns: number | string;
+  cbm: number | string | null;
+  position: number;
+}
+
+export function useMastersBoard() {
+  return useQuery({
+    queryKey: ["job_houses", "board"],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const houses = unwrap<BoardHouse[]>(
+        (await supabase
+          .from("job_houses")
+          .select(
+            "*, supplier:suppliers(id, company, email, contact), job:jobs(id, reference, mode, milestone, shipment_status, etd, eta, awb_mbl, container_no, quote_id, client_id, client:clients(id, company, email))",
+          )
+          .order("position")) as never,
+      );
+      const ids = houses.map((h) => h.id);
+      const quoteIds = [...new Set(houses.map((h) => h.job?.quote_id).filter(Boolean))] as string[];
+      const [receipts, docs, quoted] = await Promise.all([
+        ids.length
+          ? unwrap<BoardReceipt[]>(
+              await supabase
+                .from("wms_receipts")
+                .select("id, receipt_no, house_id, pieces, gross_kg, volume_cbm, received_at")
+                .in("house_id", ids),
+            )
+          : [],
+        ids.length
+          ? unwrap<BoardDoc[]>(await supabase.from("shipment_documents").select("id, house_id, doc_type").in("house_id", ids))
+          : [],
+        quoteIds.length
+          ? unwrap<QuotedCargo[]>(
+              await supabase
+                .from("packing_list_items")
+                .select("quote_id, position, length_cm, width_cm, height_cm, actual_kg, qty_ctns, cbm")
+                .in("quote_id", quoteIds),
+            )
+          : [],
+      ]);
+      return { houses, receipts, docs, quoted };
+    },
+  });
+}
+
+export function useUpdateHouseSteps() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: {
+      id: string;
+      patch: Partial<Pick<BoardHouse, "cargo_ready_date" | "hbl_issued_at" | "loaded_at">>;
+    }) => unwrap(await supabase.from("job_houses").update(v.patch).eq("id", v.id)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["job_houses"] }),
+  });
+}
+
+export type HouseStatus = "Awaiting cargo" | "Received" | "Documents complete" | "HBL issued" | "Loaded";
+export const HOUSE_STATUS_CLASS: Record<HouseStatus, string> = {
+  "Awaiting cargo": "hs-wait",
+  Received: "hs-recv",
+  "Documents complete": "hs-docs",
+  "HBL issued": "hs-bill",
+  Loaded: "hs-loaded",
+};
+export function houseStatus(h: BoardHouse, received: boolean, docsComplete: boolean): HouseStatus {
+  if (h.loaded_at) return "Loaded";
+  if (h.hbl_issued_at) return "HBL issued";
+  if (received && docsComplete) return "Documents complete";
+  if (received) return "Received";
+  return "Awaiting cargo";
+}
