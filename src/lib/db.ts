@@ -935,6 +935,22 @@ export async function listMessagesForJobs(jobIds: string[]): Promise<Message[]> 
   );
 }
 
+/** Shipment emails sent out today (since local midnight): which shipments
+ *  have had their daily Shipment Comms, for the board's envelope. */
+export async function listEmailsSentToday(): Promise<{ job_id: string; to_emails: string[]; cc_emails: string[] }[]> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return unwrap<{ job_id: string; to_emails: string[]; cc_emails: string[] }[]>(
+    await supabase
+      .from("messages")
+      .select("job_id, to_emails, cc_emails")
+      .eq("kind", "email")
+      .eq("direction", "out")
+      .neq("status", "failed")
+      .gte("created_at", start.toISOString()),
+  );
+}
+
 /** Unread customer replies (direction='in', read_at null), lights up the
  *  mail icon on Active Shipments and feeds the notif bell. */
 export async function listUnreadMessages(): Promise<

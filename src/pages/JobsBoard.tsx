@@ -39,6 +39,7 @@ import {
   useSetJobMilestone,
   useShipmentDocuments,
   useUnreadMessages,
+  useEmailsSentToday,
   useUpdateJob,
   useUpdateJobsBulk,
   useUpdateShipmentDocument,
@@ -252,6 +253,24 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     [unreadMessagesQ.data],
   );
   const markRead = useMarkJobMessagesRead();
+  // Daily Shipment Comms: shipments with no email to the customer since
+  // midnight get an orange envelope (Active Shipments only).
+  const sentTodayQ = useEmailsSentToday();
+  const mailedToday = useMemo(() => {
+    const domain = (e: string) => e.trim().toLowerCase().split("@")[1] ?? "";
+    const byJob = new Map<string, string[]>();
+    for (const m of sentTodayQ.data ?? [])
+      byJob.set(m.job_id, [...(byJob.get(m.job_id) ?? []), ...(m.to_emails ?? []), ...(m.cc_emails ?? [])]);
+    const set = new Set<string>();
+    for (const j of jobs ?? []) {
+      const to = byJob.get(j.id);
+      if (!to || to.length === 0) continue;
+      const ce = (j.client?.email ?? "").trim().toLowerCase();
+      // To the customer (their address or company domain); no customer email = any.
+      if (!ce || to.some((e) => e.trim().toLowerCase() === ce || domain(e) === domain(ce))) set.add(j.id);
+    }
+    return set;
+  }, [sentTodayQ.data, jobs]);
   const tasksQ = useOpsTasks();
   const openTaskJobIds = useMemo(
     () =>
@@ -468,6 +487,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             onMail={() => openComms(j)}
             mailTitle="Messages / email the customer"
             mailUnread={unreadJobIds.has(j.id)}
+            mailDue={mode === "active" && !sentTodayQ.isLoading && !mailedToday.has(j.id)}
             onTask={() => setTaskingJob(j)}
             taskTitle="Create a task for this shipment"
             taskOpen={openTaskJobIds.has(j.id)}
@@ -702,7 +722,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, mode, modeTab, unreadJobIds, openTaskJobIds],
+    [sel, mode, modeTab, unreadJobIds, openTaskJobIds, mailedToday, sentTodayQ.isLoading],
   );
 
   return (

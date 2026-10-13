@@ -527,6 +527,14 @@ export function useMessages(jobId: string | undefined) {
 
 /** Unread customer replies, polled so one sent from the portal lights up
  *  the mail icon (and the notif bell) here without a manual refresh. */
+/** Shipment emails sent today (the board's "no comms sent yet today" envelope). */
+export function useEmailsSentToday() {
+  return useQuery({
+    queryKey: ["messages", "sent-today"],
+    queryFn: db.listEmailsSentToday,
+    refetchInterval: 60_000,
+  });
+}
 export function useUnreadMessages() {
   return useQuery({
     queryKey: ["unread_messages"],
@@ -615,8 +623,10 @@ export function useSendMessage() {
         throw e;
       }
     },
-    onSuccess: (_m, input) =>
-      qc.invalidateQueries({ queryKey: ["messages", input.job.id] }),
+    onSuccess: (_m, input) => {
+      qc.invalidateQueries({ queryKey: ["messages", input.job.id] });
+      qc.invalidateQueries({ queryKey: ["messages", "sent-today"] });
+    },
     onError: (_e, input) =>
       qc.invalidateQueries({ queryKey: ["messages", input.job.id] }),
   });

@@ -139,6 +139,7 @@ export function RowActions({
   onMail,
   mailTitle = "Send a message",
   mailUnread = false,
+  mailDue = false,
   onTask,
   taskTitle = "Create a task",
   taskOpen = false,
@@ -155,6 +156,8 @@ export function RowActions({
   mailTitle?: string;
   /** Badges the mail icon, an unread customer reply is waiting. */
   mailUnread?: boolean;
+  /** Fills the mail icon orange: today's update hasn't been sent yet. */
+  mailDue?: boolean;
   /** When set, a task icon is shown, opens a new task pre-linked to this row. */
   onTask?: () => void;
   taskTitle?: string;
@@ -189,8 +192,8 @@ export function RowActions({
       )}
       {onMail && (
         <button
-          className={`row-icon-btn${mailUnread ? " has-unread" : ""}`}
-          title={mailUnread ? `${mailTitle}, new reply` : mailTitle}
+          className={`row-icon-btn${mailUnread ? " has-unread" : ""}${mailDue ? " mail-due" : ""}`}
+          title={`${mailTitle}${mailUnread ? ", new reply" : ""}${mailDue ? ", no Shipment Comms sent today yet" : ""}`}
           onClick={stop(onMail)}
         >
           {ROW_ICON.mail}

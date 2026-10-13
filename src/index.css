@@ -9472,3 +9472,12 @@ select.status-pick-on {
   color: var(--teal-ink);
   font-weight: 700;
 }
+
+/* Active Shipments: no Shipment Comms sent today yet (#ef4910 envelope) */
+.row-icon-btn.mail-due svg rect {
+  fill: var(--orange);
+  stroke: var(--orange);
+}
+.row-icon-btn.mail-due svg path {
+  stroke: #fff;
+}
