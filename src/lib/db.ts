@@ -1286,7 +1286,12 @@ export async function getMyDocumentUrl(storagePath: string): Promise<string> {
 
 /** Portal › shipment › Shipment Documents: the customer uploads a
  *  Commercial Invoice / Packing List / HAWB / HBL (0161). */
-export async function uploadMyShipmentDocument(jobId: string, file: File, docType: string): Promise<string> {
+export async function uploadMyShipmentDocument(
+  jobId: string,
+  file: File,
+  docType: string,
+  houseId?: string | null,
+): Promise<string> {
   const safe = file.name.replace(/[^\w.() -]+/g, "_");
   const path = `portal/${jobId}/${Date.now()}-${safe}`;
   const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
@@ -1299,6 +1304,7 @@ export async function uploadMyShipmentDocument(jobId: string, file: File, docTyp
         p_path: path,
         p_doc_type: docType,
         p_size: file.size,
+        ...(houseId ? { p_house: houseId } : {}),
       }),
     );
   } catch (e) {

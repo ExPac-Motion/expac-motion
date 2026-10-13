@@ -1,4 +1,6 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useJobHouses } from "../../lib/houses";
+import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -532,6 +534,8 @@ export function ReceiptEditModal({
   const save = useWmsMutation((v: { id?: string; values: WmsReceiptInput }) => wmsDb.saveReceipt(v.id, v.values));
 
   const firstWh = lk.warehouses.find((w) => w.active)?.id ?? lk.warehouses[0]?.id ?? "";
+  const [houseId, setHouseId] = useState<string | null>(null);
+  const [houseTouched, setHouseTouched] = useState(false);
   const [f, setF] = useState<WmsReceiptInput>(() =>
     receipt
       ? (() => {
@@ -597,6 +601,7 @@ export function ReceiptEditModal({
     if (!(Number(f.pieces) > 0)) return error("Enter the number of pieces received");
     const values: WmsReceiptInput = {
       ...f,
+      ...(houseTouched ? { house_id: f.job_id ? houseId : null } : {}),
       pieces: Number(f.pieces) || 0,
       pallets: Number(f.pallets) || 0,
       gross_kg: Number(f.gross_kg) || 0,
@@ -713,6 +718,16 @@ export function ReceiptEditModal({
               ))}
             </select>
           </div>
+          <ReceiptHouseField
+            jobId={f.job_id}
+            receiptId={receipt?.id}
+            value={houseId}
+            onChange={(id, supplierId) => {
+              setHouseId(id);
+              setHouseTouched(true);
+              if (supplierId) setF((p) => ({ ...p, supplier_id: supplierId }));
+            }}
+          />
           <div className="field">
             <label>Shipper / supplier</label>
             <select value={f.supplier_id ?? ""} onChange={(e) => set("supplier_id", orNull(e.target.value))}>
@@ -999,5 +1014,57 @@ function ExpectedList({ toolsSlot }: { toolsSlot: HTMLDivElement | null }) {
         />
       )}
     </>
+  );
+}
+
+/** Which house of a master shipment the goods are for (0164): the house's
+ *  supplier fills in the receipt's supplier. Hidden when the shipment has
+ *  no houses. */
+function ReceiptHouseField({
+  jobId,
+  receiptId,
+  value,
+  onChange,
+}: {
+  jobId: string | null;
+  receiptId?: string;
+  value: string | null;
+  onChange: (houseId: string | null, supplierId: string | null) => void;
+}) {
+  const housesQ = useJobHouses(jobId ?? undefined);
+  const houses = housesQ.data ?? [];
+  // An existing receipt: read its house (the receipts view doesn't carry it).
+  useEffect(() => {
+    if (!receiptId) return;
+    void supabase
+      .from("wms_receipts")
+      .select("house_id")
+      .eq("id", receiptId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const h = (data as { house_id?: string | null } | null)?.house_id ?? null;
+        if (h) onChange(h, null);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receiptId]);
+  if (!jobId || houses.length === 0) return null;
+  return (
+    <div className="field">
+      <label>House (master shipment)</label>
+      <select
+        value={value ?? ""}
+        onChange={(e) => {
+          const h = houses.find((x) => x.id === e.target.value) ?? null;
+          onChange(h?.id ?? null, h?.supplier_id ?? null);
+        }}
+      >
+        <option value="">Not split by house</option>
+        {houses.map((h) => (
+          <option key={h.id} value={h.id}>
+            {h.house_no}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

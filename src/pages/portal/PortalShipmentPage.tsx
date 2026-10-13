@@ -20,6 +20,7 @@ import { packingTotals, volumetricFactor } from "../../lib/calc";
 import { MILESTONES, type ClientDocument, type Milestone, type PackingItem } from "../../lib/types";
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
+import { houseTotals, useMyJobHouses } from "../../lib/houses";
 import PortalQuoteModal from "./PortalQuoteViewPage";
 import { modeEmoji } from "./PortalLayout";
 
@@ -50,6 +51,8 @@ export default function PortalShipmentPage() {
   const upload = useUploadMyShipmentDocument();
   const remove = useDeleteMyShipmentDocument();
   const [uploading, setUploading] = useState<string | null>(null);
+  const housesQ = useMyJobHouses(id);
+  const houses = housesQ.data ?? [];
 
   const quotesQ = usePortalQuotes();
   const quote = (quotesQ.data ?? []).find((q) => q.id === job?.quote_id) ?? null;
@@ -78,12 +81,12 @@ export default function PortalShipmentPage() {
     }
   }
 
-  function onUpload(docType: string, file: File) {
+  function onUpload(docType: string, file: File, houseId?: string) {
     if (!id) return;
     if (file.size > 20 * 1024 * 1024) return toastError("That file is over 20 MB, please send a smaller one.");
-    setUploading(docType);
+    setUploading((houseId ?? "") + docType);
     upload.mutate(
-      { jobId: id, file, docType },
+      { jobId: id, file, docType, houseId },
       {
         onSuccess: () => toast(`${docType} uploaded, ExPac has been notified`),
         onError: (e) => toastError(e instanceof Error ? e.message : "Could not upload"),
@@ -136,7 +139,11 @@ export default function PortalShipmentPage() {
     air ? { type: "HAWB", label: "HAWB (House Air Waybill)" } : { type: "HBL", label: "HBL (House Bill of Lading)" },
   ];
   const docs = docsQ.data ?? [];
-  const otherDocs = docs.filter((d) => !slots.some((x) => x.type === d.doc_type));
+  // On a master with houses, each house has its own three slots.
+  const inSlot = (d: (typeof docs)[number]) =>
+    slots.some((x) => x.type === d.doc_type) && (houses.length === 0 || houses.some((h) => h.id === d.house_id));
+  const otherDocs = docs.filter((d) => !inSlot(d));
+  const hTot = houseTotals(houses);
 
   return (
     <>
@@ -221,7 +228,10 @@ export default function PortalShipmentPage() {
         </Card>
 
         <Card title="Cargo & parties">
-          <Row label="Shipper" value={job.supplier_company} />
+          <Row
+            label={houses.length ? "Shippers" : "Shipper"}
+            value={houses.length ? [...new Set(houses.map((h) => h.supplier_company).filter(Boolean))].join(", ") || job.supplier_company : job.supplier_company}
+          />
           <Row label="Consignee" value={quote?.consignee_company} />
           <Row label="Commodity" value={quote?.commodity} />
           <Row label="Incoterms" value={quote?.incoterms} />
@@ -257,21 +267,95 @@ export default function PortalShipmentPage() {
           )}
         </Card>
         <Card title="Shipment Documents" plain>
-          <div className="sp-slots">
-            {slots.map((slot) => (
-              <DocSlot
-                key={slot.type}
-                label={slot.label}
-                files={docs.filter((d) => d.doc_type === slot.type)}
-                busy={upload.isPending && uploading === slot.type}
-                onOpen={onDownload}
-                onUpload={(file) => onUpload(slot.type, file)}
-                onRemove={onRemove}
-              />
-            ))}
-          </div>
+          {houses.length > 0 ? (
+            <div className="sp-slots">
+              {houses.map((h) => {
+                const have = slots.filter((x) => docs.some((d) => d.house_id === h.id && d.doc_type === x.type)).length;
+                return (
+                  <a key={h.id} href={`#house-${h.id}`} className={`sp-slot${have === slots.length ? " has" : ""}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <div className="sp-slot-head">
+                      <span className="sp-slot-mark" aria-hidden>
+                        {have === slots.length ? "✓" : ""}
+                      </span>
+                      <b>{h.house_no}</b>
+                      <span className="sp-slot-meta">
+                        {have} / {slots.length} documents
+                      </span>
+                    </div>
+                    <span className="sp-slot-empty">{h.supplier_company || "Supplier to be confirmed"}</span>
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="sp-slots">
+              {slots.map((slot) => (
+                <DocSlot
+                  key={slot.type}
+                  label={slot.label}
+                  files={docs.filter((d) => d.doc_type === slot.type)}
+                  busy={upload.isPending && uploading === slot.type}
+                  onOpen={onDownload}
+                  onUpload={(file) => onUpload(slot.type, file)}
+                  onRemove={onRemove}
+                />
+              ))}
+            </div>
+          )}
         </Card>
       </div>
+
+      {houses.length > 0 && (
+        <div className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Houses on this shipment</h2>
+            </div>
+            <span className="hint">
+              {houses.length} houses · {hTot.pieces} pcs · {hTot.kg.toLocaleString("en-ZA", { maximumFractionDigits: 2 })} kg ·{" "}
+              {hTot.cbm.toLocaleString("en-ZA", { maximumFractionDigits: 3 })} CBM
+            </span>
+          </div>
+          <div className="sp-houses">
+            {houses.map((h) => (
+              <div key={h.id} id={`house-${h.id}`} className="sp-house">
+                <div className="sp-house-head">
+                  <b>{h.house_no}</b>
+                  <span>{h.supplier_company || "Supplier to be confirmed"}</span>
+                </div>
+                <dl className="sp-rows">
+                  <dt>Cargo</dt>
+                  <dd>
+                    {h.pieces} pcs · {Number(h.gross_kg).toLocaleString("en-ZA", { maximumFractionDigits: 2 })} kg ·{" "}
+                    {Number(h.volume_cbm).toLocaleString("en-ZA", { maximumFractionDigits: 3 })} CBM
+                  </dd>
+                  <dt>Commodity</dt>
+                  <dd>{h.commodity || <span className="hint">Not yet</span>}</dd>
+                  <dt>Value</dt>
+                  <dd>
+                    {h.commercial_value != null ? currencyAmount(h.commercial_value, h.value_currency as never) : <span className="hint">Not yet</span>}
+                  </dd>
+                  <dt>{air ? "HAWB No" : "HBL No"}</dt>
+                  <dd>{h.carrier_house_no || <span className="hint">Not yet</span>}</dd>
+                </dl>
+                <div className="sp-slots">
+                  {slots.map((slot) => (
+                    <DocSlot
+                      key={slot.type}
+                      label={slot.label}
+                      files={docs.filter((d) => d.doc_type === slot.type && d.house_id === h.id)}
+                      busy={upload.isPending && uploading === h.id + slot.type}
+                      onOpen={onDownload}
+                      onUpload={(file) => onUpload(slot.type, file, h.id)}
+                      onRemove={onRemove}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {otherDocs.length > 0 && (
         <div className="panel">

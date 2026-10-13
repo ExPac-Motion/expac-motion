@@ -94,6 +94,8 @@ export interface WmsReceipt {
   condition_notes: string | null;
   hazardous: boolean;
   notes: string | null;
+  /** The house on a master shipment (0164), not in wms_receipts_v. */
+  house_id?: string | null;
   /** "Checked" step (0147): goods inspected / measured after receiving. */
   checked_at?: string | null;
   checked_by?: string | null;

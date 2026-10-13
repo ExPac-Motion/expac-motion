@@ -909,7 +909,8 @@ export function useMyJobTracking() {
 export function useUploadMyShipmentDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { jobId: string; file: File; docType: string }) => db.uploadMyShipmentDocument(v.jobId, v.file, v.docType),
+    mutationFn: (v: { jobId: string; file: File; docType: string; houseId?: string | null }) =>
+      db.uploadMyShipmentDocument(v.jobId, v.file, v.docType, v.houseId),
     onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ["my_documents", v.jobId] });
       qc.invalidateQueries({ queryKey: ["my_documents_all"] });

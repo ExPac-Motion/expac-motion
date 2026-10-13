@@ -1,3 +1,5 @@
+import HousesSection from "../components/HousesSection";
+import { useJobHouses, useSetDocumentHouse } from "../lib/houses";
 import {
   useEffect,
   useMemo,
@@ -1002,6 +1004,7 @@ function JobViewModal({
 
       <PodSection job={job} />
       <ConsolSection job={job} />
+      <HousesSection job={job} />
       <DocumentsSection job={job} />
     </Modal>
   );
@@ -1065,13 +1068,19 @@ function DocumentsSection({ job }: { job: Job }) {
   const [visibleToClient, setVisibleToClient] = useState(false);
   const docTypes = useDocumentTypes();
   const [printDoc, setPrintDoc] = useState<string>(DOCUMENT_TYPES_LIST[0].slug);
+  // Master shipments (0164): a document can belong to one house.
+  const housesQ = useJobHouses(job.id);
+  const houses = housesQ.data ?? [];
+  const setDocHouse = useSetDocumentHouse();
+  const [forHouse, setForHouse] = useState<string>("");
 
   async function onPick(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     try {
-      await upload.mutateAsync({ jobId: job.id, file, docType, visibleToClient });
+      const doc = await upload.mutateAsync({ jobId: job.id, file, docType, visibleToClient });
+      if (forHouse && doc?.id) await setDocHouse.mutateAsync({ docId: doc.id, jobId: job.id, houseId: forHouse });
       toast("Document uploaded");
     } catch (err) {
       toastError(err instanceof Error ? err.message : "Could not upload");
@@ -1159,6 +1168,16 @@ function DocumentsSection({ job }: { job: Job }) {
               </option>
             ))}
           </select>
+          {houses.length > 0 && (
+            <select value={forHouse} onChange={(e) => setForHouse(e.target.value)} title="Which house this document is for" style={{ width: "auto" }}>
+              <option value="">Master {job.reference}</option>
+              {houses.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.house_no}
+                </option>
+              ))}
+            </select>
+          )}
           <label
             className="check small"
             style={{ whiteSpace: "nowrap" }}
@@ -1215,6 +1234,22 @@ function DocumentsSection({ job }: { job: Job }) {
                 )}
                 {doc.from_client && <span className="badge sent" style={{ marginLeft: 6 }}>From customer</span>}
               </button>
+              {houses.length > 0 && (
+                <select
+                  className="doc-house-tag"
+                  value={doc.house_id ?? ""}
+                  onChange={(e) => setDocHouse.mutate({ docId: doc.id, jobId: job.id, houseId: e.target.value || null })}
+                  title="Which house this document is for"
+                  style={{ width: "auto" }}
+                >
+                  <option value="">Master</option>
+                  {houses.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.house_no}
+                    </option>
+                  ))}
+                </select>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className="muted small">
                   {bytesLabel(doc.size_bytes)} · {formatDate(doc.created_at)}

@@ -9123,3 +9123,86 @@ th.sage-num {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
 }
+
+/* ---------- Master shipment houses (0164) ---------- */
+.houses-sec {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.houses-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.houses-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.houses-table th,
+.houses-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.houses-table th.num,
+.houses-table td.num {
+  text-align: right;
+}
+.houses-table input,
+.houses-table select {
+  width: 100%;
+  min-width: 70px;
+}
+.houses-table input.num {
+  text-align: right;
+}
+.houses-table tfoot td {
+  border-bottom: 0;
+  padding-top: 8px;
+  font-weight: 700;
+}
+.houses-off {
+  color: var(--orange-ink);
+}
+.houses-off-note {
+  color: var(--orange-ink);
+  margin: 6px 0 0;
+}
+.doc-house-tag {
+  margin-left: 6px;
+}
+.sp-houses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+.sp-house {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  scroll-margin-top: 90px;
+}
+.sp-house-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+.sp-house-head b {
+  font-size: 1rem;
+}
+.sp-house-head span {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

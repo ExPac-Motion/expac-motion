@@ -348,6 +348,8 @@ export interface ClientDocument {
   created_at: string;
   /** Uploaded by the customer on the portal (0161). */
   from_client?: boolean;
+  /** The house it belongs to on a master shipment (0164), null = master. */
+  house_id?: string | null;
 }
 
 /** "Customer Party", a shipper used on one of this client's own shipments. */
@@ -398,6 +400,8 @@ export interface ShipmentDocument {
   created_at: string;
   /** Uploaded by the customer on the portal (0161). */
   from_client?: boolean;
+  /** The house it belongs to on a master shipment (0164), null = master. */
+  house_id?: string | null;
 }
 
 /** Options for the "Type" picker on a shipment document upload. */

@@ -132,10 +132,14 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
     seed(["my_job_tracking"], []);
     seed(["my_tracking_events", "job-2"], []);
     seed(["my_documents", "job-2"], [
-      { id: "d1", job_id: "job-2", name: "Commercial Invoice CI-2087.pdf", storage_path: "x", doc_type: "Commercial Invoice", created_at: ago(60 * 24 * 18) },
+      { id: "d1", job_id: "job-2", name: "Commercial Invoice CI-2087.pdf", storage_path: "x", doc_type: "Commercial Invoice", house_id: "h1", created_at: ago(60 * 24 * 18) },
       { id: "d2", job_id: "job-2", name: "House Bill of Lading.pdf", storage_path: "y", doc_type: "Bill of Lading", created_at: ago(60 * 24 * 11) },
     ]);
     seed(["my_messages", "job-2"], []);
+    seed(["my_job_houses", "job-2"], [
+      { id: "h1", job_id: "job-2", position: 1, house_no: "EXP-S2087-1", supplier_company: "Shenzhen Bright Lighting Co.", pieces: 2, gross_kg: 280, volume_cbm: 0.6, commodity: "LED panels", commercial_value: 7400, value_currency: "USD", carrier_house_no: "NGB2410331" },
+      { id: "h2", job_id: "job-2", position: 2, house_no: "EXP-S2087-2", supplier_company: "Ningbo Ocean Tools", pieces: 1, gross_kg: 140, volume_cbm: 0.4, commodity: "Hand tools", commercial_value: 5100, value_currency: "USD", carrier_house_no: null },
+    ]);
     seed(["portal", "quotes"], [
       { id: "q-2", reference: "EXP-S2087", client_id: CLIENT, mode: "Sea Freight (LCL)", commodity: "General Cargo", origin: "CNNGB, Ningbo, China", destination: "ZADUR, Durban, South Africa", delivery_terms: "Door to Door", incoterms: "FOB", commercial_value: 12500, value_currency: "USD", insurance_amount: 0, status: "accepted", accepted_at: ago(60 * 24 * 21), customer_reference: "PO-5521", consignee_company: "Demo Imports (Pty) Ltd", revision_no: 1, created_at: ago(60 * 24 * 25) },
     ]);
