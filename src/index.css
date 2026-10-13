@@ -9388,3 +9388,40 @@ th.sage-num {
   color: var(--amber-ink);
   font-size: 0.86rem;
 }
+.ms-status-pick {
+  border: 0;
+  cursor: pointer;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  width: auto;
+  min-width: 0;
+}
+.ms-where {
+  width: 210px;
+  font-size: 0.8rem;
+}
+.ms-unassigned {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+  font-size: 0.84rem;
+}
+.ms-unassigned-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+.ms-unassigned-item select {
+  width: auto;
+  min-width: 0;
+  font-size: 0.8rem;
+}

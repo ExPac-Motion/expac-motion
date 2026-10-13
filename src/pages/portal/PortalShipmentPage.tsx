@@ -350,6 +350,16 @@ export default function PortalShipmentPage() {
                   <span>{h.supplier_company || "Supplier to be confirmed"}</span>
                 </div>
                 <dl className="sp-rows">
+                  {h.status && (
+                    <>
+                      <dt>Status</dt>
+                      <dd>
+                        {h.status}
+                        {h.received_note ? `, ${h.received_note}` : ""}
+                        {h.status_at ? <span className="hint"> · {formatDate(h.status_at)}</span> : null}
+                      </dd>
+                    </>
+                  )}
                   <dt>Cargo</dt>
                   <dd>
                     {h.pieces} pcs · {Number(h.gross_kg).toLocaleString("en-ZA", { maximumFractionDigits: 2 })} kg ·{" "}

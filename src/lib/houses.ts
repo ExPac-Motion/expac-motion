@@ -46,6 +46,10 @@ export interface ClientJobHouse {
   commercial_value: number | null;
   value_currency: string | null;
   carrier_house_no: string | null;
+  /** 0168: the house status the team set, and where the cargo was received. */
+  status?: string | null;
+  status_at?: string | null;
+  received_note?: string | null;
 }
 
 export function houseTotals(houses: { pieces: number; gross_kg: number; volume_cbm: number }[]) {
@@ -130,6 +134,11 @@ export interface BoardHouse extends JobHouse {
   cargo_ready_date: string | null;
   hbl_issued_at: string | null;
   loaded_at: string | null;
+  /** Set by the team (0168), null = worked out automatically. */
+  status?: HouseStatus | null;
+  status_at?: string | null;
+  /** Where the cargo was received when not at ExPac's warehouse (0168). */
+  received_note?: string | null;
   supplier: { id: string; company: string; email: string | null; contact: string | null } | null;
   job: {
     id: string;
@@ -149,7 +158,9 @@ export interface BoardHouse extends JobHouse {
 export interface BoardReceipt {
   id: string;
   receipt_no: string;
-  house_id: string;
+  /** null = on the shipment but not on a house yet. */
+  house_id: string | null;
+  job_id?: string | null;
   pieces: number;
   gross_kg: number;
   volume_cbm: number;
@@ -185,14 +196,16 @@ export function useMastersBoard() {
           .order("position")) as never,
       );
       const ids = houses.map((h) => h.id);
+      const jobIds = [...new Set(houses.map((h) => h.job_id))];
       const quoteIds = [...new Set(houses.map((h) => h.job?.quote_id).filter(Boolean))] as string[];
       const [receipts, docs, quoted] = await Promise.all([
-        ids.length
+        // Every receipt on these shipments: on a house, or not on one yet.
+        jobIds.length
           ? unwrap<BoardReceipt[]>(
               await supabase
                 .from("wms_receipts")
-                .select("id, receipt_no, house_id, pieces, gross_kg, volume_cbm, received_at")
-                .in("house_id", ids),
+                .select("id, receipt_no, house_id, job_id, pieces, gross_kg, volume_cbm, received_at")
+                .in("job_id", jobIds),
             )
           : [],
         ids.length
@@ -212,18 +225,34 @@ export function useMastersBoard() {
   });
 }
 
+/** Puts a warehouse receipt on a house of its shipment (null = off). */
+export function useAssignReceiptHouse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { receiptId: string; houseId: string | null }) =>
+      unwrap(await supabase.from("wms_receipts").update({ house_id: v.houseId }).eq("id", v.receiptId)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["job_houses"] });
+      qc.invalidateQueries({ queryKey: ["wms"] });
+    },
+  });
+}
+
 export function useUpdateHouseSteps() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: {
       id: string;
-      patch: Partial<Pick<BoardHouse, "cargo_ready_date" | "hbl_issued_at" | "loaded_at">>;
+      patch: Partial<Pick<BoardHouse, "cargo_ready_date" | "hbl_issued_at" | "loaded_at" | "status" | "status_at" | "received_note">>;
     }) => unwrap(await supabase.from("job_houses").update(v.patch).eq("id", v.id)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["job_houses"] }),
   });
 }
 
 export type HouseStatus = "Awaiting cargo" | "Received" | "Documents complete" | "HBL issued" | "Loaded";
+export const HOUSE_STATUSES: HouseStatus[] = ["Awaiting cargo", "Received", "Documents complete", "HBL issued", "Loaded"];
+/** At or past "Received". */
+export const isReceivedStatus = (s: HouseStatus | null | undefined) => !!s && HOUSE_STATUSES.indexOf(s) >= 1;
 export const HOUSE_STATUS_CLASS: Record<HouseStatus, string> = {
   "Awaiting cargo": "hs-wait",
   Received: "hs-recv",
@@ -231,10 +260,15 @@ export const HOUSE_STATUS_CLASS: Record<HouseStatus, string> = {
   "HBL issued": "hs-bill",
   Loaded: "hs-loaded",
 };
-export function houseStatus(h: BoardHouse, received: boolean, docsComplete: boolean): HouseStatus {
+/** Worked out from the dates, receipts and documents (ignores a status set by hand). */
+export function autoHouseStatus(h: BoardHouse, received: boolean, docsComplete: boolean): HouseStatus {
   if (h.loaded_at) return "Loaded";
   if (h.hbl_issued_at) return "HBL issued";
   if (received && docsComplete) return "Documents complete";
   if (received) return "Received";
   return "Awaiting cargo";
+}
+/** The status shown: the team's choice, else the automatic one. */
+export function houseStatus(h: BoardHouse, received: boolean, docsComplete: boolean): HouseStatus {
+  return h.status ?? autoHouseStatus(h, received, docsComplete);
 }

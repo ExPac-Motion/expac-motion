@@ -153,7 +153,7 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
           { ...base, id: "mh1", position: 1, house_no: "SEA160984-1", supplier_id: "s1", supplier: { id: "s1", company: "Brilliant Rays Wheels Trading Co. Ltd", email: "steven@brilliantrays.cn", contact: "Steven" }, pieces: 4, gross_kg: 180, volume_cbm: 0.6, carrier_house_no: "NGB2410331", cargo_ready_date: day(-2) },
           { ...base, id: "mh2", position: 2, house_no: "SEA160984-2", supplier_id: "s2", supplier: { id: "s2", company: "Shenzhen Grepow Battery Co Ltd", email: null, contact: null }, pieces: 2, gross_kg: 95, volume_cbm: 0.4, carrier_house_no: null },
         ],
-        receipts: [{ id: "r1", receipt_no: "WR000214", house_id: "mh1", pieces: 4, gross_kg: 182, volume_cbm: 0.62, received_at: ago(60 * 24) }],
+        receipts: [{ id: "r1", receipt_no: "WR000214", house_id: "mh1", job_id: "job-m", pieces: 4, gross_kg: 182, volume_cbm: 0.62, received_at: ago(60 * 24) }, { id: "r2", receipt_no: "WR000219", house_id: null, job_id: "job-m", pieces: 2, gross_kg: 95, volume_cbm: 0.4, received_at: ago(60 * 5) }],
         docs: [
           { id: "x1", house_id: "mh1", doc_type: "Commercial Invoice" },
           { id: "x2", house_id: "mh1", doc_type: "Packing List" },

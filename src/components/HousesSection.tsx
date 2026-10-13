@@ -87,6 +87,16 @@ export default function HousesSection({ job }: { job: Job }) {
             : `${rows.length} house${rows.length === 1 ? "" : "s"} on ${job.reference}`}
         </span>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          {(housesQ.data ?? []).length > 0 && (
+            <>
+              <a className="btn outline btn-sm" href={`/jobs/${job.id}/houses/print/house`} target="_blank" rel="noopener">
+                Print {bill}s
+              </a>
+              <a className="btn outline btn-sm" href={`/jobs/${job.id}/houses/print/manifest`} target="_blank" rel="noopener">
+                Print manifest
+              </a>
+            </>
+          )}
           <button type="button" className="btn outline btn-sm" onClick={() => setRows((rs) => [...rs, blank(nextPos)])}>
             + Add house
           </button>

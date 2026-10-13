@@ -15,8 +15,12 @@ import { formatDate } from "../../lib/format";
 import { packingTotals, volumetricFactor } from "../../lib/calc";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
 import {
+  HOUSE_STATUSES,
   HOUSE_STATUS_CLASS,
+  autoHouseStatus,
   houseStatus,
+  isReceivedStatus,
+  useAssignReceiptHouse,
   useMastersBoard,
   useUpdateHouseSteps,
   type BoardDoc,
@@ -49,6 +53,9 @@ interface HouseView {
   have: string[];
   missing: string[];
   status: ReturnType<typeof houseStatus>;
+  auto: ReturnType<typeof houseStatus>;
+  /** Received here (a warehouse receipt) or marked received elsewhere. */
+  received: boolean;
 }
 
 export default function MastersPage() {
@@ -76,7 +83,17 @@ export default function MastersPage() {
         const docs: BoardDoc[] = d.docs.filter((x) => x.house_id === h.id);
         const have = types.filter((t) => docs.some((x) => x.doc_type === t));
         const missing = types.filter((t) => !have.includes(t));
-        return { h, receipts, recv, have, missing, status: houseStatus(h, receipts.length > 0, missing.length === 0) };
+        const status = houseStatus(h, receipts.length > 0, missing.length === 0);
+        return {
+          h,
+          receipts,
+          recv,
+          have,
+          missing,
+          status,
+          auto: autoHouseStatus(h, receipts.length > 0, missing.length === 0),
+          received: receipts.length > 0 || isReceivedStatus(status),
+        };
       });
       const items = d.quoted.filter((q) => q.quote_id === job.quote_id);
       const quoted = items.length ? packingTotals(items as never, volumetricFactor(job.mode)) : null;
@@ -84,7 +101,8 @@ export default function MastersPage() {
         (t, v) => ({ pieces: t.pieces + Number(v.h.pieces || 0), kg: t.kg + Number(v.h.gross_kg || 0), cbm: t.cbm + Number(v.h.volume_cbm || 0) }),
         { pieces: 0, kg: 0, cbm: 0 },
       );
-      return { job, views, quoted, declared };
+      const unassigned = d.receipts.filter((r) => r.job_id === job.id && !r.house_id);
+      return { job, views, quoted, declared, unassigned };
     });
   }, [boardQ.data]);
 
@@ -94,9 +112,9 @@ export default function MastersPage() {
     if (filter !== "all" && delivered) return false;
     if (mode === "air" && !isAir(job.mode)) return false;
     if (mode === "sea" && isAir(job.mode)) return false;
-    if (filter === "cargo" && !views.some((v) => v.receipts.length === 0)) return false;
+    if (filter === "cargo" && !views.some((v) => !v.received)) return false;
     if (filter === "docs" && !views.some((v) => v.missing.length > 0)) return false;
-    if (filter === "ready" && !views.every((v) => v.receipts.length > 0 && v.missing.length === 0 && !v.h.loaded_at)) return false;
+    if (filter === "ready" && !views.every((v) => v.received && v.missing.length === 0 && !v.h.loaded_at)) return false;
     if (!n) return true;
     return [job.reference, job.client?.company, job.awb_mbl, job.container_no, ...views.flatMap((v) => [v.h.house_no, v.h.supplier?.company, v.h.carrier_house_no])]
       .join(" ")
@@ -148,9 +166,9 @@ export default function MastersPage() {
           </EmptyState>
         </div>
       ) : (
-        shown.map(({ job, views, quoted, declared }) => {
+        shown.map(({ job, views, quoted, declared, unassigned }) => {
           const types = docTypes(job.mode);
-          const received = views.filter((v) => v.receipts.length > 0).length;
+          const received = views.filter((v) => v.received).length;
           const docsHave = views.reduce((s, v) => s + v.have.length, 0);
           const issued = views.filter((v) => v.h.hbl_issued_at).length;
           const loaded = views.filter((v) => v.h.loaded_at).length;
@@ -171,6 +189,12 @@ export default function MastersPage() {
                   {job.eta ? ` · ETA ${formatDate(job.eta)}` : ""}
                 </span>
                 <span className="ms-status">{job.shipment_status || job.milestone}</span>
+                <a className="link-btn" href={`/jobs/${job.id}/houses/print/house`} target="_blank" rel="noopener">
+                  Print all {billOf(job.mode)}s
+                </a>
+                <a className="link-btn" href={`/jobs/${job.id}/houses/print/manifest`} target="_blank" rel="noopener">
+                  Manifest
+                </a>
               </div>
               <div className="ms-rollup">
                 <span>
@@ -205,6 +229,7 @@ export default function MastersPage() {
                   {quoted ? ` (quoted ${f2(qKg)} kg · ${f3(qCbm)} CBM)` : ""}
                 </span>
               </div>
+              {unassigned.length > 0 && <UnassignedReceipts receipts={unassigned} views={views} reference={job.reference} />}
               <div className="table-wrap">
                 <table className="ms-houses">
                   <thead>
@@ -237,6 +262,45 @@ export default function MastersPage() {
   );
 }
 
+/** Warehouse receipts on the master that aren't on a house yet: assign them. */
+function UnassignedReceipts({ receipts, views, reference }: { receipts: BoardReceipt[]; views: HouseView[]; reference: string }) {
+  const { toast, error } = useToast();
+  const assign = useAssignReceiptHouse();
+  return (
+    <div className="ms-unassigned">
+      <b>
+        {receipts.length} warehouse receipt{receipts.length === 1 ? "" : "s"} on {reference} not on a house yet
+      </b>
+      {receipts.map((r) => (
+        <span key={r.id} className="ms-unassigned-item">
+          {r.receipt_no} · {f0(Number(r.pieces))} pcs · {f2(Number(r.gross_kg))} kg · {f3(Number(r.volume_cbm))} CBM
+          <select
+            value=""
+            onChange={(e) =>
+              e.target.value &&
+              assign.mutate(
+                { receiptId: r.id, houseId: e.target.value },
+                {
+                  onSuccess: () => toast(`${r.receipt_no} put on ${views.find((v) => v.h.id === e.target.value)?.h.house_no ?? "the house"}`),
+                  onError: (er) => error(er.message),
+                },
+              )
+            }
+          >
+            <option value="">Assign to house…</option>
+            {views.map((v) => (
+              <option key={v.h.id} value={v.h.id}>
+                {v.h.house_no}
+                {v.h.supplier?.company ? ` (${v.h.supplier.company})` : ""}
+              </option>
+            ))}
+          </select>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function HouseRow({ v, types, onAsk }: { v: HouseView; types: string[]; onAsk: () => void }) {
   const { error } = useToast();
   const upd = useUpdateHouseSteps();
@@ -256,7 +320,19 @@ function HouseRow({ v, types, onAsk }: { v: HouseView; types: string[]; onAsk: (
       </td>
       <td className={`num nowrap${diff ? " ms-diff" : ""}`}>
         {receipts.length === 0 ? (
-          <span className="hint">Not received</span>
+          v.received ? (
+            <input
+              className="ms-where"
+              defaultValue={h.received_note ?? ""}
+              placeholder="Received where? e.g. Shenzhen warehouse"
+              onBlur={(e) => {
+                const val = e.target.value.trim() || null;
+                if (val !== (h.received_note ?? null)) step({ received_note: val });
+              }}
+            />
+          ) : (
+            <span className="hint">Not received</span>
+          )
         ) : (
           <>
             {f0(recv.pieces)} pcs · {f2(recv.kg)} kg · {f3(recv.cbm)} CBM
@@ -281,14 +357,34 @@ function HouseRow({ v, types, onAsk }: { v: HouseView; types: string[]; onAsk: (
         <DateInput value={h.loaded_at} onChange={(d) => step({ loaded_at: d || null })} />
       </td>
       <td className="nowrap">
-        <span className={`badge ${HOUSE_STATUS_CLASS[status]}`}>{status}</span>
+        <select
+          className={`ms-status-pick badge ${HOUSE_STATUS_CLASS[status]}`}
+          value={h.status ?? ""}
+          title={h.status ? "Set by the team, pick Auto to follow the receipts, documents and dates again" : "Worked out automatically, pick a status to set it"}
+          onChange={(e) => {
+            const s = (e.target.value || null) as typeof h.status;
+            step({ status: s, status_at: s ? new Date().toISOString() : null });
+          }}
+        >
+          <option value="">Auto: {v.auto}</option>
+          {HOUSE_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
       </td>
       <td className="nowrap">
-        {missing.length > 0 && (
-          <button type="button" className="btn outline btn-sm" onClick={onAsk}>
-            Request documents
-          </button>
-        )}
+        <span style={{ display: "inline-flex", gap: 6 }}>
+          <a className="btn outline btn-sm" href={`/jobs/${h.job_id}/houses/print/house?h=${h.id}`} target="_blank" rel="noopener" title="Print this house bill">
+            Print
+          </a>
+          {missing.length > 0 && (
+            <button type="button" className="btn outline btn-sm" onClick={onAsk}>
+              Request documents
+            </button>
+          )}
+        </span>
       </td>
     </tr>
   );
