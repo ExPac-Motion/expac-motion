@@ -265,6 +265,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
   const { arm, closeAndReturn } = useDeepLinkReturn();
   const [search, setSearch] = useState("");
+  const [statusPick, setStatusPick] = useState<string>("");
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const [recordFilter, setRecordFilter] = useState<
     "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null
@@ -358,7 +359,17 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   // Quick search: shipment no., customer, shipper, PO / reference, AWB/MBL,
   // container, vessel, carrier, ports, notes.
   const q = search.trim().toLowerCase();
+  // Status dropdown (header band): one Shipment Status, "" = all.
+  const statusCounts = new Map<string, number>();
+  for (const j of stageRows.filter((x) => matchesModeTab(x.mode, modeTab))) {
+    const k = j.shipment_status || "__none";
+    statusCounts.set(k, (statusCounts.get(k) ?? 0) + 1);
+  }
+  const statusOptions = SHIPMENT_STATUSES.filter((st) =>
+    mode === "completed" ? st === DELIVERED_STATUS : st !== DELIVERED_STATUS,
+  );
   const modeRows = stageRows
+    .filter((j) => !statusPick || (statusPick === "__none" ? !j.shipment_status : j.shipment_status === statusPick))
     .filter((j) => matchesModeTab(j.mode, modeTab))
     .filter(
       (j) =>
@@ -708,7 +719,24 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           />
         }
         filters={
-          recordFilter && (
+          <>
+          <select
+            value={statusPick}
+            onChange={(e) => setStatusPick(e.target.value)}
+            aria-label="Filter by status"
+            title="Show only shipments with this status"
+            className={statusPick ? "status-pick-on" : undefined}
+            style={{ width: "auto" }}
+          >
+            <option value="">All statuses ({stageRows.filter((x) => matchesModeTab(x.mode, modeTab)).length})</option>
+            {statusOptions.map((st) => (
+              <option key={st} value={st}>
+                {st} ({statusCounts.get(st) ?? 0})
+              </option>
+            ))}
+            {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}
+          </select>
+          {recordFilter && (
             <span className="topbar-filter">
               Filtered to{" "}
               <strong>
@@ -725,7 +753,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                 clear
               </button>
             </span>
-          )
+          )}
+          </>
         }
         count={
           isLoading
@@ -782,6 +811,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           <EmptyState>
             {q
               ? `No shipments match "${search.trim()}".`
+              : statusPick
+              ? `No shipments with status ${statusPick === "__none" ? "not set" : `"${statusPick}"`} in this view.`
               : recordFilter
               ? "Nothing matches that filter, every shipment in this view has one."
               : modeTab !== "All" && stageRows.length > 0

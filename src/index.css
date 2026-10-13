@@ -9464,3 +9464,11 @@ th.sage-num {
   width: 100%;
   text-align: left;
 }
+
+/* Active Shipments: status filter dropdown highlights when a status is picked */
+select.status-pick-on {
+  border-color: var(--teal);
+  background-color: var(--teal-tint);
+  color: var(--teal-ink);
+  font-weight: 700;
+}
