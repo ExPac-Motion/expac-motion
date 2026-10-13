@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { previewActive } from "./lib/db";
 import {
   BrowserRouter,
   Navigate,
@@ -129,6 +130,8 @@ function PortalProtected() {
   }
   if (!session) return <Navigate to="/login" replace />;
   if (profileQ.data?.role === "restricted") return <RestrictedAccountPage />;
+  // An Admin previewing a customer (0167) sees that customer's portal, read-only.
+  if (previewActive(profileQ.data)) return <PortalLayout />;
   if (profileQ.data?.role !== "client") return <Navigate to="/" replace />;
   // null (pre-0068 accounts) and 'approved' both mean "go ahead".
   const status = profileQ.data?.portal_status;

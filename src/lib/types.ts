@@ -59,6 +59,9 @@ export interface Profile {
    *  older invite-claimed client), the app treats null the same as
    *  'approved'. */
   portal_status: "pending" | "approved" | "rejected" | null;
+  /** Admin portal preview (0167): which customer, until when. */
+  preview_client_id?: string | null;
+  preview_until?: string | null;
   /** Which portal nav sections this login can see. Only meaningful for
    *  role='client' (or 'restricted', kept so it's remembered on restore). */
   portal_permissions: {

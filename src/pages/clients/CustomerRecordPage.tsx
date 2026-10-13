@@ -5,7 +5,7 @@ import { useToast } from "../../components/Toast";
 import { useAgents, useClients, useMyProfile, useProfiles } from "../../lib/hooks";
 import { formatDateTime, normalizeWebsite } from "../../lib/format";
 import { RATE_TIERS, type RateTierId } from "../../lib/types";
-import { setClientRateTier } from "../../lib/db";
+import { setClientRateTier, setPortalPreview } from "../../lib/db";
 import {
   CUSTOMER_ROLES,
   CUSTOMER_SEGMENTS,
@@ -180,6 +180,22 @@ export default function CustomerRecordPage() {
             <button className="btn outline" onClick={() => navigate("/clients")}>
               All customers
             </button>
+            {isAdmin && !isNew && (
+              <button
+                className="btn outline"
+                title="Open the Customer Portal as this customer sees it (read-only, your own login)"
+                onClick={async () => {
+                  try {
+                    await setPortalPreview(id);
+                    window.location.href = "/portal";
+                  } catch (e) {
+                    error(e instanceof Error ? e.message : "Could not start the preview");
+                  }
+                }}
+              >
+                View portal as customer
+              </button>
+            )}
             {(fieldTab || isNew) && (
               <button className="btn" onClick={onSave} disabled={save.isPending || (!dirty && !isNew)}>
                 {save.isPending ? "Saving…" : isNew ? "Create customer" : dirty ? "Save changes" : "Saved"}

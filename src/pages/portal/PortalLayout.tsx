@@ -1,4 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { previewActive, setPortalPreview } from "../../lib/db";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { useMyJobs, useMyProfile } from "../../lib/hooks";
@@ -330,6 +332,7 @@ export default function PortalLayout() {
           </div>
         </header>
         <main className="main pt-main">
+          {previewActive(profileQ.data) && <PreviewBanner company={meQ.data?.company} clientId={profileQ.data?.preview_client_id ?? ""} />}
           <Outlet />
         </main>
       </div>
@@ -555,6 +558,30 @@ function ChangePassword() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Admin preview (0167): whose portal this is, read-only, and Exit. */
+function PreviewBanner({ company, clientId }: { company?: string; clientId: string }) {
+  const qc = useQueryClient();
+  async function exit() {
+    try {
+      await setPortalPreview(null);
+    } finally {
+      qc.clear();
+      window.location.href = clientId ? `/clients/${clientId}` : "/";
+    }
+  }
+  return (
+    <div className="pt-preview-banner" role="status">
+      <span>
+        👁 <b>Preview</b>: you're viewing the portal as <b>{company || "this customer"}</b>. Read-only, nothing can be accepted, sent or
+        uploaded. Ends automatically after 2 hours.
+      </span>
+      <button type="button" className="btn outline btn-sm" onClick={() => void exit()}>
+        Exit preview
+      </button>
     </div>
   );
 }

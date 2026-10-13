@@ -1041,6 +1041,15 @@ export async function listShipmentDocumentsForJobs(
 }
 
 /* ---------- Customer Portal ---------- */
+/** Admin: start (clientId) or stop (null) previewing the portal as a customer (0167). */
+export async function setPortalPreview(clientId: string | null): Promise<string | null> {
+  return unwrap<string | null>(await supabase.rpc("set_portal_preview", { p_client: clientId }));
+}
+/** An Admin's portal preview that is still running. */
+export function previewActive(p: Pick<Profile, "role" | "preview_client_id" | "preview_until"> | null | undefined): boolean {
+  return !!p && p.role === "admin" && !!p.preview_client_id && !!p.preview_until && Date.parse(p.preview_until) > Date.now();
+}
+
 export async function getMyProfile(): Promise<Profile | null> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;

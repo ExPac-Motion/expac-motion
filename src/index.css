@@ -9372,3 +9372,19 @@ th.sage-num {
 .sp-steps .sp-label {
   line-height: 1.2;
 }
+
+/* Admin portal preview banner (0167) */
+.pt-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--amber-tint);
+  border: 1px solid var(--amber);
+  color: var(--amber-ink);
+  font-size: 0.86rem;
+}
