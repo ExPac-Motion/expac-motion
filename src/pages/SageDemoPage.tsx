@@ -148,10 +148,11 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
     {
       const job = { id: "job-m", reference: "SEA160984", mode: "Sea Freight (LCL)", milestone: "Booked", shipment_status: "Booked", etd: day(6), eta: day(34), awb_mbl: "MEDUNB123456", container_no: null, quote_id: "q-m", client_id: CLIENT, client: { id: CLIENT, company: "Connell Investment Holdings", email: "gilbert@connell.co.za" } };
       const base = { job_id: "job-m", commodity: null, commercial_value: null, value_currency: "USD", notes: null, cargo_ready_date: null, hbl_issued_at: null, loaded_at: null, job };
+      seed(["wms", "warehouses"], [{ id: "w1", code: "SZX", name: "Shenzhen Warehouse", active: true }, { id: "w2", code: "JNB", name: "Johannesburg Warehouse", active: true }]);
       seed(["job_houses", "board"], {
         houses: [
           { ...base, id: "mh1", position: 1, house_no: "SEA160984-1", supplier_id: "s1", supplier: { id: "s1", company: "Brilliant Rays Wheels Trading Co. Ltd", email: "steven@brilliantrays.cn", contact: "Steven" }, pieces: 4, gross_kg: 180, volume_cbm: 0.6, carrier_house_no: "NGB2410331", cargo_ready_date: day(-2) },
-          { ...base, id: "mh2", position: 2, house_no: "SEA160984-2", supplier_id: "s2", supplier: { id: "s2", company: "Shenzhen Grepow Battery Co Ltd", email: null, contact: null }, pieces: 2, gross_kg: 95, volume_cbm: 0.4, carrier_house_no: null },
+          { ...base, id: "mh2", position: 2, house_no: "SEA160984-2", supplier_id: "s2", supplier: { id: "s2", company: "Shenzhen Grepow Battery Co Ltd", email: null, contact: null }, pieces: 2, gross_kg: 95, volume_cbm: 0.4, carrier_house_no: null, status: "Received", received_note: "Shenzhen Warehouse" },
         ],
         receipts: [{ id: "r1", receipt_no: "WR000214", house_id: "mh1", job_id: "job-m", pieces: 4, gross_kg: 182, volume_cbm: 0.62, received_at: ago(60 * 24) }, { id: "r2", receipt_no: "WR000219", house_id: null, job_id: "job-m", pieces: 2, gross_kg: 95, volume_cbm: 0.4, received_at: ago(60 * 5) }],
         docs: [

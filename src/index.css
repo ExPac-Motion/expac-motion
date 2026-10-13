@@ -9269,6 +9269,8 @@ th.sage-num {
 }
 .ms-houses {
   width: 100%;
+  min-width: 1583px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.84rem;
 }
@@ -9424,4 +9426,41 @@ th.sage-num {
   width: auto;
   min-width: 0;
   font-size: 0.8rem;
+}
+
+/* Masters & Houses table: aligned columns (one line per figure) */
+.ms-houses th,
+.ms-houses td {
+  vertical-align: middle;
+}
+.ms-houses td {
+  overflow-wrap: anywhere;
+}
+.ms-houses td input,
+.ms-houses td select {
+  width: 100%;
+  min-width: 0;
+}
+.ms-fig {
+  display: grid;
+  gap: 1px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.ms-fig b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ms-diff .ms-fig b {
+  color: var(--orange-ink);
+}
+.ms-where {
+  display: grid;
+  gap: 4px;
+  width: auto;
+}
+.ms-houses .ms-status-pick {
+  width: 100%;
+  text-align: left;
 }

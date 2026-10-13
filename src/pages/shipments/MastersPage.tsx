@@ -14,6 +14,7 @@ import { createMessage, getCompanySettings } from "../../lib/db";
 import { formatDate } from "../../lib/format";
 import { packingTotals, volumetricFactor } from "../../lib/calc";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
+import { useWmsWarehouses } from "../../lib/wms";
 import {
   HOUSE_STATUSES,
   HOUSE_STATUS_CLASS,
@@ -232,18 +233,30 @@ export default function MastersPage() {
               {unassigned.length > 0 && <UnassignedReceipts receipts={unassigned} views={views} reference={job.reference} />}
               <div className="table-wrap">
                 <table className="ms-houses">
+                  <colgroup>
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 230 }} />
+                    <col style={{ width: 150 }} />
+                    <col style={{ width: 190 }} />
+                    <col style={{ width: 150 }} />
+                    <col style={{ width: 126 }} />
+                    <col style={{ width: 126 }} />
+                    <col style={{ width: 126 }} />
+                    <col style={{ width: 160 }} />
+                    <col style={{ width: 205 }} />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th>House</th>
+                      <th>House No</th>
                       <th>Supplier</th>
-                      <th className="num">Declared</th>
-                      <th className="num">Received at warehouse</th>
+                      <th>Declared cargo</th>
+                      <th>Received at</th>
                       <th>Documents</th>
                       <th>Cargo ready</th>
                       <th>{billOf(job.mode)} issued</th>
                       <th>Loaded</th>
                       <th>Status</th>
-                      <th />
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -301,6 +314,64 @@ function UnassignedReceipts({ receipts, views, reference }: { receipts: BoardRec
   );
 }
 
+/** Pieces / kg / CBM, one line each, so the columns line up. */
+function CargoFigures({ pieces, kg, cbm }: { pieces: number; kg: number; cbm: number }) {
+  return (
+    <div className="ms-fig">
+      <span>
+        <b>{f0(pieces)}</b> pcs
+      </span>
+      <span>
+        <b>{f2(kg)}</b> kg
+      </span>
+      <span>
+        <b>{f3(cbm)}</b> CBM
+      </span>
+    </div>
+  );
+}
+
+/** Where cargo marked Received (without a Motion receipt) was received:
+ *  one of the warehouses (Motion WMS › Warehouses) or Other. */
+function ReceivedAt({ value, onChange }: { value: string | null | undefined; onChange: (v: string | null) => void }) {
+  const whQ = useWmsWarehouses();
+  const names = (whQ.data ?? []).filter((w) => w.active).map((w) => w.name);
+  const isOther = !!value && !names.includes(value);
+  const [other, setOther] = useState(isOther);
+  return (
+    <div className="ms-where">
+      <select
+        value={other ? "__other" : value ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "__other") return setOther(true);
+          setOther(false);
+          onChange(v || null);
+        }}
+      >
+        <option value="">Pick the warehouse…</option>
+        {names.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+        <option value="__other">Other…</option>
+      </select>
+      {other && (
+        <input
+          defaultValue={isOther ? value ?? "" : ""}
+          placeholder="Where? e.g. supplier's warehouse"
+          autoFocus={!isOther}
+          onBlur={(e) => {
+            const v = e.target.value.trim() || null;
+            if (v !== (value ?? null)) onChange(v);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function HouseRow({ v, types, onAsk }: { v: HouseView; types: string[]; onAsk: () => void }) {
   const { error } = useToast();
   const upd = useUpdateHouseSteps();
@@ -315,29 +386,19 @@ function HouseRow({ v, types, onAsk }: { v: HouseView; types: string[]; onAsk: (
         {h.carrier_house_no && <div className="hint">{h.carrier_house_no}</div>}
       </td>
       <td>{h.supplier?.company ?? <span className="hint">Not set</span>}</td>
-      <td className="num nowrap">
-        {f0(Number(h.pieces))} pcs · {f2(Number(h.gross_kg))} kg · {f3(Number(h.volume_cbm))} CBM
+      <td>
+        <CargoFigures pieces={Number(h.pieces)} kg={Number(h.gross_kg)} cbm={Number(h.volume_cbm)} />
       </td>
-      <td className={`num nowrap${diff ? " ms-diff" : ""}`}>
-        {receipts.length === 0 ? (
-          v.received ? (
-            <input
-              className="ms-where"
-              defaultValue={h.received_note ?? ""}
-              placeholder="Received where? e.g. Shenzhen warehouse"
-              onBlur={(e) => {
-                const val = e.target.value.trim() || null;
-                if (val !== (h.received_note ?? null)) step({ received_note: val });
-              }}
-            />
-          ) : (
-            <span className="hint">Not received</span>
-          )
-        ) : (
+      <td className={diff ? "ms-diff" : undefined}>
+        {receipts.length > 0 ? (
           <>
-            {f0(recv.pieces)} pcs · {f2(recv.kg)} kg · {f3(recv.cbm)} CBM
+            <CargoFigures pieces={recv.pieces} kg={recv.kg} cbm={recv.cbm} />
             <div className="hint">{receipts.map((r) => r.receipt_no).join(", ")}</div>
           </>
+        ) : v.received ? (
+          <ReceivedAt value={h.received_note} onChange={(val) => step({ received_note: val })} />
+        ) : (
+          <span className="hint">Not received</span>
         )}
       </td>
       <td className="nowrap">
