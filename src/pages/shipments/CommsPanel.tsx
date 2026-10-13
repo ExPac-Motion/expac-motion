@@ -40,10 +40,10 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
   const { data: settings } = useCompanySettings();
 
   const [tab, setTab] = useState<"email" | "note">("email");
-  // 'reply' (default) = quick chat-style message, no shipment-data block,
-  // the common case once a thread is already going. 'update' is the full
-  // per-mode status-update template (Settings -> Shipment Comms).
-  const [template, setTemplate] = useState<"update" | "reply">("reply");
+  // 'update' (default) = the full per-mode status-update template (Settings ->
+  // Shipment Comms). 'reply' = quick chat-style message, no shipment-data
+  // block, picked by hand when answering the customer.
+  const [template, setTemplate] = useState<"update" | "reply">("update");
   const [remarks, setRemarks] = useState("");
   const remarksRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState("");
