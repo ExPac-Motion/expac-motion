@@ -3,10 +3,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 
 interface AuthApi {
@@ -35,14 +37,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const qc = useQueryClient();
+  // Whose data is cached. When the signed-in person changes (sign in, sign
+  // out, another login in the same tab) everything cached for the previous
+  // one is dropped, so e.g. the profile looked up while signed out ("no
+  // one") never decides where a new login lands.
+  const cachedFor = useRef<string | null | undefined>(undefined);
+  const switchTo = (s: Session | null) => {
+    const uid = s?.user?.id ?? null;
+    if (cachedFor.current !== undefined && cachedFor.current !== uid) qc.clear();
+    cachedFor.current = uid;
+  };
 
   useEffect(() => {
     supabase.auth
       .getSession()
-      .then(({ data }) => setSession(data.session))
+      .then(({ data }) => {
+        switchTo(data.session);
+        setSession(data.session);
+      })
       .catch(() => setSession(null))
       .finally(() => setLoading(false));
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      switchTo(s);
       setSession(s);
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
     });
