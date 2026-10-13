@@ -927,6 +927,22 @@ export function useDeleteMyShipmentDocument() {
     },
   });
 }
+/** When each Shipment Status was set (client_job_status_history, 0166). */
+export function useMyStatusHistory(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["my_status_history", jobId],
+    enabled: Boolean(jobId),
+    queryFn: async () => {
+      const r = await supabase
+        .from("client_job_status_history")
+        .select("status, changed_at")
+        .eq("job_id", jobId as string)
+        .order("changed_at", { ascending: true });
+      if (r.error) return [] as { status: string; changed_at: string }[]; // before 0166
+      return (r.data ?? []) as { status: string; changed_at: string }[];
+    },
+  });
+}
 export function useMyJobEvents(jobId: string | undefined) {
   return useQuery({
     queryKey: ["my_job_events", jobId],

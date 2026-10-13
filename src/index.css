@@ -8791,7 +8791,7 @@ th.sage-num {
   --sp-dot: 30px;
   position: relative;
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--sp-n, 7), minmax(0, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -8802,16 +8802,16 @@ th.sage-num {
   content: "";
   position: absolute;
   top: calc(var(--sp-dot) / 2 - 2px);
-  left: calc(100% / 14);
+  left: calc(100% / (2 * var(--sp-n, 7)));
   height: 4px;
   border-radius: 2px;
 }
 .sp-steps::before {
-  right: calc(100% / 14);
+  right: calc(100% / (2 * var(--sp-n, 7)));
   background: var(--line);
 }
 .sp-steps::after {
-  width: calc((100% - 100% / 7) * var(--sp-frac, 0));
+  width: calc((100% - 100% / var(--sp-n, 7)) * var(--sp-frac, 0));
   background: var(--green);
 }
 .sp-step {
@@ -9356,4 +9356,19 @@ th.sage-num {
   font-weight: 600;
   color: var(--ink);
   margin: 2px 0;
+}
+
+.sp-step.alert .sp-dot {
+  border-color: var(--orange);
+  color: var(--orange-ink);
+}
+.sp-step.alert.done .sp-dot,
+.sp-step.alert.current .sp-dot {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+  box-shadow: none;
+}
+.sp-steps .sp-label {
+  line-height: 1.2;
 }

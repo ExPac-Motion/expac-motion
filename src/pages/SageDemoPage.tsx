@@ -110,7 +110,7 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
       { id: "c-2", company: "Highveld Outdoor Gear", sage_customer_id: 502 },
     ]);
     seed(["jobs"], JOBS);
-    seed(["my_jobs"], JOBS.map((j, i) => ({ ...j, quote_id: j.id === "job-2" ? "q-2" : null, eta: j.id === "job-2" ? day(9) : null, client_id: CLIENT, milestone: "In Transit", shipment_status: null, created_at: day(-60 + i * 7), etd: day(-50 + i * 7), origin: i % 2 ? "CNSZX, Shenzhen, China" : "CNNGB, Ningbo, China", supplier_company: i % 2 ? "Brilliant Rays Wheels Trading Co. Ltd" : "Shenzhen Bright Lighting Co." })));
+    seed(["my_jobs"], JOBS.map((j, i) => ({ ...j, quote_id: j.id === "job-2" ? "q-2" : null, shipment_status: j.id === "job-2" ? "In Transit" : null, eta: j.id === "job-2" ? day(9) : null, client_id: CLIENT, milestone: "In Transit", created_at: day(-60 + i * 7), etd: day(-50 + i * 7), origin: i % 2 ? "CNSZX, Shenzhen, China" : "CNNGB, Ningbo, China", supplier_company: i % 2 ? "Brilliant Rays Wheels Trading Co. Ltd" : "Shenzhen Bright Lighting Co." })));
     seed(["my_documents_all"], []);
     const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
     const CHAT = [
@@ -137,6 +137,14 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
       { id: "d2", job_id: "job-2", name: "House Bill of Lading.pdf", storage_path: "y", doc_type: "Bill of Lading", created_at: ago(60 * 24 * 11) },
     ]);
     seed(["my_messages", "job-2"], []);
+    seed(["my_status_history", "job-2"], [
+      { status: "Booked", changed_at: ago(60 * 24 * 20) },
+      { status: "Collected", changed_at: ago(60 * 24 * 17) },
+      { status: "Received", changed_at: ago(60 * 24 * 15) },
+      { status: "Loaded", changed_at: ago(60 * 24 * 13) },
+      { status: "Departed", changed_at: ago(60 * 24 * 12) },
+      { status: "In Transit", changed_at: ago(60 * 24 * 11) },
+    ]);
     {
       const job = { id: "job-m", reference: "SEA160984", mode: "Sea Freight (LCL)", milestone: "Booked", shipment_status: "Booked", etd: day(6), eta: day(34), awb_mbl: "MEDUNB123456", container_no: null, quote_id: "q-m", client_id: CLIENT, client: { id: CLIENT, company: "Connell Investment Holdings", email: "gilbert@connell.co.za" } };
       const base = { job_id: "job-m", commodity: null, commercial_value: null, value_currency: "USD", notes: null, cargo_ready_date: null, hbl_issued_at: null, loaded_at: null, job };

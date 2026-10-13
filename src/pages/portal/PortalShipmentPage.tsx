@@ -6,6 +6,7 @@ import {
   useDeleteMyShipmentDocument,
   useMyDocuments,
   useMyJobEvents,
+  useMyStatusHistory,
   useMyJobs,
   useMyJobTracking,
   useMyMessages,
@@ -17,7 +18,7 @@ import { getMyDocumentUrl } from "../../lib/db";
 import { carrierLabel } from "../../lib/docTemplates";
 import { currencyAmount, formatDate, formatDateTime, money, portCode } from "../../lib/format";
 import { packingTotals, volumetricFactor } from "../../lib/calc";
-import { MILESTONES, type ClientDocument, type Milestone, type PackingItem } from "../../lib/types";
+import { MILESTONE_BY_STATUS, SHIPMENT_STATUSES, type ClientDocument, type PackingItem } from "../../lib/types";
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
 import { houseTotals, useMyJobHouses } from "../../lib/houses";
@@ -59,15 +60,18 @@ export default function PortalShipmentPage() {
   const linesQ = usePortalLines(quote ? [quote.id] : []);
   const packQ = usePortalPacking(quote?.id);
 
-  // When each milestone was reached: Created = booked into Motion, the rest
-  // from the milestone log, Delivered from the proof of delivery.
+  // When each Shipment Status was set (0166): Created = booked into Motion,
+  // the rest from the status history, Delivered also from the proof of
+  // delivery.
+  const historyQ = useMyStatusHistory(id);
   const reachedAt = useMemo(() => {
-    const m = new Map<Milestone, string>();
+    const m = new Map<string, string>();
     if (job) m.set("Created", job.created_at);
-    for (const e of eventsQ.data ?? []) m.set(e.milestone as Milestone, e.created_at);
-    if (job?.pod_delivered_at) m.set("Delivered", job.pod_delivered_at);
+    for (const e of historyQ.data ?? []) m.set(e.status, e.changed_at);
+    if (job?.pod_delivered_at && !m.has("Delivered")) m.set("Delivered", job.pod_delivered_at);
     return m;
-  }, [job, eventsQ.data]);
+  }, [job, historyQ.data]);
+  void eventsQ;
 
   async function onDownload(storagePath: string) {
     const tab = window.open("", "_blank");
@@ -120,8 +124,15 @@ export default function PortalShipmentPage() {
   if (jobsQ.isLoading) return <Loading />;
   if (!job) return <ErrorNote error={new Error("Shipment not found")} />;
 
-  const current = Math.max(0, MILESTONES.indexOf(job.milestone as Milestone));
-  const delivered = job.milestone === "Delivered" || !!job.pod_delivered_at;
+  const delivered = job.milestone === "Delivered" || job.shipment_status === "Delivered" || !!job.pod_delivered_at;
+  // Every Shipment Status in order; Detained only when it happened.
+  const steps = SHIPMENT_STATUSES.filter((s) => s !== "Detained" || reachedAt.has(s) || job.shipment_status === s);
+  const byStatus = steps.indexOf(job.shipment_status ?? "");
+  const current = delivered
+    ? steps.length - 1
+    : byStatus >= 0
+      ? byStatus
+      : Math.max(0, steps.findIndex((s) => MILESTONE_BY_STATUS[s] === job.milestone));
   const status = tracking?.status || job.shipment_status || job.milestone;
   const etd = tracking?.etd || job.etd;
   const eta = tracking?.pod_ata || tracking?.pod_eta || tracking?.eta || job.eta;
@@ -176,17 +187,32 @@ export default function PortalShipmentPage() {
           {!delivered && eta && <span className="sp-eta">Expected {formatDate(eta)}</span>}
           {delivered && job.pod_signed_by && <span className="sp-eta">Signed for by {job.pod_signed_by}</span>}
         </div>
-        <ol className="sp-steps" style={{ ["--sp-frac" as string]: current / (MILESTONES.length - 1) }}>
-          {MILESTONES.map((m, i) => {
+        <ol
+          className="sp-steps"
+          style={{ ["--sp-frac" as string]: current / (steps.length - 1), ["--sp-n" as string]: steps.length }}
+        >
+          {steps.map((m, i) => {
             const state = i < current || (i === current && delivered) ? "done" : i === current ? "current" : "todo";
             const at = reachedAt.get(m);
             return (
-              <li key={m} className={`sp-step ${state}`}>
+              <li key={m} className={`sp-step ${state}${m === "Detained" ? " alert" : ""}`}>
                 <span className="sp-dot" aria-hidden>
                   {state === "done" ? "✓" : i + 1}
                 </span>
                 <span className="sp-label">{m}</span>
-                <span className="sp-when">{at && state !== "todo" ? formatDateTime(at) : state === "current" ? "Now" : ""}</span>
+                <span className="sp-when">
+                  {at && state !== "todo" ? (
+                    <>
+                      {formatDate(at)}
+                      <br />
+                      {formatDateTime(at).split(" ").slice(1).join(" ")}
+                    </>
+                  ) : state === "current" ? (
+                    "Now"
+                  ) : (
+                    ""
+                  )}
+                </span>
               </li>
             );
           })}
