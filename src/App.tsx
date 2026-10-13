@@ -81,9 +81,11 @@ function Protected() {
     return <div className="center-note">Loading…</div>;
   }
   if (!session) return <Navigate to="/login" replace />;
-  if (profileQ.data?.role === "restricted") return <RestrictedAccountPage />;
   if (profileQ.data?.role === "client") return <Navigate to="/portal" replace />;
   if (profileQ.data?.role === "partner") return <Navigate to="/partner" replace />;
+  // Only real staff (Admin / Standard User) get Motion; a restricted login,
+  // or one whose profile is missing / unreadable, never sees the staff shell.
+  if (profileQ.data?.role !== "admin" && profileQ.data?.role !== "user") return <RestrictedAccountPage />;
   return <Layout />;
 }
 
