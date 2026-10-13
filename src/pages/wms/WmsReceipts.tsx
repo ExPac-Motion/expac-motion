@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useJobHouses } from "../../lib/houses";
+import { useJobHouses, useMastersBoard, type BoardHouse } from "../../lib/houses";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
@@ -210,7 +210,7 @@ export default function WmsReceipts() {
               <option value="part_released">Part released</option>
               <option value="released">Released</option>
               <option value="all">All receipts</option>
-              <option value="expected">Expected (pre-advised)</option>
+              <option value="expected">Expected (pre-advised + shipment houses)</option>
             </select>
             {lk.warehouses.length > 1 && (
               <select value={whId} onChange={(e) => setWhId(e.target.value)} style={{ width: "auto" }}>
@@ -237,6 +237,7 @@ export default function WmsReceipts() {
         </button>
       </PageTools>
 
+      {status !== "expected" && <ExpectedHint onShow={() => setStatus("expected")} />}
       {status === "expected" ? (
         <ExpectedList toolsSlot={toolsSlot} />
       ) : (
@@ -534,8 +535,8 @@ export function ReceiptEditModal({
   const save = useWmsMutation((v: { id?: string; values: WmsReceiptInput }) => wmsDb.saveReceipt(v.id, v.values));
 
   const firstWh = lk.warehouses.find((w) => w.active)?.id ?? lk.warehouses[0]?.id ?? "";
-  const [houseId, setHouseId] = useState<string | null>(null);
-  const [houseTouched, setHouseTouched] = useState(false);
+  const [houseId, setHouseId] = useState<string | null>(defaults?.house_id ?? null);
+  const [houseTouched, setHouseTouched] = useState(!!defaults?.house_id);
   const [f, setF] = useState<WmsReceiptInput>(() =>
     receipt
       ? (() => {
@@ -965,6 +966,7 @@ function ExpectedList({ toolsSlot }: { toolsSlot: HTMLDivElement | null }) {
   const pk = receiving ? packageTotals(receiving.packages) : null;
   return (
     <>
+      <ExpectedHouses />
       <div className="panel">
         <div className="panel-head">
           <div>
@@ -1066,5 +1068,132 @@ function ReceiptHouseField({
         ))}
       </select>
     </div>
+  );
+}
+
+/* ---------- Expected from master shipments' houses (0164) ---------- */
+
+/** Houses still waiting for a Motion warehouse receipt (not loaded). */
+function useExpectedHouses() {
+  const boardQ = useMastersBoard();
+  const d = boardQ.data;
+  const rows = (d?.houses ?? []).filter(
+    (h) => h.job && h.job.milestone !== "Delivered" && !h.loaded_at && !(d?.receipts ?? []).some((r) => r.house_id === h.id),
+  );
+  return { rows, isLoading: boardQ.isLoading };
+}
+
+/** On the stock views: "N houses expected", one click to the Expected view. */
+function ExpectedHint({ onShow }: { onShow: () => void }) {
+  const { rows } = useExpectedHouses();
+  if (rows.length === 0) return null;
+  return (
+    <div className="ms-unassigned" style={{ marginBottom: 12 }}>
+      <b>
+        {rows.length} shipment house{rows.length === 1 ? "" : "s"} expected at the warehouse
+      </b>
+      <span>{[...new Set(rows.map((h) => h.job?.reference))].join(", ")}</span>
+      <button type="button" className="btn outline btn-sm" onClick={onShow}>
+        Show expected cargo
+      </button>
+    </div>
+  );
+}
+
+function ExpectedHouses() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { rows, isLoading } = useExpectedHouses();
+  const [receiving, setReceiving] = useState<BoardHouse | null>(null);
+  return (
+    <>
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Expected from shipments</h2>
+            <p>Houses on master shipments still waiting for cargo. Receive opens a receipt filled in from the house (shipment, house, supplier, cargo).</p>
+          </div>
+        </div>
+        {isLoading ? (
+          <Loading />
+        ) : rows.length === 0 ? (
+          <EmptyState>No shipment houses waiting for cargo.</EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="ms-houses" style={{ minWidth: 0, tableLayout: "auto" }}>
+              <thead>
+                <tr>
+                  <th>Actions</th>
+                  <th>House No</th>
+                  <th>Shipment</th>
+                  <th>Customer</th>
+                  <th>Supplier</th>
+                  <th>Declared cargo</th>
+                  <th>Cargo ready</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((h) => (
+                  <tr key={h.id}>
+                    <td>
+                      <button type="button" className="btn btn-sm" onClick={() => setReceiving(h)}>
+                        Receive
+                      </button>
+                    </td>
+                    <td className="nowrap">
+                      <b>{h.house_no}</b>
+                    </td>
+                    <td className="nowrap">
+                      {h.job?.reference}
+                      <div className="hint">{h.job?.mode}</div>
+                    </td>
+                    <td>{h.job?.client?.company ?? ""}</td>
+                    <td>{h.supplier?.company ?? <span className="hint">Not set</span>}</td>
+                    <td className="nowrap">
+                      {Number(h.pieces)} pcs · {Number(h.gross_kg).toLocaleString("en-ZA", { maximumFractionDigits: 2 })} kg ·{" "}
+                      {Number(h.volume_cbm).toLocaleString("en-ZA", { maximumFractionDigits: 3 })} CBM
+                    </td>
+                    <td className="nowrap">{h.cargo_ready_date ? formatDate(h.cargo_ready_date) : <span className="hint">Not set</span>}</td>
+                    <td className="nowrap">
+                      {h.status ? (
+                        <span className="hint">
+                          Marked {h.status}
+                          {h.received_note ? `, ${h.received_note}` : ""}, no receipt yet
+                        </span>
+                      ) : (
+                        <span className="hint">Awaiting cargo</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {receiving && receiving.job && (
+        <ReceiptEditModal
+          receipt={null}
+          defaults={{
+            client_id: receiving.job.client_id,
+            job_id: receiving.job.id,
+            house_id: receiving.id,
+            supplier_id: receiving.supplier_id,
+            description: receiving.commodity,
+            pieces: Number(receiving.pieces) || 0,
+            gross_kg: Number(receiving.gross_kg) || 0,
+            volume_cbm: Number(receiving.volume_cbm) || 0,
+            notes: "House " + receiving.house_no + (receiving.supplier?.company ? ", from " + receiving.supplier.company : ""),
+          }}
+          onClose={() => setReceiving(null)}
+          onSaved={(id) => {
+            toast("Received against " + receiving.house_no);
+            setReceiving(null);
+            navigate(`/wms/print/receipt/${id}`);
+          }}
+        />
+      )}
+    </>
   );
 }
