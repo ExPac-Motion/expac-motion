@@ -7,7 +7,7 @@ import QuoteRequestPublicForm from "./QuoteRequestPublicForm";
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
  *  alert -- see submit_web_form() in 0037_web_forms.sql. */
-const FORM_FAVICON = "https://cdn.expac.co.za/mail-assets/media/596ab86f-da15-45f0-b60f-8cdac120721a.jpg";
+const FORM_FAVICON = "https://cdn.expac.co.za/mail-assets/media/d2dbb470-55b1-483c-92ff-0cba3a2756b5.png";
 
 export default function FormPublicPage() {
   const { id = "" } = useParams();
@@ -57,7 +57,7 @@ export default function FormPublicPage() {
     const original = link.href;
     const originalType = link.type;
     link.href = FORM_FAVICON;
-    link.type = "image/jpeg";
+    link.type = "image/png";
     return () => {
       link.href = original;
       link.type = originalType;
