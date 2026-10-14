@@ -164,7 +164,7 @@ export default function QuotesListPage() {
   );
   const [bulkOpen, setBulkOpen] = useState(false);
   const { toast, error: toastError } = useToast();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const status = params.get("status");
   const filter: QuoteStatus | "all" = isQuoteStatus(status) ? status : "all";
 
@@ -193,6 +193,12 @@ export default function QuotesListPage() {
   // reference, commodity, ports, vessel, container.
   const [search, setSearch] = useState("");
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  // Status dropdown (header band, as on Shipments / Leads): quotes per status.
+  const statusCounts = useMemo(() => {
+    const m = new Map<QuoteStatus, number>();
+    for (const q of quotes ?? []) m.set(q.status, (m.get(q.status) ?? 0) + 1);
+    return m;
+  }, [quotes]);
   const rows = useMemo(() => {
     const list = quotes ?? [];
     const byStatus = filter === "all" ? list : list.filter((q) => q.status === filter);
@@ -583,6 +589,29 @@ export default function QuotesListPage() {
             onChange={setSearch}
             placeholder="Search quote no., customer, shipper, reference…"
           />
+        }
+        filters={
+          <select
+            value={filter}
+            onChange={(e) => {
+              // Same ?status= the Quotations menu links use, so they agree.
+              const next = new URLSearchParams(params);
+              if (e.target.value === "all") next.delete("status");
+              else next.set("status", e.target.value);
+              setParams(next, { replace: true });
+            }}
+            aria-label="Filter by status"
+            title="Show only quotes with this status"
+            className={filter !== "all" ? "status-pick-on" : undefined}
+            style={{ width: "auto" }}
+          >
+            <option value="all">All statuses ({(quotes ?? []).length})</option>
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]} ({statusCounts.get(s) ?? 0})
+              </option>
+            ))}
+          </select>
         }
         count={
           isLoading
