@@ -7,6 +7,8 @@ import QuoteRequestPublicForm from "./QuoteRequestPublicForm";
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
  *  alert -- see submit_web_form() in 0037_web_forms.sql. */
+const FORM_FAVICON = "https://cdn.expac.co.za/mail-assets/media/596ab86f-da15-45f0-b60f-8cdac120721a.jpg";
+
 export default function FormPublicPage() {
   const { id = "" } = useParams();
   const [params] = useSearchParams();
@@ -44,9 +46,8 @@ export default function FormPublicPage() {
     return () => ro.disconnect();
   }, [embed, id]);
 
-  // A smaller-looking tab icon on hosted forms only, same mark, more
-  // transparent padding around it, so it reads as a smaller icon than the
-  // rest of the app's favicon. This is a single-page-app, so there's no
+  // The ExPac tab icon on the hosted forms (contact / lane quote request
+  // pages, chosen 2026-10-14). This is a single-page-app, so there's no
   // separate index.html per route to set this statically; swap the shared
   // <link rel="icon"> on mount and put the app's own favicon back on
   // unmount, so leaving the form page (client-side, no reload) restores it.
@@ -54,9 +55,12 @@ export default function FormPublicPage() {
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (!link) return;
     const original = link.href;
-    link.href = "/Favicon-small.png";
+    const originalType = link.type;
+    link.href = FORM_FAVICON;
+    link.type = "image/jpeg";
     return () => {
       link.href = original;
+      link.type = originalType;
     };
   }, []);
 
