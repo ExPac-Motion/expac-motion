@@ -1088,6 +1088,13 @@ export async function getMyProfile(): Promise<Profile | null> {
   return row ? { ...row, email: auth.user.email } : null;
 }
 
+/** Lead -> customer (promote_lead_to_customer, 0054): copies the profile and
+ *  contacts, moves the lead's quotes to the customer; returns the client id
+ *  (the existing one if the lead was promoted already). */
+export async function promoteLeadToCustomer(leadId: string): Promise<string> {
+  return unwrap<string>(await supabase.rpc("promote_lead_to_customer", { p_lead_id: leadId }));
+}
+
 /** email is optional so existing callers keep working; pass the intended
  *  contact's address (primary or a secondary client_contacts row) so the
  *  invite, and later, Portal Access, can show who it's actually for. */

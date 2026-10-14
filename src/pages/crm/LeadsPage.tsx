@@ -43,7 +43,8 @@ import {
   useUpdateLeadsBulk,
   useUploadMailAsset,
 } from "../../lib/hooks";
-import { createLeadContacts, listLeadContacts } from "../../lib/db";
+import { createClientInvite, createLeadContacts, listLeadContacts, promoteLeadToCustomer } from "../../lib/db";
+import { useQueryClient } from "@tanstack/react-query";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
 import { linkifyHtml } from "../../lib/mailStyle";
@@ -125,6 +126,8 @@ export default function LeadsPage() {
   const bulkCreate = useCreateLeadsBulk();
   const bulkUpdate = useUpdateLeadsBulk();
   const { toast, error: toastError } = useToast();
+  const qc = useQueryClient();
+  const companySettingsQ = useCompanySettings();
   const [bulkOpen, setBulkOpen] = useState(false);
   // Slot in the header row (beside "+ Add Lead") that DataTable portals its
   // Save Grid / Reset columns / Table settings controls into, keeps the
@@ -248,6 +251,60 @@ export default function LeadsPage() {
   // Builder starts on the lead with its rate tier and sales person.
   function onNewQuote(row: Lead) {
     navigate("/quotes/new", { state: { prefill: { leadId: row.id } } });
+  }
+
+  // Website quote request "I'd like access to the ExPac Motion portal" (the
+  // form adds this line to the lead notes).
+  const PORTAL_ASK = "Would like access to the ExPac Motion portal.";
+  const wantsPortal = (l: Lead) => !l.promoted_client_id && (l.notes ?? "").includes(PORTAL_ASK);
+
+  // One click: lead -> customer (quotes move with it), portal invite, and the
+  // sign-up link emailed to the lead (support in BCC). If the email can't go
+  // (e.g. local dev), the link is copied instead.
+  const [inviting, setInviting] = useState(false);
+  async function onPortalInvite(lead: Lead) {
+    const email = (lead.email ?? "").trim();
+    if (!email) return toastError("This lead has no email address, add one first.");
+    if (
+      !window.confirm(
+        `${lead.promoted_client_id ? "" : `Make ${lead.company} a customer and `}email a portal invite to ${email}?`,
+      )
+    )
+      return;
+    setInviting(true);
+    try {
+      const clientId = await promoteLeadToCustomer(lead.id);
+      const invite = await createClientInvite(clientId, email);
+      const url = `${window.location.origin}/portal/signup?token=${invite.token}`;
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      const hi = lead.contact ? `Hi ${lead.contact.split(" ")[0]}` : "Good day";
+      try {
+        await sendMail({
+          to: [email],
+          bcc: SUPPORT_BCC,
+          subject: "Your ExPac Motion portal access",
+          text: `${hi},\n\nThank you for your quote request. As requested, here is your access to the ExPac Motion portal, where you can request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.\n\nCreate your login here:\n${url}\n\nPlease sign up with this email address (${email}).\n\nKind regards`,
+          html: `<p>${hi},</p><p>Thank you for your quote request. As requested, here is your access to the <strong>ExPac Motion portal</strong>, where you can request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.</p><p><a href="${url}">Create your portal login</a></p><p>Please sign up with this email address (${email}).</p><p>Kind regards</p>`,
+          fromName: companySettingsQ.data?.mail_sender_name || undefined,
+          replyTo: companySettingsQ.data?.mail_reply_to || undefined,
+        });
+        toast(`${lead.company} is now a customer, portal invite emailed to ${email}`);
+      } catch {
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          /* clipboard blocked */
+        }
+        toast(`${lead.company} is now a customer. The email didn't send, the invite link is copied: ${url}`);
+      }
+      setViewing(null);
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not invite to the portal");
+    } finally {
+      setInviting(false);
+    }
   }
 
   async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
@@ -429,6 +486,11 @@ export default function LeadsPage() {
             <strong className="row-name">{r.company}</strong>
             {r.promoted_client_id && (
               <span className="tag">promoted to customer</span>
+            )}
+            {wantsPortal(r) && (
+              <span className="tag tag-portal-ask" title="Ticked 'I'd like access to the ExPac Motion portal' on the website quote request">
+                portal access requested
+              </span>
             )}
           </>
         ),
@@ -705,6 +767,22 @@ export default function LeadsPage() {
           onClose={() => closeAndReturn(() => setViewing(null))}
           headerActions={
             <>
+              <button
+                className={wantsPortal(viewing) ? "btn" : "btn outline"}
+                onClick={() => onPortalInvite(viewing)}
+                disabled={inviting || !viewing.email}
+                title={
+                  viewing.email
+                    ? "Makes this lead a customer (its quotes move with it) and emails a portal invite"
+                    : "Add an email address to invite this lead"
+                }
+              >
+                {inviting
+                  ? "Inviting…"
+                  : viewing.promoted_client_id
+                    ? "Invite to portal"
+                    : "Make customer & invite to portal"}
+              </button>
               <button
                 className="btn outline"
                 onClick={() => onNewQuote(viewing)}

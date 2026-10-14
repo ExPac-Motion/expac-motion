@@ -1872,11 +1872,16 @@ select.badge-select.lost {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: var(--green-tint);
-  border-color: var(--green);
+  background: var(--blue-tint);
+  border-color: var(--blue);
 }
 .wq-tip p {
   color: var(--ink);
+}
+/* Blue (not the green of a picked mode), links in the same blue. */
+.wq-tip .pt-tip-head b,
+.wq-tip p a {
+  color: var(--blue-ink);
 }
 .wq-portal {
   align-items: flex-start;
@@ -2045,6 +2050,11 @@ select.badge-select.lost {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   vertical-align: middle;
+}
+/* Lead ticked "portal access" on the website quote request (Leads list). */
+.tag.tag-portal-ask {
+  background: var(--amber-tint);
+  color: var(--amber-ink);
 }
 .grid3 {
   display: grid;
