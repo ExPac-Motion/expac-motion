@@ -131,9 +131,13 @@ function endStop(e: RouteEnd | null | undefined): RouteStop | null {
   const lat = typeof e.lat === "number" ? e.lat : (looked?.lat ?? null);
   const lon = typeof e.lon === "number" ? e.lon : (looked?.lon ?? null);
   if (lat == null || lon == null) return null;
+  // The shipment's own origin / destination text, e.g. "CNCAN, Guangzhou,
+  // China": the code up front, the rest as the place name.
+  const m = String(e.code ?? "").match(/^\s*([A-Za-z]{3,5})\b[\s,\-–]*(.*)$/);
+  const code = m ? m[1].toUpperCase() : (e.code ?? null);
   return {
-    name: e.name || looked?.name || e.code || "",
-    code: e.code ?? null,
+    name: e.name || (m && m[2].trim()) || looked?.name || code || "",
+    code,
     lat,
     lon,
     events: [],
