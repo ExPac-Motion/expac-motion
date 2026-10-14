@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
+import { useQueryClient } from "@tanstack/react-query";
+import { previewActive, setPortalPreview } from "../lib/db";
 import { useCan, useMyProfile } from "../lib/hooks";
 import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
@@ -274,8 +276,37 @@ export default function Layout() {
       )}
 
       <main className={`main${activeModule?.children ? " has-subnav" : ""}`}>
+        {previewActive(profileQ.data) && <MotionPreviewBanner />}
         <Outlet />
       </main>
+    </div>
+  );
+}
+
+/**
+ * An Admin's "View portal as customer" preview (0167 / 0169) turns off staff
+ * access for that login everywhere, so Motion shows zeros and empty pages
+ * until it ends. Say so here, with the way out, instead of looking broken.
+ */
+function MotionPreviewBanner() {
+  const qc = useQueryClient();
+  async function exit() {
+    try {
+      await setPortalPreview(null);
+    } finally {
+      qc.clear();
+      window.location.reload();
+    }
+  }
+  return (
+    <div className="pt-preview-banner" role="status">
+      <span>
+        👁 <b>Customer portal preview is running</b> on your login, so Motion shows no data (zeros,
+        empty lists, settings errors) until it ends. Ends automatically after 2 hours.
+      </span>
+      <button type="button" className="btn outline btn-sm" onClick={() => void exit()}>
+        Exit preview
+      </button>
     </div>
   );
 }
