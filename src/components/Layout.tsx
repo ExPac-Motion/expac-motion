@@ -164,8 +164,13 @@ export default function Layout() {
   const profileQ = useMyProfile();
   const isAdmin = profileQ.data?.role === "admin";
   const can = useCan();
+  // The Team name (profiles.full_name) first: the sign-up name stored on the
+  // login is never updated, so it can be someone else's (e.g. whoever created it).
   const name =
-    (user?.user_metadata?.full_name as string | undefined) || user?.email || "";
+    profileQ.data?.full_name ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    user?.email ||
+    "";
 
   // The Personal Vault tab is only wired into Control Tower for its owner.
   let nav: NavModule[] = isVaultOwner(user?.email)
