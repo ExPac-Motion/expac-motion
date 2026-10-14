@@ -13,14 +13,12 @@ import {
   useJobs,
   useLeads,
   useMailTemplates,
-  useOpportunities,
   useOpsTasks,
   useQuotes,
   useRateSheet,
   useSuppliers,
   useTransporters,
 } from "../lib/hooks";
-import { OPPORTUNITY_STAGES } from "../lib/types";
 
 const SearchIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -37,7 +35,7 @@ interface Hit {
 }
 
 /** Search icon in the top nav + a spotlight palette over everything the
- *  app already caches (quotes, shipments, leads, opportunities, the four
+ *  app already caches (quotes, shipments, leads, the four
  *  contact books, tasks, rates, templates). Opens on click or Ctrl/⌘K. */
 export default function GlobalSearch() {
   const [open, setOpen] = useState(false);
@@ -79,7 +77,6 @@ function SearchPalette({ onClose }: { onClose: () => void }) {
   const quotesQ = useQuotes();
   const jobsQ = useJobs();
   const leadsQ = useLeads();
-  const oppsQ = useOpportunities();
   const clientsQ = useClients();
   const suppliersQ = useSuppliers();
   const agentsQ = useAgents();
@@ -101,14 +98,10 @@ function SearchPalette({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const stageLabel = (k: string) =>
-    OPPORTUNITY_STAGES.find((s) => s.key === k)?.label ?? k;
-
   const index = useMemo<Hit[]>(() => {
     const quotes = quotesQ.data ?? [];
     const jobs = jobsQ.data ?? [];
     const leads = leadsQ.data ?? [];
-    const opps = oppsQ.data ?? [];
     const clients = clientsQ.data ?? [];
     const suppliers = suppliersQ.data ?? [];
     const agents = agentsQ.data ?? [];
@@ -122,7 +115,7 @@ function SearchPalette({ onClose }: { onClose: () => void }) {
       out.push({
         group: "Quotations",
         label: x.reference,
-        sub: [x.client?.company, x.supplier?.company].filter(Boolean).join(" → ") ||
+        sub: [x.client?.company ?? x.lead?.company, x.supplier?.company].filter(Boolean).join(" → ") ||
           x.mode,
         to: `/quotes/${x.id}`,
       });
@@ -139,13 +132,6 @@ function SearchPalette({ onClose }: { onClose: () => void }) {
         label: x.company,
         sub: [x.contact, x.email, x.phone].filter(Boolean).join(" · "),
         to: "/crm?tab=leads",
-      });
-    for (const x of opps)
-      out.push({
-        group: "Opportunities",
-        label: x.lead?.company ?? x.client?.company ?? "Opportunity",
-        sub: stageLabel(x.status),
-        to: "/crm?tab=opportunities",
       });
     const books: [string, typeof clients, string][] = [
       ["Customers", clients, "/clients"],
@@ -190,7 +176,6 @@ function SearchPalette({ onClose }: { onClose: () => void }) {
     quotesQ.data,
     jobsQ.data,
     leadsQ.data,
-    oppsQ.data,
     clientsQ.data,
     suppliersQ.data,
     agentsQ.data,

@@ -617,10 +617,8 @@ export function AssociatedLeadsTab({ client }: { client: CustomerRecord }) {
       </div>
       <div className="panel cr-section">
         <div className="cr-section-head">
-          <h3>Opportunities</h3>
-          <Link to="/crm?tab=opportunities" className="link-btn">
-            Opportunities board
-          </Link>
+          {/* Opportunities were retired for quotes (0172), kept as history. */}
+          <h3>Opportunities (history)</h3>
         </div>
         {oppsQ.isLoading ? (
           <Loading />

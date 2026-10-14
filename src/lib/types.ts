@@ -719,6 +719,11 @@ export type WebFormFieldMap =
   | "email"
   | "phone"
   | "notes"
+  | "quote_mode"
+  | "quote_origin"
+  | "quote_destination"
+  | "quote_incoterms"
+  | "quote_commodity"
   | "none";
 
 export const WEB_FORM_FIELD_TYPES: { type: WebFormFieldType; label: string }[] = [
@@ -737,6 +742,12 @@ export const WEB_FORM_FIELD_MAPS: { value: WebFormFieldMap; label: string }[] = 
   { value: "email", label: "Lead · Email" },
   { value: "phone", label: "Lead · Phone" },
   { value: "notes", label: "Lead · Notes (appended)" },
+  // 0172: also appended to the notes, and fills the New Lead quote.
+  { value: "quote_mode", label: "Quote · Mode (+ notes)" },
+  { value: "quote_origin", label: "Quote · Origin (+ notes)" },
+  { value: "quote_destination", label: "Quote · Destination (+ notes)" },
+  { value: "quote_incoterms", label: "Quote · Incoterms (+ notes)" },
+  { value: "quote_commodity", label: "Quote · Commodity (+ notes)" },
 ];
 
 export interface WebFormField {
@@ -1283,6 +1294,8 @@ export interface Quote {
   request_pickup?: string | null;
   request_delivery?: string | null;
   request_notes?: string | null;
+  /** Web-form enquiry as submitted (0172), internal: never printed or on the portal. */
+  enquiry_notes?: string | null;
   portal_decision?: "accepted" | "declined" | null;
   portal_decided_at?: string | null;
   portal_decline_reason?: string | null;

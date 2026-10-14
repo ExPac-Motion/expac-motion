@@ -5,7 +5,6 @@ import type {
   Lead,
   MailCampaign,
   Message,
-  Opportunity,
   OpsTask,
   Quote,
   ShipmentDocument,
@@ -35,7 +34,6 @@ export interface NotificationSources {
   leads?: Lead[];
   quotes?: Quote[];
   jobs?: Job[];
-  opportunities?: Opportunity[];
   tasks?: OpsTask[];
   campaigns?: MailCampaign[];
   followUps?: FollowUpLogEntry[];
@@ -51,7 +49,7 @@ const LOOKBACK_DAYS = 30;
 
 /**
  * Builds the system-wide notification feed from data the app already loads
- * elsewhere (leads, quotes, jobs + their job_events, opportunities, tasks,
+ * elsewhere (leads, quotes, jobs + their job_events, tasks,
  * campaigns, follow-ups, messages, documents) -- there is no persisted
  * event log, this is computed fresh each time. Shared by the top-nav bell
  * and the full Notifications tab so the two views can't drift apart.
@@ -129,21 +127,6 @@ export function buildNotifications(
       });
     }
   }
-
-  for (const o of src.opportunities ?? [])
-    if (o.status === "job_completed" && recent(o.updated_at))
-      out.push({
-        key: `oppwon-${o.id}`,
-        domain: "sales",
-        text: `Opportunity delivered, ${
-          o.lead?.company ?? o.client?.company ?? "opportunity"
-        }`,
-        when: o.updated_at,
-        to: "/crm?tab=opportunities",
-        navState: { openOpportunityId: o.id },
-        clientId: o.client_id,
-        leadId: o.lead_id,
-      });
 
   const jobById = new Map((src.jobs ?? []).map((j) => [j.id, j]));
 

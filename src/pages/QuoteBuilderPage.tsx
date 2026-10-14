@@ -1059,6 +1059,13 @@ export default function QuoteBuilderPage() {
 
       <RevisionRequests quoteId={existingQ.data?.id} revisionNo={existingQ.data?.revision_no ?? 1} pending={!!existingQ.data?.revision_pending} />
 
+      {existingQ.data?.enquiry_notes && (
+        <div className="panel portal-request-note enquiry-note">
+          <b>Enquiry</b> <span className="muted small">internal, not on the quotation</span>
+          <div>{existingQ.data.enquiry_notes}</div>
+        </div>
+      )}
+
       {existingQ.data?.portal_requested_at && (
         <div className="panel portal-request-note">
           <b>Requested by the customer on the portal</b> · {formatDate(existingQ.data.portal_requested_at)}

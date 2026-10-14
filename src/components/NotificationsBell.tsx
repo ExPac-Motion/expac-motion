@@ -7,7 +7,6 @@ import {
   useLeads,
   useMailCampaigns,
   useNotificationState,
-  useOpportunities,
   useOpsTasks,
   useQuotes,
   useSetNotificationState,
@@ -70,7 +69,6 @@ export default function NotificationsBell() {
   const leads = useLeads().data;
   const quotes = useQuotes().data;
   const jobs = useJobs().data;
-  const opps = useOpportunities().data;
   const tasks = useOpsTasks().data;
   const campaigns = useMailCampaigns().data;
   const followUps = useFollowUpLog().data;
@@ -98,14 +96,13 @@ export default function NotificationsBell() {
       leads,
       quotes,
       jobs,
-      opportunities: opps,
       tasks,
       campaigns,
       followUps,
       messages,
       generalMessages: (unreadGeneral ?? []).map((g) => ({ ...g, company: g.clients?.company ?? null })),
     });
-  }, [now, leads, quotes, jobs, opps, tasks, campaigns, followUps, unreadMessages, unreadGeneral]);
+  }, [now, leads, quotes, jobs, tasks, campaigns, followUps, unreadMessages, unreadGeneral]);
 
   const visible = items.filter((n) => !stateByKey.get(n.key)?.archived_at);
   const unread = visible.filter((n) => !stateByKey.get(n.key)?.read_at);

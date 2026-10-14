@@ -7896,6 +7896,14 @@ tr.clickable:hover td {
   flex-direction: column;
   gap: 4px;
 }
+/* Web-form enquiry on a New Lead quote (0172): answers keep their line breaks. */
+.enquiry-note {
+  border-left-color: var(--teal);
+  background: var(--teal-tint);
+}
+.enquiry-note > div {
+  white-space: pre-wrap;
+}
 /* Customer record (0142) — tabs + boxed fields with the label inside, after
    the user's reference screenshot */
 .cr-tabs {

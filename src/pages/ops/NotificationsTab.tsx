@@ -9,7 +9,6 @@ import {
   useMailCampaigns,
   useMessagesForJobs,
   useNotificationState,
-  useOpportunities,
   useOpsTasks,
   useQuotes,
   useSaveOpsTask,
@@ -71,7 +70,6 @@ export default function NotificationsTab() {
   const leadsQ = useLeads();
   const quotesQ = useQuotes();
   const jobsQ = useJobs();
-  const oppsQ = useOpportunities();
   const tasksQ = useOpsTasks();
   const campaignsQ = useMailCampaigns();
   const followUpQ = useFollowUpLog();
@@ -97,7 +95,6 @@ export default function NotificationsTab() {
     leadsQ.isLoading ||
     quotesQ.isLoading ||
     jobsQ.isLoading ||
-    oppsQ.isLoading ||
     tasksQ.isLoading ||
     campaignsQ.isLoading ||
     followUpQ.isLoading ||
@@ -114,7 +111,6 @@ export default function NotificationsTab() {
       leads: leadsQ.data ?? [],
       quotes: quotesQ.data ?? [],
       jobs,
-      opportunities: oppsQ.data ?? [],
       tasks: tasksQ.data ?? [],
       campaigns: campaignsQ.data ?? [],
       followUps: followUpQ.data ?? [],
@@ -126,7 +122,6 @@ export default function NotificationsTab() {
     leadsQ.data,
     quotesQ.data,
     jobs,
-    oppsQ.data,
     tasksQ.data,
     campaignsQ.data,
     followUpQ.data,

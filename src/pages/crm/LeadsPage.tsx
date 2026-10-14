@@ -30,7 +30,6 @@ import { useToast } from "../../components/Toast";
 import {
   useCompanySettings,
   useCreateLeadsBulk,
-  useCreateOpportunity,
   useDeleteLead,
   useLeadContacts,
   useLeadStatuses,
@@ -125,7 +124,6 @@ export default function LeadsPage() {
   const remove = useDeleteLead();
   const bulkCreate = useCreateLeadsBulk();
   const bulkUpdate = useUpdateLeadsBulk();
-  const createOpportunity = useCreateOpportunity();
   const { toast, error: toastError } = useToast();
   const [bulkOpen, setBulkOpen] = useState(false);
   // Slot in the header row (beside "+ Add Lead") that DataTable portals its
@@ -235,20 +233,10 @@ export default function LeadsPage() {
     }
   }
 
-  async function onAddOpportunity(row: Lead) {
-    try {
-      await createOpportunity.mutateAsync({
-        lead_id: row.id,
-        client_id: null,
-        status: "new_lead",
-        value: 0,
-        sales_person_id: row.sales_person_id,
-      });
-      toast("Opportunity added to the pipeline");
-      navigate("/crm?tab=opportunities");
-    } catch (e2) {
-      toastError(e2 instanceof Error ? e2.message : "Could not add opportunity");
-    }
+  // A new quote on this lead (same as Inbox › Create quotation): the Quote
+  // Builder starts on the lead with its rate tier and sales person.
+  function onNewQuote(row: Lead) {
+    navigate("/quotes/new", { state: { prefill: { leadId: row.id } } });
   }
 
   async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
@@ -394,7 +382,7 @@ export default function LeadsPage() {
       {
         key: "actions",
         fixed: true,
-        width: 200,
+        width: 228,
         header: (
           <RowActionsHead
             checked={sel.allChecked}
@@ -408,6 +396,8 @@ export default function LeadsPage() {
             onSelectToggle={() => sel.toggle(r.id)}
             onMail={() => setMailing(r)}
             mailTitle="Send email"
+            onQuote={() => onNewQuote(r)}
+            quoteTitle="New quote for this lead"
             onTask={() => setTaskingLead(r)}
             taskTitle="Create a task for this lead"
             taskOpen={openTaskLeadIds.has(r.id)}
@@ -704,10 +694,9 @@ export default function LeadsPage() {
             <>
               <button
                 className="btn outline"
-                onClick={() => onAddOpportunity(viewing)}
-                disabled={createOpportunity.isPending}
+                onClick={() => onNewQuote(viewing)}
               >
-                {createOpportunity.isPending ? "Adding…" : "+ Add Opportunity"}
+                + New quote
               </button>
               <button
                 className="btn outline"

@@ -600,6 +600,8 @@ export function synthesizeQuoteOpportunities(
  * opportunity (quote_id set), re-derive its value the same way so every
  * consumer, the pipeline board, the sales dashboard, trends, agrees with
  * the quote's actual current total instead of a stale stored number.
+ * Since the Opportunities board was retired (0172) the quote also sets the
+ * stage: a linked opportunity follows its quote's status (QUOTE_STAGE).
  */
 export function withLiveOpportunityValues(
   realOpps: Opportunity[],
@@ -613,7 +615,8 @@ export function withLiveOpportunityValues(
     const manualValue = q.opportunity_value != null ? Number(q.opportunity_value) : null;
     const computed = chargeTotals(q.quote_lines, fxOf(q)).sellIncl;
     const value = manualValue ?? computed;
-    if (value === o.value && (o.opportunity_value ?? null) === manualValue) return o;
-    return { ...o, value, opportunity_value: manualValue };
+    const status = QUOTE_STAGE[q.status] ?? o.status;
+    if (value === o.value && (o.opportunity_value ?? null) === manualValue && status === o.status) return o;
+    return { ...o, value, opportunity_value: manualValue, status };
   });
 }
