@@ -7,8 +7,6 @@ import QuoteRequestPublicForm from "./QuoteRequestPublicForm";
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
  *  alert -- see submit_web_form() in 0037_web_forms.sql. */
-const FORM_FAVICON = "https://cdn.expac.co.za/mail-assets/media/d2dbb470-55b1-483c-92ff-0cba3a2756b5.png";
-
 export default function FormPublicPage() {
   const { id = "" } = useParams();
   const [params] = useSearchParams();
@@ -45,24 +43,6 @@ export default function FormPublicPage() {
     post();
     return () => ro.disconnect();
   }, [embed, id]);
-
-  // The ExPac tab icon on the hosted forms (contact / lane quote request
-  // pages, chosen 2026-10-14). This is a single-page-app, so there's no
-  // separate index.html per route to set this statically; swap the shared
-  // <link rel="icon"> on mount and put the app's own favicon back on
-  // unmount, so leaving the form page (client-side, no reload) restores it.
-  useEffect(() => {
-    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!link) return;
-    const original = link.href;
-    const originalType = link.type;
-    link.href = FORM_FAVICON;
-    link.type = "image/png";
-    return () => {
-      link.href = original;
-      link.type = originalType;
-    };
-  }, []);
 
   const utm = useMemo(() => {
     const out: Record<string, string> = {};
