@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import DateInput from "../components/DateInput";
 import { packingTotals, volumetricFactor } from "../lib/calc";
 import { submitQuoteRequest } from "../lib/db";
@@ -465,6 +465,8 @@ const FORM_TIPS: { text: string; to?: string; link?: string }[] = [
   { text: "Track any ExPac shipment around the clock with your shipment number.", to: "/track", link: "Track a shipment" },
 ];
 
+const TIP_SECONDS = 8;
+
 function FormTip({ onPortal }: { onPortal: () => void }) {
   const [offset, setOffset] = useState(0);
   const d = new Date();
@@ -472,8 +474,22 @@ function FormTip({ onPortal }: { onPortal: () => void }) {
   // Each day opens on a portal tip (the aim: prospects ask for portal access),
   // the arrow then walks through all of them.
   const tip = FORM_TIPS[((day % PORTAL_TIPS.length) + offset) % FORM_TIPS.length];
+  // Moves on by itself every few seconds; pointing at it (or tabbing into a
+  // link) holds the tip. The arrow, or the tip changing, restarts the timer.
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (held) return;
+    const t = window.setTimeout(() => setOffset((o) => o + 1), TIP_SECONDS * 1000);
+    return () => window.clearTimeout(t);
+  }, [held, offset]);
   return (
-    <div className="pt-tip wq-tip">
+    <div
+      className="pt-tip wq-tip"
+      onMouseEnter={() => setHeld(true)}
+      onMouseLeave={() => setHeld(false)}
+      onFocus={() => setHeld(true)}
+      onBlur={() => setHeld(false)}
+    >
       <div className="pt-tip-head">
         <span aria-hidden>🎓</span>
         <b>Tip of the Day</b>
@@ -481,7 +497,7 @@ function FormTip({ onPortal }: { onPortal: () => void }) {
           ›
         </button>
       </div>
-      <p>
+      <p key={offset} className="tip-fade">
         {tip.text}
         {tip.to && (
           <>

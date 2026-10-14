@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 export interface Tip {
@@ -34,7 +34,10 @@ function dayIndex(): number {
   return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000);
 }
 
-/** Dashboard › Tip of the Day: a new tip each day; the arrow shows the next one. */
+const TIP_SECONDS = 8;
+
+/** Dashboard › Tip of the Day: a new tip each day, then the next every few
+ *  seconds (held while pointed at); the arrow shows the next one. */
 export default function PortalTip({ pending }: { pending: Tip[] }) {
   // Pending items lead the list, so the day's tip is often "what's waiting for you".
   const tips = [...pending, ...FEATURE_TIPS];
@@ -42,8 +45,22 @@ export default function PortalTip({ pending }: { pending: Tip[] }) {
   const start = dayIndex() % (pending.length > 0 ? pending.length : tips.length);
   const tip = tips[(start + offset) % tips.length];
   const isPending = (start + offset) % tips.length < pending.length;
+  // Moves on by itself every few seconds; pointing at it (or tabbing into
+  // its link) holds the tip. The arrow, or the tip changing, restarts the timer.
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (held) return;
+    const t = window.setTimeout(() => setOffset((o) => o + 1), TIP_SECONDS * 1000);
+    return () => window.clearTimeout(t);
+  }, [held, offset]);
   return (
-    <div className={`pt-tip${isPending ? " pending" : ""}`}>
+    <div
+      className={`pt-tip${isPending ? " pending" : ""}`}
+      onMouseEnter={() => setHeld(true)}
+      onMouseLeave={() => setHeld(false)}
+      onFocus={() => setHeld(true)}
+      onBlur={() => setHeld(false)}
+    >
       <div className="pt-tip-head">
         <span aria-hidden>{isPending ? "🔔" : "🎓"}</span>
         <b>{isPending ? "Waiting for you" : "Tip of the Day"}</b>
@@ -51,7 +68,7 @@ export default function PortalTip({ pending }: { pending: Tip[] }) {
           ›
         </button>
       </div>
-      <p>
+      <p key={offset} className="tip-fade">
         {tip.text}
         {tip.to && (
           <>

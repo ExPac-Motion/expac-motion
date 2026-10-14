@@ -408,6 +408,25 @@ input[type="number"] {
   color: var(--green-dark);
   white-space: nowrap;
 }
+/* Tip of the Day: each new tip fades in (portal dashboard + website form). */
+.tip-fade {
+  animation: tip-fade 0.45s ease;
+}
+@keyframes tip-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tip-fade {
+    animation: none;
+  }
+}
 .topbar-left {
   display: flex;
   align-items: flex-end;
