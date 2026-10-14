@@ -5,15 +5,16 @@ import { submitQuoteRequest } from "../lib/db";
 import { LOCODE_OPTIONS } from "../lib/locodes";
 import { INCOTERMS_ANY_MODE, INCOTERMS_SEA, type PublicWebForm, type QuoteMode } from "../lib/types";
 
-/** What the visitor picks -> the Quote Builder mode it becomes (the same
- *  mapping submit_quote_request() / web_form_quote_mode() apply, 0174). */
-const MODES: { label: string; sub: string; mode: QuoteMode | null; contactOnly?: true }[] = [
-  { label: "Priority Air Freight", sub: "Fastest, direct flights", mode: "Air Freight (AIR)" },
-  { label: "Consolidated Air Freight", sub: "Air, better rates", mode: "Air Freight (AIR)" },
-  { label: "Ocean LCL", sub: "Less than a container", mode: "Sea Freight (LCL)" },
-  { label: "Ocean FCL", sub: "Full container", mode: "Sea Freight (FCL)" },
-  { label: "Courier Express", sub: "Small, urgent parcels", mode: "Courier Express (CX)", contactOnly: true },
-  { label: "Road Freight", sub: "Cross-border & local", mode: "Road Freight (RDX)", contactOnly: true },
+/** Motion's own modes (as in the Quote Builder), plus "Not sure". The label
+ *  is sent as-is; submit_quote_request() / web_form_quote_mode() (0174) turn
+ *  it into the quote's mode, "Not sure" lands as Air for the team to change. */
+const MODES: { label: string; sub: string; mode: QuoteMode | null }[] = [
+  { label: "Air Freight (AIR)", sub: "Airport to airport or door", mode: "Air Freight (AIR)" },
+  { label: "Air Freight (Consol)", sub: "Consolidated air, better rates", mode: "Air Freight (Consol)" },
+  { label: "Sea Freight (LCL)", sub: "Less than a container", mode: "Sea Freight (LCL)" },
+  { label: "Sea Freight (FCL)", sub: "Full container", mode: "Sea Freight (FCL)" },
+  { label: "Courier Express (CX)", sub: "Small, urgent parcels", mode: "Courier Express (CX)" },
+  { label: "Road Freight (RDX)", sub: "Cross-border & local", mode: "Road Freight (RDX)" },
   { label: "Not sure, please advise", sub: "We'll recommend the best option", mode: null },
 ];
 const CONTAINERS = ["20GP", "40GP", "40HC", "45HC", "20RF", "40RF"];
@@ -52,7 +53,7 @@ export default function QuoteRequestPublicForm({
   onDone: () => void;
 }) {
   const lane = form.lane_origin_country || "";
-  const modes = MODES.filter((m) => !(lane && m.contactOnly));
+  const modes = MODES;
 
   const [me, setMe] = useState({ name: "", company: "", email: "", phone: "" });
   const [modeLabel, setModeLabel] = useState(modes[modes.length - 1].label);

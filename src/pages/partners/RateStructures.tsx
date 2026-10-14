@@ -72,6 +72,7 @@ const AIR: ModeTemplate = {
 
 const MODE_TEMPLATES: Record<string, ModeTemplate> = {
   "Air Freight (AIR)": AIR,
+  "Air Freight (Consol)": AIR,
   "Courier Express (CX)": {
     qty: "Weight Band",
     qtyShort: "Weight",
@@ -214,6 +215,7 @@ function blocksUntouched(blocks: RateBlock[]): boolean {
 /** The rate types an agent's window is tabbed by. */
 export const RATE_TABS: { mode: string; label: string }[] = [
   { mode: "Air Freight (AIR)", label: "Air Freight Rates" },
+  { mode: "Air Freight (Consol)", label: "Air Consol Rates" },
   { mode: "Sea Freight (FCL)", label: "FCL Rates" },
   { mode: "Sea Freight (LCL)", label: "LCL Rates" },
   { mode: "Courier Express (CX)", label: "Courier Rates" },

@@ -17,8 +17,8 @@ export interface CatalogItem {
   vat_pct?: number;
 }
 
-// Courier Express uses the same codes/descriptions as Air Freight.
-const AIR: QuoteMode[] = ["Air Freight (AIR)", "Courier Express (CX)"];
+// Air Freight (Consol) and Courier Express use the same codes/descriptions as Air Freight.
+const AIR: QuoteMode[] = ["Air Freight (AIR)", "Air Freight (Consol)", "Courier Express (CX)"];
 const SEA: QuoteMode[] = ["Sea Freight (FCL)", "Sea Freight (LCL)"];
 
 /**

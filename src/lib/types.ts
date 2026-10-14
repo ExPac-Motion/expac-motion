@@ -1,6 +1,8 @@
 export type QuoteStatus = "open" | "sent" | "accepted" | "completed" | "lost";
 export type QuoteMode =
   | "Air Freight (AIR)"
+  /** Consolidated air (0175), an air mode everywhere (`startsWith("Air")`). */
+  | "Air Freight (Consol)"
   | "Courier Express (CX)"
   | "Sea Freight (FCL)"
   | "Sea Freight (LCL)"
@@ -809,6 +811,7 @@ export interface WebFormSubmission {
 
 export const QUOTE_MODES: QuoteMode[] = [
   "Air Freight (AIR)",
+  "Air Freight (Consol)",
   "Courier Express (CX)",
   "Sea Freight (FCL)",
   "Sea Freight (LCL)",

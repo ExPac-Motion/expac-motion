@@ -12,6 +12,7 @@ import { PortalIcon } from "./PortalLayout";
 
 const MODES: { mode: QuoteMode; label: string; sub: string; icon: string }[] = [
   { mode: "Air Freight (AIR)", label: "Air Freight", sub: "Airport to airport or door", icon: "plane" },
+  { mode: "Air Freight (Consol)", label: "Air Freight Consol", sub: "Consolidated air, better rates", icon: "plane" },
   { mode: "Sea Freight (LCL)", label: "Sea Freight LCL", sub: "Less than a container", icon: "ship" },
   { mode: "Sea Freight (FCL)", label: "Sea Freight FCL", sub: "Full container", icon: "ship" },
   { mode: "Courier Express (CX)", label: "Courier Express", sub: "Small, urgent parcels", icon: "items" },
