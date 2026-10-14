@@ -411,6 +411,7 @@ export default function LeadsPage() {
             onTask={() => setTaskingLead(r)}
             taskTitle="Create a task for this lead"
             taskOpen={openTaskLeadIds.has(r.id)}
+            taskOpenAmber
             onView={() => setViewing(r)}
             onEdit={() => setEditing(r)}
             onDelete={() => onDelete(r)}

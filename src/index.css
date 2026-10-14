@@ -2657,13 +2657,19 @@ select.badge-select.lost {
 .row-icon-btn.has-unread {
   color: var(--green-dark);
 }
-/* Open task pending on this row — calendar filled amber, tick in white
-   (same fill approach as .mail-due; amber so it doesn't read as the orange
-   mail-due or green unread-reply icons). */
+/* Open task pending on this row — calendar filled in the heading-label blue,
+   tick in white (same fill approach as .mail-due). Leads use amber so it
+   stands out there. */
 .row-icon-btn.has-open-task {
-  color: var(--amber-ink);
+  color: var(--teal-ink);
 }
 .row-icon-btn.has-open-task svg rect {
+  fill: var(--teal-ink);
+}
+.row-icon-btn.has-open-task.amber {
+  color: var(--amber-ink);
+}
+.row-icon-btn.has-open-task.amber svg rect {
   fill: var(--amber);
   stroke: var(--amber-ink);
 }

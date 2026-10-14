@@ -143,6 +143,7 @@ export function RowActions({
   onTask,
   taskTitle = "Create a task",
   taskOpen = false,
+  taskOpenAmber = false,
   onView,
   onEdit,
   onDelete,
@@ -163,6 +164,8 @@ export function RowActions({
   taskTitle?: string;
   /** Highlights the task icon, an open/pending task is already linked to this row. */
   taskOpen?: boolean;
+  /** Fills the open-task icon amber instead of blue (Leads). */
+  taskOpenAmber?: boolean;
   /** Each icon is omitted when its handler isn't passed (e.g. config lists
    *  that are view + edit only, or a sent campaign that can't be edited). */
   onView?: () => void;
@@ -202,7 +205,7 @@ export function RowActions({
       )}
       {onTask && (
         <button
-          className={`row-icon-btn${taskOpen ? " has-open-task" : ""}`}
+          className={`row-icon-btn${taskOpen ? ` has-open-task${taskOpenAmber ? " amber" : ""}` : ""}`}
           title={taskOpen ? `${taskTitle}, open task pending` : taskTitle}
           onClick={stop(onTask)}
         >
