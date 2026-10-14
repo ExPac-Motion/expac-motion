@@ -49,10 +49,12 @@ export default function PortalTip({ pending }: { pending: Tip[] }) {
   // its link) holds the tip. The arrow, or the tip changing, restarts the timer.
   const [held, setHeld] = useState(false);
   useEffect(() => {
-    if (held) return;
+    // A "Waiting for you" item stays up until it is dealt with (it then drops
+    // off the pending list); only the arrow moves past it.
+    if (held || isPending) return;
     const t = window.setTimeout(() => setOffset((o) => o + 1), TIP_SECONDS * 1000);
     return () => window.clearTimeout(t);
-  }, [held, offset]);
+  }, [held, offset, isPending]);
   return (
     <div
       className={`pt-tip${isPending ? " pending" : ""}`}
