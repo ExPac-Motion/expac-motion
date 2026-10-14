@@ -324,10 +324,10 @@ export default function QuoteRequestPublicForm({
               readOnly
               tabIndex={-1}
               value={insuranceAmount(route.value).toFixed(2)}
-              title="0.50% of the goods value, as on the quotation"
+              title="0.50% of the value of your goods, cargo insurance"
             />
           </div>
-          <span className="hint">0.50% of the goods value, as on the quotation.</span>
+          <span className="hint">0.50% of the value of your goods, cargo insurance.</span>
         </div>
       </div>
 
