@@ -37,6 +37,7 @@ import {
   useLeadSources,
   useLeads,
   useMailTemplates,
+  useOpsTasks,
   useProfiles,
   useReplaceLeadContacts,
   useSaveLead,
@@ -139,6 +140,17 @@ export default function LeadsPage() {
   const [taskingLead, setTaskingLead] = useState<Lead | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const viewContactsQ = useLeadContacts(viewing?.id);
+  const tasksQ = useOpsTasks();
+  // Leads with an open (not done) task linked, the row task icon is filled.
+  const openTaskLeadIds = useMemo(
+    () =>
+      new Set(
+        (tasksQ.data ?? [])
+          .filter((t) => t.kind === "task" && t.status !== "done" && t.lead_id)
+          .map((t) => t.lead_id as string),
+      ),
+    [tasksQ.data],
+  );
 
   const [filters, setFilters] = useState<LeadFilters>(() =>
     loadJson<LeadFilters>("leads.filters", EMPTY_FILTERS),
@@ -398,6 +410,7 @@ export default function LeadsPage() {
             mailTitle="Send email"
             onTask={() => setTaskingLead(r)}
             taskTitle="Create a task for this lead"
+            taskOpen={openTaskLeadIds.has(r.id)}
             onView={() => setViewing(r)}
             onEdit={() => setEditing(r)}
             onDelete={() => onDelete(r)}
@@ -528,7 +541,7 @@ export default function LeadsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, statuses],
+    [sel, statuses, openTaskLeadIds],
   );
 
   return (

@@ -2657,9 +2657,16 @@ select.badge-select.lost {
 .row-icon-btn.has-unread {
   color: var(--green-dark);
 }
-/* Open task pending on this row — same blue as the heading labels. */
+/* Open task pending on this row — calendar filled in the heading-label blue,
+   tick in white (same fill approach as .mail-due). */
 .row-icon-btn.has-open-task {
   color: var(--teal-ink);
+}
+.row-icon-btn.has-open-task svg rect {
+  fill: var(--teal-ink);
+}
+.row-icon-btn.has-open-task svg path {
+  stroke: #fff;
 }
 .row-icon-dot {
   position: absolute;
