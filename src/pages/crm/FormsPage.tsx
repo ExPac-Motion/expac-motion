@@ -25,6 +25,7 @@ import {
   type WebForm,
   type WebFormField,
   type WebFormFieldType,
+  type WebFormKind,
   type WebFormPatch,
 } from "../../lib/types";
 
@@ -168,6 +169,8 @@ function FormEditor({
       thankyou_body: draft.thankyou_body,
       notify_email: draft.notify_email,
       track_url_params: draft.track_url_params,
+      kind: draft.kind,
+      lane_origin_country: draft.lane_origin_country ?? null,
       active: draft.active,
     };
     try {
@@ -186,7 +189,16 @@ function FormEditor({
 
   const sel = draft.fields.find((f) => f.id === selected) ?? null;
   const hostedUrl = `${SITE_URL}/forms/${draft.id}`;
-  const embedCode = `<iframe src="${hostedUrl}?embed=1" style="width:100%;max-width:700px;height:820px;border:0" title="${draft.name}"></iframe>`;
+  // Self-sizing embed: the hosted form posts its height (FormPublicPage), the
+  // snippet resizes the iframe to it, and passes the page's own ?utm_... on.
+  const frameId = `expac-form-${draft.id}`;
+  const embedCode =
+    `<iframe id="${frameId}" title="${draft.name.replace(/"/g, "&quot;")}" style="width:100%;${
+      draft.kind === "quote_request" ? "" : "max-width:700px;"
+    }border:0;height:${draft.kind === "quote_request" ? 1500 : 820}px"></iframe>\n` +
+    `<script>(function(){var f=document.getElementById("${frameId}"),q=location.search.slice(1);` +
+    `f.src="${hostedUrl}?embed=1"+(q?"&"+q:"");` +
+    `window.addEventListener("message",function(e){var d=e.data;if(e.origin==="${SITE_URL}"&&d&&d.type==="expac-form-height"&&d.id==="${draft.id}")f.style.height=d.height+"px";});})();</script>`;
 
   async function copy(text: string, key: string) {
     try {
@@ -228,6 +240,17 @@ function FormEditor({
           </button>
         ))}
       </div>
+
+      {tab === "builder" && draft.kind === "quote_request" && (
+        <div className="panel portal-request-note" style={{ marginBottom: 12 }}>
+          <b>Quote request form</b>
+          <span>
+            Visitors fill in the Quote Builder inputs (your details, mode, route, incoterm, ready date, sender, receiver and the
+            packing list) and each request lands in Quotations as a New Lead quote. The heading, subtitle and button text
+            come from here; the fields below are not used. Change the type in Settings.
+          </span>
+        </div>
+      )}
 
       {tab === "builder" && (
         <div className="wf-builder">
@@ -460,6 +483,31 @@ function FormEditor({
       {tab === "settings" && (
         <div className="panel" style={{ maxWidth: 560 }}>
           <div className="field">
+            <label>Form type</label>
+            <select
+              value={draft.kind ?? "fields"}
+              onChange={(e) => set("kind", e.target.value as WebFormKind)}
+            >
+              <option value="quote_request">Quote request (Quote Builder inputs + packing list, makes a New Lead quote)</option>
+              <option value="fields">Contact form (the fields you build)</option>
+            </select>
+          </div>
+          {draft.kind === "quote_request" && (
+            <div className="field">
+              <label>Trade lane origin country (optional)</label>
+              <input
+                placeholder="e.g. China"
+                value={draft.lane_origin_country ?? ""}
+                onChange={(e) => set("lane_origin_country", e.target.value || null)}
+              />
+              <span className="hint">
+                For a lane page: the form asks for the origin in this country and adds it to the quote's origin
+                ("Shenzhen" becomes "Shenzhen, China"). Leave blank for an any-route form like Contact Us.
+              </span>
+            </div>
+          )}
+          <hr className="wf-hr" />
+          <div className="field">
             <label>Email notification for form submissions (optional)</label>
             <input
               type="email"
@@ -514,7 +562,7 @@ function FormEditor({
           </div>
           <div className="field">
             <label>Embed code</label>
-            <textarea readOnly rows={3} value={embedCode} />
+            <textarea readOnly rows={6} value={embedCode} />
             <div className="wf-copy-row" style={{ marginTop: 6 }}>
               <button
                 className="btn outline btn-sm"
@@ -524,7 +572,7 @@ function FormEditor({
               </button>
             </div>
             <span className="hint">
-              Paste this into your website's contact page.
+              Paste this into the page on your website (for a lane page, the #quote section). It resizes itself as the form grows.
             </span>
           </div>
         </div>

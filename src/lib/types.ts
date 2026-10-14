@@ -771,6 +771,8 @@ export interface WebForm {
   thankyou_body: string;
   notify_email: string | null;
   track_url_params: boolean;
+  kind?: WebFormKind;
+  lane_origin_country?: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -778,6 +780,8 @@ export interface WebForm {
 export type WebFormPatch = Partial<
   Omit<WebForm, "id" | "created_at" | "updated_at">
 >;
+
+export type WebFormKind = "fields" | "quote_request";
 
 /** The render-safe subset returned by the public get_web_form RPC. */
 export interface PublicWebForm {
@@ -789,6 +793,9 @@ export interface PublicWebForm {
   thankyou_title: string;
   thankyou_body: string;
   track_url_params: boolean;
+  /** 0174: "quote_request" shows the Quote Builder style form; lane = origin country. */
+  kind?: WebFormKind;
+  lane_origin_country?: string | null;
 }
 
 export interface WebFormSubmission {

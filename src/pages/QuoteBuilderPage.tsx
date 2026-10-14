@@ -1066,12 +1066,34 @@ export default function QuoteBuilderPage() {
         </div>
       )}
 
-      {existingQ.data?.portal_requested_at && (
-        <div className="panel portal-request-note">
-          <b>Requested by the customer on the portal</b> · {formatDate(existingQ.data.portal_requested_at)}
-          {existingQ.data.request_ready_date && <> · cargo ready {formatDate(existingQ.data.request_ready_date)}</>}
-          {existingQ.data.request_pickup && <div>Collect from: {existingQ.data.request_pickup}</div>}
-          {existingQ.data.request_delivery && <div>Deliver to: {existingQ.data.request_delivery}</div>}
+      {/* Portal request, or a website quote request (0174: sender / receiver
+          / ready date, no portal_requested_at). */}
+      {(existingQ.data?.portal_requested_at ||
+        existingQ.data?.request_pickup ||
+        existingQ.data?.request_delivery ||
+        existingQ.data?.request_ready_date) && (
+        <div className="panel portal-request-note request-note-lines">
+          {existingQ.data.portal_requested_at ? (
+            <span>
+              <b>Requested by the customer on the portal</b> · {formatDate(existingQ.data.portal_requested_at)}
+              {existingQ.data.request_ready_date && <> · cargo ready {formatDate(existingQ.data.request_ready_date)}</>}
+            </span>
+          ) : (
+            <span>
+              <b>Requested on the website</b> · {formatDate(existingQ.data.created_at)}
+              {existingQ.data.request_ready_date && <> · cargo ready {formatDate(existingQ.data.request_ready_date)}</>}
+            </span>
+          )}
+          {existingQ.data.request_pickup && (
+            <div>
+              {existingQ.data.portal_requested_at ? "Collect from" : "Sender (collect from)"}: {existingQ.data.request_pickup}
+            </div>
+          )}
+          {existingQ.data.request_delivery && (
+            <div>
+              {existingQ.data.portal_requested_at ? "Deliver to" : "Receiver (deliver to)"}: {existingQ.data.request_delivery}
+            </div>
+          )}
           {existingQ.data.request_notes && <div>Notes: {existingQ.data.request_notes}</div>}
           {existingQ.data.portal_decision && (
             <div>

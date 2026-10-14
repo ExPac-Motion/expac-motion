@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getPublicWebForm, submitWebForm, uploadWebFormImage } from "../lib/db";
 import type { PublicWebForm } from "../lib/types";
+import QuoteRequestPublicForm from "./QuoteRequestPublicForm";
 
 /** Public, unauthenticated hosted contact form (also used inside an
  *  <iframe> embed via ?embed=1). A submission creates a Lead + a team
@@ -26,6 +27,22 @@ export default function FormPublicPage() {
       .then((f) => setForm(f ?? "missing"))
       .catch(() => setForm("missing"));
   }, [id]);
+
+  // Embedded on a website: tell the host page our height so the iframe
+  // grows with the form (packing lines, the thank-you message). The embed
+  // snippet on the Forms page listens for this.
+  useEffect(() => {
+    if (!embed || window.parent === window) return;
+    const post = () =>
+      window.parent.postMessage(
+        { type: "expac-form-height", id, height: Math.ceil(document.documentElement.scrollHeight) },
+        "*",
+      );
+    const ro = new ResizeObserver(post);
+    ro.observe(document.body);
+    post();
+    return () => ro.disconnect();
+  }, [embed, id]);
 
   // A smaller-looking tab icon on hosted forms only, same mark, more
   // transparent padding around it, so it reads as a smaller icon than the
@@ -118,6 +135,15 @@ export default function FormPublicPage() {
           <h1>{form.thankyou_title}</h1>
           <p>{form.thankyou_body}</p>
         </div>
+      </div>
+    );
+  }
+
+  // 0174: a quote request form shows the Quote Builder style inputs.
+  if (form.kind === "quote_request") {
+    return (
+      <div className={wrapClass}>
+        <QuoteRequestPublicForm form={form} utm={utm} onDone={() => setDone(true)} />
       </div>
     );
   }

@@ -2056,6 +2056,17 @@ export async function submitWebForm(
   );
 }
 
+/** Website quote request (0174): lead + New Lead quote with packing list. */
+export async function submitQuoteRequest(
+  id: string,
+  data: Record<string, unknown>,
+  utm: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  return unwrap<{ ok: boolean; error?: string }>(
+    await supabase.rpc("submit_quote_request", { p_id: id, p_data: data, p_utm: utm }),
+  );
+}
+
 /** Public bucket for images attached to a hosted form's "Image upload"
  *  field -- anon visitors upload here (see 0096_web_form_image_uploads.sql),
  *  and staff view the result from the resulting URL in the Lead's notes. */
