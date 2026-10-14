@@ -30,6 +30,7 @@ import {
   useClients,
   useMyProfile,
   useCan,
+  useOpsTasks,
   usePartnerRateStructures,
   useProfiles,
   useReplaceClientContacts,
@@ -45,6 +46,7 @@ import {
   rateTier,
   type Contact,
   type LeadContactDraft,
+  type OpsTask,
   type PartnerKind,
   type RateTierId,
 } from "../lib/types";
@@ -146,6 +148,23 @@ export default function ContactsPage({
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [viewing, setViewing] = useState<Contact | null>(null);
   const [taskingRow, setTaskingRow] = useState<Contact | null>(null);
+  const tasksQ = useOpsTasks();
+  // Contacts with an open (not done) task linked, the row task icon is filled.
+  const openTaskIds = useMemo(() => {
+    const linkOf = (t: OpsTask) =>
+      kind === "client" ? t.client_id
+      : kind === "supplier" ? t.supplier_id
+      : kind === "agent" ? t.agent_id
+      : kind === "transporter" ? t.transporter_id
+      : kind === "clearing_agent" ? t.clearing_agent_id
+      : null;
+    return new Set(
+      (tasksQ.data ?? [])
+        .filter((t) => t.kind === "task" && t.status !== "done")
+        .map(linkOf)
+        .filter((id): id is string => !!id),
+    );
+  }, [tasksQ.data, kind]);
   const [mailingRow, setMailingRow] = useState<Contact | null>(null);
   const createInvite = useCreateClientInvite();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -447,6 +466,8 @@ export default function ContactsPage({
               mailTitle={`Email this ${label}`}
               onTask={kind === "destination_agent" ? undefined : () => setTaskingRow(r)}
               taskTitle={`Create a task for this ${label}`}
+              taskOpen={openTaskIds.has(r.id)}
+              taskOpenAmber
               onView={() => (isClient ? navigate("/clients/" + r.id) : setViewing(r))}
               onEdit={() => (isClient ? navigate("/clients/" + r.id) : setEditing(r))}
               onDelete={() => onDelete(r)}
@@ -573,7 +594,7 @@ export default function ContactsPage({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, kind, Label, clientName],
+    [sel, kind, Label, clientName, openTaskIds],
   );
 
   return (
