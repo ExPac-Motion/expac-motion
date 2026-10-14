@@ -67,6 +67,8 @@ export default function QuoteRequestPublicForm({
     value_currency: "USD",
   });
   const [extra, setExtra] = useState({ customs_registered: "Not sure", referral: "", notes: "", website: "" });
+  // "Send me portal access": the team invites them (Tip of the Day leads here).
+  const [portalAccess, setPortalAccess] = useState(false);
   const [rows, setRows] = useState<Row[]>([blankRow()]);
   const [containers, setContainers] = useState<{ count: string; size: string }[]>([{ count: "1", size: "40HC" }]);
   const [sender, setSender] = useState<Party>(blankParty());
@@ -123,7 +125,10 @@ export default function QuoteRequestPublicForm({
           ...route,
           customs_registered: extra.customs_registered,
           referral: extra.referral,
-          notes: extra.notes,
+          notes: [portalAccess ? "Would like access to the ExPac Motion portal." : "", extra.notes.trim()]
+            .filter(Boolean)
+            .join("\n"),
+          portal_access: portalAccess,
           website: extra.website,
           containers: containerText,
           sender,
@@ -233,6 +238,12 @@ export default function QuoteRequestPublicForm({
             <span>{m.sub}</span>
           </button>
         ))}
+        <FormTip
+          onPortal={() => {
+            setPortalAccess(true);
+            document.getElementById("portal-access")?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        />
       </div>
 
       <h3 className="wq-h">3. Route &amp; terms</h3>
@@ -410,10 +421,89 @@ export default function QuoteRequestPublicForm({
         />
       </div>
 
+      <label id="portal-access" className={`wq-check wq-portal${portalAccess ? " on" : ""}`}>
+        <input type="checkbox" checked={portalAccess} onChange={(e) => setPortalAccess(e.target.checked)} />
+        <span>
+          <b>I'd like access to the ExPac Motion portal</b>
+          <br />
+          Request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.
+        </span>
+      </label>
+
       {err && <div className="wf-err">{err}</div>}
       <button className="btn wf-submit" type="submit" disabled={busy}>
         {busy ? "Sending…" : form.submit_label}
       </button>
     </form>
+  );
+}
+
+/* ---------- Tip of the Day (as on the portal dashboard, PortalTip) ---------- */
+
+/** Links open Motion in a new tab: the form usually sits inside expac.co.za. */
+const MOTION = typeof window !== "undefined" ? window.location.origin : "";
+/** "#portal-access" scrolls to the form's portal tick box (section 7). */
+const PORTAL_TIPS: { text: string; to?: string; link?: string }[] = [
+  { text: "Become an ExPac customer and get the ExPac Motion portal: request and accept quotes online and follow every shipment in one place. Tick \"I'd like access to the portal\" below.", to: "#portal-access", link: "Request access" },
+  { text: "On the ExPac Motion portal every shipment has a live route map, its flights or vessels and a Latest update, so you always know where your cargo is.", to: "#portal-access", link: "Request access" },
+  { text: "Portal customers accept a quotation, or ask for a revision, in one click, and download the quotation PDF any time.", to: "#portal-access", link: "Request access" },
+  { text: "Chat with the ExPac team on any shipment from the portal, the whole conversation stays with that shipment.", to: "#portal-access", link: "Request access" },
+  { text: "Using our warehouse? On the portal you pre-advise goods, request releases and see your storage costs live.", to: "#portal-access", link: "Request access" },
+  { text: "Repeat shipments? Portal customers request a new quote in under a minute, with their details already filled in.", to: "#portal-access", link: "Request access" },
+  { text: "Already an ExPac customer? Sign in to the ExPac Motion portal to follow your shipments.", to: "/portal", link: "Sign in" },
+];
+const FORM_TIPS: { text: string; to?: string; link?: string }[] = [
+  ...PORTAL_TIPS,
+  { text: "Add your packing list, quantity, dimensions and weight per piece, for the most accurate price. The chargeable weight is worked out as you type." },
+  { text: "Not sure which mode suits your cargo? Pick \"Not sure, please advise\" and we'll recommend the best option for your goods and timeline." },
+  { text: "Air Freight (Consol) is consolidated air: your cargo shares space with other shipments for a better rate, usually a few days longer than direct air." },
+  { text: "Shipping a full container? Choose Sea Freight (FCL) and add your container sizes, the packing list is optional." },
+  { text: "Know your Incoterm, e.g. EXW or FOB? It tells us where our service starts, at your supplier's door or at the port." },
+  { text: "Add your supplier as the Sender, we can arrange collection and coordinate directly with them." },
+  { text: "ExPac handles the whole move: supplier collection, warehousing, air and sea freight, customs clearance and final-mile delivery." },
+  { text: "Not sure about customs registration? Tell us in the form and our team will advise you on what's needed." },
+  { text: "Track any ExPac shipment around the clock with your shipment number.", to: "/track", link: "Track a shipment" },
+];
+
+function FormTip({ onPortal }: { onPortal: () => void }) {
+  const [offset, setOffset] = useState(0);
+  const d = new Date();
+  const day = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000);
+  // Each day opens on a portal tip (the aim: prospects ask for portal access),
+  // the arrow then walks through all of them.
+  const tip = FORM_TIPS[((day % PORTAL_TIPS.length) + offset) % FORM_TIPS.length];
+  return (
+    <div className="pt-tip wq-tip">
+      <div className="pt-tip-head">
+        <span aria-hidden>🎓</span>
+        <b>Tip of the Day</b>
+        <button type="button" className="pt-tip-next" onClick={() => setOffset((o) => o + 1)} title="Next tip" aria-label="Next tip">
+          ›
+        </button>
+      </div>
+      <p>
+        {tip.text}
+        {tip.to && (
+          <>
+            {" "}
+            {tip.to === "#portal-access" ? (
+              <a
+                href="#portal-access"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPortal();
+                }}
+              >
+                {tip.link ?? "Show me"}
+              </a>
+            ) : (
+              <a href={MOTION + tip.to} target="_blank" rel="noopener noreferrer">
+                {tip.link ?? "Show me"}
+              </a>
+            )}
+          </>
+        )}
+      </p>
+    </div>
   );
 }

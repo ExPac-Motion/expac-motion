@@ -1862,8 +1862,40 @@ select.badge-select.lost {
 }
 .wq-modes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+}
+/* Tip of the Day in the mode grid: the three boxes after the 7 modes. */
+.wq-tip {
+  grid-column: span 3;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--green-tint);
+  border-color: var(--green);
+}
+.wq-tip p {
+  color: var(--ink);
+}
+.wq-portal {
+  align-items: flex-start;
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.wq-portal b {
+  color: var(--ink);
+}
+.wq-portal input {
+  margin-top: 3px;
+}
+.wq-portal.on {
+  border-color: var(--green);
+  background: var(--green-tint);
 }
 .wq-pkg-wrap {
   overflow-x: auto;
@@ -1922,6 +1954,14 @@ select.badge-select.lost {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+@media (max-width: 760px) {
+  .wq-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wq-tip {
+    grid-column: 1 / -1;
+  }
 }
 @media (max-width: 640px) {
   .wq-grid {
