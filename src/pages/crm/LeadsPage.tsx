@@ -189,8 +189,18 @@ export default function LeadsPage() {
     saveJson("leads.filters", next);
   }
 
+  // Status dropdown (header band, as on Shipments): leads per status.
+  const statusCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const l of rows) {
+      const k = l.lead_status_id || "__none";
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [rows]);
+
+  // "+ Add Filter" badge; the status has its own dropdown.
   const activeFilterCount =
-    (filters.statusId ? 1 : 0) +
     (filters.salesPersonId ? 1 : 0) +
     (filters.source.trim() ? 1 : 0) +
     (filters.hasEmail ? 1 : 0);
@@ -205,7 +215,8 @@ export default function LeadsPage() {
           .some((v) => norm(v as string).includes(q)),
       );
     }
-    if (filters.statusId)
+    if (filters.statusId === "__none") out = out.filter((l) => !l.lead_status_id);
+    else if (filters.statusId)
       out = out.filter((l) => l.lead_status_id === filters.statusId);
     if (filters.salesPersonId)
       out = out.filter((l) => l.sales_person_id === filters.salesPersonId);
@@ -546,25 +557,26 @@ export default function LeadsPage() {
           />
         }
         filters={
+          <>
+          <select
+            value={filters.statusId}
+            onChange={(e) => patchFilters({ ...filters, statusId: e.target.value })}
+            aria-label="Filter by status"
+            title="Show only leads with this status"
+            className={filters.statusId ? "status-pick-on" : undefined}
+            style={{ width: "auto" }}
+          >
+            <option value="">All statuses ({rows.length})</option>
+            {statuses.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({statusCounts.get(s.id) ?? 0})
+              </option>
+            ))}
+            <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>
+          </select>
           <Popover label="+ Add Filter" badge={activeFilterCount}>
             {() => (
               <>
-                <label className="ui-pop-row">
-                  <span>Status</span>
-                  <select
-                    value={filters.statusId}
-                    onChange={(e) =>
-                      patchFilters({ ...filters, statusId: e.target.value })
-                    }
-                  >
-                    <option value="">Any</option>
-                    {statuses.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <label className="ui-pop-row">
                   <span>Sales Person</span>
                   <select
@@ -610,7 +622,7 @@ export default function LeadsPage() {
                   <button
                     type="button"
                     className="btn ghost small"
-                    onClick={() => patchFilters(EMPTY_FILTERS)}
+                    onClick={() => patchFilters({ ...EMPTY_FILTERS, statusId: filters.statusId })}
                   >
                     Clear filters
                   </button>
@@ -618,6 +630,7 @@ export default function LeadsPage() {
               </>
             )}
           </Popover>
+          </>
         }
         count={
           isLoading
