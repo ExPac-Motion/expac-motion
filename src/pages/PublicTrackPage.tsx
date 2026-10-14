@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import TrackingMap from "../components/TrackingMap";
+import TrackMovements from "../components/TrackMovements";
+import { buildRoute, routeEventsFromRows } from "../lib/trackRoute";
 import { trackShipment } from "../lib/db";
 import { carrierLabel } from "../lib/docTemplates";
-import { formatDate, formatDateTime, portCode } from "../lib/format";
+import { formatDate, portCode } from "../lib/format";
 import type { TrackedShipment } from "../lib/types";
 
 /**
@@ -119,56 +121,7 @@ export default function PublicTrackPage() {
                 />
               </div>
 
-              <TrackingMap
-                height={520}
-                pol={
-                  result.pol_lat != null
-                    ? { lat: result.pol_lat, lon: result.pol_lon, label: result.pol }
-                    : null
-                }
-                pod={
-                  result.pod_lat != null
-                    ? { lat: result.pod_lat, lon: result.pod_lon, label: result.pod }
-                    : null
-                }
-                vessel={
-                  result.vessel_lat != null
-                    ? {
-                        lat: result.vessel_lat,
-                        lon: result.vessel_lon,
-                        label: result.vessel_name,
-                        at: result.position_at,
-                      }
-                    : null
-                }
-                events={result.events.map((e) => ({
-                  lat: e.lat,
-                  lon: e.lon,
-                  description: e.description,
-                  occurred_at: e.occurred_at,
-                  is_actual: e.is_actual,
-                }))}
-              />
-
-              {result.events.length > 0 && (
-                <ol className="trk-timeline" style={{ marginTop: 16 }}>
-                  {result.events
-                    .slice()
-                    .reverse()
-                    .map((e, i) => (
-                      <li key={i} className={e.is_actual ? "done" : ""}>
-                        <span className="trk-when">{formatDateTime(e.occurred_at)}</span>
-                        <span className="trk-where">
-                          {e.description || e.location || "—"}
-                          {e.vessel_name && (
-                            <span className="muted small"> · {e.vessel_name}</span>
-                          )}
-                        </span>
-                        <span className="trk-tick">{e.is_actual ? "✓" : "•"}</span>
-                      </li>
-                    ))}
-                </ol>
-              )}
+              <PublicRoute result={result} />
             </div>
           )}
         </div>
@@ -185,5 +138,20 @@ function Field({ label, value }: { label: string; value: string }) {
       </div>
       <div>{value}</div>
     </div>
+  );
+}
+
+/** Map + movements, built once per result. */
+function PublicRoute({ result }: { result: TrackedShipment }) {
+  const route = buildRoute(
+    routeEventsFromRows(result.events),
+    { code: result.pol, lat: result.pol_lat, lon: result.pol_lon },
+    { code: result.pod, lat: result.pod_lat, lon: result.pod_lon },
+  );
+  return (
+    <>
+      <TrackingMap height={520} route={route} mode={result.mode} />
+      <TrackMovements route={route} />
+    </>
   );
 }

@@ -4720,11 +4720,138 @@ select.badge-select.lost {
   color: var(--muted);
   background: #faf9f5;
 }
-.trk-vessel {
+.trk-vessel,
+.trk-vehicle {
   font-size: 18px;
   line-height: 22px;
   text-align: center;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+/* Route map (ShipsGo-style): numbered stops, green once reached. */
+.trk-stop span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--night);
+  color: var(--night);
+  font: 700 12px/1 var(--body, sans-serif);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.trk-stop.reached span {
+  background: var(--green);
+  border-color: var(--green-dark);
+  color: #fff;
+}
+.trk-pop {
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.trk-pop td {
+  padding: 2px 8px 2px 0;
+  white-space: nowrap;
+}
+/* Movements list under the map, grouped by stop. */
+.trk-moves {
+  margin-top: 14px;
+}
+.trk-moves-route {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.trk-moves-end {
+  text-align: right;
+}
+.trk-moves-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.trk-moves-bar span {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+.trk-moves-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+.trk-moves-stop {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.trk-moves-place {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--paper);
+  font-size: 0.9rem;
+}
+.trk-moves-place > span:last-child {
+  color: var(--muted);
+}
+.trk-moves-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--night);
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
+}
+.trk-moves-stop.reached .trk-moves-no {
+  background: var(--green);
+  border-color: var(--green-dark);
+  color: #fff;
+}
+.trk-moves-row {
+  display: grid;
+  grid-template-columns: 56px minmax(120px, 1fr) minmax(80px, 1fr) 70px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.86rem;
+}
+.trk-moves-code {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--blue-tint);
+  color: var(--blue-ink);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+.trk-moves-state {
+  justify-self: end;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.trk-moves-row.done .trk-moves-state {
+  color: var(--green-dark);
+  font-weight: 700;
+}
+@media (max-width: 560px) {
+  .trk-moves-row {
+    grid-template-columns: 50px 1fr auto;
+  }
+  .trk-moves-via {
+    display: none;
+  }
 }
 .trk-detail {
   background: #faf9f5;

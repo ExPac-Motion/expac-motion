@@ -50,7 +50,7 @@ import type {
   VaultTodo,
   UiTableLayout,
 } from "./types";
-import { fetchTracking, trackableRef, trackingRowFrom } from "./tracking";
+import { fetchTracking, trackableRef, trackingEventRowsFrom, trackingRowFrom } from "./tracking";
 import {
   buildShipmentEmail,
   buildShipmentReply,
@@ -508,11 +508,18 @@ export function useRefreshTracking() {
       const ref = trackableRef(input.job);
       if (!ref) throw new Error("This shipment has no AWB / MBL / container number.");
       const normalised = await fetchTracking(ref, input.shipsgoId);
-      return db.upsertJobTracking(
+      const row = await db.upsertJobTracking(
         trackingRowFrom(input.job.id, ref, normalised),
       );
+      // Same event rows the webhook writes, so the map + movements fill in
+      // straight away instead of waiting for ShipsGo's next push.
+      await db.upsertTrackingEvents(trackingEventRowsFrom(input.job.id, normalised));
+      return row;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["job_tracking"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["job_tracking"] });
+      qc.invalidateQueries({ queryKey: ["tracking_events"] });
+    },
   });
 }
 

@@ -1684,6 +1684,11 @@ export interface TrackingMovement {
   vessel: string | null;
   voyage: string | null;
   done: boolean;
+  /** Port LOCODE / airport IATA code, full timestamp and flight (air legs). */
+  locode?: string | null;
+  at?: string | null;
+  flight?: string | null;
+  container?: string | null;
 }
 
 /** Cached ShipsGo pull for a job (row in job_tracking). */

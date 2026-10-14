@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
-import type { Job, JobTracking, TrackingMovement } from "./types";
+import type { Job, JobTracking, TrackingEvent, TrackingMovement } from "./types";
+import { placeOf } from "./places";
 
 /* ------------------------------------------------------------------ *
  *  ShipsGo v2 wiring
@@ -123,11 +124,26 @@ export interface NormalisedTracking {
   movements: TrackingMovement[];
 }
 
-function normaliseMovements(raw: unknown): TrackingMovement[] {
+const isoOrNull = (v: unknown): string | null => {
+  const s = str(v);
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+function normaliseMovements(raw: unknown, container: string | null = null): TrackingMovement[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((m) => {
     const o = asDict(m);
+    // ShipsGo v2: location is { code (ocean LOCODE) | iata (air), name, ... }.
+    const loc = asDict(o.location);
+    const flight = o.flight;
     return {
+      locode: str(pick(loc, "code", "iata", "locode")) ?? null,
+      at: isoOrNull(pick(o, "timestamp", "date", "event_date", "datetime")),
+      flight:
+        typeof flight === "string" ? flight : str(pick(asDict(flight), "number", "flight_number")),
+      container,
       code: String(
         pick(o, "code", "event", "eventCode", "event_code", "movementCode",
           "movement_code", "type", "status_code") ?? "",
@@ -146,10 +162,14 @@ function normaliseMovements(raw: unknown): TrackingMovement[] {
       ),
       vessel: str(pick(o, "vessel", "vesselName", "vessel_name", "ship")),
       voyage: str(pick(o, "voyage", "voyageNumber", "voyage_number", "voyageNo")),
-      done: Boolean(
-        pick(o, "actual", "is_actual", "isActual", "completed", "done") ??
-          pick(o, "actualDate", "actual_date", "eventDate", "event_date"),
-      ),
+      // ShipsGo v2: status "ACT" (happened) / "EST" (planned).
+      done:
+        o.status === "ACT" ||
+        (o.status !== "EST" &&
+          Boolean(
+            pick(o, "actual", "is_actual", "isActual", "completed", "done") ??
+              pick(o, "actualDate", "actual_date", "eventDate", "event_date"),
+          )),
     };
   });
 }
@@ -177,10 +197,18 @@ export function normaliseShipsGo(payload: unknown): NormalisedTracking {
       pick(s, "pod", "port_of_discharge", "destination"),
   );
 
-  const movements = normaliseMovements(
-    pick(s, "movements", "events", "milestones", "timeline", "trackingEvents",
-      "tracking_events", "container_movements", "vessels"),
-  );
+  // Ocean v2 keeps movements per container; air has them on the shipment.
+  const containers = Array.isArray(s.containers) ? (s.containers as unknown[]) : [];
+  const movements = containers.length
+    ? containers
+        .flatMap((c) => normaliseMovements(asDict(c).movements, str(asDict(c).number)))
+        .sort((a, b) => (a.at ?? "").localeCompare(b.at ?? ""))
+    : normaliseMovements(
+        pick(s, "movements", "events", "milestones", "timeline", "trackingEvents",
+          "tracking_events", "container_movements", "vessels"),
+      );
+  const polLoc = asDict(pol.location);
+  const podLoc = asDict(pod.location);
 
   return {
     shipsgo_id: str(
@@ -195,18 +223,22 @@ export function normaliseShipsGo(payload: unknown): NormalisedTracking {
         "shipping_line", "airline", "airline_name", "scac"),
     ),
     pol:
+      str(pick(polLoc, "code", "iata", "locode")) ??
       str(pick(pol, "locode", "unlocode", "code", "port", "name", "port_name")) ??
       str(pick(s, "polLocode", "pol_locode", "originPort", "origin_port")),
     pod:
+      str(pick(podLoc, "code", "iata", "locode")) ??
       str(pick(pod, "locode", "unlocode", "code", "port", "name", "port_name")) ??
       str(pick(s, "podLocode", "pod_locode", "destinationPort", "destination_port")),
     etd: dateOnly(
       pick(s, "etd", "departureDate", "departure_date", "estimatedDeparture",
-        "estimated_departure", "atd") ?? pick(pol, "date", "etd"),
+        "estimated_departure", "atd") ??
+        pick(pol, "date_of_loading", "date_of_dep", "date", "etd"),
     ),
     eta: dateOnly(
       pick(s, "eta", "arrivalDate", "arrival_date", "estimatedArrival",
-        "estimated_arrival", "ata") ?? pick(pod, "date", "eta"),
+        "estimated_arrival", "ata") ??
+        pick(pod, "date_of_discharge_predicted", "date_of_discharge", "date_of_rcf", "date", "eta"),
     ),
     last_event:
       movements.length > 0
@@ -320,6 +352,9 @@ export function trackingRowFrom(
     eta: n.eta,
     last_event: n.last_event,
     movements: n.movements,
+    // Map pins for the route ends (the webhook sets these too).
+    ...coordsOf("pol", n.pol),
+    ...coordsOf("pod", n.pod),
     synced_at: new Date().toISOString(),
   };
 }
@@ -333,3 +368,42 @@ export function trackingRowFrom(
  *  job_tracking + tracking_events. Nothing polls; the manual Refresh
  *  stays only as a re-sync fallback.
  * ================================================================== */
+
+function coordsOf(
+  end: "pol" | "pod",
+  code: string | null,
+): Partial<Pick<JobTracking, "pol_lat" | "pol_lon" | "pod_lat" | "pod_lon">> {
+  const p = placeOf(code);
+  return p ? { [`${end}_lat`]: p.lat, [`${end}_lon`]: p.lon } : {};
+}
+
+/**
+ * tracking_events rows for a Refresh, the same shape and provider_event_id
+ * the webhook (functions/api/tracking-webhook.ts) writes, so a Refresh and a
+ * later push update the same rows instead of duplicating them.
+ */
+export function trackingEventRowsFrom(
+  jobId: string,
+  n: NormalisedTracking,
+): Omit<TrackingEvent, "id" | "created_at">[] {
+  return n.movements
+    .filter((m) => m.code && m.at)
+    .map((m) => {
+      const p = placeOf(m.locode);
+      return {
+        job_id: jobId,
+        provider: "shipsgo",
+        provider_event_id: `${m.container ?? ""}:${m.code}:${m.at}`,
+        event_code: m.code,
+        description: [m.code, m.location].filter(Boolean).join(" @ ") || m.code,
+        location: m.location,
+        locode: m.locode ?? null,
+        lat: p?.lat ?? null,
+        lon: p?.lon ?? null,
+        vessel_name: m.vessel ?? m.flight ?? null,
+        voyage: m.voyage,
+        occurred_at: m.at ?? null,
+        is_actual: m.done,
+      };
+    });
+}

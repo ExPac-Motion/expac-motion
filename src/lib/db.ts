@@ -885,6 +885,19 @@ export async function upsertJobTracking(
   );
 }
 
+/** Refresh: write the movements as tracking_events, merged on the same key
+ *  the ShipsGo webhook uses (job_id, provider, provider_event_id). */
+export async function upsertTrackingEvents(
+  rows: Omit<TrackingEvent, "id" | "created_at">[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  unwrap(
+    await supabase
+      .from("tracking_events")
+      .upsert(rows, { onConflict: "job_id,provider,provider_event_id" }),
+  );
+}
+
 export async function listTrackingEvents(jobId: string): Promise<TrackingEvent[]> {
   return unwrap<TrackingEvent[]>(
     await supabase

@@ -13,6 +13,13 @@ import {
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import { etaSlipped, trackableRef, trackingTone } from "../../lib/tracking";
 import TrackingMap from "../../components/TrackingMap";
+import TrackMovements from "../../components/TrackMovements";
+import {
+  buildRoute,
+  routeEventsFromMovements,
+  routeEventsFromRows,
+  type TrackRoute,
+} from "../../lib/trackRoute";
 import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
 
 export default function LiveTracking() {
@@ -282,7 +289,19 @@ function TrackMapModal({
 }) {
   const ref = trackableRef(job);
   const eventsQ = useTrackingEvents(job.id);
-  const events = eventsQ.data ?? [];
+  const events = eventsQ.data;
+  // Prefer the tracking_events rows; fall back to the legacy movements blob.
+  const route = useMemo(
+    () =>
+      buildRoute(
+        events && events.length > 0
+          ? routeEventsFromRows(events)
+          : routeEventsFromMovements(tracking?.movements ?? []),
+        { code: tracking?.pol ?? job.origin, lat: tracking?.pol_lat, lon: tracking?.pol_lon },
+        { code: tracking?.pod ?? job.destination, lat: tracking?.pod_lat, lon: tracking?.pod_lon },
+      ),
+    [events, tracking, job.origin, job.destination],
+  );
   return (
     <Modal
       title={`${job.reference}, live tracking`}
@@ -296,55 +315,19 @@ function TrackMapModal({
         </p>
       }
     >
-      <TrackingMap
-        height={440}
-        pol={
-          tracking?.pol_lat != null
-            ? { lat: tracking.pol_lat, lon: tracking.pol_lon, label: tracking.pol }
-            : null
-        }
-        pod={
-          tracking?.pod_lat != null
-            ? { lat: tracking.pod_lat, lon: tracking.pod_lon, label: tracking.pod }
-            : null
-        }
-        vessel={
-          tracking?.vessel_lat != null
-            ? {
-                lat: tracking.vessel_lat,
-                lon: tracking.vessel_lon,
-                label: tracking.vessel_name,
-                at: tracking.position_at,
-              }
-            : null
-        }
-        events={events.map((e) => ({
-          lat: e.lat,
-          lon: e.lon,
-          description: e.description,
-          occurred_at: e.occurred_at,
-          is_actual: e.is_actual,
-        }))}
-      />
-      <TrackDetail
-        job={job}
-        tracking={tracking}
-        events={events}
-        refValue={ref?.value ?? ""}
-      />
+      <TrackingMap height={440} route={route} mode={job.mode} />
+      <TrackDetail tracking={tracking} route={route} refValue={ref?.value ?? ""} />
     </Modal>
   );
 }
 
 function TrackDetail({
-  job,
   tracking,
-  events,
+  route,
   refValue,
 }: {
-  job: Job;
   tracking: JobTracking | undefined;
-  events: import("../../lib/types").TrackingEvent[];
+  route: TrackRoute;
   refValue: string;
 }) {
   if (!tracking) {
@@ -358,25 +341,6 @@ function TrackDetail({
       </div>
     );
   }
-  // Prefer the tracking_events table; fall back to the legacy movements blob.
-  const rows =
-    events.length > 0
-      ? events.map((e) => ({
-          code: e.event_code || "",
-          date: e.occurred_at,
-          description: e.description || e.location || "",
-          vessel: e.vessel_name,
-          voyage: e.voyage,
-          done: e.is_actual,
-        }))
-      : (tracking.movements ?? []).map((m) => ({
-          code: m.code,
-          date: m.date,
-          description: m.description || m.location || "",
-          vessel: m.vessel,
-          voyage: m.voyage,
-          done: m.done,
-        }));
   return (
     <div className="trk-detail">
       <div className="trk-detail-head">
@@ -384,7 +348,7 @@ function TrackDetail({
           {tracking.status ?? "—"}
         </span>
         <span>
-          <b>Carrier</b> {tracking.carrier ?? "—"}
+          <b>{tracking.ref_type === "air" ? "Airline" : "Carrier"}</b> {tracking.carrier ?? "—"}
         </span>
         {tracking.vessel_name && (
           <span>
@@ -395,37 +359,7 @@ function TrackDetail({
           <b>{tracking.ref_type === "air" ? "AWB" : "Container / BL"}</b> {refValue}
         </span>
       </div>
-      <div className="trk-route">
-        <div>
-          <div className="trk-port">{tracking.pol ?? portCode(job.origin)}</div>
-          <div className="hint">{formatDate(tracking.etd)}</div>
-        </div>
-        <div className="trk-line" />
-        <div>
-          <div className="trk-port">{tracking.pod ?? portCode(job.destination)}</div>
-          <div className="hint">
-            {formatDate(tracking.pod_eta ?? tracking.eta)}
-          </div>
-        </div>
-      </div>
-      {rows.length === 0 ? (
-        <p className="hint">No movements recorded yet.</p>
-      ) : (
-        <ol className="trk-timeline">
-          {rows.map((m, i) => (
-            <li key={i} className={m.done ? "done" : ""}>
-              <span className="trk-code">{m.code || "—"}</span>
-              <span className="trk-when">{formatDate(m.date)}</span>
-              <span className="trk-where">
-                {m.description || "—"}
-                {m.vessel && <span className="hint"> · {m.vessel}</span>}
-                {m.voyage && <span className="hint"> {m.voyage}</span>}
-              </span>
-              <span className="trk-tick">{m.done ? "✓" : "•"}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      <TrackMovements route={route} />
     </div>
   );
 }

@@ -21,6 +21,8 @@ import { packingTotals, volumetricFactor } from "../../lib/calc";
 import { MILESTONE_BY_STATUS, SHIPMENT_STATUSES, type ClientDocument, type PackingItem } from "../../lib/types";
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
+import TrackMovements from "../../components/TrackMovements";
+import { buildRoute, routeEventsFromRows } from "../../lib/trackRoute";
 import { houseTotals, useMyJobHouses } from "../../lib/houses";
 import PortalQuoteModal from "./PortalQuoteViewPage";
 import { modeEmoji } from "./PortalLayout";
@@ -42,7 +44,6 @@ export default function PortalShipmentPage() {
   const trackingQ = useMyJobTracking();
   const tracking = trackingQ.data?.find((t) => t.job_id === id);
   const trkEventsQ = useMyTrackingEvents(id);
-  const trkEvents = trkEventsQ.data ?? [];
   const eventsQ = useMyJobEvents(id);
   const docsQ = useMyDocuments(id);
   const messagesQ = useMyMessages(id);
@@ -59,6 +60,16 @@ export default function PortalShipmentPage() {
   const quote = (quotesQ.data ?? []).find((q) => q.id === job?.quote_id) ?? null;
   const linesQ = usePortalLines(quote ? [quote.id] : []);
   const packQ = usePortalPacking(quote?.id);
+
+  const trkRoute = useMemo(
+    () =>
+      buildRoute(
+        routeEventsFromRows(trkEventsQ.data ?? []),
+        { code: tracking?.pol ?? job?.origin, lat: tracking?.pol_lat, lon: tracking?.pol_lon },
+        { code: tracking?.pod ?? job?.destination, lat: tracking?.pod_lat, lon: tracking?.pod_lon },
+      ),
+    [trkEventsQ.data, tracking, job?.origin, job?.destination],
+  );
 
   // When each Shipment Status was set (0166): Created = booked into Motion,
   // the rest from the status history, Delivered also from the proof of
@@ -430,40 +441,8 @@ export default function PortalShipmentPage() {
           <EmptyState>Tracking will appear here once the shipment is on the water / in the air.</EmptyState>
         ) : (
           <>
-            <TrackingMap
-              height={300}
-              pol={tracking.pol_lat != null ? { lat: tracking.pol_lat, lon: tracking.pol_lon, label: tracking.pol } : null}
-              pod={tracking.pod_lat != null ? { lat: tracking.pod_lat, lon: tracking.pod_lon, label: tracking.pod } : null}
-              vessel={
-                tracking.vessel_lat != null
-                  ? { lat: tracking.vessel_lat, lon: tracking.vessel_lon, label: tracking.vessel_name, at: tracking.position_at }
-                  : null
-              }
-              events={trkEvents.map((e) => ({
-                lat: e.lat,
-                lon: e.lon,
-                description: e.description,
-                occurred_at: e.occurred_at,
-                is_actual: e.is_actual,
-              }))}
-            />
-            {trkEvents.length > 0 && (
-              <ol className="trk-timeline" style={{ marginTop: 12 }}>
-                {trkEvents
-                  .slice()
-                  .reverse()
-                  .map((e) => (
-                    <li key={e.id} className={e.is_actual ? "done" : ""}>
-                      <span className="trk-when">{formatDateTime(e.occurred_at)}</span>
-                      <span className="trk-where">
-                        {e.description || e.location || ""}
-                        {e.vessel_name && <span className="muted small"> · {e.vessel_name}</span>}
-                      </span>
-                      <span className="trk-tick">{e.is_actual ? "✓" : "•"}</span>
-                    </li>
-                  ))}
-              </ol>
-            )}
+            <TrackingMap height={300} route={trkRoute} mode={job.mode} />
+            <TrackMovements route={trkRoute} />
           </>
         )}
       </div>
