@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import DateInput from "../components/DateInput";
-import { packingTotals, volumetricFactor } from "../lib/calc";
+import { insuranceAmount, packingTotals, volumetricFactor } from "../lib/calc";
 import { submitQuoteRequest } from "../lib/db";
 import { LOCODE_OPTIONS } from "../lib/locodes";
 import { INCOTERMS_ANY_MODE, INCOTERMS_SEA, type PublicWebForm, type QuoteMode } from "../lib/types";
@@ -301,7 +301,7 @@ export default function QuoteRequestPublicForm({
           />
         </div>
         <div className="field">
-          <label>Goods value (for insurance / duties)</label>
+          <label>Goods value (for VAT / duties)</label>
           <div style={{ display: "flex", gap: 6 }}>
             <select
               value={route.value_currency}
@@ -314,6 +314,20 @@ export default function QuoteRequestPublicForm({
             </select>
             <input type="number" step="any" min={0} value={route.value} onChange={(e) => setRoute({ ...route, value: e.target.value })} />
           </div>
+        </div>
+        <div className="field">
+          <label>Insurance</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <span className="wq-cur">{route.value_currency}</span>
+            <input
+              type="number"
+              readOnly
+              tabIndex={-1}
+              value={insuranceAmount(route.value).toFixed(2)}
+              title="0.50% of the goods value, as on the quotation"
+            />
+          </div>
+          <span className="hint">0.50% of the goods value, as on the quotation.</span>
         </div>
       </div>
 

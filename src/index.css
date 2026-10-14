@@ -1921,6 +1921,24 @@ select.badge-select.lost {
   border-color: var(--green);
   background: var(--green-tint);
 }
+/* Insurance (read-only, 0.50% of goods value) beside the goods value. */
+.wq-cur {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 84px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.wq-card input[readonly] {
+  background: var(--paper);
+  color: var(--ink);
+}
 .wq-pkg-wrap {
   overflow-x: auto;
 }
