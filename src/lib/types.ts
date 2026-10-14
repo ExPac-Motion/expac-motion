@@ -1781,6 +1781,8 @@ export interface ClientTrackingEvent {
   event_code: string | null;
   description: string | null;
   location: string | null;
+  /** Port LOCODE / airport IATA code (0173). */
+  locode?: string | null;
   lat: number | null;
   lon: number | null;
   vessel_name: string | null;
@@ -1795,6 +1797,8 @@ export interface TrackedShipmentEvent {
   event_code: string | null;
   description: string | null;
   location: string | null;
+  /** Port LOCODE / airport IATA code (0173). */
+  locode?: string | null;
   lat: number | null;
   lon: number | null;
   vessel_name: string | null;

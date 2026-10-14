@@ -49,6 +49,7 @@ export default function TrackingMap({ route, mode, height = 320 }: Props) {
     if (!hasData || !boxRef.current) return;
     let map: import("leaflet").Map | null = null;
     let cancelled = false;
+    let observer: ResizeObserver | null = null;
 
     (async () => {
       try {
@@ -118,8 +119,27 @@ export default function TrackingMap({ route, mode, height = 320 }: Props) {
             .bindPopup(esc(pos.label));
         }
 
-        if (bounds.length === 1) map.setView(bounds[0], 5);
-        else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 6 });
+        // Frame the route; again whenever the box changes size (a modal
+        // opening, a hidden tab shown), else a map laid out at 0 x 0 keeps a
+        // wild zoom.
+        const frame = () => {
+          if (!map) return;
+          map.invalidateSize();
+          if (bounds.length === 1) map.setView(bounds[0], 5);
+          else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 6 });
+        };
+        frame();
+        let lastW = boxRef.current.clientWidth;
+        let lastH = boxRef.current.clientHeight;
+        observer = new ResizeObserver(([entry]) => {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0 && (Math.abs(width - lastW) > 2 || Math.abs(height - lastH) > 2)) {
+            lastW = width;
+            lastH = height;
+            frame();
+          }
+        });
+        observer.observe(boxRef.current);
         setReady(true);
       } catch {
         if (!cancelled) setFailed(true);
@@ -128,6 +148,7 @@ export default function TrackingMap({ route, mode, height = 320 }: Props) {
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
       map?.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

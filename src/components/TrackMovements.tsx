@@ -9,6 +9,15 @@ const EVENT_LABEL: Record<string, string> = {
   RCF: "Received from flight",
   NFD: "Ready for pick-up",
   DLV: "Delivered",
+  // Sea (ShipsGo ocean container events)
+  EMSH: "Empty container to shipper",
+  GTIN: "Gate in at port",
+  LOAD: "Loaded on vessel",
+  DEPA: "Vessel departed",
+  ARRV: "Vessel arrived",
+  DISC: "Discharged",
+  GTOT: "Gate out from port",
+  EMRT: "Empty container returned",
 };
 const labelOf = (code: string | null) => (code && EVENT_LABEL[code.toUpperCase()]) || code || "Update";
 const when = (at: string | null) => (at ? (at.length > 10 ? formatDateTime(at) : formatDate(at)) : "");

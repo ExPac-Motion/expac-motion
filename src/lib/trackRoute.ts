@@ -157,7 +157,13 @@ export function buildRoute(
 
   // Consecutive events at the same place make one stop (ARR + DEP at a hub).
   const stops: RouteStop[] = [];
+  // Sea events come once per container: "LOAD at Shanghai" x3 for three
+  // boxes is one movement on the route.
+  const seen = new Set<string>();
   for (const e of sorted) {
+    const dupKey = [e.code, e.placeCode || e.place, e.at, e.actual].join("|");
+    if (seen.has(dupKey)) continue;
+    seen.add(dupKey);
     const looked = placeOf(e.placeCode);
     const lat = typeof e.lat === "number" ? e.lat : (looked?.lat ?? null);
     const lon = typeof e.lon === "number" ? e.lon : (looked?.lon ?? null);
