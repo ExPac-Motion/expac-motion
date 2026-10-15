@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>China–South Africa Freight | Air &amp; Sea | ExPac Forwarding</title>
+  <meta name="description" content="Move freight between China and South Africa with coordinated air freight, FCL and LCL sea freight, customs clearance, supplier collection and final delivery from ExPac Forwarding, with live online tracking on ExPac Motion.">
+  <meta name="theme-color" content="#202426">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="China–South Africa Freight | ExPac Forwarding">
+  <meta property="og:description" content="Reliable air freight, FCL and LCL sea freight between China and South Africa, coordinated by one team.">
+  <meta property="og:url" content="https://expac.co.za/china-south-africa-freight/">
+  <link rel="canonical" href="https://expac.co.za/china-south-africa-freight/">
+  <style>
+    :root {
+      --green: #8cbc43;
+      --green-dark: #719d2f;
+      --ink: #202426;
+      --ink-2: #333333;
+      --paper: #f4f1ea;
+      --white: #ffffff;
+      --muted: #6f756d;
+      --line: rgba(32, 36, 38, .12);
+      --shadow: 0 20px 60px rgba(32, 36, 38, .12);
+      --radius: 24px;
+      --display: "Rajdhani", "Arial Narrow", Arial, sans-serif;
+      --body: "Roboto", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; }
+    button, input, select, textarea { font: inherit; }
+    :focus-visible { outline: 3px solid rgba(140, 188, 67, .7); outline-offset: 3px; }
+
+    .skip-link {
+      position: fixed;
+      left: 16px;
+      top: -80px;
+      z-index: 999;
+      background: var(--white);
+      color: var(--ink);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 800;
+      transition: top .2s ease;
+    }
+    .skip-link:focus { top: 16px; }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--green-dark);
+      font-family: var(--display);
+      font-size: .82rem;
+      font-weight: 800;
+      letter-spacing: .18em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 {
+      font-family: var(--display);
+      line-height: .98;
+      letter-spacing: -.025em;
+    }
+    h1 { margin-bottom: 22px; font-size: clamp(3.2rem, 7.2vw, 6.8rem); }
+    h2 { margin-bottom: 18px; font-size: clamp(2.35rem, 4.8vw, 4.6rem); }
+    h3 { margin-bottom: 12px; font-size: 1.55rem; }
+    .lead { max-width: 680px; color: #525852; font-size: clamp(1.05rem, 1.8vw, 1.22rem); }
+
+    .wrap { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+    .section { padding: 108px 0; }
+    .section-head { max-width: 760px; margin-bottom: 48px; }
+
+    .topbar {
+      background: var(--green);
+      color: var(--ink);
+      font-family: var(--display);
+      font-size: .82rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .topbar .wrap { display: flex; justify-content: center; gap: 12px; padding: 9px 0; }
+    .topbar-dot { opacity: .48; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(32, 36, 38, .92);
+      color: var(--white);
+      backdrop-filter: blur(14px);
+    }
+    .nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+    .brand { display: inline-flex; align-items: center; gap: 13px; text-decoration: none; }
+    .brand-mark {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      border: 2px solid var(--green);
+      border-radius: 50% 50% 50% 12px;
+      transform: rotate(-12deg);
+    }
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 17px;
+      height: 8px;
+      right: -7px;
+      top: 15px;
+      border-top: 3px solid var(--green);
+      border-right: 3px solid var(--green);
+      transform: rotate(18deg) skewX(25deg);
+    }
+    .brand-copy { display: grid; line-height: 1; }
+    .brand-name { font-family: var(--display); font-size: 1.35rem; font-weight: 800; letter-spacing: .04em; }
+    .brand-sub { margin-top: 4px; color: #aab0aa; font-size: .58rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
+    .brand-logo { height: 34px; width: auto; display: block; }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links > a:not(.button) { color: #e8eae7; font-size: .9rem; font-weight: 700; text-decoration: none; }
+    .nav-links > a:not(.button):hover { color: var(--green); }
+    .menu-toggle { display: none; border: 0; background: none; color: var(--white); padding: 8px; }
+    .menu-toggle span { display: block; width: 24px; height: 2px; margin: 5px 0; background: currentColor; }
+
+    .button {
+      display: inline-flex;
+      min-height: 50px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 100px;
+      padding: 13px 22px;
+      background: var(--green);
+      color: var(--ink);
+      cursor: pointer;
+      font-family: var(--display);
+      font-weight: 800;
+      letter-spacing: .025em;
+      line-height: 1;
+      text-decoration: none;
+      transition: transform .2s ease, background .2s ease, color .2s ease;
+    }
+    .button:hover { background: #9bca52; transform: translateY(-2px); }
+    .button-dark { background: var(--ink); color: var(--white); }
+    .button-dark:hover { background: #080a0a; }
+    .button-outline { border-color: rgba(255,255,255,.3); background: transparent; color: var(--white); }
+    .button-outline:hover { border-color: var(--white); background: var(--white); color: var(--ink); }
+    .button-arrow { font-size: 1.2em; }
+    .button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    .hero {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      min-height: 780px;
+      display: grid;
+      align-items: center;
+      background:
+        radial-gradient(circle at 85% 20%, rgba(140,188,67,.18), transparent 30%),
+        linear-gradient(138deg, #1d2022 0%, #202426 58%, #151819 100%);
+      color: var(--white);
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: .13;
+      background-image: linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to right, #000, transparent 72%);
+    }
+    .hero-grid { display: grid; grid-template-columns: 1.04fr .96fr; align-items: center; gap: 44px; padding: 96px 0 88px; }
+    .hero .eyebrow { color: var(--green); }
+    .hero h1 span { display: block; color: var(--green); }
+    .hero-copy { max-width: 670px; color: #ced3ce; font-size: clamp(1.08rem, 1.7vw, 1.24rem); }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    .trust-row { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 36px 0 0; padding: 0; color: #b9bfb9; font-size: .84rem; list-style: none; }
+    .trust-row li { display: inline-flex; align-items: center; gap: 8px; }
+    .trust-row li::before { content: "✓"; color: var(--green); font-weight: 900; }
+
+    .route-card {
+      position: relative;
+      min-height: 500px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 34px;
+      overflow: hidden;
+      background: rgba(255,255,255,.055);
+      box-shadow: 0 36px 80px rgba(0,0,0,.28);
+      backdrop-filter: blur(12px);
+    }
+    .route-card::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -100px;
+      bottom: -100px;
+      border-radius: 50%;
+      background: rgba(140,188,67,.14);
+      filter: blur(2px);
+    }
+    .route-label {
+      position: absolute;
+      z-index: 2;
+      display: grid;
+      gap: 4px;
+    }
+    .route-label strong { font-family: var(--display); font-size: 1.3rem; line-height: 1; }
+    .route-label .flag { display: inline-block; width: 1.5em; height: auto; vertical-align: -0.15em; margin-right: 3px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+    .route-label span { color: #aeb4ae; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
+    .route-label.china { top: 52px; left: 42px; }
+    .route-label.sa { right: 42px; bottom: 48px; text-align: right; }
+    .route-badge {
+      position: absolute;
+      z-index: 3;
+      top: 48%;
+      left: 50%;
+      width: 96px;
+      height: 96px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(140,188,67,.55);
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--green);
+      font-family: var(--display);
+      font-size: .65rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      line-height: 1.25;
+      text-align: center;
+      text-transform: uppercase;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 10px rgba(140,188,67,.06);
+    }
+    .route-svg { width: 100%; height: 500px; }
+    .route-dot { filter: drop-shadow(0 0 8px rgba(140,188,67,.8)); }
+    .mode-tag {
+      position: absolute;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 100px;
+      padding: 8px 12px;
+      background: rgba(20,22,23,.72);
+      color: #e6e8e5;
+      font-family: var(--display);
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .mode-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .mode-tag.air { top: 33%; right: 14%; }
+    .mode-tag.ocean { bottom: 27%; left: 13%; }
+
+    .quick-strip { position: relative; z-index: 5; margin-top: -34px; }
+    .quick-strip-inner {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+    .quick-item { min-height: 116px; padding: 24px 28px; border-right: 1px solid var(--line); }
+    .quick-item:last-child { border-right: 0; }
+    .quick-item small { display: block; margin-bottom: 5px; color: var(--green-dark); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .quick-item strong { font-family: var(--display); font-size: 1.35rem; line-height: 1.2; }
+
+    .service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .service-card {
+      position: relative;
+      min-height: 270px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 30px;
+      background: rgba(255,255,255,.58);
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    }
+    .service-card:hover { border-color: rgba(140,188,67,.65); transform: translateY(-5px); box-shadow: 0 16px 42px rgba(32,36,38,.08); }
+    .service-num { color: var(--green-dark); font-family: var(--display); font-size: .74rem; font-weight: 800; letter-spacing: .14em; }
+    .service-card h3 { margin-top: 42px; }
+    .service-card p { margin-bottom: 0; color: var(--muted); font-size: .94rem; }
+    .service-icon {
+      position: absolute;
+      right: -18px;
+      top: -18px;
+      width: 100px;
+      height: 100px;
+      border: 1px solid rgba(140,188,67,.25);
+      border-radius: 50%;
+    }
+    .service-icon::after { content: ""; position: absolute; inset: 25px; border: 2px solid var(--green); border-radius: 50% 50% 50% 12px; }
+
+    .options { background: var(--ink); color: var(--white); }
+    .options .eyebrow { color: var(--green); }
+    .options .lead { color: #b9bfb9; }
+    .option-grid { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid rgba(255,255,255,.12); border-radius: 26px; overflow: hidden; }
+    .option-card { position: relative; min-height: 385px; padding: 30px 26px; border-right: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.025); }
+    .option-card:last-child { border-right: 0; }
+    .option-card:hover { background: rgba(140,188,67,.08); }
+    .option-type { color: var(--green); font-family: var(--display); font-size: .75rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .option-card h3 { margin: 56px 0 14px; font-size: 1.8rem; }
+    .option-card p { color: #b6bcb6; font-size: .93rem; }
+    .option-meta { position: absolute; left: 26px; right: 26px; bottom: 28px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.12); }
+    .option-meta span { display: block; color: #8f968f; font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .option-meta strong { font-family: var(--display); font-size: 1.2rem; }
+    .transit-note { margin: 16px 0 0; color: #919891; font-size: .75rem; }
+
+    .process-grid { display: grid; grid-template-columns: .78fr 1.22fr; gap: 80px; align-items: start; }
+    .sticky-copy { position: sticky; top: 132px; }
+    .process-list { border-top: 1px solid var(--line); }
+    .process-step { display: grid; grid-template-columns: 62px 1fr; gap: 22px; padding: 31px 0; border-bottom: 1px solid var(--line); }
+    .step-num { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--green); font-family: var(--display); font-weight: 800; }
+    .process-step h3 { margin-bottom: 8px; }
+    .process-step p { margin-bottom: 0; color: var(--muted); }
+
+    .benefits-wrap {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 56px;
+      border-radius: 34px;
+      padding: 64px;
+      background: var(--green);
+      color: var(--ink);
+    }
+    .benefits-wrap::after { content: "EXPAC"; position: absolute; right: -16px; bottom: -76px; color: rgba(255,255,255,.16); font-family: var(--display); font-size: clamp(7rem, 17vw, 15rem); font-weight: 900; letter-spacing: -.06em; line-height: 1; }
+    .benefits-wrap .eyebrow { color: var(--ink); opacity: .65; }
+    .benefits-wrap h2 { position: relative; z-index: 1; margin-bottom: 0; }
+    .benefit-list { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .benefit-item { border: 1px solid rgba(32,36,38,.16); border-radius: 17px; padding: 20px; background: rgba(255,255,255,.18); }
+    .benefit-item strong { display: block; margin-bottom: 6px; font-family: var(--display); font-size: 1.17rem; }
+    .benefit-item span { display: block; font-size: .84rem; line-height: 1.45; }
+
+    .industry-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 32px 0 0; padding: 0; list-style: none; }
+    .industry-row li { border: 1px solid var(--line); border-radius: 100px; padding: 9px 15px; background: var(--white); color: #535a53; font-size: .82rem; font-weight: 700; }
+
+    .quote-section { background: #eae6dc; }
+    .quote-grid { display: grid; grid-template-columns: .86fr 1.14fr; gap: 70px; align-items: start; }
+    .contact-stack { display: grid; gap: 12px; margin: 32px 0; }
+    .contact-link { display: flex; align-items: center; gap: 13px; text-decoration: none; font-weight: 800; }
+    .contact-link:hover { color: var(--green-dark); }
+    .contact-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--green); }
+    .promise { border-left: 3px solid var(--green); padding-left: 16px; color: var(--muted); font-size: .9rem; }
+
+    .quote-form { border: 1px solid var(--line); border-radius: 26px; padding: 34px; background: var(--white); box-shadow: var(--shadow); }
+    .quote-form h3 { margin-bottom: 25px; font-size: 2rem; }
+    .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: #555b55; font-size: .75rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      border: 1px solid #d8d9d4;
+      border-radius: 10px;
+      padding: 12px 13px;
+      background: #fafaf7;
+      color: var(--ink);
+    }
+    .field textarea { min-height: 112px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); outline: 2px solid rgba(140,188,67,.18); }
+    .form-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 20px; }
+    .form-note { max-width: 270px; margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.35; }
+    .form-error { grid-column: 1 / -1; margin: 0 0 4px; padding: 10px 12px; border-radius: 10px; background: #fdecea; color: #b3261e; font-size: .82rem; }
+
+    .site-footer { padding: 56px 0 28px; background: var(--ink); color: var(--white); }
+    .footer-top { display: flex; align-items: end; justify-content: space-between; gap: 40px; padding-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .footer-line { max-width: 630px; margin: 18px 0 0; color: #b8beb8; }
+    .footer-links { display: flex; gap: 12px; flex-wrap: wrap; }
+    .footer-bottom { display: flex; justify-content: space-between; gap: 24px; padding-top: 24px; color: #8f968f; font-size: .76rem; }
+
+    .mobile-cta { display: none; }
+
+    @media (max-width: 980px) {
+      .hero-grid, .process-grid, .benefits-wrap, .quote-grid { grid-template-columns: 1fr; }
+      .hero-grid { padding-top: 76px; }
+      .hero { min-height: auto; }
+      .route-card { min-height: 440px; }
+      .route-svg { height: 440px; }
+      .service-grid { grid-template-columns: repeat(2, 1fr); }
+      .option-grid { grid-template-columns: repeat(2, 1fr); }
+      .option-card:nth-child(2) { border-right: 0; }
+      .option-card:nth-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,.12); }
+      .sticky-copy { position: static; }
+      .benefits-wrap { padding: 52px; }
+      .footer-top { align-items: start; flex-direction: column; }
+    }
+
+    @media (max-width: 760px) {
+      body { padding-bottom: 68px; }
+      .section { padding: 78px 0; }
+      .wrap { width: min(100% - 28px, 1180px); }
+      .topbar .wrap { font-size: .68rem; }
+      .topbar .optional { display: none; }
+      .nav { min-height: 68px; }
+      .menu-toggle { display: block; }
+      .nav-links {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 68px;
+        display: none;
+        align-items: stretch;
+        flex-direction: column;
+        gap: 0;
+        padding: 12px 20px 20px;
+        background: var(--ink);
+        border-top: 1px solid rgba(255,255,255,.08);
+        box-shadow: 0 18px 30px rgba(0,0,0,.2);
+      }
+      .nav-links.is-open { display: flex; }
+      .nav-links > a:not(.button) { padding: 13px 4px; }
+      .nav-links .button { margin-top: 8px; }
+      .brand-mark { width: 36px; height: 36px; }
+      .brand-name { font-size: 1.15rem; }
+      .hero-grid { gap: 54px; padding: 70px 0 84px; }
+      h1 { font-size: clamp(3rem, 15vw, 4.8rem); }
+      .hero-actions .button { width: 100%; }
+      .route-card { min-height: 390px; border-radius: 26px; }
+      .route-svg { height: 390px; }
+      .route-label.china { top: 38px; left: 27px; }
+      .route-label.sa { right: 27px; bottom: 36px; }
+      .route-badge { width: 78px; height: 78px; font-size: .56rem; }
+      .mode-tag.air { right: 5%; }
+      .mode-tag.ocean { left: 5%; }
+      .quick-strip-inner { grid-template-columns: 1fr; }
+      .quick-item { min-height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .quick-item:last-child { border-bottom: 0; }
+      .service-grid, .option-grid, .benefit-list, .field-grid { grid-template-columns: 1fr; }
+      .service-card { min-height: 245px; }
+      .option-card, .option-card:nth-child(2) { min-height: 330px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+      .option-card:last-child { border-bottom: 0; }
+      .process-step { grid-template-columns: 50px 1fr; gap: 14px; }
+      .benefits-wrap { padding: 36px 24px; border-radius: 24px; }
+      .benefits-wrap::after { bottom: -35px; }
+      .quote-form { padding: 25px 20px; }
+      .field.full { grid-column: auto; }
+      .form-footer { align-items: stretch; flex-direction: column; }
+      .form-footer .button { width: 100%; }
+      .form-note { max-width: none; }
+      .footer-bottom { flex-direction: column; gap: 8px; }
+      .mobile-cta {
+        position: fixed;
+        z-index: 80;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px;
+        background: rgba(255,255,255,.16);
+        box-shadow: 0 -8px 24px rgba(0,0,0,.18);
+      }
+      .mobile-cta a { min-height: 68px; display: grid; place-items: center; background: var(--ink); color: var(--white); font-family: var(--display); font-weight: 800; text-decoration: none; }
+      .mobile-cta a:last-child { background: var(--green); color: var(--ink); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+    /* ---- ExPac Motion section ---- */
+    .motion { background: #151819; color: var(--white); overflow: hidden; }
+    .motion .eyebrow { color: var(--green); }
+    .motion .lead { color: #b9bfb9; }
+    .motion-head { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: end; margin-bottom: 48px; }
+    .motion-head h2 span { color: var(--green); }
+    .motion-ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+    .motion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .motion-card { position: relative; border: 1px solid rgba(255,255,255,.12); border-radius: 22px; padding: 28px; background: rgba(255,255,255,.035); transition: border-color .2s ease, background .2s ease; }
+    .motion-card:hover { border-color: rgba(140,188,67,.55); background: rgba(140,188,67,.07); }
+    .motion-icon { width: 46px; height: 46px; display: grid; place-items: center; margin-bottom: 22px; border-radius: 14px; background: rgba(140,188,67,.14); color: var(--green); }
+    .motion-card h3 { margin-bottom: 10px; font-size: 1.45rem; }
+    .motion-card p { margin: 0; color: #b6bcb6; font-size: .93rem; }
+    .motion-note { margin: 22px 0 0; color: #8f968f; font-size: .8rem; }
+    .network { margin-top: 56px; padding-top: 36px; border-top: 1px solid rgba(255,255,255,.12); display: grid; grid-template-columns: .8fr 1.2fr; gap: 32px; align-items: center; }
+    .network h3 { margin: 0; font-size: 1.9rem; }
+    .network p { margin: 8px 0 0; color: #b6bcb6; font-size: .93rem; }
+    .lane-links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .lane-links a, .lane-links span { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.18); border-radius: 100px; padding: 10px 16px; color: #e6e8e5; font-family: var(--display); font-weight: 800; letter-spacing: .03em; text-decoration: none; }
+    .lane-links a:hover { border-color: var(--green); color: var(--green); }
+    .lane-links span { border-color: var(--green); background: rgba(140,188,67,.12); color: var(--green); }
+
+    /* ---- Quote request (ExPac Motion form, embedded) ---- */
+    .quote-section .quote-grid { grid-template-columns: 1fr auto; gap: 40px; align-items: end; margin-bottom: 30px; }
+    .quote-section .contact-stack { margin: 0; }
+    .quote-section .promise { max-width: 760px; margin: 18px 0 0; }
+    .quote-embed { width: min(1060px, calc(100% - 20px)); margin-inline: auto; }
+    .quote-embed iframe { display: block; width: 100%; height: 1500px; border: 0; background: transparent; }
+    .quote-fallback { margin: 10px 0 0; color: var(--muted); font-size: .8rem; text-align: center; }
+    .quote-fallback a { color: var(--green-dark); font-weight: 800; }
+
+    @media (max-width: 980px) {
+      .motion-head, .network { grid-template-columns: 1fr; }
+      .motion-ctas { justify-content: flex-start; }
+      .motion-grid { grid-template-columns: repeat(2, 1fr); }
+      .quote-section .quote-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .motion-grid { grid-template-columns: 1fr; }
+      .quote-embed { width: 100%; }
+    }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "China–South Africa Freight Forwarding",
+    "serviceType": "International air and sea freight forwarding",
+    "provider": {
+      "@type": "Organization",
+      "name": "ExPac Forwarding",
+      "url": "https://expac.co.za/",
+      "email": "support@expac.co.za",
+      "telephone": "+27-11-568-8281"
+    },
+    "areaServed": [
+      {"@type": "Country", "name": "China"},
+      {"@type": "Country", "name": "South Africa"}
+    ],
+    "description": "Air freight, FCL and LCL sea freight, supplier collection, consolidation, customs clearance and final delivery between China and South Africa."
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="topbar">
+    <div class="wrap">
+      <span>Dedicated China–South Africa trade-route support</span>
+      <span class="topbar-dot optional">•</span>
+      <span class="optional">Air, Sea, Customs &amp; Delivery</span>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="wrap nav">
+      <a class="brand" href="https://expac.co.za/" aria-label="ExPac Forwarding home">
+        <img class="brand-logo" src="data:image/png;base64,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" alt="ExPac Forwarding logo">
+      </a>
+
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-controls="site-menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="nav-links" id="site-menu" aria-label="Primary navigation">
+        <a href="#services">Services</a>
+        <a href="#options">Transit options</a>
+        <a href="#why-expac">Why ExPac</a>
+        <a href="#motion">ExPac Motion</a>
+        <a class="button" href="#quote">Request a quote <span class="button-arrow">↗</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">China ⇄ South Africa Trade Route</p>
+          <h1>Air and sea freight.<span>One connected trade route.</span></h1>
+          <p class="hero-copy">From supplier collection in China to air or sea freight, customs clearance and final delivery in South Africa, ExPac coordinates every milestone through one responsive team.</p>
+          <div class="hero-actions">
+            <a class="button" href="#quote">Plan my shipment <span class="button-arrow">↗</span></a>
+            <a class="button button-outline" href="https://expac-motion.co.za/track">Track a shipment</a>
+          </div>
+          <ul class="trust-row" aria-label="Key service benefits">
+            <li>One point of contact</li>
+            <li>Proactive updates</li>
+            <li>Door-to-door options</li>
+            <li>Live online tracking</li>
+          </ul>
+        </div>
+
+        <div class="route-card">
+          <div class="route-label china"><strong><svg class="flag" viewBox="0 0 30 20" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flag of China"><rect width="30" height="20" fill="#DE2910"/><polygon points="5.00,2.40 5.58,4.20 7.47,4.20 5.94,5.31 6.53,7.10 5.00,5.99 3.47,7.10 4.06,5.31 2.53,4.20 4.42,4.20" fill="#FFDE00"/><polygon points="9.23,2.46 9.66,1.97 9.32,1.41 9.92,1.66 10.35,1.17 10.29,1.82 10.90,2.08 10.26,2.23 10.20,2.88 9.87,2.32" fill="#FFDE00"/><polygon points="11.11,4.13 11.70,3.84 11.60,3.19 12.06,3.66 12.65,3.37 12.34,3.95 12.80,4.42 12.15,4.31 11.85,4.89 11.75,4.24" fill="#FFDE00"/><polygon points="11.17,7.65 11.82,7.70 12.08,7.10 12.23,7.74 12.88,7.80 12.32,8.14 12.46,8.77 11.97,8.34 11.41,8.68 11.66,8.08" fill="#FFDE00"/><polygon points="9.36,9.36 9.95,9.66 10.41,9.20 10.31,9.84 10.89,10.14 10.24,10.24 10.14,10.89 9.84,10.31 9.20,10.41 9.66,9.95" fill="#FFDE00"/></svg> CHINA</strong><span>Origin network</span></div>
+          <div class="route-label sa"><strong><svg class="flag" viewBox="0 0 30 20" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flag of South Africa"><rect width="30" height="10" y="0" fill="#E03C31"/><rect width="30" height="10" y="10" fill="#001489"/><path d="M0,0 L4,0 L15,9 L30,9 L30,11 L15,11 L4,20 L0,20 Z" fill="#007A4D" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round"/><path d="M0,3 L0,17 L12,10 Z" fill="#000000" stroke="#FFB612" stroke-width="1.2" stroke-linejoin="round"/></svg> SOUTH AFRICA</strong><span>Destination network</span></div>
+          <div class="mode-tag air">Air freight</div>
+          <div class="mode-tag ocean">Sea freight</div>
+          <div class="route-badge">Excellence<br>in Motion</div>
+          <svg class="route-svg" viewBox="0 0 560 500" role="img" aria-labelledby="route-title route-desc">
+            <title id="route-title">China and South Africa freight corridor</title>
+            <desc id="route-desc">Air and sea freight routes connect origin points in China with destinations across South Africa.</desc>
+            <defs>
+              <linearGradient id="routeFade" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#8cbc43" stop-opacity="1"/>
+                <stop offset="1" stop-color="#8cbc43" stop-opacity=".25"/>
+              </linearGradient>
+              <pattern id="miniGrid" width="28" height="28" patternUnits="userSpaceOnUse">
+                <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="560" height="500" fill="url(#miniGrid)"/>
+            <path d="M97 110 C230 35 411 155 459 371" fill="none" stroke="url(#routeFade)" stroke-width="2" stroke-dasharray="8 10"/>
+            <path d="M97 110 C128 285 320 407 459 371" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="2" stroke-dasharray="3 13"/>
+            <circle class="route-dot" cx="97" cy="110" r="8" fill="#8cbc43"/>
+            <circle cx="97" cy="110" r="18" fill="none" stroke="#8cbc43" stroke-opacity=".28"/>
+            <circle class="route-dot" cx="459" cy="371" r="8" fill="#8cbc43"/>
+            <circle cx="459" cy="371" r="18" fill="none" stroke="#8cbc43" stroke-opacity=".28"/>
+            <path d="M369 114 l27 10 -12 3 -8 14 -3 -13 -13 -5z" fill="#8cbc43" opacity=".9"/>
+            <path d="M177 322 h30 l10 8 -5 7 h-41 l-6-7z M181 322 v-12 h17 v12" fill="none" stroke="#8cbc43" stroke-width="2" opacity=".9"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <aside class="quick-strip" aria-label="Trade lane coverage summary">
+      <div class="wrap quick-strip-inner">
+        <div class="quick-item"><small>Major China gateways</small><strong>Shanghai, Ningbo, Shenzhen, Guangzhou, Qingdao &amp; Hong Kong</strong></div>
+        <div class="quick-item"><small>South Africa gateways</small><strong>Johannesburg, Durban, Cape Town, Gqeberha &amp; nationwide</strong></div>
+        <div class="quick-item"><small>Service model</small><strong>Airport-to-airport, port-to-port or door-to-door</strong></div>
+      </div>
+    </aside>
+
+    <section class="section" id="services">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Connected freight services</p>
+          <h2>Everything your shipment needs, coordinated as one movement.</h2>
+          <p class="lead">Choose a single service or let ExPac manage the complete journey from your supplier’s door to your delivery point.</p>
+        </div>
+
+        <div class="service-grid">
+          <article class="service-card"><span class="service-icon" aria-hidden="true"></span><span class="service-num">01 / ORIGIN</span><h3>Supplier Collection</h3><p>Collection scheduling, supplier coordination and cargo handover across key manufacturing regions in China.</p></article>
+          <article class="service-card"><span class="service-icon" aria-hidden="true"></span><span class="service-num">02 / CONSOLIDATE</span><h3>China Warehousing</h3><p>Receive, store and combine cargo from multiple suppliers into one coordinated shipment.</p></article>
+          <article class="service-card"><span class="service-icon" aria-hidden="true"></span><span class="service-num">03 / AIR</span><h3>Air Freight</h3><p>Priority, standard and consolidated air options for urgent, valuable or time-sensitive cargo.</p></article>
+          <article class="service-card"><span class="service-icon" aria-hidden="true"></span><span class="service-num">04 / SEA</span><h3>FCL &amp; LCL Sea Freight</h3><p>Full-container and shared-container solutions matched to your cargo volume, timing and budget.</p></article>
+          <article class="service-card"><span class="service-icon" aria-hidden="true"></span><span class="service-num">05 / CUSTOMS</span><h3>Customs Clearance</h3><p>Import clearance support, document coordination and guidance through South African customs processes.</p></article>
+          <article class="service-card"><span class="service-icon" aria-hidden="true"></span><span class="service-num">06 / DELIVERY</span><h3>Final-Mile Delivery</h3><p>Port or airport collection, degrouping where required and delivery to your warehouse or customer.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section options" id="options">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Transit options</p>
+          <h2>Speed by air. Economy and capacity by sea.</h2>
+          <p class="lead">We match the freight mode to your cargo, volume, deadline and landed-cost priorities, not the other way around.</p>
+        </div>
+
+        <div class="option-grid">
+          <article class="option-card"><span class="option-type">Fastest</span><h3>Priority Air</h3><p>For urgent replenishment, samples, critical parts and high-value cargo that cannot wait.</p><div class="option-meta"><span>Service profile</span><strong>First available routing*</strong></div></article>
+          <article class="option-card"><span class="option-type">Flexible</span><h3>Consolidated Air</h3><p>A practical balance of speed and cost for smaller regular consignments moving on planned departures.</p><div class="option-meta"><span>Service profile</span><strong>Planned airline routing*</strong></div></article>
+          <article class="option-card"><span class="option-type">Best for volume</span><h3>Ocean FCL</h3><p>Dedicated 20GP, 40GP and 40HC container options for larger loads and greater cargo control.</p><div class="option-meta"><span>Routing</span><strong>Direct or transhipment*</strong></div></article>
+          <article class="option-card"><span class="option-type">Best for smaller loads</span><h3>Ocean LCL</h3><p>Pay for the space you use while your cargo moves in a professionally managed shared container.</p><div class="option-meta"><span>Departure model</span><strong>Scheduled consolidation*</strong></div></article>
+        </div>
+        <p class="transit-note">*Transit times and schedules are indicative and depend on origin, carrier routing, space, cargo readiness, customs, weather and operational conditions. Confirmed options are provided with each quotation.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap process-grid">
+        <div class="sticky-copy">
+          <p class="eyebrow">How it moves</p>
+          <h2>Clear ownership at every milestone.</h2>
+          <p class="lead">One coordinated workflow keeps suppliers, carriers, customs and delivery partners aligned.</p>
+          <ul class="industry-row" aria-label="Industries served">
+            <li>Electronics</li><li>Machinery</li><li>Automotive</li><li>Textiles</li><li>Retail</li><li>Industrial components</li>
+          </ul>
+        </div>
+
+        <div class="process-list">
+          <article class="process-step"><span class="step-num">01</span><div><h3>Plan &amp; Book</h3><p>Share the supplier, cargo details, Incoterm, ready date and destination. We compare the best-fit routing and confirm your freight plan.</p></div></article>
+          <article class="process-step"><span class="step-num">02</span><div><h3>Collect &amp; Coordinate</h3><p>Our origin network coordinates directly with your supplier, arranges collection and keeps cargo and documents moving together.</p></div></article>
+          <article class="process-step"><span class="step-num">03</span><div><h3>Move &amp; Update</h3><p>We manage the international leg while your shipment updates live in ExPac Motion: every flight or vessel leg on the map, the latest confirmed milestone and a team that tells you what comes next.</p></div></article>
+          <article class="process-step"><span class="step-num">04</span><div><h3>Clear &amp; Deliver</h3><p>On arrival, we coordinate customs clearance, release, local handling and delivery to your nominated address.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="why-expac">
+      <div class="wrap benefits-wrap">
+        <div>
+          <p class="eyebrow">Why ExPac</p>
+          <h2>More than cargo. We move trust, time and opportunity.</h2>
+        </div>
+        <div class="benefit-list">
+          <div class="benefit-item"><strong>Dedicated account management</strong><span>A single point of contact who understands your cargo and keeps the journey connected.</span></div>
+          <div class="benefit-item"><strong>Proactive communication</strong><span>Clear milestone updates and early escalation when your shipment needs a decision.</span></div>
+          <div class="benefit-item"><strong>Routing built around you</strong><span>Air, FCL, LCL and multimodal options matched to urgency, volume and budget.</span></div>
+          <div class="benefit-item"><strong>End-to-end visibility</strong><span>Your own ExPac Motion portal: live tracking, quotes, documents and chat with the team, from booking to proof of delivery.</span></div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="section motion" id="motion">
+      <div class="wrap">
+        <div class="motion-head">
+          <div>
+            <p class="eyebrow">ExPac Motion</p>
+            <h2>Your shipments, live.<span> Your quotes, online.</span></h2>
+            <p class="lead">ExPac Motion is our own logistics platform. Every ExPac customer gets a portal login to follow cargo, approve quotes and talk to the team, on one screen, from any device.</p>
+          </div>
+          <div class="motion-ctas">
+            <a class="button" href="#quote">Request portal access <span class="button-arrow">↗</span></a>
+            <a class="button button-outline" href="https://expac-motion.co.za/track">Track a shipment</a>
+          </div>
+        </div>
+
+        <div class="motion-grid">
+          <article class="motion-card"><span class="motion-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></span><h3>Live route tracking</h3><p>Every shipment on a live map: each flight or vessel leg, the latest confirmed update and the ETA, refreshed automatically from carrier data.</p></article>
+          <article class="motion-card"><span class="motion-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><h3>Quotes in minutes</h3><p>Request a quote with your packing list, accept it online or ask for a revision in one click, and download the quotation PDF any time.</p></article>
+          <article class="motion-card"><span class="motion-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><h3>One conversation per shipment</h3><p>Message the ExPac team and raise tasks on each shipment. The whole history stays with that shipment, not lost in an inbox.</p></article>
+          <article class="motion-card"><span class="motion-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></span><h3>Documents &amp; proof of delivery</h3><p>Upload your commercial invoice and packing list, download shipping documents, invoices and the signed proof of delivery.</p></article>
+          <article class="motion-card"><span class="motion-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8M7 17h10"/></svg></span><h3>Warehouse visibility</h3><p>Using our warehouse? Pre-advise inbound goods, request releases for collection or delivery, and see your storage costs as they build.</p></article>
+          <article class="motion-card"><span class="motion-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16v-7"/></svg></span><h3>Reports on demand</h3><p>Download your shipments, quotations, warehouse receipts and deliveries whenever you need them, ready for your own records.</p></article>
+        </div>
+        <p class="motion-note">Portal access comes with your ExPac account. Tick “I’d like access to the ExPac Motion portal” on the quote request below and we’ll send your login.</p>
+
+        <div class="network">
+          <div>
+            <h3>One network, five trade lanes.</h3>
+            <p>Air freight (direct and consolidated), FCL and LCL sea freight, courier and road, with customs clearance and delivery across South Africa, all managed in ExPac Motion.</p>
+          </div>
+          <ul class="lane-links" aria-label="ExPac trade lanes"><li><span>China ⇄ South Africa</span></li><li><a href="https://expac.co.za/europe-south-africa-freight/">Europe ⇄ South Africa</a></li><li><a href="https://expac.co.za/india-south-africa-freight/">India ⇄ South Africa</a></li><li><a href="https://expac.co.za/united-kingdom-south-africa-freight/">United Kingdom ⇄ South Africa</a></li><li><a href="https://expac.co.za/usa-south-africa-freight/">United States ⇄ South Africa</a></li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section quote-section" id="quote">
+      <div class="wrap quote-grid">
+        <div>
+          <p class="eyebrow">Start your next shipment</p>
+          <h2>Tell us what needs to move.</h2>
+          <p class="lead">Send the essentials and our team will respond with the most practical routing, the information still needed and a clear quotation path.</p>
+          <p class="promise">Add your packing list (quantity, dimensions and weight per piece) for the most accurate quote: the chargeable weight is worked out as you type, and your request lands with our team ready to price.</p>
+        </div>
+          <div class="contact-stack">
+            <a class="contact-link" href="tel:+27115688281"><span class="contact-icon">☎</span> +27&nbsp;11&nbsp;568&nbsp;8281</a>
+            <a class="contact-link" href="mailto:support@expac.co.za"><span class="contact-icon">✉</span> support@expac.co.za</a>
+            <a class="contact-link" href="https://wa.me/27826823332?text=Hi%20ExPac%2C%20I%20need%20a%20China%E2%80%93South%20Africa%20freight%20quote."><span class="contact-icon">↗</span> WhatsApp our team</a>
+          </div>
+      </div>
+      <div class="quote-embed">
+        <iframe id="expac-form-6923e026-60b5-409e-b078-b5da78382775" title="ExPac quote request" loading="lazy"></iframe>
+        <p class="quote-fallback">Form not loading? <a href="https://expac-motion.co.za/forms/6923e026-60b5-409e-b078-b5da78382775" target="_blank" rel="noopener">Open the quote request in a new tab</a> or email <a href="mailto:support@expac.co.za">support@expac.co.za</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-top">
+        <div>
+          <a class="brand" href="https://expac.co.za/" aria-label="ExPac Forwarding home">
+            <img class="brand-logo" src="data:image/png;base64,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" alt="ExPac Forwarding logo">
+          </a>
+          <p class="footer-line">Excellence in Motion. Seamless air, sea and road freight solutions connecting businesses across borders.</p>
+        </div>
+        <div class="footer-links">
+          <a class="button button-outline" href="https://expac.co.za/">Visit ExPac</a>
+          <a class="button button-outline" href="https://expac-motion.co.za/portal">ExPac Motion portal</a>
+          <a class="button" href="#quote">Request a quote</a>
+        </div>
+      </div>
+      <div class="footer-bottom"><span>© <span id="year">2026</span> ExPac Forwarding. All rights reserved.</span><span>China ⇄ South Africa Trade Route</span></div>
+    </div>
+  </footer>
+
+  <nav class="mobile-cta" aria-label="Quick actions">
+    <a href="tel:+27115688281">Call&nbsp;ExPac</a>
+    <a href="#quote">Get a Quote</a>
+  </nav>
+
+  <script>
+    const menuToggle = document.querySelector('.menu-toggle');
+    const siteMenu = document.querySelector('#site-menu');
+
+    menuToggle.addEventListener('click', () => {
+      const open = siteMenu.classList.toggle('is-open');
+      menuToggle.setAttribute('aria-expanded', String(open));
+      menuToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    });
+
+    siteMenu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => {
+        siteMenu.classList.remove('is-open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+        menuToggle.setAttribute('aria-label', 'Open navigation');
+      });
+    });
+
+    document.querySelector('#year').textContent = new Date().getFullYear();
+    // ---- Quote request: the ExPac Motion form (Sales CRM › Forms), embedded.
+    // It posts its height so the frame grows with the packing list, and gets
+    // this page's ?utm_ parameters for campaign tracking. Each request lands
+    // in Motion as a New Lead quote with its packing list.
+    (function () {
+      var frame = document.getElementById('expac-form-6923e026-60b5-409e-b078-b5da78382775');
+      var q = location.search.slice(1);
+      frame.src = 'https://expac-motion.co.za/forms/6923e026-60b5-409e-b078-b5da78382775?embed=1' + (q ? '&' + q : '');
+      window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (e.origin === 'https://expac-motion.co.za' && d && d.type === 'expac-form-height' && d.id === '6923e026-60b5-409e-b078-b5da78382775') {
+          frame.style.height = d.height + 'px';
+        }
+      });
+    })();
+
+  </script>
+</body>
+</html>

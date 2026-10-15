@@ -33,6 +33,10 @@ export default function FormPublicPage() {
   // snippet on the Forms page listens for this.
   useEffect(() => {
     if (!embed || window.parent === window) return;
+    // See-through inside the host page (the website's own background shows
+    // around the form card instead of Motion's paper colour).
+    const bodyBg = document.body.style.background;
+    document.body.style.background = "transparent";
     const post = () =>
       window.parent.postMessage(
         { type: "expac-form-height", id, height: Math.ceil(document.documentElement.scrollHeight) },
@@ -41,7 +45,10 @@ export default function FormPublicPage() {
     const ro = new ResizeObserver(post);
     ro.observe(document.body);
     post();
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      document.body.style.background = bodyBg;
+    };
   }, [embed, id]);
 
   const utm = useMemo(() => {
