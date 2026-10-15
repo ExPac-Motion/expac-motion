@@ -26,6 +26,11 @@ const REGIONS: Region[] = [
       { city: "Nairobi", country: "Kenya", zone: "Africa/Nairobi" },
       { city: "Lagos", country: "Nigeria", zone: "Africa/Lagos" },
       { city: "Cairo", country: "Egypt", zone: "Africa/Cairo" },
+      { city: "Casablanca", country: "Morocco", zone: "Africa/Casablanca" },
+      { city: "Accra", country: "Ghana", zone: "Africa/Accra" },
+      { city: "Dar es Salaam", country: "Tanzania", zone: "Africa/Dar_es_Salaam" },
+      { city: "Luanda", country: "Angola", zone: "Africa/Luanda" },
+      { city: "Port Louis", country: "Mauritius", zone: "Indian/Mauritius" },
     ],
   },
   {
@@ -34,14 +39,28 @@ const REGIONS: Region[] = [
       { city: "London", country: "United Kingdom", zone: "Europe/London" },
       { city: "Rotterdam", country: "Netherlands", zone: "Europe/Amsterdam" },
       { city: "Hamburg", country: "Germany", zone: "Europe/Berlin" },
+      { city: "Antwerp", country: "Belgium", zone: "Europe/Brussels" },
+      { city: "Paris", country: "France", zone: "Europe/Paris" },
+      { city: "Madrid", country: "Spain", zone: "Europe/Madrid" },
+      { city: "Milan", country: "Italy", zone: "Europe/Rome" },
+      { city: "Lisbon", country: "Portugal", zone: "Europe/Lisbon" },
+      { city: "Warsaw", country: "Poland", zone: "Europe/Warsaw" },
+      { city: "Athens", country: "Greece", zone: "Europe/Athens" },
       { city: "Istanbul", country: "Türkiye", zone: "Europe/Istanbul" },
+      { city: "Moscow", country: "Russia", zone: "Europe/Moscow" },
     ],
   },
   {
     name: "Middle East & South Asia",
     cities: [
       { city: "Dubai", country: "United Arab Emirates", zone: "Asia/Dubai" },
+      { city: "Riyadh", country: "Saudi Arabia", zone: "Asia/Riyadh" },
+      { city: "Doha", country: "Qatar", zone: "Asia/Qatar" },
+      { city: "Tel Aviv", country: "Israel", zone: "Asia/Jerusalem" },
+      { city: "Karachi", country: "Pakistan", zone: "Asia/Karachi" },
       { city: "Mumbai", country: "India", zone: "Asia/Kolkata" },
+      { city: "Colombo", country: "Sri Lanka", zone: "Asia/Colombo" },
+      { city: "Dhaka", country: "Bangladesh", zone: "Asia/Dhaka" },
     ],
   },
   {
@@ -54,6 +73,9 @@ const REGIONS: Region[] = [
       { city: "Bangkok", country: "Thailand", zone: "Asia/Bangkok" },
       { city: "Jakarta", country: "Indonesia", zone: "Asia/Jakarta" },
       { city: "Kuala Lumpur", country: "Malaysia", zone: "Asia/Kuala_Lumpur" },
+      { city: "Manila", country: "Philippines", zone: "Asia/Manila" },
+      { city: "Taipei", country: "Taiwan", zone: "Asia/Taipei" },
+      { city: "Seoul", country: "South Korea", zone: "Asia/Seoul" },
       { city: "Tokyo", country: "Japan", zone: "Asia/Tokyo" },
     ],
   },
@@ -61,6 +83,7 @@ const REGIONS: Region[] = [
     name: "Oceania",
     cities: [
       { city: "Sydney", country: "Australia", zone: "Australia/Sydney" },
+      { city: "Perth", country: "Australia", zone: "Australia/Perth" },
       { city: "Auckland", country: "New Zealand", zone: "Pacific/Auckland" },
     ],
   },
@@ -68,8 +91,15 @@ const REGIONS: Region[] = [
     name: "Americas",
     cities: [
       { city: "New York", country: "United States", zone: "America/New_York" },
+      { city: "Toronto", country: "Canada", zone: "America/Toronto" },
       { city: "Chicago", country: "United States", zone: "America/Chicago" },
       { city: "Los Angeles", country: "United States", zone: "America/Los_Angeles" },
+      { city: "Vancouver", country: "Canada", zone: "America/Vancouver" },
+      { city: "Mexico City", country: "Mexico", zone: "America/Mexico_City" },
+      { city: "Bogotá", country: "Colombia", zone: "America/Bogota" },
+      { city: "Lima", country: "Peru", zone: "America/Lima" },
+      { city: "Santiago", country: "Chile", zone: "America/Santiago" },
+      { city: "Buenos Aires", country: "Argentina", zone: "America/Argentina/Buenos_Aires" },
       { city: "São Paulo", country: "Brazil", zone: "America/Sao_Paulo" },
     ],
   },
@@ -209,6 +239,17 @@ export default function WorldClock() {
   const now = useNow();
   const homeOffset = offsetMinutes(HOME.zone, now);
   const localZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
+  // Find a city or country ("Canada" -> Toronto, Vancouver).
+  const [q, setQ] = useState("");
+  const term = q.trim().toLowerCase();
+  const regions = term
+    ? REGIONS.map((r) => ({
+        ...r,
+        cities: r.cities.filter((c) =>
+          [c.city, c.country, r.name].some((v) => v.toLowerCase().includes(term)),
+        ),
+      })).filter((r) => r.cities.length > 0)
+    : REGIONS;
 
   return (
     <div className="panel">
@@ -221,13 +262,23 @@ export default function WorldClock() {
             {localZone && localZone !== HOME.zone ? ` Your device is on ${localZone}.` : ""}
           </p>
         </div>
+        <input
+          className="wc-search"
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Find a city or country…"
+          aria-label="Find a city or country"
+        />
       </div>
+
+      {regions.length === 0 && <p className="hint">No clock for "{q.trim()}" yet, ask to have it added.</p>}
 
       {/* One continuous grid (no gaps at the end of a region's row); the
           region name sits above its first clock, the other cells keep the
           same space so every row of cards lines up. */}
       <div className="wc-grid">
-        {REGIONS.flatMap((r) =>
+        {regions.flatMap((r) =>
           r.cities.map((c, i) => (
             <div key={c.zone} className="wc-cell">
               <h3 className={`wc-region-name${i === 0 ? "" : " wc-region-spacer"}`} aria-hidden={i !== 0}>

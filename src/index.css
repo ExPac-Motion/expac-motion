@@ -4160,12 +4160,21 @@ select.badge-select.lost {
 .wc-cell > .wc-card {
   flex: 1;
 }
+/* Region heading: a solid green tab on the region's first clock. */
 .wc-region-name {
+  align-self: flex-start;
   font-size: 12px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  letter-spacing: 0.05em;
+  background: var(--green);
+  color: var(--night);
+  border-radius: 8px;
+  padding: 4px 10px;
   margin: 0 0 8px;
+}
+.wc-search {
+  width: min(280px, 100%);
 }
 .wc-grid {
   display: grid;
@@ -4207,14 +4216,14 @@ select.badge-select.lost {
   white-space: nowrap;
 }
 .wc-badge.open {
-  background: var(--green-tint);
-  color: var(--green-dark);
-  border: 1px solid var(--green);
+  background: var(--teal);
+  color: #fff;
+  border: 1px solid var(--teal-ink);
 }
 .wc-badge.closed {
-  background: var(--white);
-  color: var(--muted);
-  border: 1px solid var(--line);
+  background: var(--orange-tint);
+  color: var(--orange-ink);
+  border: 1px solid var(--orange);
 }
 .wc-time {
   font-family: var(--display);
