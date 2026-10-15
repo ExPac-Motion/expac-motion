@@ -4150,8 +4150,15 @@ select.badge-select.lost {
 }
 
 /* --- World Clock --- */
-.wc-region + .wc-region {
-  margin-top: 18px;
+.wc-region-spacer {
+  visibility: hidden;
+}
+.wc-cell {
+  display: flex;
+  flex-direction: column;
+}
+.wc-cell > .wc-card {
+  flex: 1;
 }
 .wc-region-name {
   font-size: 12px;

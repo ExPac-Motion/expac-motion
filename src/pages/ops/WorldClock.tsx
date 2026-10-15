@@ -223,22 +223,21 @@ export default function WorldClock() {
         </div>
       </div>
 
-      {REGIONS.map((r) => (
-        <section key={r.name} className="wc-region">
-          <h3 className="wc-region-name">{r.name}</h3>
-          <div className="wc-grid">
-            {r.cities.map((c) => (
-              <ClockCard
-                key={c.zone}
-                c={c}
-                now={now}
-                homeOffset={homeOffset}
-                home={c.zone === HOME.zone}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {/* One continuous grid (no gaps at the end of a region's row); the
+          region name sits above its first clock, the other cells keep the
+          same space so every row of cards lines up. */}
+      <div className="wc-grid">
+        {REGIONS.flatMap((r) =>
+          r.cities.map((c, i) => (
+            <div key={c.zone} className="wc-cell">
+              <h3 className={`wc-region-name${i === 0 ? "" : " wc-region-spacer"}`} aria-hidden={i !== 0}>
+                {r.name}
+              </h3>
+              <ClockCard c={c} now={now} homeOffset={homeOffset} home={c.zone === HOME.zone} />
+            </div>
+          )),
+        )}
+      </div>
     </div>
   );
 }
