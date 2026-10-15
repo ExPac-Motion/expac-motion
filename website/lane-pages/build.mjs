@@ -168,6 +168,12 @@ function embedScript(form) {
 function build(slug, lane) {
   let h = fs.readFileSync(path.join(SRC, slug, "index.html"), "utf8");
 
+  // The page's own address is its live folder (the UK page said
+  // /uk-south-africa-freight/, live is /united-kingdom-south-africa-freight/).
+  h = h.replace(/https:\/\/expac\.co\.za\/[a-z-]+-south-africa-freight\//g, (url) =>
+    url.includes(`/${slug}/`) ? url : url.replace(/\/[a-z-]+-south-africa-freight\//, `/${slug}/`),
+  );
+
   // Styles for the new sections, before the page's own media queries close.
   h = replaceOnce(h, "\n  </style>", CSS + "  </style>", "styles");
 
