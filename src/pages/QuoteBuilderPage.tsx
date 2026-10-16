@@ -20,6 +20,7 @@ import {
   useTierMargins,
   useCan,
   useSaveQuote,
+  useConfirmQuoteMode,
   useFinalizeCopiedQuote,
   useSaveSupplier,
   useSuppliers,
@@ -339,6 +340,7 @@ export default function QuoteBuilderPage() {
   const existingQ = useQuote(id);
   const wmsReceiptsQ = useWmsReceipts();
   const saveQuote = useSaveQuote();
+  const confirmMode = useConfirmQuoteMode();
   const finalizeCopied = useFinalizeCopiedQuote();
   const saveSupplier = useSaveSupplier();
   const settingsQ = useCompanySettings();
@@ -1059,6 +1061,27 @@ export default function QuoteBuilderPage() {
 
       <RevisionRequests quoteId={existingQ.data?.id} revisionNo={existingQ.data?.revision_no ?? 1} pending={!!existingQ.data?.revision_pending} />
 
+      {/* Website "Not sure, please advise" (0178): the saved mode is only a
+          placeholder. Picking another mode and saving clears it. */}
+      {existingQ.data?.mode_to_advise && (
+        <div className="panel portal-request-note mode-advise-note">
+          <b>Client not sure of the mode, please advise.</b> The request came in as "Not sure", so{" "}
+          <b>{existingQ.data.mode}</b> is only a placeholder. Pick the mode below and save, or{" "}
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={confirmMode.isPending}
+            onClick={() =>
+              confirmMode.mutate(existingQ.data!.id, {
+                onError: (e) => error(e instanceof Error ? e.message : "Could not keep the mode"),
+              })
+            }
+          >
+            Keep {existingQ.data.mode}
+          </button>
+        </div>
+      )}
+
       {existingQ.data?.enquiry_notes && (
         <div className="panel portal-request-note enquiry-note">
           <b>Enquiry</b> <span className="muted small">internal, not on the quotation</span>
@@ -1140,6 +1163,9 @@ export default function QuoteBuilderPage() {
                 <option key={m}>{m}</option>
               ))}
             </select>
+            {existingQ.data?.mode_to_advise && draft.mode === existingQ.data.mode && (
+              <div className="hint mode-advise-hint">Client: not sure, please advise</div>
+            )}
           </div>
           <div className="field">
             <label>Incoterms</label>

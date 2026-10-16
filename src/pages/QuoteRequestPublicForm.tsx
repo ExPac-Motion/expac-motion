@@ -7,7 +7,8 @@ import { INCOTERMS_ANY_MODE, INCOTERMS_SEA, type PublicWebForm, type QuoteMode }
 
 /** Motion's own modes (as in the Quote Builder), plus "Not sure". The label
  *  is sent as-is; submit_quote_request() / web_form_quote_mode() (0174) turn
- *  it into the quote's mode, "Not sure" lands as Air for the team to change. */
+ *  it into the quote's mode, "Not sure" lands as Air for the team to change,
+ *  flagged mode_to_advise (0178) so the quote says "Not sure, please advise". */
 const MODES: { label: string; sub: string; mode: QuoteMode | null }[] = [
   { label: "Air Freight (AIR)", sub: "Airport to airport or door", mode: "Air Freight (AIR)" },
   { label: "Air Freight (Consol)", sub: "Consolidated air, better rates", mode: "Air Freight (Consol)" },

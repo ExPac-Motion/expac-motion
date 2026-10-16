@@ -133,7 +133,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
       {/* Field order mirrors the Quote Builder's Shipment Information grid. */}
       <div className="grid4" style={{ margin: "4px 0 14px" }}>
         <Field label="Shipment No" value={q.reference} />
-        <Field label="Mode" value={q.mode} />
+        <Field label="Mode" value={q.mode_to_advise ? `Not sure, please advise (${q.mode} placeholder)` : q.mode} />
         <Field label="Incoterms" value={q.incoterms || "—"} />
         <div>
           <div className="qd-label" style={{ marginBottom: 4 }}>

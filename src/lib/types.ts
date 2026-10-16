@@ -1306,6 +1306,9 @@ export interface Quote {
   request_notes?: string | null;
   /** Web-form enquiry as submitted (0172), internal: never printed or on the portal. */
   enquiry_notes?: string | null;
+  /** Website request answered "Not sure" on mode (0178): `mode` is only a
+   *  placeholder until the team picks one. Cleared when the mode changes. */
+  mode_to_advise?: boolean;
   portal_decision?: "accepted" | "declined" | null;
   portal_decided_at?: string | null;
   portal_decline_reason?: string | null;

@@ -319,8 +319,15 @@ export default function QuotesListPage() {
         key: "mode",
         header: "Mode",
         width: 130,
-        sortValue: (q) => q.mode,
-        render: (q) => q.mode,
+        sortValue: (q) => (q.mode_to_advise ? "Not sure" : q.mode),
+        render: (q) =>
+          q.mode_to_advise ? (
+            <span className="badge lost" title={`Client not sure of the mode, please advise (placeholder: ${q.mode})`}>
+              Not sure, please advise
+            </span>
+          ) : (
+            q.mode
+          ),
       },
       {
         key: "cost",

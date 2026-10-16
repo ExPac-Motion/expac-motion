@@ -564,6 +564,17 @@ export async function setQuoteNotes(
   );
 }
 
+/** Website "Not sure" mode (0178): the team keeps the quote's current mode. */
+export async function confirmQuoteMode(id: string): Promise<void> {
+  unwrap(
+    await supabase
+      .from("quotes")
+      .update({ mode_to_advise: false })
+      .eq("id", id)
+      .select("id"),
+  );
+}
+
 /** Apply one patch to every listed quote (Bulk Edit on the Quotations table). */
 export async function updateQuotesBulk(
   ids: string[],

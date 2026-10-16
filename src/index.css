@@ -8254,6 +8254,19 @@ tr.clickable:hover td {
 .enquiry-note > div {
   white-space: pre-wrap;
 }
+/* Website request with "Not sure" mode (0178): the mode is a placeholder. */
+.mode-advise-note {
+  border-left-color: var(--orange-ink);
+  background: var(--orange-tint);
+  display: block;
+}
+.mode-advise-note .btn {
+  margin-left: 4px;
+}
+.mode-advise-hint {
+  color: var(--orange-ink);
+  font-weight: 700;
+}
 /* Customer record (0142) — tabs + boxed fields with the label inside, after
    the user's reference screenshot */
 .cr-tabs {
