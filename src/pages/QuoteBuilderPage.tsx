@@ -39,6 +39,8 @@ import {
   SERVICE_FEE_CODES,
   isLegacyClearanceFee,
   serviceFeePrefillZar,
+  USD_TOTAL_CATEGORIES,
+  usdTotals,
   lineTotal,
   lineBuyTotal,
   lineSellTotal,
@@ -2293,9 +2295,22 @@ export default function QuoteBuilderPage() {
               </div>
             )}
 
+            {g.lines.length > 0 && USD_TOTAL_CATEGORIES.includes(g.category) && (() => {
+              const usd = usdTotals(g.lines.map((x) => x.line), fx);
+              return (
+                <div className="charge-group-subtotal">
+                  Total Buy (USD):&nbsp;<strong>{moneyCur(usd.buy, "USD")}</strong>
+                  &nbsp;·&nbsp;Total Sell (USD):&nbsp;<strong>{moneyCur(usd.sell, "USD")}</strong>
+                </div>
+              );
+            })()}
+
             {g.lines.length > 0 && (
               <div className="charge-group-subtotal">
-                Section subtotal:&nbsp;<strong>{money(g.subtotal)}</strong>
+                {USD_TOTAL_CATEGORIES.includes(g.category)
+                  ? "Section ZAR subtotal"
+                  : "Section subtotal"}
+                :&nbsp;<strong>{money(g.subtotal)}</strong>
                 {g.vat > 0 && (
                   <>
                     &nbsp;·&nbsp;VAT:&nbsp;<strong>{money(g.vat)}</strong>

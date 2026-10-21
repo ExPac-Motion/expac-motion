@@ -397,6 +397,30 @@ export function lineCostZar(l: QuoteLine, fx: FxRates): number {
   return qtyMultiplier(l) * (Number(l.buy) || 0) * buyRate(l.cur, fx);
 }
 
+/** Sections whose charges are priced in USD by the shipping agent, shown with
+ *  USD buy/sell totals alongside the ZAR subtotal. */
+export const USD_TOTAL_CATEGORIES: ChargeCategory[] = [
+  "International Freight Charges",
+  "Ex-Works Charges",
+];
+
+/** A section's buy and sell totals in USD (VAT-exclusive). Every line goes via
+ *  its ZAR value and back out at the quote's USD rate, so CNY/EUR/ZAR lines and
+ *  sell-only (ZAR-priced) lines are converted too. Zero when no USD rate. */
+export function usdTotals(
+  lines: QuoteLine[],
+  fx: FxRates,
+): { buy: number; sell: number } {
+  if (!fx.usd) return { buy: 0, sell: 0 };
+  let buy = 0;
+  let sell = 0;
+  lines.forEach((l) => {
+    buy += isVatOnlyLine(l) ? 0 : lineCostZar(l, fx);
+    sell += lineNet(l);
+  });
+  return { buy: buy / fx.usd, sell: sell / fx.usd };
+}
+
 export function chargeTotals(
   lines: QuoteLine[] | null | undefined,
   fx: FxRates = { usd: 0, cny: 0, eur: 0 },
