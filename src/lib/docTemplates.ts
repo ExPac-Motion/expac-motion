@@ -1,4 +1,5 @@
 import { formatDate, portCode } from "./format";
+import type { Consignee } from "./customers";
 import type { Job, JobTracking, Quote } from "./types";
 
 export interface DocumentTypeDef {
@@ -73,8 +74,13 @@ export function carrierLabel(mode: string | null | undefined): string {
 }
 
 /** Top row of Shipment Information: Shipper / Exporter then Customer /
- *  Consignee, printed on their own two-column row above the main grid. */
-export function shipmentPartyRows(job: Job): [string, string][] {
+ *  Consignee, printed on their own two-column row above the main grid.
+ *  When the quote picked one of the customer's own consignees (0179), that
+ *  consignee prints instead of the customer. */
+export function shipmentPartyRows(
+  job: Job,
+  consignee?: Pick<Consignee, "company" | "address" | "contact" | "phone"> | null,
+): [string, string][] {
   return [
     [
       "Shipper / Exporter",
@@ -85,15 +91,20 @@ export function shipmentPartyRows(job: Job): [string, string][] {
         job.supplier?.phone,
       ),
     ],
-    [
-      "Customer / Consignee",
-      partyBlock(
-        job.client?.company,
-        job.client?.address,
-        job.client?.contact,
-        job.client?.company_phone || job.client?.phone,
-      ),
-    ],
+    consignee
+      ? [
+          "Consignee",
+          partyBlock(consignee.company, consignee.address, consignee.contact, consignee.phone),
+        ]
+      : [
+          "Customer / Consignee",
+          partyBlock(
+            job.client?.company,
+            job.client?.address,
+            job.client?.contact,
+            job.client?.company_phone || job.client?.phone,
+          ),
+        ],
   ];
 }
 

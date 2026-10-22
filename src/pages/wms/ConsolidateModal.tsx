@@ -18,6 +18,7 @@ import { blankConsol, consolNoticeDetail, houseLabel, masterLabel } from "./WmsC
 import { notifyWms } from "../../lib/wmsNotify";
 import { consolModeFor, houseFromShipment, jobsOnMasters, shipmentFitsConsol } from "./houseFromShipment";
 import { useWmsLookups } from "./shared";
+import { useAllConsignees } from "../../lib/customers";
 
 /**
  * Active Shipments › Consolidate: the ticked shipments become houses (HAWB /
@@ -29,6 +30,7 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
   const lk = useWmsLookups();
   const { toast, error } = useToast();
   const quotesQ = useQuotes();
+  const consigneesQ = useAllConsignees();
   const receiptsQ = useWmsReceipts();
   const consolsQ = useWmsConsols();
   const firstMode = consolModeFor(jobs[0]?.mode);
@@ -71,6 +73,7 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
         receipts: receiptsQ.data ?? [],
         client: lk.client,
         supplier: lk.supplier,
+        consignees: consigneesQ.data,
         position: startAt + i,
       }),
     );

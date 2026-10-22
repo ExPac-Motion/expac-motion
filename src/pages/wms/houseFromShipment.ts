@@ -2,6 +2,7 @@
 // house document (HAWB / HBL), ExPac's or the origin agent's, on its own or
 // under a master. These helpers turn a shipment into a consolidation house.
 import { VOLUMETRIC_FACTOR, packingTotals, volumetricFactor } from "../../lib/calc";
+import type { Consignee } from "../../lib/customers";
 import type { Contact, Job, Quote, QuoteMode } from "../../lib/types";
 import { round, wmCbm, type ConsolMode, type WmsConsol, type WmsConsolHouse, type WmsReceipt } from "../../lib/wms";
 import { EXPAC_NOTIFY } from "./WmsConsols";
@@ -52,6 +53,8 @@ export function houseFromShipment(args: {
   receipts: WmsReceipt[];
   client: (id: string | null | undefined) => Contact | undefined;
   supplier: (id: string | null | undefined) => Contact | undefined;
+  /** Customers' own consignees (0179); the quote's pick wins over consignee_id. */
+  consignees?: Consignee[];
   containerNo?: string | null;
   position: number;
 }): WmsConsolHouse {
@@ -73,7 +76,10 @@ export function houseFromShipment(args: {
     cbm = pk.totalCbm;
   }
   const houseNo = shipmentHouseNo(quote, consolMode);
-  const consignee = client(quote?.consignee_id ?? null) ?? client(job.client_id);
+  const own = quote?.client_consignee_id
+    ? args.consignees?.find((c) => c.id === quote.client_consignee_id)
+    : undefined;
+  const consignee = own ?? client(quote?.consignee_id ?? null) ?? client(job.client_id);
   const types = [...new Set(recs.map((r) => r.package_type).filter(Boolean))];
   return {
     position: args.position,

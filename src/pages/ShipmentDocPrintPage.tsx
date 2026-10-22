@@ -8,6 +8,7 @@ import {
   useQuote,
 } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
+import { useCustomerConsignees } from "../lib/customers";
 import { shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 
@@ -32,6 +33,8 @@ export default function ShipmentDocPrintPage() {
   const { data: settings } = useCompanySettings();
   const job = jobs?.find((j) => j.id === id);
   const quoteQ = useQuote(job?.quote_id ?? undefined);
+  const consigneesQ = useCustomerConsignees(job?.client_id ?? undefined);
+  const consignee = consigneesQ.data?.find((c) => c.id === quoteQ.data?.client_consignee_id);
   const profilesQ = useProfiles();
   const trackingQ = useJobTracking();
   const packingRows = quoteQ.data?.packing_list_items ?? [];
@@ -108,7 +111,7 @@ export default function ShipmentDocPrintPage() {
           className="qs-info"
           style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 4 }}
         >
-          {shipmentPartyRows(job).map(([k, v]) => (
+          {shipmentPartyRows(job, consignee).map(([k, v]) => (
             <div key={k}>
               <div className="k">{k}</div>
               <div className="v" style={{ whiteSpace: "pre-line" }}>

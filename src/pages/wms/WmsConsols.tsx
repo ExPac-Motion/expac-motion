@@ -36,6 +36,7 @@ import {
 import { orNull, useWmsLookups } from "./shared";
 import { notifyWms } from "../../lib/wmsNotify";
 import { useQuotes } from "../../lib/hooks";
+import { useAllConsignees } from "../../lib/customers";
 import { isShipmentComplete, type Job } from "../../lib/types";
 import { houseFromShipment, jobsOnMasters, shipmentFitsConsol, shipmentHouseNo } from "./houseFromShipment";
 
@@ -369,6 +370,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
   const [adding, setAdding] = useState(false);
   const [addingJobs, setAddingJobs] = useState(false);
   const quotesQ = useQuotes();
+  const consigneesQ = useAllConsignees();
   const consolsAll = useWmsConsols().data ?? [];
   const set = <K extends keyof WmsConsolInput>(k: K, v: WmsConsolInput[K]) => setF((p) => ({ ...p, [k]: v }));
   const s = (k: keyof WmsConsolInput) => (f[k] as string | null | undefined) ?? "";
@@ -465,6 +467,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
           receipts: (receiptsQ.data ?? []).filter((r) => !used.has(r.id)),
           client: lk.client,
           supplier: lk.supplier,
+          consignees: consigneesQ.data,
           containerNo: containers.length === 1 ? containers[0].container_no : null,
           position: houses.length + i,
         }),

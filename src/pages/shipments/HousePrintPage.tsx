@@ -6,8 +6,8 @@
 //   /jobs/:id/houses/print/house?h=<id>   one house
 //   /jobs/:id/houses/print/manifest       the master's manifest
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useJobs } from "../../lib/hooks";
-import { useCustomerShippers } from "../../lib/customers";
+import { useJobs, useQuote } from "../../lib/hooks";
+import { useCustomerConsignees, useCustomerShippers } from "../../lib/customers";
 import { useJobHouses } from "../../lib/houses";
 import type { ConsolMode, WmsConsol, WmsConsolHouse } from "../../lib/wms";
 import { AwbSheet, ManifestSheet } from "../wms/WmsPrintPage";
@@ -24,8 +24,10 @@ export default function HousePrintPage() {
   const job = (jobsQ.data ?? []).find((j) => j.id === id);
   const housesQ = useJobHouses(id);
   const shippersQ = useCustomerShippers(job?.client_id ?? undefined);
+  const quoteQ = useQuote(job?.quote_id ?? undefined);
+  const consigneesQ = useCustomerConsignees(job?.client_id ?? undefined);
 
-  if (jobsQ.isLoading || housesQ.isLoading || shippersQ.isLoading) return <div className="center-note">Loading…</div>;
+  if (jobsQ.isLoading || housesQ.isLoading || shippersQ.isLoading || quoteQ.isLoading || consigneesQ.isLoading) return <div className="center-note">Loading…</div>;
   if (!job) return <div className="center-note">Shipment not found</div>;
   const houses = housesQ.data ?? [];
   if (houses.length === 0) return <div className="center-note">This shipment has no houses yet (add them on the shipment's View).</div>;
@@ -34,7 +36,13 @@ export default function HousePrintPage() {
   const mode: ConsolMode = air ? "air" : job.mode.includes("FCL") ? "fcl" : "lcl";
   const shippers = new Map((shippersQ.data ?? []).map((s) => [s.id, s]));
   const client = job.client;
-  const consignee = party(client?.company, client?.address, client?.contact ? `Attn: ${client.contact}` : null, client?.phone || client?.company_phone ? `Tel: ${client?.phone || client?.company_phone}` : null);
+  const customer = party(client?.company, client?.address, client?.contact ? `Attn: ${client.contact}` : null, client?.phone || client?.company_phone ? `Tel: ${client?.phone || client?.company_phone}` : null);
+  // The quote's pick from the customer's own consignees (0179) wins; the
+  // customer then pays, so Accounting Information names the customer.
+  const own = (consigneesQ.data ?? []).find((c) => c.id === quoteQ.data?.client_consignee_id);
+  const consignee = own
+    ? party(own.company, own.address, own.contact ? `Attn: ${own.contact}` : null, own.phone ? `Tel: ${own.phone}` : null)
+    : customer;
 
   const consolHouses: WmsConsolHouse[] = houses.map((h) => {
     const s = h.supplier_id ? shippers.get(h.supplier_id) : undefined;
@@ -47,7 +55,7 @@ export default function HousePrintPage() {
       client_id: job.client_id,
       shipper: party(s?.company, s?.address, s?.contact ? `Attn: ${s.contact}` : null, s?.phone ? `Tel: ${s.phone}` : null),
       consignee,
-      accounting_info: "Same as consignee",
+      accounting_info: own ? customer : "Same as consignee",
       nature_of_goods: h.commodity,
       handling_info: h.notes,
       marks: h.house_no,

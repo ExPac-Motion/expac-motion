@@ -146,6 +146,10 @@ export const customersDb = {
   async consignees(clientId: string): Promise<Consignee[]> {
     return unwrap(await supabase.from("client_consignees").select("*").eq("client_id", clientId).order("company"));
   },
+  /** Every customer's consignees, for shipment paperwork across customers. */
+  async allConsignees(): Promise<Consignee[]> {
+    return unwrap(await supabase.from("client_consignees").select("*").order("company"));
+  },
   async saveConsignee(id: string | undefined, v: Partial<Consignee>) {
     if (id) unwrap(await supabase.from("client_consignees").update(v).eq("id", id));
     else unwrap(await supabase.from("client_consignees").insert(v));
@@ -202,6 +206,8 @@ export const useCustomerShippers = (id: string | undefined) =>
   useQuery({ queryKey: ["customer", id, "shippers"], queryFn: () => customersDb.shippers(id as string), enabled: !!id });
 export const useCustomerConsignees = (id: string | undefined) =>
   useQuery({ queryKey: ["customer", id, "consignees"], queryFn: () => customersDb.consignees(id as string), enabled: !!id });
+export const useAllConsignees = () =>
+  useQuery({ queryKey: ["customer", "all", "consignees"], queryFn: () => customersDb.allConsignees() });
 export const useCustomerFiles = (id: string | undefined) =>
   useQuery({ queryKey: ["customer", id, "files"], queryFn: () => customersDb.files(id as string), enabled: !!id });
 
