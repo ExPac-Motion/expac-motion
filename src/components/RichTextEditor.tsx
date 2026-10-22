@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type ReactNode,
+} from "react";
 import { useToast } from "./Toast";
 import { rewriteCopy, type RewriteAction, type RewriteTone } from "../lib/ai";
 import { useMediaAssets, useRecordMediaAsset } from "../lib/hooks";
@@ -61,17 +69,24 @@ function storagePathFromUrl(url: string): string | null {
  *
  *  `onUploadImage` is the raw file→storage upload used by the gallery's
  *  "Upload new" option; the uploaded image is also recorded as a reusable
- *  `media_assets` row so it shows up in the Media tab. */
+ *  `media_assets` row so it shows up in the Media tab. Images pasted
+ *  straight into the body (a screenshot) are uploaded the same way.
+ *
+ *  `mail` is one-to-one mail (Inbox): no merge tags or unsubscribe link. */
 export default function RichTextEditor({
   value,
   onChange,
   onUploadImage,
   trailing,
+  mail,
+  autoFocus,
 }: {
   value: string;
   onChange: (html: string) => void;
   onUploadImage: (file: File) => Promise<{ url: string }>;
   trailing?: ReactNode;
+  mail?: boolean;
+  autoFocus?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const aiRef = useRef<HTMLDivElement>(null);
@@ -117,8 +132,49 @@ export default function RichTextEditor({
     return () => document.removeEventListener("mousedown", onDocDown);
   }, [aiOpen]);
 
+  // Caret at the top, above any seeded signature / quoted text.
+  useEffect(() => {
+    if (!autoFocus) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const r = document.createRange();
+    r.setStart(editor, 0);
+    r.collapse(true);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function emit() {
     if (editorRef.current) onChange(editorRef.current.innerHTML);
+  }
+
+  /** A pasted image (screenshot, copied picture) is uploaded and inserted
+   *  as a hosted image; anything else pastes as normal. */
+  async function onPaste(e: ClipboardEvent<HTMLDivElement>) {
+    const files = [...e.clipboardData.files].filter((f) => f.type.startsWith("image/"));
+    if (!files.length) return;
+    e.preventDefault();
+    const sel = window.getSelection();
+    const at = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    setUploading(true);
+    try {
+      for (const f of files) {
+        const file = f.name && f.name !== "image.png" ? f : new File([f], `pasted-${Date.now()}.png`, { type: f.type });
+        const { url } = await onUploadImage(file);
+        if (at) {
+          sel?.removeAllRanges();
+          sel?.addRange(at);
+        }
+        insertImage(url);
+      }
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not paste the image");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function exec(cmd: string, arg?: string) {
@@ -353,6 +409,7 @@ export default function RichTextEditor({
           lang="en"
           onInput={emit}
           onBlur={emit}
+          onPaste={(e) => void onPaste(e)}
           onMouseUp={rememberSelection}
           onKeyUp={rememberSelection}
         />
@@ -441,21 +498,23 @@ export default function RichTextEditor({
         >
           {uploading ? "…" : "🖼"}
         </button>
-        <select
-          className="rte-icon-select"
-          title="Insert template tag"
-          defaultValue=""
-          onChange={onPickTag}
-        >
-          <option value="" disabled>
-            {"{ }"}
-          </option>
-          {MERGE_TAGS.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+        {!mail && (
+          <select
+            className="rte-icon-select"
+            title="Insert template tag"
+            defaultValue=""
+            onChange={onPickTag}
+          >
+            <option value="" disabled>
+              {"{ }"}
             </option>
-          ))}
-        </select>
+            {MERGE_TAGS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="button"
           title="View/edit raw HTML"
@@ -464,14 +523,18 @@ export default function RichTextEditor({
         >
           {"<>"}
         </button>
-        <span className="rte-sep" />
-        <span className="rte-label">Unsubscribe Link</span>
-        <select defaultValue="" onChange={onPickUnsubscribe}>
-          <option value="" disabled>
-            Default Unsubscribe Link
-          </option>
-          <option value="insert">Insert Unsubscribe Link</option>
-        </select>
+        {!mail && (
+          <>
+            <span className="rte-sep" />
+            <span className="rte-label">Unsubscribe Link</span>
+            <select defaultValue="" onChange={onPickUnsubscribe}>
+              <option value="" disabled>
+                Default Unsubscribe Link
+              </option>
+              <option value="insert">Insert Unsubscribe Link</option>
+            </select>
+          </>
+        )}
         {trailing && (
           <>
             <span className="rte-sep" />

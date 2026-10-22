@@ -17,6 +17,7 @@ import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
+import InboxDemoPage from "./pages/InboxDemoPage";
 import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import OpsControlTowerPage from "./pages/OpsControlTowerPage";
@@ -223,6 +224,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/customer-messages" element={<CustomerMessagesDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/masters" element={<MastersDemo />} />}
+          {import.meta.env.DEV && <Route path="/dev/inbox" element={<InboxDemoPage />} />}
           {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}

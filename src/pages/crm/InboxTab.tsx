@@ -31,11 +31,15 @@ import {
   useSaveLead,
   useSyncInbox,
   useUpdateInboxMessage,
+  useUploadMailAsset,
 } from "../../lib/hooks";
 import { downloadInboxRaw, insertInboxMessage } from "../../lib/db";
 import TaskEditModal from "../ops/TaskEditModal";
 import RecipientInput, { type BookEntry } from "./RecipientInput";
+import RichTextEditor from "../../components/RichTextEditor";
 import { sendMail } from "../../lib/mail";
+import { htmlToText } from "../../lib/mailMerge";
+import { linkifyHtml } from "../../lib/mailStyle";
 import { formatDateTime } from "../../lib/format";
 import type { InboxCategory, InboxMessage, Job, SentMail } from "../../lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -159,10 +163,17 @@ export default function InboxTab() {
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [tasking, setTasking] = useState<InboxMessage | null>(null);
-  const [compose, setCompose] = useState<{
-    replyTo?: InboxMessage;
-    forward?: { msg: InboxMessage; parsed?: Parsed };
-  } | null>(null);
+  const [compose, setCompose] = useState<ComposeState | null>(null);
+  // Double-click a message: the reading pane takes the whole width.
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded || compose || tasking) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded, compose, tasking]);
   // Draggable divider between the list and the reading pane (width kept per browser).
   const [listWidth, setListWidth] = useState<number>(() => {
     try {
@@ -336,7 +347,10 @@ export default function InboxTab() {
         <p className="hint">The inbox isn't connected yet, add the IMAP settings in Cloudflare.</p>
       )}
 
-      <div className="panel inbox" style={{ "--inbox-list": `${listWidth}px` } as React.CSSProperties}>
+      <div
+        className={`panel inbox${expanded ? " expanded" : ""}`}
+        style={{ "--inbox-list": `${listWidth}px` } as React.CSSProperties}
+      >
         <nav className="inbox-nav">
           <div className="inbox-nav-head">Folders</div>
           {FOLDERS.map((f) => {
@@ -397,6 +411,10 @@ export default function InboxTab() {
                   tabIndex={0}
                   className={`inbox-row${openSent?.id === s.id ? " on" : ""}`}
                   onClick={() => setOpenSent(s)}
+                  onDoubleClick={() => {
+                    setOpenSent(s);
+                    setExpanded(true);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") setOpenSent(s);
                   }}
@@ -437,6 +455,10 @@ export default function InboxTab() {
                 tabIndex={0}
                 className={`inbox-row${m.id === open?.id ? " on" : ""}${isUnread(m) ? " unread" : ""}`}
                 onClick={() => select(m)}
+                onDoubleClick={() => {
+                  select(m);
+                  setExpanded(true);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -506,6 +528,24 @@ export default function InboxTab() {
         />
 
         <div className="inbox-reader">
+          {(folder === "sent" ? openSent : open) && (
+            <div className="inbox-reader-bar">
+              {expanded ? (
+                <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Back to the list (Esc)">
+                  ‹ Back to {folder === "sent" ? "Sent" : "the list"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  onClick={() => setExpanded(true)}
+                  title="Open the email full width (or double-click it in the list)"
+                >
+                  ⤢ Full view
+                </button>
+              )}
+            </div>
+          )}
           {folder === "sent" ? (
             openSent ? (
               <SentReader key={`${openSent.source}-${openSent.id}`} mail={openSent} />
@@ -518,8 +558,8 @@ export default function InboxTab() {
               msg={open}
               thread={all.filter((m) => open.thread_key && m.thread_key === open.thread_key && m.id !== open.id)}
               jobs={jobs}
-              onReply={() => setCompose({ replyTo: open })}
-              onForward={(parsed) => setCompose({ forward: { msg: open, parsed } })}
+              onReply={(parsed, replyAll) => setCompose({ replyTo: open, replyAll, parsed })}
+              onForward={(parsed) => setCompose({ forward: open, parsed })}
             />
           ) : (
             <EmptyState>Pick a message.</EmptyState>
@@ -549,8 +589,7 @@ export default function InboxTab() {
       )}
       {compose && (
         <ComposeModal
-          replyTo={compose.replyTo}
-          forward={compose.forward}
+          {...compose}
           book={book}
           onClose={() => setCompose(null)}
         />
@@ -649,7 +688,7 @@ function Reader({
   msg: InboxMessage;
   thread: InboxMessage[];
   jobs: Job[];
-  onReply: () => void;
+  onReply: (parsed: Parsed | undefined, replyAll: boolean) => void;
   onForward: (parsed: Parsed | undefined) => void;
 }) {
   const update = useUpdateInboxMessage();
@@ -762,8 +801,24 @@ function Reader({
 
       <div className="inbox-actions">
         {msg.direction === "in" && (
-          <button type="button" className="btn small" onClick={onReply}>
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => onReply(parsed, false)}
+            disabled={!!msg.raw_path && parsedQ.isLoading}
+          >
             Reply
+          </button>
+        )}
+        {msg.direction === "in" && msg.to_emails.length + msg.cc_emails.length > 1 && (
+          <button
+            type="button"
+            className="btn small outline"
+            onClick={() => onReply(parsed, true)}
+            disabled={!!msg.raw_path && parsedQ.isLoading}
+            title="Reply to the sender and everyone else on this email"
+          >
+            Reply all
           </button>
         )}
         <button
@@ -1075,28 +1130,98 @@ async function blobUrlBase64(url: string): Promise<string> {
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(bin);
 }
-const FORWARD_ATTACH_LIMIT = 14 * 1024 * 1024;
+/** A picked file -> base64 (no data: prefix). */
+function fileBase64(f: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(f);
+  });
+}
+// /api/send-mail caps attachments at 15 MB together.
+const ATTACH_LIMIT = 14 * 1024 * 1024;
+const kb = (n: number) => `${Math.max(1, Math.round(n / 1024))} KB`;
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** An email's html, ready to sit under a reply / forward: only its <body>,
+ *  no scripts or <head> styles (they'd restyle the whole email). A reply
+ *  also drops cid: images, their parts only go along with a forward. */
+function quotableHtml(raw: string, keepCid: boolean): string {
+  const body = raw.match(/<body\b[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? raw;
+  const out = body.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<head\b[\s\S]*?<\/head>/gi, "");
+  return keepCid ? out : out.replace(/<img\b[^>]*\bsrc=("|')cid:[^"']*\1[^>]*>/gi, "");
+}
+
+/** The original message under a reply or forward, Outlook style: a rule,
+ *  its From / Sent / To / Cc / Subject, then the message itself. */
+function originalBlock(msg: InboxMessage, parsed: Parsed | undefined, forward: boolean): string {
+  const raw = parsed?.rawHtml ?? msg.body_html;
+  const content = raw
+    ? quotableHtml(raw, forward)
+    : escHtml(parsed?.text ?? msg.body_text ?? msg.snippet ?? "").replace(/\n/g, "<br>");
+  const from = msg.from_name ? `${escHtml(msg.from_name)} &lt;${escHtml(msg.from_email ?? "")}&gt;` : escHtml(msg.from_email ?? "");
+  return (
+    `<br><div style="border-top:1px solid #e1e1e1;padding-top:8px;margin-top:8px">` +
+    (forward ? `---------- Forwarded message ----------<br>` : "") +
+    `<b>From:</b> ${from}<br><b>Sent:</b> ${formatDateTime(msg.sent_at)}<br>` +
+    `<b>To:</b> ${escHtml(msg.to_emails.join(", "))}<br>` +
+    (msg.cc_emails.length ? `<b>Cc:</b> ${escHtml(msg.cc_emails.join(", "))}<br>` : "") +
+    `<b>Subject:</b> ${escHtml(msg.subject ?? "")}</div><br>${content}`
+  );
+}
+
+interface ComposeState {
+  replyTo?: InboxMessage;
+  /** Reply all: everyone on the original stays on the reply (Cc). */
+  replyAll?: boolean;
+  /** The parsed original (reply / forward), for quoting it in full. */
+  parsed?: Parsed;
+  forward?: InboxMessage;
+}
 
 function ComposeModal({
   replyTo,
-  forward,
+  replyAll,
+  parsed,
+  forward: fwd,
   book,
   onClose,
-}: {
-  replyTo?: InboxMessage;
-  forward?: { msg: InboxMessage; parsed?: Parsed };
+}: ComposeState & {
   book: BookEntry[];
   onClose: () => void;
 }) {
-  const fwd = forward?.msg;
-  const fwdFiles = forward?.parsed?.attachments ?? [];
+  const fwdFiles = fwd ? parsed?.attachments ?? [] : [];
   const [keepFiles, setKeepFiles] = useState<string[]>(() => fwdFiles.map((a) => a.url));
-  const { data: settings } = useCompanySettings();
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const settingsQ = useCompanySettings();
+  const settings = settingsQ.data;
+  const uploadAsset = useUploadMailAsset();
   const update = useUpdateInboxMessage();
   const qc = useQueryClient();
   const { toast, error } = useToast();
+
+  // Reply all: the sender in To, everyone else on the original in Cc
+  // (never our own support@ / reply-to address).
   const [to, setTo] = useState(replyTo?.from_email ?? "");
-  const [cc, setCc] = useState("");
+  const [cc, setCc] = useState(() => {
+    if (!replyTo || !replyAll) return "";
+    const skip = new Set(
+      ["support@expac.co.za", settings?.mail_reply_to ?? "", replyTo.from_email ?? ""].map((e) => e.toLowerCase()),
+    );
+    const seen = new Set<string>();
+    return [...replyTo.to_emails, ...replyTo.cc_emails]
+      .filter((e) => {
+        const k = e.trim().toLowerCase();
+        if (!k || skip.has(k) || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .join(", ");
+  });
+  const [bcc, setBcc] = useState("");
+  const [showBcc, setShowBcc] = useState(false);
   const [subject, setSubject] = useState(
     replyTo
       ? /^re:/i.test(replyTo.subject ?? "")
@@ -1108,8 +1233,38 @@ function ComposeModal({
           : `Fwd: ${fwd.subject ?? ""}`
         : "",
   );
+  const [includeOriginal, setIncludeOriginal] = useState(true);
+  const original = replyTo ?? fwd;
+
+  // The signature sits in the body (edit or delete it before sending), with
+  // two blank lines above it to type in, like Outlook.
+  const sig = settings?.mail_signature_html?.trim() || "";
+  const blank = "<div><br></div><div><br></div>";
   const [body, setBody] = useState("");
+  const [seed, setSeed] = useState<string | null>(null);
+  useEffect(() => {
+    // Settings failing to load just means no signature, never a stuck editor.
+    if (seed !== null || settingsQ.isLoading) return;
+    const s = sig ? `${blank}${sig}` : blank;
+    setSeed(s);
+    setBody((b) => (b.trim() ? b : s));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsQ.isLoading]);
   const [sending, setSending] = useState(false);
+
+  const typed = htmlToText(body).replace(htmlToText(sig), "").trim() !== "";
+  const dirty = typed || files.length > 0;
+  function close() {
+    if (dirty && !sending && !window.confirm("Discard this email? What you've written will be lost.")) return;
+    onClose();
+  }
+
+  function addFiles(list: FileList | null) {
+    if (!list?.length) return;
+    // Copy now: the picker is reset right after, which empties its FileList.
+    const picked = [...list];
+    setFiles((f) => [...f, ...picked]);
+  }
 
   const list = (s: string) =>
     s
@@ -1124,52 +1279,40 @@ function ComposeModal({
       error("Enter at least one recipient");
       return;
     }
-    if (!body.trim() && !fwd) {
+    if (!typed && !fwd && !files.length) {
       error("Write a message");
       return;
     }
     const picked = fwdFiles.filter((a) => keepFiles.includes(a.url));
-    if (picked.reduce((n, a) => n + a.size, 0) > FORWARD_ATTACH_LIMIT) {
-      error("The attachments are too large to forward together (max about 14 MB), untick some");
+    const total = picked.reduce((n, a) => n + a.size, 0) + files.reduce((n, f) => n + f.size, 0);
+    if (total > ATTACH_LIMIT) {
+      error("The attachments are too large together (max about 14 MB), remove some");
       return;
     }
     setSending(true);
-    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const bodyHtml = esc(body).replace(/\n/g, "<br>");
-    const sig = settings?.mail_signature_html?.trim() ? `<br><br>${settings.mail_signature_html}` : "";
-    const quoted = replyTo
-      ? `<br><br><div style="border-left:3px solid #ccc;padding-left:10px;color:#555">On ${formatDateTime(
-          replyTo.sent_at,
-        )}, ${esc(replyTo.from_name || replyTo.from_email || "")} wrote:<br>${esc(replyTo.snippet ?? "").replace(/\n/g, "<br>")}…</div>`
-      : "";
-    const forwarded = fwd
-      ? `<br><br>---------- Forwarded message ----------<br>From: ${esc(fwd.from_name || "")} &lt;${esc(
-          fwd.from_email || "",
-        )}&gt;<br>Date: ${formatDateTime(fwd.sent_at)}<br>Subject: ${esc(fwd.subject || "")}<br>To: ${esc(
-          fwd.to_emails.join(", "),
-        )}${fwd.cc_emails.length ? `<br>Cc: ${esc(fwd.cc_emails.join(", "))}` : ""}<br><br>${
-          (forward?.parsed?.rawHtml ?? fwd.body_html ?? "").replace(/<script[\s\S]*?<\/script>/gi, "") ||
-          esc(forward?.parsed?.text ?? fwd.body_text ?? fwd.snippet ?? "").replace(/\n/g, "<br>")
-        }`
-      : "";
-    const html = `${bodyHtml}${sig}${quoted}${forwarded}`;
+    const html = `${linkifyHtml(body)}${original && (includeOriginal || fwd) ? originalBlock(original, parsed, !!fwd) : ""}`;
+    const text = htmlToText(body);
     const references = replyTo
       ? [replyTo.refs ?? "", replyTo.message_id ?? ""].join(" ").trim()
       : undefined;
+    const ccList = list(cc);
     try {
+      const attachments = [
+        ...(await Promise.all(picked.map(async (a) => ({ filename: a.name, content: await blobUrlBase64(a.url) })))),
+        ...(await Promise.all(files.map(async (f) => ({ filename: f.name, content: await fileBase64(f) })))),
+      ];
       const sentRes = await sendMail({
         to: toList,
-        cc: list(cc),
+        cc: ccList,
+        bcc: list(bcc),
         subject: subject || "(no subject)",
         html,
-        text: body,
+        text,
         fromName: settings?.mail_sender_name || undefined,
         replyTo: settings?.mail_reply_to || undefined,
         inReplyTo: replyTo?.message_id ?? undefined,
         references,
-        attachments: picked.length
-          ? await Promise.all(picked.map(async (a) => ({ filename: a.name, content: await blobUrlBase64(a.url) })))
-          : undefined,
+        attachments: attachments.length ? attachments : undefined,
       });
       // Keep the sent message in the conversation (and on its shipment).
       await insertInboxMessage({
@@ -1180,18 +1323,18 @@ function ComposeModal({
         from_email: "support@expac.co.za",
         from_name: settings?.mail_sender_name || "ExPac",
         to_emails: toList,
-        cc_emails: list(cc),
+        cc_emails: ccList,
         subject: subject || "(no subject)",
-        snippet: body.replace(/\s+/g, " ").trim().slice(0, 180),
-        body_text: body,
+        snippet: text.replace(/\s+/g, " ").trim().slice(0, 180),
+        body_text: text,
         body_html: html,
         in_reply_to: replyTo?.message_id ?? null,
         refs: references ?? null,
         // A forward stays with the original's conversation and shipment.
-        thread_key: (replyTo ?? fwd)?.thread_key ?? null,
-        job_id: (replyTo ?? fwd)?.job_id ?? null,
-        job_linked_by: (replyTo ?? fwd)?.job_id ? (replyTo ?? fwd)?.job_linked_by ?? null : null,
-        has_attachments: picked.length > 0,
+        thread_key: original?.thread_key ?? null,
+        job_id: original?.job_id ?? null,
+        job_linked_by: original?.job_id ? original?.job_linked_by ?? null : null,
+        has_attachments: attachments.length > 0,
         sent_at: new Date().toISOString(),
         seen: true,
         answered: false,
@@ -1209,40 +1352,93 @@ function ComposeModal({
   }
 
   return (
-    <Modal title={replyTo ? "Reply" : fwd ? "Forward" : "New email"} onClose={onClose} wide>
-      <form onSubmit={submit}>
-        <div className="grid2">
-          <div className="field">
-            <label>To</label>
-            <RecipientInput
-              value={to}
-              onChange={setTo}
-              book={book}
-              placeholder="Start typing a name or email"
-              autoFocus={!replyTo}
-            />
-          </div>
+    <Modal title={replyTo ? (replyAll ? "Reply all" : "Reply") : fwd ? "Forward" : "New email"} onClose={close} wide>
+      <form
+        onSubmit={submit}
+        className={`inbox-compose${dragging ? " dragging" : ""}`}
+        onDragOver={(e) => {
+          if (![...e.dataTransfer.types].includes("Files")) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={(e) => {
+          if (!e.dataTransfer.files.length) return;
+          e.preventDefault();
+          setDragging(false);
+          addFiles(e.dataTransfer.files);
+        }}
+      >
+        <div className="field">
+          <label>
+            To
+            {!showBcc && (
+              <button type="button" className="link-btn inbox-bcc-toggle" onClick={() => setShowBcc(true)}>
+                Bcc
+              </button>
+            )}
+          </label>
+          <RecipientInput
+            value={to}
+            onChange={setTo}
+            book={book}
+            placeholder="Start typing a name or email"
+            autoFocus={!replyTo}
+          />
+        </div>
+        <div className={showBcc ? "grid2" : undefined}>
           <div className="field">
             <label>Cc</label>
             <RecipientInput value={cc} onChange={setCc} book={book} />
           </div>
+          {showBcc && (
+            <div className="field">
+              <label>Bcc</label>
+              <RecipientInput value={bcc} onChange={setBcc} book={book} />
+            </div>
+          )}
         </div>
         <div className="field">
           <label>Subject</label>
           <input value={subject} onChange={(e) => setSubject(e.target.value)} />
         </div>
         <div className="field">
-          <label>Message</label>
-          <textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} autoFocus={!!replyTo} />
+          {seed === null ? (
+            <Loading />
+          ) : (
+            <RichTextEditor
+              mail
+              autoFocus={!!replyTo}
+              value={body}
+              onChange={setBody}
+              onUploadImage={(f) => uploadAsset.mutateAsync(f)}
+              trailing={
+                <label className="inbox-attach-btn" title="Attach files (or drop them on this window)">
+                  📎 Attach
+                  <input
+                    type="file"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      addFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              }
+            />
+          )}
           <span className="hint">
-            Sent from support@expac.co.za with your email signature
-            {replyTo ? ", threaded under the original message" : ""}
-            {fwd ? ", followed by the original message" : ""}.
+            Sent from support@expac.co.za
+            {replyTo ? ", threaded under the original message" : ""}. Paste a screenshot straight into the message, or drop
+            files anywhere on this window to attach them.
           </span>
         </div>
-        {fwd && fwdFiles.length > 0 && (
+        {(files.length > 0 || fwdFiles.length > 0) && (
           <div className="field">
-            <label>Attachments to forward</label>
+            <label>Attachments</label>
             <div className="inbox-attachments" style={{ marginTop: 0 }}>
               {fwdFiles.map((a) => (
                 <label key={a.url} className="inbox-attachment" style={{ cursor: "pointer" }}>
@@ -1254,17 +1450,56 @@ function ComposeModal({
                     }
                   />{" "}
                   {a.name}
-                  <span className="muted"> {Math.max(1, Math.round(a.size / 1024))} KB</span>
+                  <span className="muted"> {kb(a.size)}</span>
                 </label>
+              ))}
+              {files.map((f, i) => (
+                <span key={`${f.name}-${i}`} className="inbox-attachment">
+                  📎 {f.name}
+                  <span className="muted"> {kb(f.size)}</span>
+                  <button
+                    type="button"
+                    className="inbox-attachment-x"
+                    title="Remove"
+                    aria-label={`Remove ${f.name}`}
+                    onClick={() => setFiles((all) => all.filter((_, j) => j !== i))}
+                  >
+                    ✕
+                  </button>
+                </span>
               ))}
             </div>
           </div>
         )}
+        {original && (
+          <div className="field">
+            {replyTo && (
+              <label className="inbox-include-original">
+                <input type="checkbox" checked={includeOriginal} onChange={(e) => setIncludeOriginal(e.target.checked)} />{" "}
+                Include the original message below my reply
+              </label>
+            )}
+            {(includeOriginal || fwd) && (
+              <details className="inbox-original">
+                <summary>
+                  {fwd ? "Forwarded message" : "Original message"} from {original.from_name || original.from_email},{" "}
+                  {formatDateTime(original.sent_at)}
+                </summary>
+                <iframe
+                  title="Original message"
+                  className="inbox-frame inbox-original-frame"
+                  sandbox=""
+                  srcDoc={`<style>body{font-family:Aptos,Calibri,"Segoe UI",sans-serif;font-size:13px;color:#2e2e2e;margin:10px;word-wrap:break-word}img{max-width:100%;height:auto}</style>${originalBlock(original, parsed, false)}`}
+                />
+              </details>
+            )}
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-          <button type="button" className="btn outline" onClick={onClose}>
+          <button type="button" className="btn outline" onClick={close}>
             Cancel
           </button>
-          <button type="submit" className="btn" disabled={sending}>
+          <button type="submit" className="btn" disabled={sending || seed === null}>
             {sending ? "Sending…" : "Send"}
           </button>
         </div>
