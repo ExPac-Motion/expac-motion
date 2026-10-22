@@ -3,7 +3,7 @@ import { packingTotals, volumetricFactor } from "../lib/calc";
 import type { CategoryGroup, PackingTotals } from "../lib/calc";
 import type { LineCurrency, PackingItem, QuoteLine } from "../lib/types";
 import { COMPANY } from "../lib/company";
-import { QuoteSheet, type QuoteSheetData } from "./QuotePrintPage";
+import { QuoteSheet, sailingRows, type QuoteSheetData } from "./QuotePrintPage";
 
 /**
  * DEV-ONLY preview of the paginated quotation with fabricated data, so the
@@ -105,6 +105,12 @@ export default function QuotePrintDemoPage() {
       ["Destination / Port of Discharge", "ZADUR, Durban, South Africa"],
       ["Commercial Value", "25 000.00"],
       ["Insurance Amount", "27 500.00"],
+      // ?mode=air shows the Air row instead of the Sea one.
+      ...sailingRows(
+        params.get("mode") === "air"
+          ? { mode: "Air Freight (AIR)", carrier_name: "Emirates SkyCargo", flight_no: "EK 362", etd: "2026-10-28", eta: "2026-10-30" }
+          : { mode: "Sea Freight (LCL)", vessel_name: "MSC Aurora", voyage_no: "FA542A", etd: "2026-11-01", eta: "2026-12-02" },
+      ),
     ],
     reference: "SEA999001",
     mode: "Sea Freight (LCL)",

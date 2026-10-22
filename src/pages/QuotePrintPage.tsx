@@ -637,6 +637,36 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
   );
 }
 
+/** Shipment Information's extra row by mode (sanctioned 2026-10-22): Sea =
+ *  vessel, voyage, ETD, ETA; Air = airline, flight, ETD, ETA. Four items, so
+ *  one more row of the 4-column grid. Other modes add nothing. */
+export function sailingRows(q: {
+  mode: string;
+  vessel_name?: string | null;
+  voyage_no?: string | null;
+  carrier_name?: string | null;
+  flight_no?: string | null;
+  etd?: string | null;
+  eta?: string | null;
+}): [string, string][] {
+  const date = (v?: string | null) => (v ? formatDate(v) : "—");
+  if ((q.mode ?? "").startsWith("Sea"))
+    return [
+      ["Vessel Name", q.vessel_name || "—"],
+      ["Voyage No", q.voyage_no || "—"],
+      ["ETD", date(q.etd)],
+      ["ETA", date(q.eta)],
+    ];
+  if ((q.mode ?? "").startsWith("Air"))
+    return [
+      ["Airline Name", q.carrier_name || "—"],
+      ["Flight Number", q.flight_no || "—"],
+      ["ETD", date(q.etd)],
+      ["ETA", date(q.eta)],
+    ];
+  return [];
+}
+
 /* ------------------------------------------------------------------ */
 /* Route component, fetches the quote and feeds <QuoteSheet>.         */
 /* ------------------------------------------------------------------ */
@@ -728,6 +758,7 @@ export default function QuotePrintPage() {
       ["Destination / Port of Discharge", q.destination || "—"],
       ["Commercial Value", currencyAmount(q.commercial_value, q.value_currency)],
       ["Insurance Amount", currencyAmount(q.insurance_amount, q.value_currency)],
+      ...sailingRows(q),
     ],
     sellCurrency: q.sell_currency ?? null,
     fx,
