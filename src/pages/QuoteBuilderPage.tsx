@@ -74,6 +74,7 @@ import {
   type PartnerSheets,
 } from "../lib/tariff";
 import { TierDot } from "./rates/TierSheetsPage";
+import { LeadEditModal } from "./crm/LeadsPage";
 import { useWmsReceipts } from "../lib/wms";
 import {
   AUTO_REFERENCE,
@@ -352,6 +353,8 @@ export default function QuoteBuilderPage() {
   const ratesQ = useRateSheet();
 
   const [draft, setDraft] = useState<QuoteDraft | null>(isEdit ? null : blankDraft());
+  // Customer/Importer is a lead: its edit form, opened over the quote.
+  const [editingLead, setEditingLead] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
   const [fxAsOf, setFxAsOf] = useState("");
@@ -1025,6 +1028,7 @@ export default function QuoteBuilderPage() {
     (s) => s.tier === draft.rate_tier && s.mode === draft.mode,
   );
   const unpromotedLeads = (leadsQ.data ?? []).filter((l) => !l.promoted_client_id);
+  const editLead = editingLead && draft?.lead_id ? leadsQ.data?.find((l) => l.id === draft.lead_id) : undefined;
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
   );
@@ -1219,7 +1223,30 @@ export default function QuoteBuilderPage() {
 
           {/* Row 2 */}
           <div className="field">
-            <label>Customer/Importer</label>
+            <label>
+              Customer/Importer
+              {/* Fix the name (or any detail) of the customer / lead on the quote. */}
+              {draft.lead_id && leadsQ.data?.some((l) => l.id === draft.lead_id) ? (
+                <button
+                  type="button"
+                  className="link-btn field-label-action"
+                  onClick={() => setEditingLead(true)}
+                  title="Edit this lead (name, contact, email…) without leaving the quote"
+                >
+                  ✎ Edit lead
+                </button>
+              ) : draft.client_id ? (
+                <a
+                  className="link-btn field-label-action"
+                  href={`/clients/${draft.client_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Open the customer record in a new tab to edit it; this quote stays open"
+                >
+                  ✎ Edit customer
+                </a>
+              ) : null}
+            </label>
             <select
               value={draft.client_id ? `c:${draft.client_id}` : draft.lead_id ? `l:${draft.lead_id}` : ""}
               onChange={(e) => {
@@ -2475,6 +2502,7 @@ export default function QuoteBuilderPage() {
           onClose={() => setAddingShipper(false)}
         />
       )}
+      {editLead && <LeadEditModal lead={editLead} onClose={() => setEditingLead(false)} />}
     </>
   );
 }

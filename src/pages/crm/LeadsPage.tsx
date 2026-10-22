@@ -1101,7 +1101,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
   );
 }
 
-function LeadEditModal({
+export function LeadEditModal({
   lead,
   onClose,
 }: {

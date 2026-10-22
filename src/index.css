@@ -7041,6 +7041,19 @@ button.inbox-convo-item:hover {
   outline-offset: 6px;
   border-radius: 8px;
 }
+/* A small action on the right of a field's label (Quote Builder › Edit lead). */
+.field label .field-label-action {
+  float: right;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  text-decoration: none;
+  color: var(--teal-ink);
+}
+.field label .field-label-action:hover {
+  text-decoration: underline;
+}
 .inbox-bcc-toggle {
   float: right;
   font-size: 0.75rem;
