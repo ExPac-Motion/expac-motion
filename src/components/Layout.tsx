@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
@@ -224,6 +225,16 @@ export default function Layout() {
     .filter((m) => m.to !== "/crm" && !m.to.startsWith("/crm?") ? true : (m.children?.length ?? 0) > 0);
 
   const activeModule = nav.find((m) => isModuleActive(m, pathname));
+
+  // Name the browser tab after the open section ("Quotations - ExPac Motion"),
+  // so several Motion tabs side by side can be told apart.
+  const section = pathname.startsWith("/settings") ? "Settings" : activeModule?.label;
+  useEffect(() => {
+    document.title = section ? `${section} - ExPac Motion` : "ExPac Motion";
+    return () => {
+      document.title = "ExPac Motion";
+    };
+  }, [section]);
 
   return (
     <div className="app-shell">
