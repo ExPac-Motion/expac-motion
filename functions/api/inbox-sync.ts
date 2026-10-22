@@ -9,7 +9,7 @@
  * inbox_messages and the raw .eml to the private "inbox" storage bucket. The
  * app parses the .eml when a message is opened, so this function stays light
  * (no MIME decoding here). Up to BATCH new messages per run, newest first, so
- * the 5-minute cron drains the year's backlog behind any new mail. Also
+ * the every-minute cron (0183) drains the year's backlog behind any new mail. Also
  * refreshes Seen / Answered flags (read or answered in Outlook / webmail) for
  * the last 30 days.
  *
@@ -30,7 +30,9 @@ const MAILBOX = "support";
 const HISTORY_DAYS = 365;
 // Seen / Answered flags are refreshed for the recent window only.
 const FLAGS_DAYS = 30;
-const BATCH = 15;
+// Each message costs two requests (raw upload + its row), and a run must
+// stay within Cloudflare's 50-requests-per-call limit.
+const BATCH = 12;
 // Stored-uid lookups per request (stays under PostgREST's row cap).
 const UID_CHUNK = 500;
 const MAX_RAW_BYTES = 20 * 1024 * 1024;
@@ -416,36 +418,37 @@ async function syncFolder(imap, env, folder, key, spam, budget, direction = "in"
       });
     }
 
-    // Raw source -> storage, one message at a time.
+    // Newest first, and each message stored as soon as its raw source is
+    // uploaded: a run that's cut short keeps everything it got through.
+    rows.sort((a, b) => b.uid - a.uid);
     for (const row of rows) {
-      if (row.size_bytes && row.size_bytes > MAX_RAW_BYTES) continue;
-      const res = await imap.cmd(`UID FETCH ${row.uid} (UID BODY.PEEK[])`);
-      const lit = res.find((r) => r.lits.length)?.lits?.[0];
-      if (!lit) continue;
-      const path = `${key.replace(/[^a-z0-9-]/gi, "_")}/${uv}/${row.uid}.eml`;
-      const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/inbox/${path}`, {
-        method: "POST",
-        headers: sb(env, { "content-type": "message/rfc822", "x-upsert": "true" }),
-        body: lit,
-      });
-      if (up.ok) {
-        row.raw_path = path;
-        row.has_attachments = /content-disposition:\s*attachment/i.test(
-          utf8.decode(lit.subarray(0, Math.min(lit.length, 400000))),
-        );
+      if (!row.size_bytes || row.size_bytes <= MAX_RAW_BYTES) {
+        const res = await imap.cmd(`UID FETCH ${row.uid} (UID BODY.PEEK[])`);
+        const lit = res.find((r) => r.lits.length)?.lits?.[0];
+        if (lit) {
+          const path = `${key.replace(/[^a-z0-9-]/gi, "_")}/${uv}/${row.uid}.eml`;
+          const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/inbox/${path}`, {
+            method: "POST",
+            headers: sb(env, { "content-type": "message/rfc822", "x-upsert": "true" }),
+            body: lit,
+          });
+          if (up.ok) {
+            row.raw_path = path;
+            row.has_attachments = /content-disposition:\s*attachment/i.test(
+              utf8.decode(lit.subarray(0, Math.min(lit.length, 400000))),
+            );
+          }
+        }
       }
-    }
-
-    if (rows.length) {
       await sbJson(env, `/rest/v1/inbox_messages?on_conflict=mailbox,uidvalidity,uid`, {
         method: "POST",
         headers: sb(env, {
           "content-type": "application/json",
           prefer: "resolution=ignore-duplicates,return=minimal",
         }),
-        body: JSON.stringify(rows),
+        body: JSON.stringify([row]),
       });
-      added = rows.length;
+      added++;
     }
   }
 

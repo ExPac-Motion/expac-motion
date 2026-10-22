@@ -1918,7 +1918,8 @@ export function usePartnerRateSheets(kind: PartnerKind, partnerId: string | null
 }
 /* ---------- Admin Inbox (0134) ---------- */
 export function useInbox(enabled = true) {
-  return useQuery({ queryKey: ["inbox"], queryFn: db.listInbox, enabled, refetchInterval: 60_000 });
+  // Every 30s while open: the server syncs the mailbox every minute (0183).
+  return useQuery({ queryKey: ["inbox"], queryFn: db.listInbox, enabled, refetchInterval: 30_000 });
 }
 export function useSentMail(enabled = true) {
   return useQuery({ queryKey: ["inbox_sent"], queryFn: db.listSentMail, enabled, refetchInterval: 60_000 });
