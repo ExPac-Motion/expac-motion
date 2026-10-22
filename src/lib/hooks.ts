@@ -1943,6 +1943,15 @@ export function useSyncInbox() {
     },
   });
 }
+/** Inbox search across the whole history (3+ characters). */
+export function useInboxSearch(term: string) {
+  return useQuery({
+    queryKey: ["inbox_search", term],
+    queryFn: () => db.searchInbox(term),
+    enabled: term.length >= 3,
+    staleTime: 60_000,
+  });
+}
 /** Inbox drafts (0180). Errors (migration not run yet) just mean no drafts. */
 export function useInboxDrafts(enabled = true) {
   return useQuery({ queryKey: ["inbox_drafts"], queryFn: db.listInboxDrafts, enabled, retry: false });

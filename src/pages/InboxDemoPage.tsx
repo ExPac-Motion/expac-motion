@@ -61,6 +61,29 @@ const MAIL = [
     job_id: "job-1",
     job_reference: "SEA826893",
   },
+  {
+    // Answered from Outlook (Sent folder sync): m2 no longer needs a reply.
+    id: "m3",
+    mailbox: "support:sent",
+    direction: "out",
+    message_id: "<m3@expac.co.za>",
+    thread_key: "t2",
+    from_email: "support@expac.co.za",
+    from_name: "ExPac Forwarding",
+    to_emails: ["lily@shenzhen-agent.cn"],
+    cc_emails: [],
+    subject: "Re: Booking confirmation SEA826893",
+    snippet: "Thanks Lily, noted.",
+    body_html: "<p>Thanks Lily, noted.</p>",
+    has_attachments: false,
+    sent_at: ago(60 * 3),
+    seen: true,
+    answered: false,
+    category: "partner",
+    record_name: "Shenzhen Agent Co.",
+    job_id: "job-1",
+    job_reference: "SEA826893",
+  },
 ];
 
 export default function InboxDemoPage() {

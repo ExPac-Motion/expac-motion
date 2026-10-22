@@ -2,14 +2,16 @@
  * Cloudflare Pages Function, sync the support@ mailbox into the Admin Inbox
  * (Sales CRM › Inbox, migration 0134).
  *
- * Connects over IMAP (Workers TCP sockets), lists the last 30 days of INBOX,
- * and for each message not yet stored: saves its envelope (from / to / cc /
- * subject / date / Message-ID / threading headers / flags) to
+ * Connects over IMAP (Workers TCP sockets), lists the last year of INBOX,
+ * the Sent folder (mail sent from Outlook, stored as direction 'out') and
+ * Junk, and for each message not yet stored: saves its envelope (from / to /
+ * cc / subject / date / Message-ID / threading headers / flags) to
  * inbox_messages and the raw .eml to the private "inbox" storage bucket. The
  * app parses the .eml when a message is opened, so this function stays light
- * (no MIME decoding here). Up to BATCH new messages per run, the 5-minute
- * cron drains any backlog. Also refreshes Seen / Answered flags (read or
- * answered in Outlook / webmail) for the 30-day window.
+ * (no MIME decoding here). Up to BATCH new messages per run, newest first, so
+ * the 5-minute cron drains the year's backlog behind any new mail. Also
+ * refreshes Seen / Answered flags (read or answered in Outlook / webmail) for
+ * the last 30 days.
  *
  * Auth: x-cron-key (pg_cron, CRON_SECRET) or a signed-in Admin / Standard
  * User with the "inbox" permission ("Sync now" in the app).
@@ -23,8 +25,14 @@
 import { connect } from "cloudflare:sockets";
 
 const MAILBOX = "support";
-const WINDOW_DAYS = 30;
+// Mail history kept: a year back, filled newest first (new mail always
+// comes in before the backlog), BATCH messages per run.
+const HISTORY_DAYS = 365;
+// Seen / Answered flags are refreshed for the recent window only.
+const FLAGS_DAYS = 30;
 const BATCH = 15;
+// Stored-uid lookups per request (stays under PostgREST's row cap).
+const UID_CHUNK = 500;
 const MAX_RAW_BYTES = 20 * 1024 * 1024;
 
 function json(data, status) {
@@ -267,9 +275,10 @@ function fetchItems(r) {
   return o;
 }
 
-/** The mailbox's Junk / Spam folder: the one flagged \Junk (RFC 6154), else
- *  a common name (Junk, Junk Email, Junk E-mail, Spam, INBOX.Junk, …). */
-async function findJunkFolder(imap) {
+/** Every folder on the server, with its flags (lower-cased). */
+let folderCache = null;
+async function listFolders(imap) {
+  if (folderCache) return folderCache;
   const list = await imap.cmd('LIST "" "*"');
   const folders = [];
   for (const r of list) {
@@ -278,6 +287,14 @@ async function findJunkFolder(imap) {
     const name = val(tokenize(m[2])[0], r.lits);
     if (name) folders.push({ name, flags: m[1].toLowerCase() });
   }
+  folderCache = folders;
+  return folders;
+}
+
+/** The mailbox's Junk / Spam folder: the one flagged \Junk (RFC 6154), else
+ *  a common name (Junk, Junk Email, Junk E-mail, Spam, INBOX.Junk, …). */
+async function findJunkFolder(imap) {
+  const folders = await listFolders(imap);
   const flagged = folders.find((f) => f.flags.includes("\\junk"));
   if (flagged) return flagged.name;
   const named = folders.find((f) =>
@@ -285,30 +302,61 @@ async function findJunkFolder(imap) {
   );
   return named ? named.name : null;
 }
-/** One folder: store its new messages (up to `budget`) and refresh flags. */
-async function syncFolder(imap, env, folder, key, spam, budget) {
-  const sel = await imap.cmd(`SELECT ${quote(folder)}`);
-  const uv = Number(sel.map((r) => r.text.match(/UIDVALIDITY (\d+)/i)).find(Boolean)?.[1] || 0);
+/** The mailbox's Sent folder: the one flagged \Sent (RFC 6154), else a
+ *  common name (Sent, Sent Items, Sent Messages, INBOX.Sent, …). */
+async function findSentFolder(imap) {
+  const folders = await listFolders(imap);
+  const flagged = folders.find((f) => f.flags.includes("\\sent"));
+  if (flagged) return flagged.name;
+  const named = folders.find((f) => /^(inbox[./])?sent( items| messages| mail)?$/i.test(f.name.trim()));
+  return named ? named.name : null;
+}
 
-  // Last 30 days on the server vs what's stored.
-  const since = imapDate(new Date(Date.now() - WINDOW_DAYS * 86400000));
-  const found = await imap.cmd(`UID SEARCH SINCE ${since}`);
-  const serverUids = found
+async function searchSince(imap, days) {
+  const found = await imap.cmd(`UID SEARCH SINCE ${imapDate(new Date(Date.now() - days * 86400000))}`);
+  return found
     .flatMap((r) => (r.text.match(/^\* SEARCH(.*)$/i)?.[1] || "").trim().split(/\s+/))
     .filter(Boolean)
     .map(Number)
     .sort((a, b) => a - b);
-  const minUid = serverUids[0] || 0;
-  const stored = minUid
-    ? await sbJson(
-        env,
-        `/rest/v1/inbox_messages?select=uid&mailbox=eq.${encodeURIComponent(key)}&uidvalidity=eq.${uv}&uid=gte.${minUid}&direction=eq.in`,
-        { headers: sb(env) },
-      )
-    : [];
-  const have = new Set((stored || []).map((r) => Number(r.uid)));
-  const pending = serverUids.filter((u) => !have.has(u));
-  const batch = budget > 0 ? pending.slice(-budget) : []; // newest first
+}
+
+/** One folder: store its new messages (up to `budget`) and refresh flags.
+ *  `direction` is "out" for the Sent folder (mail sent from Outlook). */
+async function syncFolder(imap, env, folder, key, spam, budget, direction = "in") {
+  const sel = await imap.cmd(`SELECT ${quote(folder)}`);
+  const uv = Number(sel.map((r) => r.text.match(/UIDVALIDITY (\d+)/i)).find(Boolean)?.[1] || 0);
+
+  // The history window on the server vs what's stored, newest first, a
+  // chunk of uids at a time until the batch is full.
+  const serverUids = await searchSince(imap, HISTORY_DAYS);
+  const base = `/rest/v1/inbox_messages?mailbox=eq.${encodeURIComponent(key)}&uidvalidity=eq.${uv}&direction=eq.${direction}`;
+  const newest = [...serverUids].reverse();
+  const batch = [];
+  for (let i = 0; i < newest.length && batch.length < budget; i += UID_CHUNK) {
+    const chunk = newest.slice(i, i + UID_CHUNK);
+    const stored = await sbJson(
+      env,
+      `${base}&select=uid&uid=gte.${chunk[chunk.length - 1]}&uid=lte.${chunk[0]}&limit=${UID_CHUNK * 2}`,
+      { headers: sb(env) },
+    );
+    const have = new Set((stored || []).map((r) => Number(r.uid)));
+    for (const u of chunk) {
+      if (have.has(u)) continue;
+      batch.push(u);
+      if (batch.length >= budget) break;
+    }
+  }
+  // How many are still to come (shown as "N more on the way").
+  let pendingCount = 0;
+  if (serverUids.length) {
+    const head = await fetch(`${env.SUPABASE_URL}${base}&select=uid&uid=gte.${serverUids[0]}`, {
+      method: "HEAD",
+      headers: sb(env, { prefer: "count=exact", range: "0-0" }),
+    });
+    const total = Number((head.headers.get("content-range") || "").split("/")[1] || 0);
+    pendingCount = Math.max(0, serverUids.length - total);
+  }
 
   let added = 0;
   if (batch.length) {
@@ -348,7 +396,7 @@ async function syncFolder(imap, env, folder, key, spam, budget) {
         ...(spam ? { spam: true } : {}),
         uidvalidity: uv,
         uid,
-        direction: "in",
+        direction,
         message_id: messageId,
         in_reply_to: inReplyTo,
         refs: references || null,
@@ -359,10 +407,10 @@ async function syncFolder(imap, env, folder, key, spam, budget) {
         cc_emails: addresses(env_[6], r.lits).map((a) => a.email),
         subject: decodeWords(val(env_[1], r.lits)) || "(no subject)",
         size_bytes: size || null,
-        is_bulk: !!bulk,
+        is_bulk: direction === "in" && !!bulk,
         sent_at: isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString(),
-        seen: flags.includes("\\seen"),
-        answered: flags.includes("\\answered"),
+        seen: direction === "out" || flags.includes("\\seen"),
+        answered: direction === "in" && flags.includes("\\answered"),
         raw_path: null,
         has_attachments: false,
       });
@@ -401,7 +449,9 @@ async function syncFolder(imap, env, folder, key, spam, budget) {
     }
   }
 
-  // Seen / Answered changed elsewhere (Outlook, webmail).
+  // Seen / Answered changed elsewhere (Outlook, webmail), recent mail only.
+  const recent = direction === "in" ? await searchSince(imap, FLAGS_DAYS) : [];
+  const minUid = recent[0] || 0;
   if (minUid) {
     const fl = await imap.cmd(`UID FETCH ${minUid}:* (UID FLAGS)`);
     const flags = {};
@@ -420,7 +470,7 @@ async function syncFolder(imap, env, folder, key, spam, budget) {
     }
   }
 
-  return { added, pending: Math.max(0, pending.length - added), uidvalidity: uv };
+  return { added, pending: Math.max(0, pendingCount - added), uidvalidity: uv };
 }
 
 /* ---------- Sync ---------- */
@@ -440,23 +490,37 @@ async function sync(env) {
       imap = new Imap(socket.startTls());
     }
     await imap.cmd(`LOGIN ${quote(env.IMAP_USER)} ${quote(env.IMAP_PASSWORD)}`);
-    // The Inbox first, then the Junk / Spam folder (if the mailbox has one),
-    // sharing one batch budget per run.
-    const main = await syncFolder(imap, env, "INBOX", MAILBOX, false, BATCH);
-    let junkPending = 0;
-    // A Junk-folder problem never stops the Inbox sync.
+    folderCache = null;
+    // The Inbox first, then the Sent folder (mail sent from Outlook), then
+    // Junk / Spam, sharing one batch budget per run. Inbox takes most of
+    // it, so Sent history still fills while the Inbox backlog drains.
+    const main = await syncFolder(imap, env, "INBOX", MAILBOX, false, BATCH - 5);
+    let left = BATCH - main.added;
+    let otherPending = 0;
+    // A Sent or Junk folder problem never stops the Inbox sync.
+    try {
+      const sent = await findSentFolder(imap);
+      if (sent) {
+        const s = await syncFolder(imap, env, sent, `${MAILBOX}:sent`, false, Math.max(0, left - 2), "out");
+        otherPending += s.pending;
+        main.added += s.added;
+        left -= s.added;
+      }
+    } catch {
+      /* Sent folder unreadable, the Inbox is still synced */
+    }
     try {
       const junk = await findJunkFolder(imap);
       if (junk) {
-        const j = await syncFolder(imap, env, junk, `${MAILBOX}:junk`, true, BATCH - main.added);
-        junkPending = j.pending;
+        const j = await syncFolder(imap, env, junk, `${MAILBOX}:junk`, true, left);
+        otherPending += j.pending;
         main.added += j.added;
       }
     } catch {
       /* Junk folder unreadable or 0136 not applied yet, Inbox still synced */
     }
     await imap.cmd("LOGOUT").catch(() => undefined);
-    return { added: main.added, pending: main.pending + junkPending, uidvalidity: main.uidvalidity };
+    return { added: main.added, pending: main.pending + otherPending, uidvalidity: main.uidvalidity };
   } finally {
     try {
       socket.close();

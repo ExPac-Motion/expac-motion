@@ -2105,7 +2105,7 @@ export type InboxDraftPatch = Partial<Omit<InboxDraft, "id" | "created_at" | "up
 /** inbox_sent_v (0136), everything sent from the app, with delivery status. */
 export interface SentMail {
   id: string;
-  source: "inbox" | "shipment" | "quote";
+  source: "inbox" | "outlook" | "shipment" | "quote";
   to_emails: string[];
   cc_emails: string[];
   subject: string | null;

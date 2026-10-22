@@ -33,6 +33,7 @@ import {
   useUpdateInboxMessage,
   useUploadMailAsset,
   useInboxDrafts,
+  useInboxSearch,
   useMailTemplates,
   useSaveMailTemplate,
 } from "../../lib/hooks";
@@ -97,12 +98,23 @@ const isOurs = (email: string | null) => /(@|\.)expac\.co\.za$/i.test((email ?? 
 // Mark unread in the app wins over "read in Outlook" (0136).
 const isUnread = (m: InboxMessage) =>
   m.direction === "in" && (!!m.marked_unread || (!m.seen && !m.read_at));
-const needsReply = (m: InboxMessage) =>
+/** Newest mail we sent per conversation (Motion or Outlook's Sent folder). */
+type LastOut = Map<string, string>;
+function lastOutByThread(all: InboxMessage[]): LastOut {
+  const map: LastOut = new Map();
+  for (const m of all)
+    if (m.direction === "out" && m.thread_key && (map.get(m.thread_key) ?? "") < m.sent_at) map.set(m.thread_key, m.sent_at);
+  return map;
+}
+/** An incoming email still waiting on us: not answered here or in Outlook,
+ *  and nothing sent in its conversation since it arrived. */
+const needsReply = (m: InboxMessage, lastOut?: LastOut) =>
   m.direction === "in" &&
   !m.spam &&
   !m.answered &&
   !m.replied_at &&
   !m.done_at &&
+  !(m.thread_key && (lastOut?.get(m.thread_key) ?? "") > m.sent_at) &&
   !m.is_bulk &&
   !isOurs(m.from_email);
 const cat = (m: InboxMessage): InboxCategory => m.category ?? "unknown";
@@ -217,7 +229,21 @@ export default function InboxTab() {
     document.addEventListener("mouseup", up);
   }
 
-  const all = useMemo(() => q.data ?? [], [q.data]);
+  // The list holds the newest mail; a search (3+ letters) also looks through
+  // the whole history on the server and adds what it finds.
+  const recent = useMemo(() => q.data ?? [], [q.data]);
+  const [searchTerm, setSearchTerm] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchTerm(search.trim()), 400);
+    return () => window.clearTimeout(t);
+  }, [search]);
+  const foundQ = useInboxSearch(searchTerm);
+  const found = useMemo(() => new Set((foundQ.data ?? []).map((m) => m.id)), [foundQ.data]);
+  const all = useMemo(() => {
+    const extra = (foundQ.data ?? []).filter((m) => !recent.some((r) => r.id === m.id));
+    return extra.length ? [...recent, ...extra] : recent;
+  }, [recent, foundQ.data]);
+  const lastOut = useMemo(() => lastOutByThread(all), [all]);
   const jobs = useMemo(() => jobsQ.data ?? [], [jobsQ.data]);
   const sentQ = useSentMail();
   const sent = useMemo(() => sentQ.data ?? [], [sentQ.data]);
@@ -262,7 +288,7 @@ export default function InboxTab() {
     view === "unread"
       ? isUnread(m)
       : view === "needs"
-        ? needsReply(m)
+        ? needsReply(m, lastOut)
         : view === "job"
           ? !!m.job_id && (!jobFilter || m.job_id === jobFilter)
           : true;
@@ -272,6 +298,7 @@ export default function InboxTab() {
       inFolder(m) &&
       inView(m) &&
       (!needle ||
+        found.has(m.id) ||
         [m.subject, m.from_name, m.from_email, m.snippet, m.record_name, m.job_reference, ...(m.to_emails ?? [])]
           .some((v) => (v ?? "").toLowerCase().includes(needle))),
   );
@@ -315,7 +342,7 @@ export default function InboxTab() {
     v === "unread"
       ? incoming.filter((m) => inFolder(m) && isUnread(m)).length
       : v === "needs"
-        ? incoming.filter((m) => inFolder(m) && needsReply(m)).length
+        ? incoming.filter((m) => inFolder(m) && needsReply(m, lastOut)).length
         : v === "job"
           ? all.filter((m) => inFolder(m) && m.job_id).length
           : 0;
@@ -362,7 +389,15 @@ export default function InboxTab() {
               ? undefined
               : `${rows.length} message${rows.length === 1 ? "" : "s"}`
         }
-        hint={`support@expac.co.za, sorted by who the sender is in the CRM. ${syncNote}`}
+        hint={
+          searchTerm.length >= 3
+            ? foundQ.isFetching
+              ? "Searching the whole mail history…"
+              : `Searched the whole mail history (sender, subject and the text of opened emails). ${syncNote}`
+            : `support@expac.co.za, sorted by who the sender is in the CRM. ${syncNote}${
+                st?.pending ? ` · Older mail still coming in (${st.pending} to go)` : ""
+              }`
+        }
         primary={
           <button className="btn" onClick={() => setCompose({})}>
             + New email
@@ -570,7 +605,7 @@ export default function InboxTab() {
                 <div className="inbox-meta">
                   {m.record_name && <span className="inbox-chip">{m.record_name}</span>}
                   {m.job_reference && <span className="inbox-chip job">{m.job_reference}</span>}
-                  {needsReply(m) && <span className="inbox-chip needs">Needs reply</span>}
+                  {needsReply(m, lastOut) && <span className="inbox-chip needs">Needs reply</span>}
                   {m.direction === "out" && <span className="inbox-chip">Sent</span>}
                   {m.snippet && <span className="inbox-snippet">{m.snippet}</span>}
                 </div>
@@ -630,6 +665,7 @@ export default function InboxTab() {
               thread={all.filter((m) => open.thread_key && m.thread_key === open.thread_key && m.id !== open.id)}
               jobs={jobs}
               replyDraft={drafts.find((d) => d.reply_to_id === open.id)}
+              lastOut={lastOut}
               onReply={(parsed, replyAll) => {
                 // A reply already started carries on from its draft.
                 const d = drafts.find((x) => x.reply_to_id === open.id);
@@ -700,6 +736,7 @@ function DeliveryChip({ status }: { status: string }) {
 }
 const SOURCE_LABEL: Record<SentMail["source"], string> = {
   inbox: "Inbox",
+  outlook: "Outlook",
   shipment: "Shipment Comms",
   quote: "Quotation",
 };
@@ -762,10 +799,12 @@ function Reader({
   thread,
   jobs,
   replyDraft,
+  lastOut,
   onReply,
   onForward,
 }: {
   msg: InboxMessage;
+  lastOut: LastOut;
   /** A reply to this email already started (Drafts). */
   replyDraft?: InboxDraft;
   thread: InboxMessage[];
@@ -851,7 +890,11 @@ function Reader({
       <div className="inbox-read-head">
         <h3>{msg.subject || "(no subject)"}</h3>
         <div className="inbox-read-from">
-          <strong>{msg.direction === "out" ? "ExPac (sent from Motion)" : msg.from_name || msg.from_email}</strong>
+          <strong>
+            {msg.direction === "out"
+              ? `ExPac (sent from ${msg.mailbox?.endsWith(":sent") ? "Outlook" : "Motion"})`
+              : msg.from_name || msg.from_email}
+          </strong>
           {msg.direction === "in" && msg.from_name && <span className="muted"> &lt;{msg.from_email}&gt;</span>}
           <span className="muted"> · {formatDateTime(msg.sent_at)}</span>
         </div>
@@ -914,7 +957,7 @@ function Reader({
           Forward
         </button>
         {msg.direction === "in" &&
-          (needsReply(msg) ? (
+          (needsReply(msg, lastOut) ? (
             <button
               type="button"
               className="btn small outline"
@@ -922,7 +965,7 @@ function Reader({
             >
               No reply needed
             </button>
-          ) : !msg.replied_at && !msg.answered ? (
+          ) : !msg.replied_at && !msg.answered && !(msg.thread_key && (lastOut.get(msg.thread_key) ?? "") > msg.sent_at) ? (
             <button type="button" className="btn small outline" onClick={() => patch({ done_at: null }, "Back on Needs reply")}>
               Needs reply
             </button>

@@ -2714,6 +2714,22 @@ export async function getInboxMessage(id: string): Promise<InboxMessage> {
 export async function updateInboxMessage(id: string, patch: InboxMessagePatch): Promise<void> {
   unwrap(await supabase.from("inbox_messages").update(patch).eq("id", id));
 }
+/** Search the whole mail history (the list only holds the newest): sender,
+ *  subject, and the text of emails that have been opened. */
+export async function searchInbox(term: string): Promise<InboxMessage[]> {
+  // Characters that would break PostgREST's or=() syntax become spaces.
+  const t = term.replace(/[,()*%"\\]/g, " ").trim();
+  if (t.length < 3) return [];
+  const like = `"*${t}*"`;
+  return unwrap<InboxMessage[]>(
+    await supabase
+      .from("inbox_messages_v")
+      .select(INBOX_LIST_COLS as "*")
+      .or(["subject", "from_email", "from_name", "snippet", "body_text"].map((c) => `${c}.ilike.${like}`).join(","))
+      .order("sent_at", { ascending: false })
+      .limit(200),
+  );
+}
 export async function insertInboxMessage(row: Partial<InboxMessage>): Promise<void> {
   unwrap(await supabase.from("inbox_messages").insert(row));
 }
