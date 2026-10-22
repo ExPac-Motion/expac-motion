@@ -132,11 +132,16 @@ export default function RichTextEditor({
     return () => document.removeEventListener("mousedown", onDocDown);
   }, [aiOpen]);
 
-  // Caret at the top, above any seeded signature / quoted text.
+  // Caret at the top, above any seeded signature / quoted text; the body
+  // opens scrolled to the top either way.
   useEffect(() => {
-    if (!autoFocus) return;
     const editor = editorRef.current;
     if (!editor) return;
+    requestAnimationFrame(() => {
+      editor.scrollTop = 0;
+      editor.scrollLeft = 0;
+    });
+    if (!autoFocus) return;
     editor.focus();
     const r = document.createRange();
     r.setStart(editor, 0);

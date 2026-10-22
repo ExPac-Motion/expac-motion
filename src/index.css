@@ -1468,6 +1468,29 @@ select.badge-select.lost {
 .rte-body img {
   max-width: 100%;
 }
+/* Tables written into an email (a signature laid out in a box) show as they
+   will in the mail: the app's list-table look (full width, no wrapping, cell
+   padding, row lines) stays out of the editor. Inline styles still apply. */
+.rte-body table {
+  width: auto;
+  font-size: inherit;
+}
+.rte-body td,
+.rte-body th {
+  padding: 0;
+  border-bottom: 0;
+  white-space: normal;
+  vertical-align: top;
+  font-size: inherit;
+  font-weight: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: inherit;
+}
+/* Compose: room for the message and the whole signature. */
+.inbox-compose .rte-body {
+  max-height: 55vh;
+}
 .rte-code {
   width: 100%;
   min-height: 220px;
