@@ -2075,6 +2075,33 @@ export interface InboxState {
   pending: number | null;
 }
 
+/** A file kept with an Inbox draft (private "inbox" bucket, drafts/<id>/). */
+export interface InboxDraftFile {
+  name: string;
+  path: string;
+  size: number;
+}
+/** inbox_drafts (0180): an Inbox email being written, saved as it's typed. */
+export interface InboxDraft {
+  id: string;
+  /** Recipients as typed, comma-separated. */
+  to_emails: string;
+  cc_emails: string;
+  bcc_emails: string;
+  subject: string;
+  body_html: string;
+  reply_to_id: string | null;
+  reply_all: boolean;
+  forward_id: string | null;
+  include_original: boolean;
+  /** Forward: the original's attachments (by name) still ticked. */
+  forward_files: string[] | null;
+  attachments: InboxDraftFile[];
+  created_at: string;
+  updated_at: string;
+}
+export type InboxDraftPatch = Partial<Omit<InboxDraft, "id" | "created_at" | "updated_at">>;
+
 /** inbox_sent_v (0136), everything sent from the app, with delivery status. */
 export interface SentMail {
   id: string;

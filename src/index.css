@@ -6829,6 +6829,25 @@ table.dt .task-title {
 .panel.inbox.expanded .inbox-frame {
   min-height: 72vh;
 }
+/* Inbox › Drafts (0180) and the compose tools row (templates, draft state). */
+.inbox-dot.cat-draft { background: var(--orange, #e8743b); }
+.inbox-compose-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 8px;
+}
+.inbox-compose-tools select {
+  max-width: 260px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+}
+.inbox-draft-state {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
 /* Inbox compose: drop files on the window to attach them. */
 .inbox-compose.dragging {
   outline: 2px dashed var(--teal);

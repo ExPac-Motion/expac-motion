@@ -1943,6 +1943,17 @@ export function useSyncInbox() {
     },
   });
 }
+/** Inbox drafts (0180). Errors (migration not run yet) just mean no drafts. */
+export function useInboxDrafts(enabled = true) {
+  return useQuery({ queryKey: ["inbox_drafts"], queryFn: db.listInboxDrafts, enabled, retry: false });
+}
+export function useDeleteInboxDraft() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.deleteInboxDraft,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox_drafts"] }),
+  });
+}
 
 /** Every partner rate sheet, loaded only when `enabled` (Rate list route filter). */
 export function useAllPartnerRateSheets(enabled: boolean) {

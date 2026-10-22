@@ -12,6 +12,9 @@ import type {
   InboxMessage,
   InboxMessagePatch,
   InboxState,
+  InboxDraft,
+  InboxDraftFile,
+  InboxDraftPatch,
   PartnerKind,
   PartnerRateStructure,
   PartnerRateStructureDraft,
@@ -2731,6 +2734,37 @@ export async function getInboxState(): Promise<InboxState | null> {
   return rows[0] ?? null;
 }
 /** The raw .eml of a synced message (private bucket). */
+/* ---------- Inbox drafts (0180) ---------- */
+export async function listInboxDrafts(): Promise<InboxDraft[]> {
+  return unwrap<InboxDraft[]>(
+    await supabase.from("inbox_drafts").select("*").order("updated_at", { ascending: false }),
+  );
+}
+/** Insert (no id) or update a draft; returns the saved row. */
+export async function saveInboxDraft(id: string | null, patch: InboxDraftPatch): Promise<InboxDraft> {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  return unwrap<InboxDraft>(
+    id
+      ? await supabase.from("inbox_drafts").update(row).eq("id", id).select("*").single()
+      : await supabase.from("inbox_drafts").insert(row).select("*").single(),
+  );
+}
+/** Deletes a draft and the files kept with it. */
+export async function deleteInboxDraft(draft: Pick<InboxDraft, "id" | "attachments">): Promise<void> {
+  const paths = (draft.attachments ?? []).map((a) => a.path);
+  if (paths.length) await supabase.storage.from("inbox").remove(paths);
+  unwrap(await supabase.from("inbox_drafts").delete().eq("id", draft.id));
+}
+export async function uploadInboxDraftFile(draftId: string, file: File): Promise<InboxDraftFile> {
+  const path = `drafts/${draftId}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\- ]+/g, "_")}`;
+  const up = await supabase.storage.from("inbox").upload(path, file, { contentType: file.type || undefined });
+  if (up.error) throw up.error;
+  return { name: file.name, path, size: file.size };
+}
+export async function removeInboxDraftFiles(paths: string[]): Promise<void> {
+  if (paths.length) await supabase.storage.from("inbox").remove(paths);
+}
+
 export async function downloadInboxRaw(path: string): Promise<ArrayBuffer> {
   const { data, error } = await supabase.storage.from("inbox").download(path);
   if (error) throw error;

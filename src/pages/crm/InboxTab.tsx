@@ -4,7 +4,7 @@
 // to a shipment views across them. /api/inbox-sync copies new mail in every
 // 5 minutes (and on Sync now); a message's raw .eml is parsed here when it's
 // opened. Replies go out through /api/send-mail, threaded under the original.
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
@@ -32,19 +32,29 @@ import {
   useSyncInbox,
   useUpdateInboxMessage,
   useUploadMailAsset,
+  useInboxDrafts,
+  useMailTemplates,
+  useSaveMailTemplate,
 } from "../../lib/hooks";
-import { downloadInboxRaw, insertInboxMessage } from "../../lib/db";
+import {
+  deleteInboxDraft,
+  downloadInboxRaw,
+  insertInboxMessage,
+  removeInboxDraftFiles,
+  saveInboxDraft,
+  uploadInboxDraftFile,
+} from "../../lib/db";
 import TaskEditModal from "../ops/TaskEditModal";
 import RecipientInput, { type BookEntry } from "./RecipientInput";
 import RichTextEditor from "../../components/RichTextEditor";
 import { sendMail } from "../../lib/mail";
-import { htmlToText } from "../../lib/mailMerge";
+import { htmlToText, resolveMergeFields, type MergeContext } from "../../lib/mailMerge";
 import { linkifyHtml } from "../../lib/mailStyle";
 import { formatDateTime } from "../../lib/format";
-import type { InboxCategory, InboxMessage, Job, SentMail } from "../../lib/types";
+import type { InboxCategory, InboxDraft, InboxDraftFile, InboxMessage, Job, SentMail } from "../../lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Folder = "all" | InboxCategory | "spam" | "sent";
+type Folder = "all" | InboxCategory | "spam" | "sent" | "drafts";
 type View = "all" | "unread" | "needs" | "job";
 
 const FOLDERS: { key: Folder; label: string }[] = [
@@ -55,6 +65,7 @@ const FOLDERS: { key: Folder; label: string }[] = [
   { key: "unknown", label: "Other / Unknown" },
   { key: "internal", label: "Internal" },
   { key: "spam", label: "Spam" },
+  { key: "drafts", label: "Drafts" },
   { key: "sent", label: "Sent" },
 ];
 const VIEWS: { key: View; label: string }[] = [
@@ -278,10 +289,28 @@ export default function InboxTab() {
   // Same for Sent: the newest sent email shows until one is picked.
   const openSent = pickedSent ?? sentRows[0] ?? null;
 
+  // Drafts (0180): until the migration is run the query fails, and the
+  // folder and autosave stay off.
+  const draftsQ = useInboxDrafts();
+  const draftsOn = draftsQ.isSuccess;
+  const drafts = useMemo(() => draftsQ.data ?? [], [draftsQ.data]);
+  const draftRows = drafts.filter(
+    (d) => !needle || [d.subject, d.to_emails, d.cc_emails, htmlToText(d.body_html)].some((v) => v.toLowerCase().includes(needle)),
+  );
+  /** A draft reopens in compose, with the email it answers or forwards. */
+  function openDraft(d: InboxDraft) {
+    const replyTo = d.reply_to_id ? all.find((m) => m.id === d.reply_to_id) : undefined;
+    const forward = d.forward_id ? all.find((m) => m.id === d.forward_id) : undefined;
+    setCompose({ draft: d, replyTo, replyAll: d.reply_all, forward });
+  }
+  const folders = draftsOn ? FOLDERS : FOLDERS.filter((f) => f.key !== "drafts");
+
   const folderCount = (f: Folder) =>
-    f === "spam"
-      ? incoming.filter((m) => m.spam && isUnread(m)).length
-      : incoming.filter((m) => !m.spam && (f === "all" || cat(m) === f) && isUnread(m)).length;
+    f === "drafts"
+      ? drafts.length
+      : f === "spam"
+        ? incoming.filter((m) => m.spam && isUnread(m)).length
+        : incoming.filter((m) => !m.spam && (f === "all" || cat(m) === f) && isUnread(m)).length;
   const viewCount = (v: View) =>
     v === "unread"
       ? incoming.filter((m) => inFolder(m) && isUnread(m)).length
@@ -327,7 +356,9 @@ export default function InboxTab() {
         count={
           folder === "sent"
             ? `${sentRows.length} sent`
-            : q.isLoading
+            : folder === "drafts"
+              ? `${draftRows.length} draft${draftRows.length === 1 ? "" : "s"}`
+              : q.isLoading
               ? undefined
               : `${rows.length} message${rows.length === 1 ? "" : "s"}`
         }
@@ -353,7 +384,7 @@ export default function InboxTab() {
       >
         <nav className="inbox-nav">
           <div className="inbox-nav-head">Folders</div>
-          {FOLDERS.map((f) => {
+          {folders.map((f) => {
             const n = folderCount(f.key);
             return (
               <button
@@ -396,7 +427,45 @@ export default function InboxTab() {
         </nav>
 
         <div className="inbox-list">
-          {folder === "sent" ? (
+          {folder === "drafts" ? (
+            draftRows.length === 0 ? (
+              <EmptyState>No drafts. Emails you start and close without sending are kept here.</EmptyState>
+            ) : (
+              draftRows.map((d) => (
+                <div
+                  key={d.id}
+                  role="button"
+                  tabIndex={0}
+                  className="inbox-row"
+                  title="Carry on writing this email"
+                  onClick={() => openDraft(d)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") openDraft(d);
+                  }}
+                >
+                  <div className="inbox-row-gutter">
+                    <span className="inbox-dot cat-draft" />
+                  </div>
+                  <div className="inbox-row-main">
+                    <div className="inbox-row-top">
+                      <span className="inbox-from">To: {d.to_emails || "(no recipient yet)"}</span>
+                      <span className="inbox-date">{shortDate(d.updated_at)}</span>
+                    </div>
+                    <div className="inbox-subject">
+                      {d.attachments.length > 0 && <span title="Attachments">📎 </span>}
+                      {d.subject || "(no subject)"}
+                    </div>
+                    <div className="inbox-meta">
+                      <span className="inbox-chip needs">Draft</span>
+                      {d.reply_to_id && <span className="inbox-chip">{d.reply_all ? "Reply all" : "Reply"}</span>}
+                      {d.forward_id && <span className="inbox-chip">Forward</span>}
+                      <span className="inbox-snippet">{htmlToText(d.body_html).replace(/\s+/g, " ").slice(0, 160)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )
+          ) : folder === "sent" ? (
             sentQ.isLoading ? (
               <Loading />
             ) : sentQ.isError ? (
@@ -528,7 +597,7 @@ export default function InboxTab() {
         />
 
         <div className="inbox-reader">
-          {(folder === "sent" ? openSent : open) && (
+          {folder !== "drafts" && (folder === "sent" ? openSent : open) && (
             <div className="inbox-reader-bar">
               {expanded ? (
                 <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Back to the list (Esc)">
@@ -546,7 +615,9 @@ export default function InboxTab() {
               )}
             </div>
           )}
-          {folder === "sent" ? (
+          {folder === "drafts" ? (
+            <EmptyState>Click a draft to carry on writing it.</EmptyState>
+          ) : folder === "sent" ? (
             openSent ? (
               <SentReader key={`${openSent.source}-${openSent.id}`} mail={openSent} />
             ) : (
@@ -558,7 +629,13 @@ export default function InboxTab() {
               msg={open}
               thread={all.filter((m) => open.thread_key && m.thread_key === open.thread_key && m.id !== open.id)}
               jobs={jobs}
-              onReply={(parsed, replyAll) => setCompose({ replyTo: open, replyAll, parsed })}
+              replyDraft={drafts.find((d) => d.reply_to_id === open.id)}
+              onReply={(parsed, replyAll) => {
+                // A reply already started carries on from its draft.
+                const d = drafts.find((x) => x.reply_to_id === open.id);
+                if (d) openDraft(d);
+                else setCompose({ replyTo: open, replyAll, parsed });
+              }}
               onForward={(parsed) => setCompose({ forward: open, parsed })}
             />
           ) : (
@@ -590,6 +667,8 @@ export default function InboxTab() {
       {compose && (
         <ComposeModal
           {...compose}
+          draftsOn={draftsOn}
+          jobs={jobs}
           book={book}
           onClose={() => setCompose(null)}
         />
@@ -682,10 +761,13 @@ function Reader({
   msg,
   thread,
   jobs,
+  replyDraft,
   onReply,
   onForward,
 }: {
   msg: InboxMessage;
+  /** A reply to this email already started (Drafts). */
+  replyDraft?: InboxDraft;
   thread: InboxMessage[];
   jobs: Job[];
   onReply: (parsed: Parsed | undefined, replyAll: boolean) => void;
@@ -806,11 +888,12 @@ function Reader({
             className="btn small"
             onClick={() => onReply(parsed, false)}
             disabled={!!msg.raw_path && parsedQ.isLoading}
+            title={replyDraft ? `Carry on with the reply you started (saved ${formatDateTime(replyDraft.updated_at)})` : undefined}
           >
-            Reply
+            {replyDraft ? "Continue draft" : "Reply"}
           </button>
         )}
-        {msg.direction === "in" && msg.to_emails.length + msg.cc_emails.length > 1 && (
+        {msg.direction === "in" && !replyDraft && msg.to_emails.length + msg.cc_emails.length > 1 && (
           <button
             type="button"
             className="btn small outline"
@@ -1178,25 +1261,48 @@ interface ComposeState {
   /** The parsed original (reply / forward), for quoting it in full. */
   parsed?: Parsed;
   forward?: InboxMessage;
+  /** Reopening a saved draft (0180). */
+  draft?: InboxDraft;
 }
+
+/** Saves a draft this long after the last change. */
+const DRAFT_DELAY = 1500;
 
 function ComposeModal({
   replyTo,
   replyAll,
-  parsed,
+  parsed: parsedProp,
   forward: fwd,
+  draft,
+  draftsOn,
   book,
+  jobs,
   onClose,
 }: ComposeState & {
+  /** Drafts table present (0180 run); otherwise nothing is autosaved. */
+  draftsOn: boolean;
   book: BookEntry[];
+  jobs: Job[];
   onClose: () => void;
 }) {
+  const original = replyTo ?? fwd;
+  // A reopened draft loads its original's .eml here (the reading pane does it otherwise).
+  const parsedQ = useQuery({
+    queryKey: ["inbox_raw", original?.raw_path],
+    queryFn: () => parseRaw(original?.raw_path as string),
+    enabled: !parsedProp && !!original?.raw_path,
+    staleTime: Infinity,
+  });
+  const parsed = parsedProp ?? parsedQ.data;
   const fwdFiles = fwd ? parsed?.attachments ?? [] : [];
-  const [keepFiles, setKeepFiles] = useState<string[]>(() => fwdFiles.map((a) => a.url));
-  const [files, setFiles] = useState<File[]>([]);
+  // Forwarded attachments still ticked, by name (null = all of them).
+  const [keepNames, setKeepNames] = useState<string[] | null>(draft?.forward_files ?? null);
+  const kept = (name: string) => keepNames === null || keepNames.includes(name);
   const [dragging, setDragging] = useState(false);
   const settingsQ = useCompanySettings();
   const settings = settingsQ.data;
+  const templatesQ = useMailTemplates();
+  const saveTemplate = useSaveMailTemplate();
   const uploadAsset = useUploadMailAsset();
   const update = useUpdateInboxMessage();
   const qc = useQueryClient();
@@ -1204,8 +1310,9 @@ function ComposeModal({
 
   // Reply all: the sender in To, everyone else on the original in Cc
   // (never our own support@ / reply-to address).
-  const [to, setTo] = useState(replyTo?.from_email ?? "");
+  const [to, setTo] = useState(draft?.to_emails ?? replyTo?.from_email ?? "");
   const [cc, setCc] = useState(() => {
+    if (draft) return draft.cc_emails;
     if (!replyTo || !replyAll) return "";
     const skip = new Set(
       ["support@expac.co.za", settings?.mail_reply_to ?? "", replyTo.from_email ?? ""].map((e) => e.toLowerCase()),
@@ -1220,28 +1327,29 @@ function ComposeModal({
       })
       .join(", ");
   });
-  const [bcc, setBcc] = useState("");
-  const [showBcc, setShowBcc] = useState(false);
+  const [bcc, setBcc] = useState(draft?.bcc_emails ?? "");
+  const [showBcc, setShowBcc] = useState(!!draft?.bcc_emails);
   const [subject, setSubject] = useState(
-    replyTo
-      ? /^re:/i.test(replyTo.subject ?? "")
-        ? replyTo.subject ?? ""
-        : `Re: ${replyTo.subject ?? ""}`
-      : fwd
-        ? /^(fw|fwd):/i.test(fwd.subject ?? "")
-          ? fwd.subject ?? ""
-          : `Fwd: ${fwd.subject ?? ""}`
-        : "",
+    draft
+      ? draft.subject
+      : replyTo
+        ? /^re:/i.test(replyTo.subject ?? "")
+          ? replyTo.subject ?? ""
+          : `Re: ${replyTo.subject ?? ""}`
+        : fwd
+          ? /^(fw|fwd):/i.test(fwd.subject ?? "")
+            ? fwd.subject ?? ""
+            : `Fwd: ${fwd.subject ?? ""}`
+          : "",
   );
-  const [includeOriginal, setIncludeOriginal] = useState(true);
-  const original = replyTo ?? fwd;
+  const [includeOriginal, setIncludeOriginal] = useState(draft?.include_original ?? true);
 
   // The signature sits in the body (edit or delete it before sending), with
-  // two blank lines above it to type in, like Outlook.
+  // two blank lines above it to type in, like Outlook. A draft keeps its own.
   const sig = settings?.mail_signature_html?.trim() || "";
   const blank = "<div><br></div><div><br></div>";
-  const [body, setBody] = useState("");
-  const [seed, setSeed] = useState<string | null>(null);
+  const [body, setBody] = useState(draft?.body_html ?? "");
+  const [seed, setSeed] = useState<string | null>(draft ? draft.body_html : null);
   useEffect(() => {
     // Settings failing to load just means no signature, never a stuck editor.
     if (seed !== null || settingsQ.isLoading) return;
@@ -1252,18 +1360,210 @@ function ComposeModal({
   }, [settingsQ.isLoading]);
   const [sending, setSending] = useState(false);
 
+  // Attachments: files saved with the draft (storage) and ones picked since
+  // (uploaded on the next save). Refs are the truth so overlapping saves
+  // never upload a file twice; `bump` re-renders.
+  const savedFiles = useRef<InboxDraftFile[]>(draft?.attachments ?? []);
+  const newFiles = useRef<File[]>([]);
+  const [, setBump] = useState(0);
+  const bump = () => setBump((n) => n + 1);
+
   const typed = htmlToText(body).replace(htmlToText(sig), "").trim() !== "";
-  const dirty = typed || files.length > 0;
-  function close() {
-    if (dirty && !sending && !window.confirm("Discard this email? What you've written will be lost.")) return;
+  const hasFiles = savedFiles.current.length + newFiles.current.length > 0;
+  // Worth keeping as a draft: something written, attached or addressed.
+  const worthSaving = typed || hasFiles || (!original && (!!to.trim() || !!subject.trim()));
+
+  /* ---------- Drafts (0180) ---------- */
+  const draftId = useRef<string | null>(draft?.id ?? null);
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const latest = useRef({ to, cc, bcc, subject, body, includeOriginal, keepNames });
+  latest.current = { to, cc, bcc, subject, body, includeOriginal, keepNames };
+  const [savedAt, setSavedAt] = useState<string | null>(draft ? draft.updated_at : null);
+  const [saveError, setSaveError] = useState(false);
+  // Set once sent or discarded: no more saves.
+  const stopped = useRef(false);
+  const lastSaveOk = useRef(true);
+
+  /** Queue a save (one at a time, so a new draft is only inserted once). */
+  function saveDraft(): Promise<void> {
+    chain.current = chain.current.then(async () => {
+      if (stopped.current) return;
+      const v = latest.current;
+      const row = {
+        to_emails: v.to,
+        cc_emails: v.cc,
+        bcc_emails: v.bcc,
+        subject: v.subject,
+        body_html: v.body,
+        reply_to_id: replyTo?.id ?? null,
+        reply_all: !!replyAll,
+        forward_id: fwd?.id ?? null,
+        include_original: v.includeOriginal,
+        forward_files: v.keepNames,
+      };
+      try {
+        let saved = await saveInboxDraft(draftId.current, { ...row, attachments: savedFiles.current });
+        draftId.current = saved.id;
+        const pending = [...newFiles.current];
+        if (pending.length) {
+          const up: InboxDraftFile[] = [];
+          for (const f of pending) up.push(await uploadInboxDraftFile(saved.id, f));
+          newFiles.current = newFiles.current.filter((f) => !pending.includes(f));
+          savedFiles.current = [...savedFiles.current, ...up];
+          saved = await saveInboxDraft(saved.id, { attachments: savedFiles.current });
+          bump();
+        }
+        setSavedAt(saved.updated_at);
+        setSaveError(false);
+        lastSaveOk.current = true;
+        qc.invalidateQueries({ queryKey: ["inbox_drafts"] });
+      } catch {
+        setSaveError(true);
+        lastSaveOk.current = false;
+      }
+    });
+    return chain.current;
+  }
+
+  // Autosave a moment after each change (not on open: nothing changed yet).
+  const timer = useRef<number | undefined>(undefined);
+  const snap = JSON.stringify([to, cc, bcc, subject, body, includeOriginal, keepNames, savedFiles.current.length, newFiles.current.length]);
+  const lastSnap = useRef<string | null>(null);
+  const pending = useRef(false);
+  useEffect(() => {
+    if (!draftsOn || sending || seed === null) return;
+    if (lastSnap.current === null) {
+      lastSnap.current = snap;
+      return;
+    }
+    if (snap === lastSnap.current) return;
+    if (!worthSaving && !draftId.current) return;
+    lastSnap.current = snap;
+    window.clearTimeout(timer.current);
+    pending.current = true;
+    timer.current = window.setTimeout(() => {
+      pending.current = false;
+      void saveDraft();
+    }, DRAFT_DELAY);
+    return () => window.clearTimeout(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snap, seed, draftsOn]);
+
+  async function close() {
+    window.clearTimeout(timer.current);
+    // Unsaved changes (a save waiting, or not yet scheduled) are saved first.
+    const needsSave = pending.current || snap !== lastSnap.current || (!draftId.current && worthSaving);
+    pending.current = false;
+    if (draftsOn && (needsSave || draftId.current)) {
+      if (needsSave) await saveDraft();
+      else await chain.current;
+      if (lastSaveOk.current) {
+        stopped.current = true;
+        toast("Saved to Drafts");
+        onClose();
+        return;
+      }
+      // The save failed: say so before anything is lost.
+      if (!window.confirm("The draft couldn't be saved. Close anyway and lose what you've written?")) return;
+      onClose();
+      return;
+    }
+    if ((typed || hasFiles) && !sending && !window.confirm("Discard this email? What you've written will be lost."))
+      return;
+    onClose();
+  }
+  async function discard() {
+    if ((typed || hasFiles) && !window.confirm("Discard this email? The draft will be deleted.")) return;
+    window.clearTimeout(timer.current);
+    stopped.current = true;
+    await chain.current;
+    if (draftId.current) {
+      try {
+        await deleteInboxDraft({ id: draftId.current, attachments: savedFiles.current });
+      } catch {
+        /* best effort, it stays in Drafts */
+      }
+      qc.invalidateQueries({ queryKey: ["inbox_drafts"] });
+    }
     onClose();
   }
 
-  function addFiles(list: FileList | null) {
+  function addFiles(list: FileList | File[] | null) {
     if (!list?.length) return;
     // Copy now: the picker is reset right after, which empties its FileList.
-    const picked = [...list];
-    setFiles((f) => [...f, ...picked]);
+    newFiles.current = [...newFiles.current, ...list];
+    bump();
+  }
+  function removeNewFile(f: File) {
+    newFiles.current = newFiles.current.filter((x) => x !== f);
+    bump();
+  }
+  function removeSavedFile(a: InboxDraftFile) {
+    savedFiles.current = savedFiles.current.filter((x) => x.path !== a.path);
+    bump();
+    void removeInboxDraftFiles([a.path]).catch(() => undefined);
+  }
+
+  /* ---------- Templates ---------- */
+  const firstTo = to.split(/[,;\s]+/).find((x) => x.includes("@"))?.toLowerCase() ?? "";
+  const person = book.find((b) => b.email === firstTo);
+  const job = original?.job_id ? jobs.find((j) => j.id === original.job_id) : undefined;
+  const mergeCtx: MergeContext = {
+    name:
+      person?.name ||
+      (replyTo && firstTo === (replyTo.from_email ?? "").toLowerCase() ? replyTo.from_name ?? "" : ""),
+    company: person?.org || original?.record_name || job?.client?.company || "",
+    customerName: job?.client?.company || (original?.category === "customer" ? original.record_name ?? "" : ""),
+    shipmentNumber: job?.reference ?? original?.job_reference ?? "",
+    customerReference: job?.po_no ?? "",
+    origin: job?.origin ?? "",
+    destination: job?.destination ?? "",
+    mode: job?.mode ?? "",
+    awb: job?.awb_mbl ?? "",
+    containerNo: job?.container_no ?? "",
+    vesselName: job?.vessel_name ?? "",
+    carrierName: job?.carrier_name ?? "",
+    etd: job?.etd ?? "",
+    eta: job?.eta ?? "",
+  };
+  const [loadingTpl, setLoadingTpl] = useState(false);
+  async function applyTemplate(id: string) {
+    const t = templatesQ.data?.find((x) => x.id === id);
+    if (!t) return;
+    const html = resolveMergeFields(t.body, mergeCtx);
+    // Untouched: the template goes above the signature; otherwise on top.
+    setBody((b) => (typed ? `${html}<div><br></div>${b}` : `${html}<div><br></div>${sig}`));
+    if (!subject.trim() || (!original && !typed)) setSubject(resolveMergeFields(t.subject, mergeCtx));
+    if (t.attachments?.length) {
+      setLoadingTpl(true);
+      try {
+        const got = await Promise.all(
+          t.attachments.map(async (a) => {
+            const blob = await (await fetch(a.url)).blob();
+            return new File([blob], a.name, { type: blob.type });
+          }),
+        );
+        addFiles(got);
+      } catch {
+        error("The template's attachments couldn't be added, attach them by hand");
+      } finally {
+        setLoadingTpl(false);
+      }
+    }
+  }
+  async function saveAsTemplate() {
+    const name = window.prompt("Template name (e.g. Rate request to agent)", subject.replace(/^(re|fwd?):\s*/i, ""));
+    if (!name?.trim()) return;
+    // Without the signature: it's added to every email anyway.
+    const withoutSig = sig ? body.replace(sig, "") : body;
+    try {
+      await saveTemplate.mutateAsync({
+        patch: { name: name.trim(), subject: subject.replace(/^(re|fwd?):\s*/i, ""), body: withoutSig, attachments: [] },
+      });
+      toast(`Saved as template "${name.trim()}"`);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not save the template");
+    }
   }
 
   const list = (s: string) =>
@@ -1279,16 +1579,20 @@ function ComposeModal({
       error("Enter at least one recipient");
       return;
     }
-    if (!typed && !fwd && !files.length) {
+    if (!typed && !fwd && !hasFiles) {
       error("Write a message");
       return;
     }
-    const picked = fwdFiles.filter((a) => keepFiles.includes(a.url));
-    const total = picked.reduce((n, a) => n + a.size, 0) + files.reduce((n, f) => n + f.size, 0);
+    const picked = fwdFiles.filter((a) => kept(a.name));
+    const total =
+      picked.reduce((n, a) => n + a.size, 0) +
+      savedFiles.current.reduce((n, a) => n + a.size, 0) +
+      newFiles.current.reduce((n, f) => n + f.size, 0);
     if (total > ATTACH_LIMIT) {
       error("The attachments are too large together (max about 14 MB), remove some");
       return;
     }
+    window.clearTimeout(timer.current);
     setSending(true);
     const html = `${linkifyHtml(body)}${original && (includeOriginal || fwd) ? originalBlock(original, parsed, !!fwd) : ""}`;
     const text = htmlToText(body);
@@ -1297,9 +1601,16 @@ function ComposeModal({
       : undefined;
     const ccList = list(cc);
     try {
+      await chain.current;
       const attachments = [
         ...(await Promise.all(picked.map(async (a) => ({ filename: a.name, content: await blobUrlBase64(a.url) })))),
-        ...(await Promise.all(files.map(async (f) => ({ filename: f.name, content: await fileBase64(f) })))),
+        ...(await Promise.all(
+          savedFiles.current.map(async (a) => ({
+            filename: a.name,
+            content: await fileBase64(new File([await downloadInboxRaw(a.path)], a.name)),
+          })),
+        )),
+        ...(await Promise.all(newFiles.current.map(async (f) => ({ filename: f.name, content: await fileBase64(f) })))),
       ];
       const sentRes = await sendMail({
         to: toList,
@@ -1314,6 +1625,7 @@ function ComposeModal({
         references,
         attachments: attachments.length ? attachments : undefined,
       });
+      stopped.current = true;
       // Keep the sent message in the conversation (and on its shipment).
       await insertInboxMessage({
         direction: "out",
@@ -1340,19 +1652,31 @@ function ComposeModal({
         answered: false,
       });
       if (replyTo) await update.mutateAsync({ id: replyTo.id, patch: { replied_at: new Date().toISOString() } });
+      // Sent: the draft (and its files) go.
+      await chain.current;
+      if (draftId.current) {
+        await deleteInboxDraft({ id: draftId.current, attachments: savedFiles.current }).catch(() => undefined);
+        qc.invalidateQueries({ queryKey: ["inbox_drafts"] });
+      }
       qc.invalidateQueries({ queryKey: ["inbox"] });
       qc.invalidateQueries({ queryKey: ["inbox_sent"] });
       toast(replyTo ? "Reply sent" : fwd ? "Email forwarded" : "Email sent");
       onClose();
     } catch (err) {
+      stopped.current = false;
       error(err instanceof Error ? err.message : "Could not send");
     } finally {
       setSending(false);
     }
   }
 
+  const templates = templatesQ.data ?? [];
   return (
-    <Modal title={replyTo ? (replyAll ? "Reply all" : "Reply") : fwd ? "Forward" : "New email"} onClose={close} wide>
+    <Modal
+      title={replyTo ? (replyAll ? "Reply all" : "Reply") : fwd ? "Forward" : "New email"}
+      onClose={() => void close()}
+      wide
+    >
       <form
         onSubmit={submit}
         className={`inbox-compose${dragging ? " dragging" : ""}`}
@@ -1385,7 +1709,7 @@ function ComposeModal({
             onChange={setTo}
             book={book}
             placeholder="Start typing a name or email"
-            autoFocus={!replyTo}
+            autoFocus={!replyTo && !draft}
           />
         </div>
         <div className={showBcc ? "grid2" : undefined}>
@@ -1404,13 +1728,46 @@ function ComposeModal({
           <label>Subject</label>
           <input value={subject} onChange={(e) => setSubject(e.target.value)} />
         </div>
+        <div className="inbox-compose-tools">
+          <select
+            value=""
+            onChange={(e) => void applyTemplate(e.target.value)}
+            disabled={!templates.length || loadingTpl}
+            title={templates.length ? "Insert a saved template, filled in for this email" : "No templates yet"}
+          >
+            <option value="">{loadingTpl ? "Adding the template's files…" : templates.length ? "Insert template…" : "No templates yet"}</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => void saveAsTemplate()}
+            disabled={!typed || saveTemplate.isPending}
+            title="Save this message as a template for next time"
+          >
+            Save as template
+          </button>
+          <span className="inbox-draft-state">
+            {!draftsOn
+              ? ""
+              : saveError
+                ? "Draft not saved, check your connection"
+                : savedAt
+                  ? `Draft saved ${shortDate(savedAt)}`
+                  : ""}
+          </span>
+        </div>
         <div className="field">
           {seed === null ? (
             <Loading />
           ) : (
             <RichTextEditor
               mail
-              autoFocus={!!replyTo}
+              autoFocus={!!replyTo && !draft}
               value={body}
               onChange={setBody}
               onUploadImage={(f) => uploadAsset.mutateAsync(f)}
@@ -1433,10 +1790,10 @@ function ComposeModal({
           <span className="hint">
             Sent from support@expac.co.za
             {replyTo ? ", threaded under the original message" : ""}. Paste a screenshot straight into the message, or drop
-            files anywhere on this window to attach them.
+            files anywhere on this window to attach them.{draftsOn ? " Saved to Drafts as you write." : ""}
           </span>
         </div>
-        {(files.length > 0 || fwdFiles.length > 0) && (
+        {(hasFiles || fwdFiles.length > 0) && (
           <div className="field">
             <label>Attachments</label>
             <div className="inbox-attachments" style={{ marginTop: 0 }}>
@@ -1444,16 +1801,34 @@ function ComposeModal({
                 <label key={a.url} className="inbox-attachment" style={{ cursor: "pointer" }}>
                   <input
                     type="checkbox"
-                    checked={keepFiles.includes(a.url)}
+                    checked={kept(a.name)}
                     onChange={() =>
-                      setKeepFiles((k) => (k.includes(a.url) ? k.filter((u) => u !== a.url) : [...k, a.url]))
+                      setKeepNames((k) => {
+                        const now = k ?? fwdFiles.map((x) => x.name);
+                        return now.includes(a.name) ? now.filter((n) => n !== a.name) : [...now, a.name];
+                      })
                     }
                   />{" "}
                   {a.name}
                   <span className="muted"> {kb(a.size)}</span>
                 </label>
               ))}
-              {files.map((f, i) => (
+              {savedFiles.current.map((a) => (
+                <span key={a.path} className="inbox-attachment">
+                  📎 {a.name}
+                  <span className="muted"> {kb(a.size)}</span>
+                  <button
+                    type="button"
+                    className="inbox-attachment-x"
+                    title="Remove"
+                    aria-label={`Remove ${a.name}`}
+                    onClick={() => removeSavedFile(a)}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              {newFiles.current.map((f, i) => (
                 <span key={`${f.name}-${i}`} className="inbox-attachment">
                   📎 {f.name}
                   <span className="muted"> {kb(f.size)}</span>
@@ -1462,7 +1837,7 @@ function ComposeModal({
                     className="inbox-attachment-x"
                     title="Remove"
                     aria-label={`Remove ${f.name}`}
-                    onClick={() => setFiles((all) => all.filter((_, j) => j !== i))}
+                    onClick={() => removeNewFile(f)}
                   >
                     ✕
                   </button>
@@ -1496,10 +1871,15 @@ function ComposeModal({
           </div>
         )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-          <button type="button" className="btn outline" onClick={close}>
-            Cancel
+          {draftsOn && (
+            <button type="button" className="btn outline warn" onClick={() => void discard()} style={{ marginRight: "auto" }}>
+              Discard
+            </button>
+          )}
+          <button type="button" className="btn outline" onClick={() => void close()}>
+            {draftsOn ? "Save draft & close" : "Cancel"}
           </button>
-          <button type="submit" className="btn" disabled={sending || seed === null}>
+          <button type="submit" className="btn" disabled={sending || seed === null || loadingTpl}>
             {sending ? "Sending…" : "Send"}
           </button>
         </div>

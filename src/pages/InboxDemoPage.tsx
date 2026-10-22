@@ -74,10 +74,39 @@ export default function InboxDemoPage() {
     seed(["inbox_sent"], []);
     seed(["inbox_state"], { mailbox: "support", last_sync_at: ago(3), last_error: null });
     seed(["company_settings"], { id: 1, mail_signature_html: SIGNATURE, mail_sender_name: "ExPac Forwarding" });
-    seed(["jobs"], [{ id: "job-1", reference: "SEA826893", client: { company: "Maritsu Van Straaten" } }]);
+    seed(["jobs"], [{ id: "job-1", reference: "SEA826893", origin: "CNSZX", destination: "ZADUR", mode: "Sea Freight (LCL)", client: { company: "Maritsu Van Straaten" } }]);
     seed(["clients"], []);
     seed(["leads"], []);
     seed(["media_assets"], []);
+    seed(["inbox_drafts"], [
+      {
+        id: "d1",
+        to_emails: "lily@shenzhen-agent.cn",
+        cc_emails: "",
+        bcc_emails: "",
+        subject: "Re: Booking confirmation SEA826893",
+        body_html: `<div>Hi Lily, please send the draft BL before sailing.</div><div><br></div>${SIGNATURE}`,
+        reply_to_id: "m2",
+        reply_all: false,
+        forward_id: null,
+        include_original: true,
+        forward_files: null,
+        attachments: [],
+        created_at: ago(40),
+        updated_at: ago(38),
+      },
+    ]);
+    seed(["mail_templates"], [
+      {
+        id: "t1",
+        name: "Rate request to agent",
+        subject: "Rate request {{ origin }} to {{ destination }}",
+        body: "<div>Dear {{ contact.name }},</div><div><br></div><div>Please send your best rate for shipment {{ shipment.number }}, {{ mode }}.</div>",
+        attachments: [],
+        created_at: ago(9000),
+        updated_at: ago(9000),
+      },
+    ]);
     return true;
   });
   // The tab syncs on open, which refetches (empty, signed out): put the
