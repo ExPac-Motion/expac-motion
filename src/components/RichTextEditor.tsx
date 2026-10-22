@@ -397,7 +397,11 @@ export default function RichTextEditor({
           rows={12}
           spellCheck={false}
           value={codeText}
-          onChange={(e) => setCodeText(e.target.value)}
+          // Passed on as typed, so Save works without switching back first.
+          onChange={(e) => {
+            setCodeText(e.target.value);
+            onChange(e.target.value);
+          }}
         />
       ) : (
         <div
