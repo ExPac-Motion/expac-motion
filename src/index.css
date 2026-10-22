@@ -169,6 +169,21 @@ input[type="number"] {
   color: var(--ink);
   font-weight: 700;
 }
+/* Unread Inbox mail on Sales CRM / Inbox. */
+.nav-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  vertical-align: 1px;
+}
 .topbar-utils {
   display: flex;
   align-items: center;
@@ -6828,6 +6843,40 @@ table.dt .task-title {
 }
 .panel.inbox.expanded .inbox-frame {
   min-height: 72vh;
+}
+/* Inbox: alerts switch + shortcuts link under the folders, shortcuts help. */
+.inbox-nav-foot {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.inbox-keys {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.inbox-keys td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.inbox-keys td:first-child {
+  width: 120px;
+  white-space: nowrap;
+}
+.inbox-keys kbd {
+  display: inline-block;
+  min-width: 22px;
+  margin-right: 4px;
+  padding: 1px 6px;
+  border: 1px solid #d8d9d4;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #fafaf7;
+  font: 700 0.78rem/1.4 inherit;
+  text-align: center;
 }
 /* Inbox › organise (0182): tick boxes, bulk bar, flag, snooze, conversation. */
 .inbox-check {

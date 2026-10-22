@@ -2714,6 +2714,35 @@ export async function listInbox(): Promise<InboxMessage[]> {
   }
   return unwrap<InboxMessage[]>(res);
 }
+/** Unread mail waiting in the Inbox's folders (for the nav badge and desktop
+ *  alerts): straight from the table, so it stays light on every page. */
+export interface InboxUnread {
+  id: string;
+  from_name: string | null;
+  from_email: string | null;
+  subject: string | null;
+  sent_at: string;
+}
+export async function listInboxUnread(): Promise<InboxUnread[]> {
+  const run = (organised: boolean) => {
+    let q = supabase
+      .from("inbox_messages")
+      .select(`id,from_name,from_email,subject,sent_at${organised ? ",snoozed_until" : ""}` as "*")
+      .eq("direction", "in")
+      .eq("spam", false)
+      .or("marked_unread.is.true,and(seen.is.false,read_at.is.null)")
+      .order("sent_at", { ascending: false })
+      .limit(300);
+    if (organised) q = q.is("archived_at", null).is("deleted_at", null);
+    return q;
+  };
+  let res = await run(true);
+  // Before migration 0182 there's no archive / trash / snooze to leave out.
+  if (res.error && /archived_at|deleted_at|snoozed_until/.test(res.error.message)) res = await run(false);
+  const rows = unwrap<(InboxUnread & { snoozed_until?: string | null })[]>(res);
+  const now = Date.now();
+  return rows.filter((r) => !r.snoozed_until || new Date(r.snoozed_until).getTime() <= now);
+}
 /** The same change on several messages (bulk Archive, Delete, Read, Flag…). */
 export async function updateInboxMessages(ids: string[], patch: InboxMessagePatch): Promise<void> {
   if (ids.length) unwrap(await supabase.from("inbox_messages").update(patch).in("id", ids));

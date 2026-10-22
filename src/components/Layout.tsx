@@ -1,10 +1,11 @@
-import { useEffect } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { alertsOn, notifyNewMail } from "../lib/inboxAlerts";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewActive, setPortalPreview } from "../lib/db";
-import { useCan, useMyProfile } from "../lib/hooks";
+import { useCan, useInboxUnread, useMyProfile } from "../lib/hooks";
 import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
@@ -236,6 +237,32 @@ export default function Layout() {
     };
   }, [section]);
 
+  // Unread Inbox mail: a count on Sales CRM / Inbox, and a desktop alert
+  // (when switched on in the Inbox) for mail that arrives while you work.
+  const navigate = useNavigate();
+  const unreadQ = useInboxUnread(can("inbox"));
+  const unread = unreadQ.data?.length ?? 0;
+  const known = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const list = unreadQ.data;
+    if (!list) return;
+    // First load: what's already waiting raises no alerts.
+    if (!known.current) {
+      known.current = new Set(list.map((m) => m.id));
+      return;
+    }
+    const seen = known.current;
+    const fresh = list.filter((m) => !seen.has(m.id));
+    for (const m of fresh) seen.add(m.id);
+    if (!fresh.length || !alertsOn()) return;
+    // Not while the Inbox is on screen, and not for older mail the history sync brings in.
+    if (document.visibilityState === "visible" && pathname === "/crm" && search.includes("tab=inbox")) return;
+    const recent = fresh.filter((m) => Date.now() - new Date(m.sent_at).getTime() < 2 * 3_600_000);
+    for (const m of recent.slice(0, 3)) notifyNewMail(m, () => navigate("/crm?tab=inbox"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unreadQ.data]);
+  const badge = (n: number) => (n > 0 ? <span className="nav-count">{n > 99 ? "99+" : n}</span> : null);
+
   return (
     <div className="app-shell">
       <header className="topbar-nav">
@@ -251,6 +278,7 @@ export default function Layout() {
               className={`topbar-tab${activeModule === m ? " active" : ""}`}
             >
               {m.label}
+              {m.label === "Sales CRM" && m.children?.some((c) => c.to.includes("tab=inbox")) && badge(unread)}
             </Link>
           ))}
         </nav>
@@ -286,6 +314,7 @@ export default function Layout() {
               className={`subnav-tab${isSubActive(c, pathname, search) ? " active" : ""}`}
             >
               {c.label}
+              {c.to.includes("tab=inbox") && badge(unread)}
             </Link>
           ))}
         </nav>

@@ -1931,7 +1931,10 @@ export function useUpdateInboxMessage() {
   return useMutation({
     mutationFn: (input: { id: string; patch: InboxMessagePatch }) =>
       db.updateInboxMessage(input.id, input.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_unread"] });
+    },
   });
 }
 /** One change on several messages, shown at once (the list updates before
@@ -1952,6 +1955,7 @@ export function useUpdateInboxMessages() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_unread"] });
       qc.invalidateQueries({ queryKey: ["inbox_search"] });
     },
   });
@@ -1962,8 +1966,20 @@ export function useSyncInbox() {
     mutationFn: db.syncInbox,
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_unread"] });
       qc.invalidateQueries({ queryKey: ["inbox_state"] });
     },
+  });
+}
+/** Unread Inbox mail, polled every minute on every page (nav badge, alerts). */
+export function useInboxUnread(enabled: boolean) {
+  return useQuery({
+    queryKey: ["inbox_unread"],
+    queryFn: db.listInboxUnread,
+    enabled,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+    retry: false,
   });
 }
 /** Inbox search across the whole history (3+ characters). */

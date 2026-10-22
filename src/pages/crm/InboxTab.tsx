@@ -52,6 +52,7 @@ import RichTextEditor from "../../components/RichTextEditor";
 import { sendMail } from "../../lib/mail";
 import { htmlToText, resolveMergeFields, type MergeContext } from "../../lib/mailMerge";
 import { linkifyHtml } from "../../lib/mailStyle";
+import { alertsOn, alertsSupported, setAlerts } from "../../lib/inboxAlerts";
 import { formatDateTime } from "../../lib/format";
 import type {
   InboxCategory,
@@ -216,6 +217,7 @@ async function parseRaw(path: string): Promise<Parsed> {
 }
 
 export default function InboxTab() {
+  const qc = useQueryClient();
   const q = useInbox();
   const stateQ = useInboxState();
   const sync = useSyncInbox();
@@ -474,6 +476,97 @@ export default function InboxTab() {
     if (isUnread(m))
       update.mutate({ id: m.id, patch: { read_at: new Date().toISOString(), marked_unread: false } });
   }
+  /** Reply (or reply all); a reply already started carries on from its draft. */
+  function startReply(m: InboxMessage, parsed: Parsed | undefined, replyAll: boolean) {
+    const d = drafts.find((x) => x.reply_to_id === m.id);
+    if (d) openDraft(d);
+    else setCompose({ replyTo: m, replyAll, parsed });
+  }
+
+  /* ---------- Desktop alerts (switched on per browser) ---------- */
+  const [alerts, setAlertsState] = useState(alertsOn);
+  async function toggleAlerts() {
+    const r = await setAlerts(!alerts);
+    if (r === "blocked") {
+      error("Your browser is blocking notifications for this site. Allow them in the site settings (the icon left of the address), then try again.");
+      setAlertsState(false);
+      return;
+    }
+    setAlertsState(r);
+    toast(r ? "Desktop alerts on: you'll get a pop-up when new mail arrives" : "Desktop alerts off");
+  }
+
+  /* ---------- Keyboard shortcuts ---------- */
+  const [showKeys, setShowKeys] = useState(false);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey || compose || tasking || showKeys) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (document.querySelector(".modal")) return;
+      const k = e.key;
+      if (k === "?") return void (e.preventDefault(), setShowKeys(true));
+      if (k === "/") {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>(".search-box input")?.focus();
+        return;
+      }
+      if (k === "c" || k === "n") return void (e.preventDefault(), setCompose({}));
+      if (folder === "sent" || folder === "drafts") return;
+      const at = open ? rows.findIndex((m) => m.id === open.id) : -1;
+      const go = (i: number) => {
+        const m = rows[Math.max(0, Math.min(rows.length - 1, i))];
+        if (m) select(m);
+      };
+      if (k === "j" || k === "ArrowDown") return void (e.preventDefault(), go(at + 1));
+      if (k === "k" || k === "ArrowUp") return void (e.preventDefault(), go(at - 1));
+      if (!open) return;
+      const parsed = open.raw_path ? qc.getQueryData<Parsed>(["inbox_raw", open.raw_path]) : undefined;
+      const ids = checked.size ? [...checked] : [open.id];
+      switch (k) {
+        case "Enter":
+          e.preventDefault();
+          setExpanded(true);
+          return;
+        case "r":
+          if (open.direction === "in") startReply(open, parsed, false);
+          return;
+        case "a":
+          if (open.direction === "in") startReply(open, parsed, true);
+          return;
+        case "f":
+          setCompose({ forward: open, parsed });
+          return;
+      }
+      if (!organiseOn) return;
+      switch (k) {
+        case "e":
+          if (folder === "archive") actions.unarchive(ids);
+          else actions.archive(ids);
+          return;
+        case "#":
+        case "Delete":
+          if (folder === "trash") actions.restore(ids);
+          else actions.remove(ids);
+          return;
+        case "s":
+          actions.flag(ids, !open.flagged);
+          return;
+        case "u":
+          actions.read(ids, false);
+          return;
+        case "x":
+          toggleChecked(open.id);
+          return;
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+  // Keep the open email in sight when moving with the keys.
+  useEffect(() => {
+    document.querySelector(".inbox-list .inbox-row.on")?.scrollIntoView({ block: "nearest" });
+  }, [open?.id]);
 
   async function onSync() {
     try {
@@ -586,6 +679,21 @@ export default function InboxTab() {
               ))}
             </select>
           )}
+          <div className="inbox-nav-foot">
+            {alertsSupported() && (
+              <button
+                type="button"
+                className={`inbox-nav-item${alerts ? " on" : ""}`}
+                onClick={() => void toggleAlerts()}
+                title="A pop-up from your browser when new mail arrives, on any Motion page"
+              >
+                {alerts ? "🔔 Desktop alerts on" : "🔕 Desktop alerts off"}
+              </button>
+            )}
+            <button type="button" className="inbox-nav-item" onClick={() => setShowKeys(true)} title="Keyboard shortcuts (?)">
+              ⌨ Keyboard shortcuts
+            </button>
+          </div>
         </nav>
 
         <div className="inbox-list">
@@ -842,12 +950,7 @@ export default function InboxTab() {
                 const m = all.find((x) => x.id === id);
                 if (m) select(m);
               }}
-              onReply={(parsed, replyAll) => {
-                // A reply already started carries on from its draft.
-                const d = drafts.find((x) => x.reply_to_id === open.id);
-                if (d) openDraft(d);
-                else setCompose({ replyTo: open, replyAll, parsed });
-              }}
+              onReply={(parsed, replyAll) => startReply(open, parsed, replyAll)}
               onForward={(parsed) => setCompose({ forward: open, parsed })}
             />
           ) : (
@@ -876,6 +979,25 @@ export default function InboxTab() {
           onClose={() => setTasking(null)}
         />
       )}
+      {showKeys && (
+        <Modal title="Keyboard shortcuts" onClose={() => setShowKeys(false)}>
+          <table className="inbox-keys">
+            <tbody>
+              {KEYS.map(([keys, what]) => (
+                <tr key={what}>
+                  <td>
+                    {keys.split(" ").map((x) => (
+                      <kbd key={x}>{x}</kbd>
+                    ))}
+                  </td>
+                  <td>{what}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="hint">Shortcuts work in the Inbox while you're not typing in a box. Archive, delete, flag and mark unread act on the ticked emails when some are ticked.</p>
+        </Modal>
+      )}
       {compose && (
         <ComposeModal
           {...compose}
@@ -888,6 +1010,25 @@ export default function InboxTab() {
     </>
   );
 }
+
+/** The Inbox's keyboard shortcuts, as listed in the help (?). */
+const KEYS: [string, string][] = [
+  ["j ↓", "Next email"],
+  ["k ↑", "Previous email"],
+  ["Enter", "Open full view"],
+  ["Esc", "Back to the list"],
+  ["r", "Reply"],
+  ["a", "Reply all"],
+  ["f", "Forward"],
+  ["c", "New email"],
+  ["e", "Archive (in Archive: move back to the inbox)"],
+  ["# Delete", "Delete (in Trash: restore)"],
+  ["s", "Flag / remove the flag"],
+  ["u", "Mark unread"],
+  ["x", "Tick / untick the open email"],
+  ["/", "Search"],
+  ["?", "These shortcuts"],
+];
 
 /** Archive / Trash / Flag / Snooze / Read (0182), on one email or several. */
 interface OrganiseActions {
