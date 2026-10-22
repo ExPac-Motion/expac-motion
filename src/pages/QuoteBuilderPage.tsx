@@ -26,6 +26,7 @@ import {
   useSuppliers,
   useTransporters,
 } from "../lib/hooks";
+import { useCustomerConsignees } from "../lib/customers";
 import {
   autoQty,
   buyRate,
@@ -153,6 +154,7 @@ function blankDraft(): QuoteDraft {
     supplier_id: "",
     consignee_id: "",
     consignee_lead_id: "",
+    client_consignee_id: "",
     agent_id: "",
     transporter_id: "",
     clearing_agent_id: "",
@@ -208,6 +210,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     supplier_id: q.supplier_id ?? "",
     consignee_id: q.consignee_id ?? "",
     consignee_lead_id: q.consignee_lead_id ?? "",
+    client_consignee_id: q.client_consignee_id ?? "",
     agent_id: q.agent_id ?? "",
     transporter_id: q.transporter_id ?? "",
     clearing_agent_id: q.clearing_agent_id ?? "",
@@ -354,6 +357,8 @@ export default function QuoteBuilderPage() {
   const [fxAsOf, setFxAsOf] = useState("");
   const [ratePickerFor, setRatePickerFor] = useState<ChargeCategory | null>(null);
   const [addingShipper, setAddingShipper] = useState(false);
+  // The picked customer's own consignees (Customer → Consignees & Shippers).
+  const consigneesQ = useCustomerConsignees(draft?.client_id || undefined);
   // Charge-line drag-reorder: the line being dragged and where it would land.
   const [dragLine, setDragLine] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<{ index: number; after: boolean } | null>(null);
@@ -1229,6 +1234,9 @@ export default function QuoteBuilderPage() {
                         ...d,
                         client_id: kind === "c" ? id : "",
                         lead_id: kind === "l" ? id : "",
+                        // A consignee belongs to one customer, so a new customer clears it.
+                        client_consignee_id:
+                          kind === "c" && id === d.client_id ? d.client_consignee_id : "",
                         sales_person_id: pickedLead?.sales_person_id || d.sales_person_id,
                         rate_tier: tier,
                         tariff_sheet_id: tier === d.rate_tier ? d.tariff_sheet_id : "",
@@ -1302,11 +1310,13 @@ export default function QuoteBuilderPage() {
             <label>Consignee/Delivery Point</label>
             <select
               value={
-                draft.consignee_id
-                  ? `c:${draft.consignee_id}`
-                  : draft.consignee_lead_id
-                    ? `l:${draft.consignee_lead_id}`
-                    : ""
+                draft.client_consignee_id
+                  ? `k:${draft.client_consignee_id}`
+                  : draft.consignee_id
+                    ? `c:${draft.consignee_id}`
+                    : draft.consignee_lead_id
+                      ? `l:${draft.consignee_lead_id}`
+                      : ""
               }
               onChange={(e) => {
                 const [kind, id] = e.target.value.split(":");
@@ -1314,6 +1324,7 @@ export default function QuoteBuilderPage() {
                   d
                     ? {
                         ...d,
+                        client_consignee_id: kind === "k" ? id : "",
                         consignee_id: kind === "c" ? id : "",
                         consignee_lead_id: kind === "l" ? id : "",
                       }
@@ -1322,19 +1333,44 @@ export default function QuoteBuilderPage() {
               }}
             >
               <option value="">Same as Customer/Importer</option>
-              {clients.map((c) => (
-                <option key={c.id} value={`c:${c.id}`}>
-                  {c.company}
-                </option>
-              ))}
-              {unpromotedLeads.length > 0 && (
-                <optgroup label="Leads (not yet a customer)">
-                  {unpromotedLeads.map((l) => (
-                    <option key={l.id} value={`l:${l.id}`}>
-                      {l.company}
+              {draft.client_id ? (
+                <>
+                  {/* Only this customer's own consignees (Consignees & Shippers tab). */}
+                  {(consigneesQ.data ?? []).map((c) => (
+                    <option key={c.id} value={`k:${c.id}`}>
+                      {c.company}
                     </option>
                   ))}
-                </optgroup>
+                  {/* An older quote's Customer/Lead consignee stays visible so it isn't lost. */}
+                  {draft.consignee_id && (
+                    <option value={`c:${draft.consignee_id}`}>
+                      {clients.find((c) => c.id === draft.consignee_id)?.company ?? "Previous consignee"}
+                    </option>
+                  )}
+                  {draft.consignee_lead_id && (
+                    <option value={`l:${draft.consignee_lead_id}`}>
+                      {unpromotedLeads.find((l) => l.id === draft.consignee_lead_id)?.company ??
+                        "Previous consignee"}
+                    </option>
+                  )}
+                </>
+              ) : (
+                <>
+                  {clients.map((c) => (
+                    <option key={c.id} value={`c:${c.id}`}>
+                      {c.company}
+                    </option>
+                  ))}
+                  {unpromotedLeads.length > 0 && (
+                    <optgroup label="Leads (not yet a customer)">
+                      {unpromotedLeads.map((l) => (
+                        <option key={l.id} value={`l:${l.id}`}>
+                          {l.company}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
               )}
             </select>
           </div>

@@ -1284,6 +1284,9 @@ export interface Quote {
   consignee_id: string | null;
   /** Set instead of consignee_id when the delivery point is a not-yet-promoted lead. */
   consignee_lead_id: string | null;
+  /** One of the customer's own consignees (client_consignees, 0179); wins
+   *  over consignee_id / consignee_lead_id. Undefined before 0179 is applied. */
+  client_consignee_id?: string | null;
   /** Agent / transporter / clearing agent, internal only, never shown to the customer. */
   agent_id: string | null;
   transporter_id: string | null;
@@ -1861,6 +1864,8 @@ export interface QuoteDraft {
   consignee_id: string;
   /** Set instead of consignee_id when the delivery point is a not-yet-promoted lead. */
   consignee_lead_id: string;
+  /** One of the customer's own consignees (client_consignees, 0179). */
+  client_consignee_id: string;
   agent_id: string;
   transporter_id: string;
   clearing_agent_id: string;

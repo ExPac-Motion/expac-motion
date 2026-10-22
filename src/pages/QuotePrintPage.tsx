@@ -17,6 +17,7 @@ import {
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useClients, useCompanySettings, useQuote } from "../lib/hooks";
+import { useCustomerConsignees } from "../lib/customers";
 import {
   convertZar,
   fxOf,
@@ -645,6 +646,7 @@ export default function QuotePrintPage() {
   const { data: q, isLoading, isError, error } = useQuote(id);
   const { data: clients } = useClients();
   const { data: settings } = useCompanySettings();
+  const { data: consignees } = useCustomerConsignees(q?.client_id ?? undefined);
 
   // Drives the filename the browser's Print → Save as PDF proposes.
   useEffect(() => {
@@ -709,7 +711,8 @@ export default function QuotePrintPage() {
       ["Shipper / Exporter", q.supplier?.company ?? "—"],
       [
         "Consignee / Delivery Point",
-        q.consignee?.company ??
+        consignees?.find((c) => c.id === q.client_consignee_id)?.company ??
+          q.consignee?.company ??
           q.consignee_lead?.company ??
           q.client?.company ??
           q.lead?.company ??

@@ -507,6 +507,14 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
   if (routingErr && routingErr.code !== "PGRST204" && routingErr.code !== "42703") {
     throw routingErr;
   }
+  // Customer's own consignee (0179): same separate, tolerant update.
+  const { error: consigneeErr } = await supabase
+    .from("quotes")
+    .update({ client_consignee_id: draft.client_consignee_id || null })
+    .eq("id", id);
+  if (consigneeErr && consigneeErr.code !== "PGRST204" && consigneeErr.code !== "42703") {
+    throw consigneeErr;
+  }
   // Rate tier + tier sheet (0119): same separate, tolerant update.
   const { error: tierErr } = await supabase
     .from("quotes")
