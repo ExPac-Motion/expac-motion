@@ -2714,6 +2714,23 @@ export async function listInbox(): Promise<InboxMessage[]> {
   }
   return unwrap<InboxMessage[]>(res);
 }
+/** Work waiting per menu area (0184): active shipments per mode, quotes per
+ *  stage, open tasks, unread customer messages. */
+export interface NavCounts {
+  jobs_active: number;
+  jobs_air: number;
+  jobs_courier: number;
+  jobs_sea: number;
+  jobs_road: number;
+  quotes_open: number;
+  quotes_sent: number;
+  quotes_accepted: number;
+  tasks_open: number;
+  chat_unread: number;
+}
+export async function getNavCounts(): Promise<NavCounts> {
+  return unwrap<NavCounts>(await supabase.rpc("nav_counts"));
+}
 /** Unread mail waiting in the Inbox's folders (for the nav badge and desktop
  *  alerts): straight from the table, so it stays light on every page. */
 export interface InboxUnread {

@@ -1983,6 +1983,16 @@ export function useInboxUnread(enabled: boolean) {
     retry: false,
   });
 }
+/** Menu counts (0184), every minute on every page; until 0184 is run the
+ *  call fails and the menu simply shows no counts. */
+export function useNavCounts() {
+  return useQuery({
+    queryKey: ["nav_counts"],
+    queryFn: db.getNavCounts,
+    refetchInterval: 60_000,
+    retry: false,
+  });
+}
 /** Inbox search across the whole history (3+ characters). */
 export function useInboxSearch(term: string) {
   return useQuery({

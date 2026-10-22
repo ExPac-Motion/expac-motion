@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewActive, setPortalPreview } from "../lib/db";
-import { useCan, useInboxUnread, useMyProfile } from "../lib/hooks";
+import { useCan, useInboxUnread, useMyProfile, useNavCounts } from "../lib/hooks";
 import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
@@ -263,6 +263,37 @@ export default function Layout() {
   }, [unreadQ.data]);
   const badge = (n: number) => (n > 0 ? <span className="nav-count">{n > 99 ? "99+" : n}</span> : null);
 
+  // Work waiting in each area (0184), refreshed every minute and whenever you
+  // move to another page (so a count drops soon after you deal with something).
+  const navQ = useNavCounts();
+  const { refetch: refetchCounts } = navQ;
+  useEffect(() => {
+    void refetchCounts();
+  }, [pathname, search, refetchCounts]);
+  const nc = navQ.data;
+  /** The count on one menu link. */
+  const linkCount = (to: string): number => {
+    if (to.includes("tab=inbox")) return unread;
+    if (!nc) return 0;
+    const byLink: Record<string, number> = {
+      "/jobs": nc.jobs_active,
+      "/jobs?mode=air": nc.jobs_air,
+      "/jobs?mode=courier": nc.jobs_courier,
+      "/jobs?mode=sea": nc.jobs_sea,
+      "/jobs?mode=road": nc.jobs_road,
+      "/quotes?status=open": nc.quotes_open,
+      "/quotes?status=sent": nc.quotes_sent,
+      "/quotes?status=accepted": nc.quotes_accepted,
+      "/ops?tab=tasks": nc.tasks_open,
+      "/crm?tab=messages": nc.chat_unread,
+    };
+    return byLink[to] ?? 0;
+  };
+  /** A top tab's count: all active shipments for Shipments; otherwise the
+   *  sum of the counts on the sub-tabs this login can see. */
+  const moduleCount = (m: NavModule): number =>
+    m.to === "/jobs" ? linkCount("/jobs") : (m.children ?? []).reduce((n, c) => n + linkCount(c.to), 0);
+
   return (
     <div className="app-shell">
       <header className="topbar-nav">
@@ -278,7 +309,7 @@ export default function Layout() {
               className={`topbar-tab${activeModule === m ? " active" : ""}`}
             >
               {m.label}
-              {m.label === "Sales CRM" && m.children?.some((c) => c.to.includes("tab=inbox")) && badge(unread)}
+              {badge(moduleCount(m))}
             </Link>
           ))}
         </nav>
@@ -314,7 +345,7 @@ export default function Layout() {
               className={`subnav-tab${isSubActive(c, pathname, search) ? " active" : ""}`}
             >
               {c.label}
-              {c.to.includes("tab=inbox") && badge(unread)}
+              {badge(linkCount(c.to))}
             </Link>
           ))}
         </nav>
