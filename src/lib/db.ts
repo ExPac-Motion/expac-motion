@@ -2690,7 +2690,9 @@ export async function listPartnerUsers(
 const INBOX_LIST_COLS =
   "id,mailbox,uid,direction,message_id,in_reply_to,refs,thread_key,from_email,from_name,to_emails,cc_emails," +
   "subject,snippet,raw_path,size_bytes,has_attachments,is_bulk,spam,marked_unread,sent_at,seen,answered,read_at,replied_at," +
-  "done_at,job_id,job_linked_by,created_at,category,record_kind,record_id,record_name,job_reference";
+  "done_at,job_id,job_linked_by,created_at,category,record_kind,record_id,record_name,job_reference," +
+  "archived_at,deleted_at,flagged,snoozed_until";
+const ORGANISE_COLS = ",archived_at,deleted_at,flagged,snoozed_until";
 export async function listInbox(): Promise<InboxMessage[]> {
   const run = (cols: string) =>
     supabase
@@ -2699,12 +2701,22 @@ export async function listInbox(): Promise<InboxMessage[]> {
       .select(cols as "*")
       .order("sent_at", { ascending: false })
       .limit(1500);
-  const res = await run(INBOX_LIST_COLS);
+  let cols = INBOX_LIST_COLS;
+  let res = await run(cols);
+  // Before migration 0182 (archive / trash / flag / snooze) the view lacks those columns.
+  if (res.error && /archived_at|deleted_at|flagged|snoozed_until/.test(res.error.message)) {
+    cols = cols.replace(ORGANISE_COLS, "");
+    res = await run(cols);
+  }
   // Before migration 0136 (spam / marked_unread) the view lacks those columns.
   if (res.error && /spam|marked_unread/.test(res.error.message)) {
-    return unwrap<InboxMessage[]>(await run(INBOX_LIST_COLS.replace("spam,marked_unread,", "")));
+    return unwrap<InboxMessage[]>(await run(cols.replace("spam,marked_unread,", "")));
   }
   return unwrap<InboxMessage[]>(res);
+}
+/** The same change on several messages (bulk Archive, Delete, Read, Flag…). */
+export async function updateInboxMessages(ids: string[], patch: InboxMessagePatch): Promise<void> {
+  if (ids.length) unwrap(await supabase.from("inbox_messages").update(patch).in("id", ids));
 }
 export async function getInboxMessage(id: string): Promise<InboxMessage> {
   return unwrap<InboxMessage>(
@@ -2721,14 +2733,18 @@ export async function searchInbox(term: string): Promise<InboxMessage[]> {
   const t = term.replace(/[,()*%"\\]/g, " ").trim();
   if (t.length < 3) return [];
   const like = `"*${t}*"`;
-  return unwrap<InboxMessage[]>(
-    await supabase
+  const run = (cols: string) =>
+    supabase
       .from("inbox_messages_v")
-      .select(INBOX_LIST_COLS as "*")
+      .select(cols as "*")
       .or(["subject", "from_email", "from_name", "snippet", "body_text"].map((c) => `${c}.ilike.${like}`).join(","))
       .order("sent_at", { ascending: false })
-      .limit(200),
-  );
+      .limit(200);
+  const res = await run(INBOX_LIST_COLS);
+  if (res.error && /archived_at|deleted_at|flagged|snoozed_until/.test(res.error.message)) {
+    return unwrap<InboxMessage[]>(await run(INBOX_LIST_COLS.replace(ORGANISE_COLS, "")));
+  }
+  return unwrap<InboxMessage[]>(res);
 }
 export async function insertInboxMessage(row: Partial<InboxMessage>): Promise<void> {
   unwrap(await supabase.from("inbox_messages").insert(row));

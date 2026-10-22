@@ -2053,6 +2053,11 @@ export interface InboxMessage {
   record_id: string | null;
   record_name: string | null;
   job_reference: string | null;
+  /** Organise (0182), in Motion only: Archive, Trash, Flag, Snooze. */
+  archived_at?: string | null;
+  deleted_at?: string | null;
+  flagged?: boolean;
+  snoozed_until?: string | null;
 }
 export type InboxMessagePatch = Partial<
   Pick<
@@ -2066,6 +2071,10 @@ export type InboxMessagePatch = Partial<
     | "body_text"
     | "spam"
     | "marked_unread"
+    | "archived_at"
+    | "deleted_at"
+    | "flagged"
+    | "snoozed_until"
   >
 >;
 export interface InboxState {

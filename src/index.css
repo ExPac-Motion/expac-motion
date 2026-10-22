@@ -6829,6 +6829,121 @@ table.dt .task-title {
 .panel.inbox.expanded .inbox-frame {
   min-height: 72vh;
 }
+/* Inbox › organise (0182): tick boxes, bulk bar, flag, snooze, conversation. */
+.inbox-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+}
+.inbox-row.checked {
+  background: var(--green-tint);
+}
+.inbox-flag {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0 2px;
+  opacity: 0;
+}
+.inbox-row:hover .inbox-flag,
+.inbox-flag.on {
+  opacity: 1;
+}
+.inbox-flag.on {
+  color: var(--orange-ink, #c2410c);
+}
+.inbox-bulk {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 12px;
+  background: var(--night-tint, #eef0ee);
+  border-bottom: 1px solid var(--line);
+}
+.inbox-bulk-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+.inbox-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.inbox-snooze {
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  max-width: 190px;
+}
+.inbox-snooze-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.inbox-snooze-custom input {
+  padding: 3px 6px;
+  font-size: 0.78rem;
+}
+.inbox-organise {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+.btn.inbox-flagged {
+  color: var(--orange-ink, #c2410c);
+  border-color: var(--orange-ink, #c2410c);
+}
+.inbox-convo {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+.inbox-convo-head {
+  padding: 6px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--teal-ink);
+  background: var(--paper, #faf8f3);
+}
+.inbox-convo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--white);
+  padding: 7px 10px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+button.inbox-convo-item:hover {
+  background: var(--teal-tint);
+}
+.inbox-convo-item.on {
+  border-left: 3px solid var(--green);
+  cursor: default;
+}
+.inbox-convo-snippet {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* Inbox › Drafts (0180) and the compose tools row (templates, draft state). */
 .inbox-dot.cat-draft { background: var(--orange, #e8743b); }
 .inbox-compose-tools {

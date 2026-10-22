@@ -11,6 +11,7 @@ import { applyTierMargins } from "./types";
 import { DEFAULT_ROLE_PERMISSIONS, type PermKey } from "./permissions";
 import type {
   ClientSupplierInput,
+  InboxMessage,
   InboxMessagePatch,
   RateTierId,
   MailCampaignPatch,
@@ -1931,6 +1932,28 @@ export function useUpdateInboxMessage() {
     mutationFn: (input: { id: string; patch: InboxMessagePatch }) =>
       db.updateInboxMessage(input.id, input.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+  });
+}
+/** One change on several messages, shown at once (the list updates before
+ *  the server answers, and rolls back if it fails). */
+export function useUpdateInboxMessages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; patch: InboxMessagePatch }) => db.updateInboxMessages(input.ids, input.patch),
+    onMutate: async ({ ids, patch }) => {
+      await qc.cancelQueries({ queryKey: ["inbox"] });
+      const before = qc.getQueryData<InboxMessage[]>(["inbox"]);
+      const set = new Set(ids);
+      qc.setQueryData<InboxMessage[]>(["inbox"], (rows) => rows?.map((m) => (set.has(m.id) ? { ...m, ...patch } : m)));
+      return { before };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.before) qc.setQueryData(["inbox"], ctx.before);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_search"] });
+    },
   });
 }
 export function useSyncInbox() {

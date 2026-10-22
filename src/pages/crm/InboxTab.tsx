@@ -32,6 +32,7 @@ import {
   useSyncInbox,
   useUpdateInboxMessage,
   useUploadMailAsset,
+  useUpdateInboxMessages,
   useInboxDrafts,
   useInboxSearch,
   useMailTemplates,
@@ -52,11 +53,19 @@ import { sendMail } from "../../lib/mail";
 import { htmlToText, resolveMergeFields, type MergeContext } from "../../lib/mailMerge";
 import { linkifyHtml } from "../../lib/mailStyle";
 import { formatDateTime } from "../../lib/format";
-import type { InboxCategory, InboxDraft, InboxDraftFile, InboxMessage, Job, SentMail } from "../../lib/types";
+import type {
+  InboxCategory,
+  InboxDraft,
+  InboxDraftFile,
+  InboxMessage,
+  InboxMessagePatch,
+  Job,
+  SentMail,
+} from "../../lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Folder = "all" | InboxCategory | "spam" | "sent" | "drafts";
-type View = "all" | "unread" | "needs" | "job";
+type Folder = "all" | InboxCategory | "spam" | "sent" | "drafts" | "snoozed" | "archive" | "trash";
+type View = "all" | "unread" | "needs" | "flagged" | "job";
 
 const FOLDERS: { key: Folder; label: string }[] = [
   { key: "all", label: "All mail" },
@@ -65,14 +74,20 @@ const FOLDERS: { key: Folder; label: string }[] = [
   { key: "partner", label: "Suppliers & Agents" },
   { key: "unknown", label: "Other / Unknown" },
   { key: "internal", label: "Internal" },
+  { key: "snoozed", label: "Snoozed" },
+  { key: "archive", label: "Archive" },
   { key: "spam", label: "Spam" },
   { key: "drafts", label: "Drafts" },
   { key: "sent", label: "Sent" },
+  { key: "trash", label: "Trash" },
 ];
+/** Folders that need migration 0182 (archive / trash / flag / snooze). */
+const ORGANISE_FOLDERS: Folder[] = ["snoozed", "archive", "trash"];
 const VIEWS: { key: View; label: string }[] = [
   { key: "all", label: "Everything" },
   { key: "unread", label: "Unread" },
   { key: "needs", label: "Needs reply" },
+  { key: "flagged", label: "Flagged" },
   { key: "job", label: "Linked to a shipment" },
 ];
 const CATEGORY_LABEL: Record<InboxCategory, string> = {
@@ -95,9 +110,33 @@ const RECORD_ROUTE: Record<string, string> = {
  *  send.expac.co.za) never needs a reply. */
 const isOurs = (email: string | null) => /(@|\.)expac\.co\.za$/i.test((email ?? "").trim());
 
+/** Snoozed and not due back yet (0182). */
+const isSnoozed = (m: InboxMessage) => !!m.snoozed_until && new Date(m.snoozed_until).getTime() > Date.now();
+/** Back from a snooze: it counts from its snooze date, and is unread again. */
+const backFromSnooze = (m: InboxMessage) =>
+  !!m.snoozed_until && !isSnoozed(m) && (!m.read_at || m.read_at < m.snoozed_until);
 // Mark unread in the app wins over "read in Outlook" (0136).
 const isUnread = (m: InboxMessage) =>
-  m.direction === "in" && (!!m.marked_unread || (!m.seen && !m.read_at));
+  m.direction === "in" && (!!m.marked_unread || (!m.seen && !m.read_at) || backFromSnooze(m));
+/** Where a message sorts in the list: its arrival, or when it came back from a snooze. */
+const listDate = (m: InboxMessage) => (m.snoozed_until && !isSnoozed(m) ? m.snoozed_until : m.sent_at);
+
+/** Snooze choices: later today, tomorrow and next Monday morning. */
+function snoozeChoices(): { label: string; at: Date }[] {
+  const now = new Date();
+  const at = (days: number, h: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(h, 0, 0, 0);
+    return d;
+  };
+  const out: { label: string; at: Date }[] = [];
+  if (now.getHours() < 16) out.push({ label: "Later today (17:00)", at: at(0, 17) });
+  out.push({ label: "Tomorrow morning (08:00)", at: at(1, 8) });
+  const toMonday = ((8 - now.getDay()) % 7) || 7;
+  out.push({ label: "Next week (Monday 08:00)", at: at(toMonday, 8) });
+  return out;
+}
 /** Newest mail we sent per conversation (Motion or Outlook's Sent folder). */
 type LastOut = Map<string, string>;
 function lastOutByThread(all: InboxMessage[]): LastOut {
@@ -111,6 +150,9 @@ function lastOutByThread(all: InboxMessage[]): LastOut {
 const needsReply = (m: InboxMessage, lastOut?: LastOut) =>
   m.direction === "in" &&
   !m.spam &&
+  // Archived or deleted: dealt with.
+  !m.archived_at &&
+  !m.deleted_at &&
   !m.answered &&
   !m.replied_at &&
   !m.done_at &&
@@ -281,27 +323,44 @@ export default function InboxTab() {
   }, []);
 
   const incoming = all.filter((m) => m.direction === "in");
-  // Spam only shows in the Spam folder.
-  const inFolder = (m: InboxMessage) =>
-    folder === "spam" ? !!m.spam : !m.spam && (folder === "all" || cat(m) === folder);
+  const needle = search.trim().toLowerCase();
+  // Organise (0182) is on once the list carries its columns.
+  const organiseOn = recent.length === 0 || "flagged" in recent[0];
+  // Trash, Spam, Snoozed and Archive each keep their mail out of the other
+  // folders; a search still finds archived mail.
+  const inFolder = (m: InboxMessage) => {
+    if (folder === "trash") return !!m.deleted_at;
+    if (m.deleted_at) return false;
+    if (folder === "spam") return !!m.spam;
+    if (m.spam) return false;
+    if (folder === "snoozed") return isSnoozed(m);
+    if (isSnoozed(m)) return false;
+    if (folder === "archive") return !!m.archived_at;
+    if (m.archived_at && !needle) return false;
+    return folder === "all" || cat(m) === folder;
+  };
   const inView = (m: InboxMessage) =>
     view === "unread"
       ? isUnread(m)
       : view === "needs"
         ? needsReply(m, lastOut)
-        : view === "job"
-          ? !!m.job_id && (!jobFilter || m.job_id === jobFilter)
-          : true;
-  const needle = search.trim().toLowerCase();
-  const rows = (view === "job" ? all : incoming).filter(
-    (m) =>
-      inFolder(m) &&
-      inView(m) &&
-      (!needle ||
-        found.has(m.id) ||
-        [m.subject, m.from_name, m.from_email, m.snippet, m.record_name, m.job_reference, ...(m.to_emails ?? [])]
-          .some((v) => (v ?? "").toLowerCase().includes(needle))),
-  );
+        : view === "flagged"
+          ? !!m.flagged
+          : view === "job"
+            ? !!m.job_id && (!jobFilter || m.job_id === jobFilter)
+            : true;
+  const rows = (view === "job" ? all : incoming)
+    .filter(
+      (m) =>
+        inFolder(m) &&
+        inView(m) &&
+        (!needle ||
+          found.has(m.id) ||
+          [m.subject, m.from_name, m.from_email, m.snippet, m.record_name, m.job_reference, ...(m.to_emails ?? [])]
+            .some((v) => (v ?? "").toLowerCase().includes(needle))),
+    )
+    // Back from a snooze: sorts as if it arrived then.
+    .sort((a, b) => listDate(b).localeCompare(listDate(a)));
   // Nothing picked yet: the reading pane shows the top message of the list
   // (not marked read until it's actually clicked).
   const open = openId === null ? rows[0] ?? null : all.find((m) => m.id === openId) ?? null;
@@ -330,22 +389,84 @@ export default function InboxTab() {
     const forward = d.forward_id ? all.find((m) => m.id === d.forward_id) : undefined;
     setCompose({ draft: d, replyTo, replyAll: d.reply_all, forward });
   }
-  const folders = draftsOn ? FOLDERS : FOLDERS.filter((f) => f.key !== "drafts");
+  const folders = FOLDERS.filter(
+    (f) => (f.key !== "drafts" || draftsOn) && (organiseOn || !ORGANISE_FOLDERS.includes(f.key)),
+  );
 
+  // In the main folders: not deleted, spam, snoozed or archived.
+  const live = (m: InboxMessage) => !m.deleted_at && !m.spam && !isSnoozed(m) && !m.archived_at;
   const folderCount = (f: Folder) =>
     f === "drafts"
       ? drafts.length
-      : f === "spam"
-        ? incoming.filter((m) => m.spam && isUnread(m)).length
-        : incoming.filter((m) => !m.spam && (f === "all" || cat(m) === f) && isUnread(m)).length;
+      : f === "snoozed"
+        ? incoming.filter((m) => !m.deleted_at && isSnoozed(m)).length
+        : f === "archive" || f === "trash"
+          ? 0
+          : f === "spam"
+            ? incoming.filter((m) => m.spam && !m.deleted_at && isUnread(m)).length
+            : incoming.filter((m) => live(m) && (f === "all" || cat(m) === f) && isUnread(m)).length;
   const viewCount = (v: View) =>
     v === "unread"
       ? incoming.filter((m) => inFolder(m) && isUnread(m)).length
       : v === "needs"
         ? incoming.filter((m) => inFolder(m) && needsReply(m, lastOut)).length
-        : v === "job"
-          ? all.filter((m) => inFolder(m) && m.job_id).length
-          : 0;
+        : v === "flagged"
+          ? incoming.filter((m) => inFolder(m) && m.flagged).length
+          : v === "job"
+            ? all.filter((m) => inFolder(m) && m.job_id).length
+            : 0;
+
+  /* ---------- Organise (0182): archive, delete, flag, snooze, in bulk too ---------- */
+  const updateMany = useUpdateInboxMessages();
+  // Ticked emails (cleared when the folder or view changes).
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const toggleChecked = (id: string) =>
+    setChecked((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  /** Apply a change; when it moves the open email out of view, open the next one. */
+  function organise(ids: string[], patch: InboxMessagePatch, done: string, leaves = true) {
+    if (!ids.length) return;
+    if (leaves && open && ids.includes(open.id)) {
+      const at = rows.findIndex((m) => m.id === open.id);
+      const next = rows.slice(at + 1).find((m) => !ids.includes(m.id)) ?? rows.slice(0, at).reverse().find((m) => !ids.includes(m.id));
+      setOpenId(next?.id ?? null);
+    }
+    updateMany.mutate(
+      { ids, patch },
+      {
+        onSuccess: () => toast(done),
+        onError: (e) => error(e instanceof Error ? e.message : "Could not update the email"),
+      },
+    );
+    setChecked(new Set());
+  }
+  const now = () => new Date().toISOString();
+  const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+  const actions = {
+    archive: (ids: string[]) => organise(ids, { archived_at: now(), snoozed_until: null }, `${plural(ids.length, "email")} archived`),
+    unarchive: (ids: string[]) => organise(ids, { archived_at: null }, `${plural(ids.length, "email")} moved back to the inbox`),
+    remove: (ids: string[]) => organise(ids, { deleted_at: now() }, `${plural(ids.length, "email")} moved to Trash`),
+    restore: (ids: string[]) => organise(ids, { deleted_at: null }, `${plural(ids.length, "email")} restored`),
+    flag: (ids: string[], on: boolean) =>
+      organise(ids, { flagged: on }, on ? `${plural(ids.length, "email")} flagged` : "Flag removed", view === "flagged" && !on),
+    read: (ids: string[], on: boolean) =>
+      organise(
+        ids,
+        on ? { read_at: now(), marked_unread: false } : { read_at: null, marked_unread: true },
+        on ? "Marked read" : "Marked unread",
+        false,
+      ),
+    snooze: (ids: string[], until: Date | null) =>
+      organise(
+        ids,
+        until ? { snoozed_until: until.toISOString(), archived_at: null } : { snoozed_until: null },
+        until ? `Snoozed until ${formatDateTime(until.toISOString())}` : "Back in the inbox",
+      ),
+  };
   const linkedJobs = jobs.filter((j) => all.some((m) => m.job_id === j.id));
 
   function select(m: InboxMessage) {
@@ -426,7 +547,10 @@ export default function InboxTab() {
                 key={f.key}
                 type="button"
                 className={`inbox-nav-item${folder === f.key ? " on" : ""}`}
-                onClick={() => setFolder(f.key)}
+                onClick={() => {
+                  setFolder(f.key);
+                  setChecked(new Set());
+                }}
               >
                 <span className={`inbox-dot cat-${f.key}`} />
                 {f.label}
@@ -442,7 +566,10 @@ export default function InboxTab() {
                 key={v.key}
                 type="button"
                 className={`inbox-nav-item${view === v.key ? " on" : ""}`}
-                onClick={() => setView(v.key)}
+                onClick={() => {
+                  setView(v.key);
+                  setChecked(new Set());
+                }}
               >
                 {v.label}
                 {n > 0 && <span className="inbox-count">{n}</span>}
@@ -552,12 +679,25 @@ export default function InboxTab() {
               {all.length === 0 ? "No mail yet, it arrives with the next sync." : "Nothing here."}
             </EmptyState>
           ) : (
-            rows.map((m) => (
+            <>
+            {organiseOn && checked.size > 0 && (
+              <BulkBar
+                ids={rows.filter((m) => checked.has(m.id)).map((m) => m.id)}
+                rows={rows}
+                folder={folder}
+                actions={actions}
+                onAll={() => setChecked(new Set(rows.map((m) => m.id)))}
+                onClear={() => setChecked(new Set())}
+              />
+            )}
+            {rows.map((m) => (
               <div
                 key={m.id}
                 role="button"
                 tabIndex={0}
-                className={`inbox-row${m.id === open?.id ? " on" : ""}${isUnread(m) ? " unread" : ""}`}
+                className={`inbox-row${m.id === open?.id ? " on" : ""}${isUnread(m) ? " unread" : ""}${
+                  checked.has(m.id) ? " checked" : ""
+                }`}
                 onClick={() => select(m)}
                 onDoubleClick={() => {
                   select(m);
@@ -571,6 +711,18 @@ export default function InboxTab() {
                 }}
               >
                 <div className="inbox-row-gutter">
+                  {organiseOn && (
+                    <input
+                      type="checkbox"
+                      className="inbox-check"
+                      checked={checked.has(m.id)}
+                      title="Select (to archive, delete, flag… several at once)"
+                      aria-label="Select this email"
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleChecked(m.id)}
+                    />
+                  )}
                   <span className={`inbox-dot cat-${cat(m)}`} title={CATEGORY_LABEL[cat(m)]} />
                   <button
                     type="button"
@@ -596,6 +748,21 @@ export default function InboxTab() {
                       ? `To: ${m.to_emails[0] ?? ""}`
                       : m.from_name || m.from_email || "(unknown sender)"}
                   </span>
+                  {organiseOn && (
+                    <button
+                      type="button"
+                      className={`inbox-flag${m.flagged ? " on" : ""}`}
+                      title={m.flagged ? "Remove the flag" : "Flag (find it under Views › Flagged)"}
+                      aria-label={m.flagged ? "Remove the flag" : "Flag this email"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        actions.flag([m.id], !m.flagged);
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                    >
+                      {m.flagged ? "⚑" : "⚐"}
+                    </button>
+                  )}
                   <span className="inbox-date">{shortDate(m.sent_at)}</span>
                 </div>
                 <div className="inbox-subject">
@@ -607,11 +774,15 @@ export default function InboxTab() {
                   {m.job_reference && <span className="inbox-chip job">{m.job_reference}</span>}
                   {needsReply(m, lastOut) && <span className="inbox-chip needs">Needs reply</span>}
                   {m.direction === "out" && <span className="inbox-chip">Sent</span>}
+                  {isSnoozed(m) && <span className="inbox-chip">Snoozed until {shortDate(m.snoozed_until as string)}</span>}
+                  {backFromSnooze(m) && <span className="inbox-chip job">Back from snooze</span>}
+                  {m.archived_at && folder !== "archive" && <span className="inbox-chip">Archived</span>}
                   {m.snippet && <span className="inbox-snippet">{m.snippet}</span>}
                 </div>
                 </div>
               </div>
-            ))
+            ))}
+            </>
           )}
         </div>
 
@@ -666,6 +837,11 @@ export default function InboxTab() {
               jobs={jobs}
               replyDraft={drafts.find((d) => d.reply_to_id === open.id)}
               lastOut={lastOut}
+              organise={organiseOn ? actions : undefined}
+              onOpen={(id) => {
+                const m = all.find((x) => x.id === id);
+                if (m) select(m);
+              }}
               onReply={(parsed, replyAll) => {
                 // A reply already started carries on from its draft.
                 const d = drafts.find((x) => x.reply_to_id === open.id);
@@ -710,6 +886,138 @@ export default function InboxTab() {
         />
       )}
     </>
+  );
+}
+
+/** Archive / Trash / Flag / Snooze / Read (0182), on one email or several. */
+interface OrganiseActions {
+  archive: (ids: string[]) => void;
+  unarchive: (ids: string[]) => void;
+  remove: (ids: string[]) => void;
+  restore: (ids: string[]) => void;
+  flag: (ids: string[], on: boolean) => void;
+  read: (ids: string[], on: boolean) => void;
+  snooze: (ids: string[], until: Date | null) => void;
+}
+
+/** Snooze: later today / tomorrow / next week, or a date and time. */
+function SnoozeMenu({ onPick }: { onPick: (until: Date) => void }) {
+  const [custom, setCustom] = useState(false);
+  const [value, setValue] = useState("");
+  if (custom) {
+    const at = value ? new Date(value) : null;
+    const ok = !!at && !isNaN(at.getTime()) && at.getTime() > Date.now();
+    return (
+      <span className="inbox-snooze-custom">
+        <input type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
+        <button
+          type="button"
+          className="btn small outline"
+          disabled={!ok}
+          onClick={() => {
+            if (at && ok) onPick(at);
+            setCustom(false);
+            setValue("");
+          }}
+        >
+          Snooze
+        </button>
+        <button type="button" className="btn ghost small" onClick={() => setCustom(false)} aria-label="Cancel">
+          ✕
+        </button>
+      </span>
+    );
+  }
+  return (
+    <select
+      className="inbox-snooze"
+      value=""
+      title="Hide it until later; it comes back to the top as unread"
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === "custom") setCustom(true);
+        else if (v) onPick(new Date(v));
+      }}
+    >
+      <option value="">⏰ Snooze…</option>
+      {snoozeChoices().map((c) => (
+        <option key={c.label} value={c.at.toISOString()}>
+          {c.label}
+        </option>
+      ))}
+      <option value="custom">Pick a date and time…</option>
+    </select>
+  );
+}
+
+/** Shown above the list while emails are ticked. */
+function BulkBar({
+  ids,
+  rows,
+  folder,
+  actions,
+  onAll,
+  onClear,
+}: {
+  ids: string[];
+  rows: InboxMessage[];
+  folder: Folder;
+  actions: OrganiseActions;
+  onAll: () => void;
+  onClear: () => void;
+}) {
+  const picked = rows.filter((m) => ids.includes(m.id));
+  const anyUnread = picked.some(isUnread);
+  const allFlagged = picked.length > 0 && picked.every((m) => m.flagged);
+  return (
+    <div className="inbox-bulk">
+      <div className="inbox-bulk-head">
+        <strong>{ids.length} selected</strong>
+        {ids.length < rows.length && (
+          <button type="button" className="link-btn" onClick={onAll}>
+            Select all {rows.length}
+          </button>
+        )}
+        <button type="button" className="btn ghost small" onClick={onClear} title="Clear the selection" style={{ marginLeft: "auto" }}>
+          ✕
+        </button>
+      </div>
+      <div className="inbox-bulk-actions">
+        {folder === "trash" ? (
+          <button type="button" className="btn small" onClick={() => actions.restore(ids)}>
+            Restore
+          </button>
+        ) : (
+          <>
+            {folder === "archive" ? (
+              <button type="button" className="btn small outline" onClick={() => actions.unarchive(ids)}>
+                Move to inbox
+              </button>
+            ) : (
+              <button type="button" className="btn small" onClick={() => actions.archive(ids)}>
+                Archive
+              </button>
+            )}
+            <button type="button" className="btn small outline warn" onClick={() => actions.remove(ids)}>
+              Delete
+            </button>
+            <button type="button" className="btn small outline" onClick={() => actions.read(ids, anyUnread)}>
+              {anyUnread ? "Mark read" : "Mark unread"}
+            </button>
+            <button type="button" className="btn small outline" onClick={() => actions.flag(ids, !allFlagged)}>
+              {allFlagged ? "Remove flag" : "Flag"}
+            </button>
+            {folder === "snoozed" ? (
+              <button type="button" className="btn small outline" onClick={() => actions.snooze(ids, null)}>
+                Unsnooze
+              </button>
+            ) : (
+              <SnoozeMenu onPick={(d) => actions.snooze(ids, d)} />
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -800,6 +1108,8 @@ function Reader({
   jobs,
   replyDraft,
   lastOut,
+  organise,
+  onOpen,
   onReply,
   onForward,
 }: {
@@ -809,6 +1119,10 @@ function Reader({
   replyDraft?: InboxDraft;
   thread: InboxMessage[];
   jobs: Job[];
+  /** Archive / Delete / Flag / Snooze (0182); absent until it's run. */
+  organise?: OrganiseActions;
+  /** Open another email of the conversation. */
+  onOpen: (id: string) => void;
   onReply: (parsed: Parsed | undefined, replyAll: boolean) => void;
   onForward: (parsed: Parsed | undefined) => void;
 }) {
@@ -923,6 +1237,61 @@ function Reader({
           {msg.is_bulk && <span className="inbox-chip">Bulk / automated</span>}
         </div>
       </div>
+
+      {organise && msg.direction === "in" && (
+        <div className="inbox-organise">
+          {msg.deleted_at ? (
+            <>
+              <span className="muted">In Trash.</span>
+              <button type="button" className="btn small" onClick={() => organise.restore([msg.id])}>
+                Restore
+              </button>
+            </>
+          ) : (
+            <>
+              {msg.archived_at ? (
+                <button type="button" className="btn small outline" onClick={() => organise.unarchive([msg.id])}>
+                  Move to inbox
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn small outline"
+                  onClick={() => organise.archive([msg.id])}
+                  title="Out of the inbox; still found by search, and under Archive"
+                >
+                  Archive
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn small outline warn"
+                onClick={() => organise.remove([msg.id])}
+                title="Move to Trash (you can restore it from there)"
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                className={`btn small outline${msg.flagged ? " inbox-flagged" : ""}`}
+                onClick={() => organise.flag([msg.id], !msg.flagged)}
+              >
+                {msg.flagged ? "⚑ Flagged" : "⚐ Flag"}
+              </button>
+              {isSnoozed(msg) ? (
+                <>
+                  <span className="muted">Snoozed until {formatDateTime(msg.snoozed_until as string)}</span>
+                  <button type="button" className="btn small outline" onClick={() => organise.snooze([msg.id], null)}>
+                    Unsnooze
+                  </button>
+                </>
+              ) : (
+                <SnoozeMenu onPick={(d) => organise.snooze([msg.id], d)} />
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="inbox-actions">
         {msg.direction === "in" && (
@@ -1050,20 +1419,33 @@ function Reader({
       </div>
 
       {thread.length > 0 && (
-        <details className="inbox-thread">
-          <summary>
-            {thread.length} other message{thread.length === 1 ? "" : "s"} in this conversation
-          </summary>
-          {[...thread]
+        // The whole conversation, oldest first; click one to read it.
+        <div className="inbox-convo">
+          <div className="inbox-convo-head">Conversation · {thread.length + 1} emails</div>
+          {[...thread, msg]
             .sort((a, b) => a.sent_at.localeCompare(b.sent_at))
-            .map((t) => (
-              <div key={t.id} className="inbox-thread-item">
-                <strong>{t.direction === "out" ? "ExPac" : t.from_name || t.from_email}</strong>
-                <span className="muted"> · {formatDateTime(t.sent_at)}</span>
-                <div className="muted">{t.snippet || t.subject}</div>
-              </div>
-            ))}
-        </details>
+            .map((t) =>
+              t.id === msg.id ? (
+                <div key={t.id} className="inbox-convo-item on">
+                  <strong>{t.direction === "out" ? "ExPac" : t.from_name || t.from_email}</strong>
+                  <span className="muted"> · {formatDateTime(t.sent_at)} · reading now</span>
+                </div>
+              ) : (
+                <button key={t.id} type="button" className="inbox-convo-item" onClick={() => onOpen(t.id)}>
+                  <span>
+                    <strong>
+                      {t.direction === "out"
+                        ? `ExPac${t.mailbox?.endsWith(":sent") ? " (Outlook)" : ""}`
+                        : t.from_name || t.from_email}
+                    </strong>
+                    <span className="muted"> · {formatDateTime(t.sent_at)}</span>
+                    {t.deleted_at && <span className="inbox-chip">In Trash</span>}
+                  </span>
+                  <span className="muted inbox-convo-snippet">{t.snippet || t.subject}</span>
+                </button>
+              ),
+            )}
+        </div>
       )}
 
       {imagesHeld && (
