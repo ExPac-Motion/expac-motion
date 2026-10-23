@@ -147,6 +147,7 @@ export function RowActions({
   mailTitle = "Send a message",
   mailUnread = false,
   mailDue = false,
+  mailDueTitle = "no Shipment Comms sent today yet",
   onTask,
   taskTitle = "Create a task",
   taskOpen = false,
@@ -168,6 +169,8 @@ export function RowActions({
   mailUnread?: boolean;
   /** Fills the mail icon orange: today's update hasn't been sent yet. */
   mailDue?: boolean;
+  /** Tooltip suffix while `mailDue` is set. */
+  mailDueTitle?: string;
   /** When set, a task icon is shown, opens a new task pre-linked to this row. */
   onTask?: () => void;
   taskTitle?: string;
@@ -208,7 +211,7 @@ export function RowActions({
       {onMail && (
         <button
           className={`row-icon-btn${mailUnread ? " has-unread" : ""}${mailDue ? " mail-due" : ""}`}
-          title={`${mailTitle}${mailUnread ? ", new reply" : ""}${mailDue ? ", no Shipment Comms sent today yet" : ""}`}
+          title={`${mailTitle}${mailUnread ? ", new reply" : ""}${mailDue ? `, ${mailDueTitle}` : ""}`}
           onClick={stop(onMail)}
         >
           {ROW_ICON.mail}

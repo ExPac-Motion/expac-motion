@@ -1064,6 +1064,22 @@ export async function listUnreadQuoteMessages(): Promise<
   );
 }
 
+/** Quote emails sent out today (since local midnight): which quotes have
+ *  had their daily follow-up, for the Quotations envelope. */
+export async function listQuoteEmailsSentToday(): Promise<{ quote_id: string; to_emails: string[]; cc_emails: string[] }[]> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return unwrap<{ quote_id: string; to_emails: string[]; cc_emails: string[] }[]>(
+    await supabase
+      .from("quote_messages")
+      .select("quote_id, to_emails, cc_emails")
+      .eq("kind", "email")
+      .eq("direction", "out")
+      .neq("status", "failed")
+      .gte("created_at", start.toISOString()),
+  );
+}
+
 /** Marks every unread customer reply on a quote as read, called when
  *  staff opens its Comms panel. */
 export async function markQuoteMessagesRead(quoteId: string): Promise<void> {

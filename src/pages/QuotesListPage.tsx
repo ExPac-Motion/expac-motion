@@ -23,6 +23,7 @@ import {
   useMarkQuoteMessagesRead,
   useOpsTasks,
   useProfiles,
+  useQuoteEmailsSentToday,
   useQuotes,
   useSaveQuote,
   useSetQuoteNotes,
@@ -144,6 +145,24 @@ export default function QuotesListPage() {
     [unreadMessagesQ.data],
   );
   const markRead = useMarkQuoteMessagesRead();
+  // Daily follow-up: New Lead / Quote Sent quotes with no email to the
+  // customer since midnight get an orange envelope (as on Active Shipments).
+  const sentTodayQ = useQuoteEmailsSentToday();
+  const mailedToday = useMemo(() => {
+    const domain = (e: string) => e.trim().toLowerCase().split("@")[1] ?? "";
+    const byQuote = new Map<string, string[]>();
+    for (const m of sentTodayQ.data ?? [])
+      byQuote.set(m.quote_id, [...(byQuote.get(m.quote_id) ?? []), ...(m.to_emails ?? []), ...(m.cc_emails ?? [])]);
+    const set = new Set<string>();
+    for (const q of quotes ?? []) {
+      const to = byQuote.get(q.id);
+      if (!to || to.length === 0) continue;
+      const ce = (q.client?.email ?? q.lead?.email ?? "").trim().toLowerCase();
+      // To the customer (their address or company domain); no customer email = any.
+      if (!ce || to.some((e) => e.trim().toLowerCase() === ce || domain(e) === domain(ce))) set.add(q.id);
+    }
+    return set;
+  }, [sentTodayQ.data, quotes]);
 
   function openQuoteComms(q: Quote) {
     setCommsQuote(q);
@@ -253,6 +272,12 @@ export default function QuotesListPage() {
             onMail={() => openQuoteComms(q)}
             mailTitle="Messages / email the customer"
             mailUnread={unreadQuoteIds.has(q.id)}
+            mailDue={
+              (q.status === "open" || q.status === "sent") &&
+              !sentTodayQ.isLoading &&
+              !mailedToday.has(q.id)
+            }
+            mailDueTitle="no mail sent to the customer today yet"
             onTask={() => setTaskingQuote(q)}
             taskTitle="Create a task for this quote"
             taskOpen={openTaskQuoteIds.has(q.id)}
@@ -583,7 +608,7 @@ export default function QuotesListPage() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sel, totalsByQuote, navigate, salesPeople, openTaskQuoteIds, unreadQuoteIds]);
+  }, [sel, totalsByQuote, navigate, salesPeople, openTaskQuoteIds, unreadQuoteIds, mailedToday, sentTodayQ.isLoading]);
 
   return (
     <>

@@ -682,6 +682,15 @@ export function useUnreadQuoteMessages() {
   });
 }
 
+/** Quote emails sent today (the Quotations "no mail sent yet today" envelope). */
+export function useQuoteEmailsSentToday() {
+  return useQuery({
+    queryKey: ["quote_messages", "sent-today"],
+    queryFn: db.listQuoteEmailsSentToday,
+    refetchInterval: 60_000,
+  });
+}
+
 export function useMarkQuoteMessagesRead() {
   const qc = useQueryClient();
   return useMutation({
@@ -777,8 +786,10 @@ export function useSendQuoteMessage() {
         throw e;
       }
     },
-    onSuccess: (_m, input) =>
-      qc.invalidateQueries({ queryKey: ["quote_messages", input.quote.id] }),
+    onSuccess: (_m, input) => {
+      qc.invalidateQueries({ queryKey: ["quote_messages", input.quote.id] });
+      qc.invalidateQueries({ queryKey: ["quote_messages", "sent-today"] });
+    },
     onError: (_e, input) =>
       qc.invalidateQueries({ queryKey: ["quote_messages", input.quote.id] }),
   });
