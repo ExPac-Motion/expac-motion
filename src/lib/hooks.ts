@@ -1729,6 +1729,18 @@ export function useDeleteJob() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 }
+/** Shipment back to Quote Sent (removes it from Active Shipments). */
+export function useRevertJobToQuote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.revertJobToQuote,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["ops_tasks"] });
+    },
+  });
+}
 export function useUpdateJobsBulk() {
   const qc = useQueryClient();
   return useMutation({

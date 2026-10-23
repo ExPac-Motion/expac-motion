@@ -697,6 +697,33 @@ export async function deleteJob(id: string): Promise<void> {
   unwrap(await supabase.from("jobs").delete().eq("id", id));
 }
 
+/** Undo an accepted quote: deletes the shipment (its comms, documents and
+ *  tracking cascade with it) and its still-open auto-created tasks, then
+ *  puts the originating quote back to Quote Sent. */
+export async function revertJobToQuote(job: Pick<Job, "id" | "quote_id">): Promise<void> {
+  if (!job.quote_id) throw new Error("This shipment has no originating quote");
+  unwrap(
+    await supabase
+      .from("ops_tasks")
+      .delete()
+      .eq("job_id", job.id)
+      .eq("kind", "task")
+      .neq("status", "done")
+      .in("title", [
+        "Request commercial invoice",
+        "Book carrier",
+        "Send booking confirmation to customer",
+      ]),
+  );
+  unwrap(await supabase.from("jobs").delete().eq("id", job.id));
+  unwrap(
+    await supabase
+      .from("quotes")
+      .update({ status: "sent", accepted_at: null, updated_at: new Date().toISOString() })
+      .eq("id", job.quote_id),
+  );
+}
+
 /** Apply one patch to every listed job (Bulk Edit on the Shipments board). */
 export async function updateJobsBulk(
   ids: string[],

@@ -42,6 +42,7 @@ import {
   useEmailsSentToday,
   useUpdateJob,
   useUpdateJobsBulk,
+  useRevertJobToQuote,
   useUpdateShipmentDocument,
   useUploadShipmentDocument,
   useCan,
@@ -1010,15 +1011,48 @@ function JobViewModal({
   onClose: () => void;
   onEdit: () => void;
 }) {
+  const revert = useRevertJobToQuote();
+  const { toast, error: toastError } = useToast();
+  const canDelete = useCan()("delete");
+  // Customer not ready yet: back to Quote Sent, off the board, re-accept later.
+  const canRevert =
+    !!job.quote_id && job.shipment_status !== DELIVERED_STATUS && canDelete;
+  async function onRevert() {
+    if (
+      !window.confirm(
+        `Move ${job.reference} back to Quote Sent?\n\nThe shipment is removed from Active Shipments, along with its emails, documents and tracking. The quotation stays and can be accepted again later.`,
+      )
+    )
+      return;
+    try {
+      await revert.mutateAsync(job);
+      toast(`${job.reference} moved back to Quote Sent`);
+      onClose();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not move it back to a quote");
+    }
+  }
   return (
     <Modal
       title={job.reference}
       onClose={onClose}
       wide
       headerActions={
-        <button className="btn outline" onClick={onEdit}>
-          Edit
-        </button>
+        <>
+          {canRevert && (
+            <button
+              className="btn outline"
+              onClick={onRevert}
+              disabled={revert.isPending}
+              title="Remove this shipment and put its quotation back to Quote Sent"
+            >
+              Back to Quote Sent
+            </button>
+          )}
+          <button className="btn outline" onClick={onEdit}>
+            Edit
+          </button>
+        </>
       }
     >
       <div className="grid2">
