@@ -107,8 +107,8 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
   const preview = useMemo(
     () =>
       template === "reply"
-        ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies).text
-        : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms).text,
+        ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies, settings?.mail_signature_html).text
+        : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms, settings?.mail_signature_html).text,
     [quote, remarks, settings, template],
   );
 

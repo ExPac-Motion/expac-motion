@@ -368,6 +368,55 @@ function insertAfterLabelLine(text: string, label: string, line: string): string
   return [...before, "", line, "", ...after].join("\n");
 }
 
+/** The saved email signature (Settings → Email, the one Inbox uses)
+ *  replaces a template's own typed sign-off: everything from its last
+ *  "Kind Regards" / "Thank you" line down is dropped. Done on the template
+ *  before merging, so the operator's remarks are never cut. */
+function withoutTypedSignature(
+  tpl: ShipmentCommsTemplate,
+  signatureHtml?: string | null,
+): ShipmentCommsTemplate {
+  if (!signatureHtml?.trim()) return tpl;
+  const lines = tpl.body.split("\n");
+  let cut = -1;
+  lines.forEach((l, i) => {
+    if (SIGNOFF_LINE.test(l.trim())) cut = i;
+  });
+  if (cut === -1) return tpl;
+  return { ...tpl, body: lines.slice(0, cut).join("\n").trimEnd() };
+}
+
+/** Plain-text counterpart of the HTML signature, for the text part of the
+ *  email and the Comms preview. */
+function signatureText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(tr|p|div|h\d|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l, i, a) => l !== "" || (i > 0 && a[i - 1] !== ""))
+    .join("\n")
+    .trim();
+}
+
+/** Append the saved signature to a built email (both parts). */
+function withSignature(mail: BuiltEmail, signatureHtml?: string | null): BuiltEmail {
+  const sig = signatureHtml?.trim();
+  if (!sig) return mail;
+  return {
+    subject: mail.subject,
+    text: `${mail.text.trimEnd()}\n\n${signatureText(sig)}`,
+    html: mail.html.replace(/<\/div>\s*$/, `<br>${sig}\n</div>`),
+  };
+}
+
 /** Wrap the plain-text body in the branded HTML shell. `boldHeadings` (the
  *  shipment status-update body, not the free-text reply) also bolds the
  *  first line, the customer's name, upper-cased, and the label on every
@@ -432,8 +481,12 @@ export function buildShipmentEmail(
   _tracking: JobTracking | undefined,
   remarks: string,
   config?: ShipmentCommsConfig | null,
+  signatureHtml?: string | null,
 ): BuiltEmail {
-  const tpl = shipmentCommsTemplate(shipmentModeKey(job.mode), config);
+  const tpl = withoutTypedSignature(
+    shipmentCommsTemplate(shipmentModeKey(job.mode), config),
+    signatureHtml,
+  );
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
   // Plain-text counterpart of the button shipmentEmailHtml inlines into the
   // html version, same spot, under Provisional Delivery Date.
@@ -442,7 +495,10 @@ export function buildShipmentEmail(
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(job)}`,
   );
-  return { subject, text: textWithLink, html: shipmentEmailHtml(text, true, job) };
+  return withSignature(
+    { subject, text: textWithLink, html: shipmentEmailHtml(text, true, job) },
+    signatureHtml,
+  );
 }
 
 /**
@@ -455,8 +511,12 @@ export function buildShipmentReply(
   job: Job,
   remarks: string,
   config?: ShipmentCommsConfig | null,
+  signatureHtml?: string | null,
 ): BuiltEmail {
-  const tpl = shipmentReplyTemplate(shipmentModeKey(job.mode), config);
+  const tpl = withoutTypedSignature(
+    shipmentReplyTemplate(shipmentModeKey(job.mode), config),
+    signatureHtml,
+  );
   const { subject, text } = renderShipmentEmail(job, tpl, remarks);
   // No Provisional Delivery Date line in the Reply body, so this falls back
   // to appending at the end, same fallback shipmentEmailHtml uses below.
@@ -465,7 +525,10 @@ export function buildShipmentReply(
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(job)}`,
   );
-  return { subject, text: textWithLink, html: shipmentEmailHtml(text, false, job) };
+  return withSignature(
+    { subject, text: textWithLink, html: shipmentEmailHtml(text, false, job) },
+    signatureHtml,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -644,19 +707,22 @@ export function buildQuoteCommsEmail(
   quote: Quote,
   remarks: string,
   config?: ShipmentCommsConfig | null,
+  signatureHtml?: string | null,
 ): BuiltEmail {
-  const tpl = quotationCommsTemplate(shipmentModeKey(quote.mode), config);
+  const tpl = withoutTypedSignature(
+    quotationCommsTemplate(shipmentModeKey(quote.mode), config),
+    signatureHtml,
+  );
   const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
   const textWithLink = insertAfterLabelLine(
     text,
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(quote)}`,
   );
-  return {
-    subject,
-    text: textWithLink,
-    html: shipmentEmailHtml(text, true, quote),
-  };
+  return withSignature(
+    { subject, text: textWithLink, html: shipmentEmailHtml(text, true, quote) },
+    signatureHtml,
+  );
 }
 
 /**
@@ -668,8 +734,12 @@ export function buildQuoteCommsReply(
   quote: Quote,
   remarks: string,
   config?: ShipmentCommsConfig | null,
+  signatureHtml?: string | null,
 ): BuiltEmail {
-  const tpl = quotationReplyTemplate(shipmentModeKey(quote.mode), config);
+  const tpl = withoutTypedSignature(
+    quotationReplyTemplate(shipmentModeKey(quote.mode), config),
+    signatureHtml,
+  );
   const { subject, text } = renderQuoteEmail(quote, tpl, remarks);
   // No Provisional Delivery Date line in the Reply body, so this falls back
   // to appending at the end, same fallback shipmentEmailHtml uses below.
@@ -678,9 +748,8 @@ export function buildQuoteCommsReply(
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(quote)}`,
   );
-  return {
-    subject,
-    text: textWithLink,
-    html: shipmentEmailHtml(text, false, quote),
-  };
+  return withSignature(
+    { subject, text: textWithLink, html: shipmentEmailHtml(text, false, quote) },
+    signatureHtml,
+  );
 }

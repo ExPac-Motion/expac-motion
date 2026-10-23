@@ -696,7 +696,9 @@ function EmailTab() {
             onUploadImage={(file) => uploadAsset.mutateAsync(file)}
           />
           <span className="hint">
-            Added to the bottom of every campaign and follow-up email.
+            Added to the bottom of every email: Inbox, campaigns, follow-ups,
+            and Shipment / Quotation Comms and Replies (in place of the
+            template's own typed sign-off from "Kind Regards" / "Thank you" down).
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>

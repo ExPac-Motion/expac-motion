@@ -584,8 +584,8 @@ export function useSendMessage() {
       const settings = await db.getCompanySettings().catch(() => null);
       const mail =
         template === "reply"
-          ? buildShipmentReply(job, remarks, settings?.shipment_replies)
-          : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms);
+          ? buildShipmentReply(job, remarks, settings?.shipment_replies, settings?.mail_signature_html)
+          : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms, settings?.mail_signature_html);
       // The thread keeps a note of what went out attached (not in the email).
       const body = picks.length
         ? `${mail.text}
@@ -728,8 +728,8 @@ export function useSendQuoteMessage() {
       const settings = await db.getCompanySettings().catch(() => null);
       const mail =
         template === "reply"
-          ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies)
-          : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms);
+          ? buildQuoteCommsReply(quote, remarks, settings?.quotation_replies, settings?.mail_signature_html)
+          : buildQuoteCommsEmail(quote, remarks, settings?.quotation_comms, settings?.mail_signature_html);
       const attachedNames = [
         ...(attachQuote ? ["Quotation"] : []),
         ...picks.map((p) => p.label),

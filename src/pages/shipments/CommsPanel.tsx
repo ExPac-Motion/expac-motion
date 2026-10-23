@@ -108,8 +108,8 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
   const preview = useMemo(
     () =>
       template === "reply"
-        ? buildShipmentReply(job, remarks, settings?.shipment_replies).text
-        : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms)
+        ? buildShipmentReply(job, remarks, settings?.shipment_replies, settings?.mail_signature_html).text
+        : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms, settings?.mail_signature_html)
             .text,
     [job, remarks, settings, template],
   );
