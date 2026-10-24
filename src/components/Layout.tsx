@@ -290,10 +290,6 @@ export default function Layout() {
     };
     return byLink[to] ?? 0;
   };
-  /** A top tab's count: all active shipments for Shipments; otherwise the
-   *  sum of the counts on the sub-tabs this login can see. */
-  const moduleCount = (m: NavModule): number =>
-    m.to === "/jobs" ? linkCount("/jobs") : (m.children ?? []).reduce((n, c) => n + linkCount(c.to), 0);
 
   return (
     <div className="app-shell">
@@ -309,8 +305,8 @@ export default function Layout() {
               to={m.to}
               className={`topbar-tab${activeModule === m ? " active" : ""}`}
             >
+              {/* Counts sit on the sub-nav links only, not the top tabs. */}
               {m.label}
-              {badge(moduleCount(m))}
             </Link>
           ))}
         </nav>
