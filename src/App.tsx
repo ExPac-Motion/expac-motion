@@ -19,6 +19,7 @@ import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
 import InboxDemoPage from "./pages/InboxDemoPage";
 import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
+import { DECK_DEMO, DeckDemoSeed } from "./pages/DeckDemoSeed";
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
@@ -127,6 +128,8 @@ function NeedsAnyPerm({ perms, children }: { perms: PermKey[]; children: ReactNo
 function PortalProtected() {
   const { session, loading } = useAuth();
   const profileQ = useMyProfile();
+  // Presentation screenshots (dev only): the sample customer, no login.
+  if (DECK_DEMO) return <PortalLayout />;
   if (loading || (session && profileQ.isLoading)) {
     return <div className="center-note">Loading…</div>;
   }
@@ -363,7 +366,13 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <AppGate />
+      {DECK_DEMO ? (
+        <DeckDemoSeed>
+          <AppGate />
+        </DeckDemoSeed>
+      ) : (
+        <AppGate />
+      )}
     </AuthProvider>
   );
 }
