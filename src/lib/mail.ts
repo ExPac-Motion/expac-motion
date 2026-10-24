@@ -38,14 +38,28 @@ interface SendMailResult {
   error?: string;
 }
 
+/** The sender name from Settings → Email, null when it can't be read (e.g.
+ *  a portal login, whose mail the server labels itself). */
+async function settingsSenderName(): Promise<string | null> {
+  const { data } = await supabase.from("company_settings").select("mail_sender_name").eq("id", 1).maybeSingle();
+  const name = (data as { mail_sender_name?: string } | null)?.mail_sender_name?.trim();
+  return name || null;
+}
+
 /**
  * Send a customer email through the /api/send-mail Cloudflare Pages Function
- * (which holds the Resend key). Returns the Resend message id.
+ * (which holds the Resend key). Returns the Resend message id. Without a
+ * `fromName` the Settings sender name is used (chat, portal invites, POD and
+ * warehouse notices), not the server's MAIL_FROM default.
  */
 export async function sendMail(input: SendMailInput): Promise<{ id: string }> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+  if (!input.fromName) {
+    const name = await settingsSenderName().catch(() => null);
+    if (name) input = { ...input, fromName: name };
+  }
 
   const res = await fetch("/api/send-mail", {
     method: "POST",
