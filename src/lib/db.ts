@@ -2111,12 +2111,15 @@ export async function unsubscribeLead(recipientId: string): Promise<boolean> {
 }
 
 /** Public "track by shipment number" page -- callable with no session
- *  (anon role). Exact match on the reference; null when not found. */
+ *  (anon role). Exact match on the reference; null when not found. `key`
+ *  is the private link key from a Comms email (0186), which adds the
+ *  customer, shipper and PO number. */
 export async function trackShipment(
   reference: string,
+  key?: string | null,
 ): Promise<TrackedShipment | null> {
   return unwrap<TrackedShipment | null>(
-    await supabase.rpc("track_shipment", { p_reference: reference }),
+    await supabase.rpc("track_shipment", { p_reference: reference, p_key: key || null }),
   );
 }
 

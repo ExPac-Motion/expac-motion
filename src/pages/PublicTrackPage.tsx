@@ -21,6 +21,8 @@ import type { TrackedShipment } from "../lib/types";
 export default function PublicTrackPage() {
   const [searchParams] = useSearchParams();
   const initialRef = searchParams.get("ref") ?? "";
+  // The email link's private key (0186), only for the number it came with.
+  const linkKey = searchParams.get("k") ?? "";
   const [input, setInput] = useState(initialRef);
   const [state, setState] = useState<"idle" | "loading" | "found" | "notfound" | "error">(
     "idle",
@@ -31,7 +33,7 @@ export default function PublicTrackPage() {
     if (!ref) return;
     setState("loading");
     try {
-      const r = await trackShipment(ref);
+      const r = await trackShipment(ref, ref === initialRef ? linkKey : null);
       setResult(r);
       setState(r ? "found" : "notfound");
     } catch {
@@ -96,8 +98,9 @@ export default function PublicTrackPage() {
             <div className="panel">
               <div className="track-fields">
                 <Field label="Shipment Number" value={result.reference} />
-                <Field label="Reference" value={result.customer_ref || "—"} />
-                <Field label="Shipper Name" value={result.shipper || "—"} />
+                {/* Only with the private link key (0186), from the customer's email. */}
+                {result.customer_ref && <Field label="Reference" value={result.customer_ref} />}
+                {result.shipper && <Field label="Shipper Name" value={result.shipper} />}
                 <Field label="Mode" value={result.mode} />
                 <Field label="Status" value={result.status || "—"} />
                 <Field label={carrierLabel(result.mode)} value={result.carrier || "—"} />

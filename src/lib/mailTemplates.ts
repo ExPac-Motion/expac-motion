@@ -347,8 +347,11 @@ const TRACKING_ANCHOR_LABEL = "Provisional Delivery Date:";
 
 /** Job and Quote share the same reference/shipment number, a quote not
  *  yet accepted just won't have tracking data yet on the other end. */
-function trackingUrl(entity: { reference: string }): string {
-  return `${PUBLIC_APP_URL}/track?ref=${encodeURIComponent(entity.reference)}`;
+function trackingUrl(entity: { reference: string; track_key?: string }): string {
+  // The private key (0186) is what lets the customer see their company,
+  // shipper and PO there; a typed / guessed number shows the status only.
+  const key = entity.track_key ? `&k=${encodeURIComponent(entity.track_key)}` : "";
+  return `${PUBLIC_APP_URL}/track?ref=${encodeURIComponent(entity.reference)}${key}`;
 }
 
 /** Insert `line` right after the line containing `label`, with exactly one
@@ -429,7 +432,7 @@ function withSignature(mail: BuiltEmail, signatureHtml?: string | null): BuiltEm
 export function shipmentEmailHtml(
   text: string,
   boldHeadings = false,
-  entity?: { reference: string },
+  entity?: { reference: string; track_key?: string },
 ): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

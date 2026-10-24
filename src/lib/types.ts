@@ -1268,6 +1268,8 @@ export interface QuoteLine {
 
 export interface Quote {
   id: string;
+  /** Private key on the Live Tracking link in quote emails (0186). */
+  track_key?: string;
   /** System shipment number (AIR/SEA/CX/RDX + 6 digits), never changes. */
   reference: string;
   /** Operator-typed customer reference / customer PO for this enquiry. */
@@ -1430,6 +1432,9 @@ export interface Job {
   id: string;
   quote_id: string | null;
   reference: string;
+  /** Private key on the Live Tracking link (0186); unlocks customer,
+   *  shipper and PO on the public track page. Undefined before 0186. */
+  track_key?: string;
   client_id: string | null;
   supplier_id: string | null;
   origin: string | null;
@@ -1825,6 +1830,9 @@ export interface TrackedShipmentEvent {
 export interface TrackedShipment {
   reference: string;
   mode: string;
+  /** Opened with the shipment's private link key (0186): customer, shipper
+   *  and PO are filled in only then. */
+  full_view?: boolean;
   customer: string | null;
   status: string | null;
   carrier: string | null;
