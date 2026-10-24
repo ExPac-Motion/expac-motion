@@ -157,7 +157,8 @@ export default function PortalSignupPage() {
         <div className="auth-card">
           <h1>Invite not found</h1>
           <p className="sub">
-            This link is invalid or has already been used. Ask ExPac for a new one.
+            This link is invalid, has expired (invites last 30 days) or has
+            already been used. Ask ExPac for a new one.
           </p>
         </div>
       </div>

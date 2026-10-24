@@ -42,15 +42,27 @@ export async function onRequest(context) {
   const url = new URL(context.request.url);
   const host = url.hostname;
 
+  const headers = new Headers(response.headers);
   if (host !== PRODUCTION_HOST) {
-    const headers = new Headers(response.headers);
     headers.set("X-Robots-Tag", "noindex, nofollow");
-    response = new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
   }
+  // Security headers on every response. Motion pages can't be framed by
+  // another site (clickjacking); hosted web forms (/forms/:id) stay
+  // embeddable, the expac.co.za website frames the quote form.
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (url.protocol === "https:") {
+    headers.set("Strict-Transport-Security", "max-age=31536000");
+  }
+  if (!url.pathname.startsWith("/forms/")) {
+    headers.set("Content-Security-Policy", "frame-ancestors 'self'");
+    headers.set("X-Frame-Options", "SAMEORIGIN");
+  }
+  response = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 
   if (
     url.pathname.startsWith("/forms/") &&
