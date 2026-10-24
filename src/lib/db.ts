@@ -1198,6 +1198,40 @@ export async function getInvite(token: string): Promise<Pick<ClientInvite, "emai
 
 export async function claimClientInvite(token: string): Promise<void> {
   unwrap(await supabase.rpc("claim_client_invite", { p_token: token }));
+  forgetPendingInvite();
+}
+
+/* An invited customer who confirms their email from the confirmation link
+ * lands on "Waiting on approval" before their invite is claimed. The invite
+ * page remembers the token in this browser so that screen can offer
+ * "Finish setting up" (claim_client_invite only accepts the invited email,
+ * 0185, so a remembered token is no use to anyone else). */
+const PENDING_INVITE_KEY = "expac:portal-invite";
+export interface PendingInvite {
+  token: string;
+  email: string;
+}
+export function rememberPendingInvite(invite: PendingInvite): void {
+  try {
+    localStorage.setItem(PENDING_INVITE_KEY, JSON.stringify(invite));
+  } catch {
+    // Storage blocked: the invite link still works by opening it again.
+  }
+}
+export function pendingInvite(): PendingInvite | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(PENDING_INVITE_KEY) || "null");
+    return v && typeof v.token === "string" ? { token: v.token, email: String(v.email || "") } : null;
+  } catch {
+    return null;
+  }
+}
+export function forgetPendingInvite(): void {
+  try {
+    localStorage.removeItem(PENDING_INVITE_KEY);
+  } catch {
+    // nothing to clear
+  }
 }
 
 /** Self-serve portal signups awaiting staff approval (portal_status='pending'). */

@@ -2,7 +2,7 @@ import { BRAND_LOGO_URL } from "../../lib/supabase";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import { claimClientInvite, getInvite } from "../../lib/db";
+import { claimClientInvite, getInvite, rememberPendingInvite } from "../../lib/db";
 import { PORTAL_SIGNUP_ENABLED, PORTAL_SIGNUP_NOTIFY_EMAIL } from "../../lib/flags";
 import { useInvite } from "../../lib/hooks";
 import { sendMail } from "../../lib/mail";
@@ -25,7 +25,7 @@ export default function PortalSignupPage() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   const navigate = useNavigate();
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, session } = useAuth();
   const inviteQ = useInvite(token || undefined);
 
   const [email, setEmail] = useState("");
@@ -65,6 +65,9 @@ export default function PortalSignupPage() {
       // as staff. See 0068_portal_self_signup.sql for the same pattern on
       // the self-serve signup path.
       await signUp(email, password, email, { signup_kind: "portal" });
+      // If they confirm from the email link instead of clicking Continue
+      // here, "Waiting on approval" can still finish the claim.
+      rememberPendingInvite({ token, email });
       try {
         await signIn(email, password);
       } catch {
@@ -76,6 +79,20 @@ export default function PortalSignupPage() {
         );
         return;
       }
+      await finishClaim();
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Already signed in as the invited address (they confirmed from the
+   *  email link): one click claims, on this person's explicit say-so. */
+  async function onFinishSignedIn() {
+    setErr("");
+    setBusy(true);
+    try {
       await finishClaim();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Something went wrong");
@@ -142,6 +159,42 @@ export default function PortalSignupPage() {
           <p className="sub">
             This link is invalid or has already been used. Ask ExPac for a new one.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  const signedInEmail = session?.user.email?.trim().toLowerCase() ?? "";
+  if (signedInEmail && invitedEmail && signedInEmail === invitedEmail.trim().toLowerCase()) {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="brand">
+            <div className="brand-mark">
+              <img src={BRAND_LOGO_URL} alt="EXPAC" />
+            </div>
+            <div>
+              <div className="brand-name">EXPAC</div>
+              <div className="brand-sub" style={{ color: "var(--muted)" }}>
+                CUSTOMER PORTAL
+              </div>
+            </div>
+          </div>
+          <h1>Finish setting up</h1>
+          <p className="sub">
+            You're signed in as {session?.user.email}. One last step links this
+            login to your company's portal.
+          </p>
+          {err && <div className="auth-error">{err}</div>}
+          <button
+            className="btn"
+            type="button"
+            disabled={busy}
+            onClick={onFinishSignedIn}
+            style={{ width: "100%", justifyContent: "center" }}
+          >
+            {busy ? "Please wait…" : "Finish setting up"}
+          </button>
         </div>
       </div>
     );
