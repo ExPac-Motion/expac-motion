@@ -41,7 +41,7 @@ async function verifyUser(env, authHeader) {
 }
 
 /** Staff = profiles.role admin / user, mirrors public.is_staff(), including
- *  treating a not-yet-created profile row as staff. Read with the caller's own
+ *  where a login with no profile row is NOT staff (0185). Read with the caller's own
  *  token, so RLS lets them see only their own profile. */
 async function isStaffUser(env, authHeader, userId) {
   try {
@@ -51,7 +51,7 @@ async function isStaffUser(env, authHeader, userId) {
     );
     if (!r.ok) return false;
     const rows = await r.json();
-    if (!Array.isArray(rows) || rows.length === 0) return true;
+    if (!Array.isArray(rows) || rows.length === 0) return false;
     return rows[0].role === "admin" || rows[0].role === "user";
   } catch {
     return false;

@@ -2664,6 +2664,11 @@ select.badge-select.lost {
   padding: 0;
   margin-bottom: 20px;
 }
+/* The wordmark is light for the dark sidebar; on the white sign-in cards
+   (signup, waiting on approval) it needs the ink colour to be readable. */
+.auth-card .brand-name {
+  color: var(--ink);
+}
 .auth-card h1 {
   font-size: 1.4rem;
   margin-bottom: 4px;

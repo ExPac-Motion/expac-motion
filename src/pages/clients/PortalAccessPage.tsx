@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   EmptyState,
+  ErrorNote,
   Loading,
   PageHeader,
 } from "../../components/common";
@@ -81,6 +82,9 @@ function PendingSignups() {
       <h3 style={{ marginTop: 0 }}>Awaiting approval</h3>
       {pendingQ.isLoading ? (
         <Loading />
+      ) : pendingQ.isError ? (
+        // A failed read must not look like "nobody waiting".
+        <ErrorNote error={pendingQ.error} />
       ) : rows.length === 0 ? (
         <EmptyState>No portal signups waiting for approval.</EmptyState>
       ) : (

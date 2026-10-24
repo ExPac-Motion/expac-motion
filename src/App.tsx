@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { previewActive } from "./lib/db";
 import {
   BrowserRouter,
@@ -19,7 +19,13 @@ import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
 import InboxDemoPage from "./pages/InboxDemoPage";
 import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
-import { DECK_DEMO, DeckDemoSeed } from "./pages/DeckDemoSeed";
+// Presentation screenshot mode (dev only). The flag is written out here, not
+// imported, so a production build folds it to false and drops the sample
+// data module (DeckDemoSeed.tsx) altogether.
+const DECK_DEMO = import.meta.env.DEV && import.meta.env.VITE_DECK_DEMO === "1";
+const DeckDemoSeed = DECK_DEMO
+  ? lazy(() => import("./pages/DeckDemoSeed").then((m) => ({ default: m.DeckDemoSeed })))
+  : null;
 import ImportVatDutyPage from "./pages/ImportVatDutyPage";
 import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
@@ -366,10 +372,12 @@ export default function App() {
 
   return (
     <AuthProvider>
-      {DECK_DEMO ? (
-        <DeckDemoSeed>
-          <AppGate />
-        </DeckDemoSeed>
+      {DeckDemoSeed ? (
+        <Suspense fallback={null}>
+          <DeckDemoSeed>
+            <AppGate />
+          </DeckDemoSeed>
+        </Suspense>
       ) : (
         <AppGate />
       )}

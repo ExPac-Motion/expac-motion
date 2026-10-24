@@ -286,6 +286,7 @@ export default function Layout() {
       "/quotes?status=accepted": nc.quotes_accepted,
       "/ops?tab=tasks": nc.tasks_open,
       "/crm?tab=messages": nc.chat_unread,
+      "/clients?tab=portal-access": nc.portal_pending ?? 0,
     };
     return byLink[to] ?? 0;
   };

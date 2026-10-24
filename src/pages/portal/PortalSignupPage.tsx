@@ -1,5 +1,5 @@
 import { BRAND_LOGO_URL } from "../../lib/supabase";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { claimClientInvite, getInvite } from "../../lib/db";
@@ -29,6 +29,11 @@ export default function PortalSignupPage() {
   const inviteQ = useInvite(token || undefined);
 
   const [email, setEmail] = useState("");
+  // The invite is claimed with the address it was sent to (0185), so start there.
+  const invitedEmail = inviteQ.data?.email ?? "";
+  useEffect(() => {
+    if (invitedEmail) setEmail(invitedEmail);
+  }, [invitedEmail]);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -102,9 +107,11 @@ export default function PortalSignupPage() {
       <div className="auth-wrap">
         <div className="auth-card">
           <div className="brand">
-            <div className="brand-mark">E</div>
+            <div className="brand-mark">
+              <img src={BRAND_LOGO_URL} alt="EXPAC" />
+            </div>
             <div>
-              <div className="brand-name">ExPac</div>
+              <div className="brand-name">EXPAC</div>
               <div className="brand-sub" style={{ color: "var(--muted)" }}>
                 CUSTOMER PORTAL
               </div>
@@ -184,6 +191,8 @@ export default function PortalSignupPage() {
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             placeholder={inviteQ.data.email ?? undefined}
+            // The invite can only be claimed with the address it was sent to (0185).
+            readOnly={Boolean(inviteQ.data.email)}
             disabled={awaitingConfirmation}
             required
           />

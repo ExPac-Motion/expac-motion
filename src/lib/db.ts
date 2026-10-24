@@ -715,11 +715,21 @@ export async function revertJobToQuote(job: Pick<Job, "id" | "quote_id">): Promi
         "Send booking confirmation to customer",
       ]),
   );
-  unwrap(await supabase.from("jobs").delete().eq("id", job.id));
+  // RLS turns a refused delete into "0 rows", not an error: check it went,
+  // or the quote would go back to Quote Sent with the shipment still there.
+  const gone = unwrap<{ id: string }[]>(await supabase.from("jobs").delete().eq("id", job.id).select("id"));
+  if (!gone || gone.length === 0) throw new Error("Could not remove the shipment (no delete permission?)");
   unwrap(
     await supabase
       .from("quotes")
-      .update({ status: "sent", accepted_at: null, updated_at: new Date().toISOString() })
+      .update({
+        status: "sent",
+        accepted_at: null,
+        // A portal "accepted" would otherwise still show on the customer's side.
+        portal_decision: null,
+        portal_decided_at: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", job.quote_id),
   );
 }
@@ -1176,10 +1186,14 @@ export async function createClientInvite(
   );
 }
 
-export async function getInvite(token: string): Promise<ClientInvite> {
-  return unwrap<ClientInvite>(
-    await supabase.from("client_invites").select("*").eq("token", token).single(),
+/** One invite by its token (0185: the table itself isn't readable before
+ *  sign-in, so this goes through check_client_invite). */
+export async function getInvite(token: string): Promise<Pick<ClientInvite, "email" | "claimed_at">> {
+  const rows = unwrap<Pick<ClientInvite, "email" | "claimed_at">[]>(
+    await supabase.rpc("check_client_invite", { p_token: token }),
   );
+  if (!rows || rows.length === 0) throw new Error("Invalid invite link");
+  return rows[0];
 }
 
 export async function claimClientInvite(token: string): Promise<void> {
@@ -2770,6 +2784,8 @@ export interface NavCounts {
   quotes_accepted: number;
   tasks_open: number;
   chat_unread: number;
+  /** Self-serve portal signups awaiting approval (0185; 0 before it's run). */
+  portal_pending?: number;
 }
 export async function getNavCounts(): Promise<NavCounts> {
   return unwrap<NavCounts>(await supabase.rpc("nav_counts"));
