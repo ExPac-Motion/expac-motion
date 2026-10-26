@@ -259,7 +259,9 @@ export function isLegacyClearanceFee(
   return l.code === CUSTOMS_CLEARANCE_CODE && !(Number(l.buy) > 0) && Number(l.sell) > 0;
 }
 /** Default suggested rates (decimal) for the pre-fill. */
-export const FORWARDING_RATE = 0.01;
+export const FORWARDING_RATE = 0.02;
+/** FW-01 never pre-fills below this (R). */
+export const FORWARDING_MIN_ZAR = 350;
 export const DISBURSEMENT_RATE = 0.025;
 /** Customs VAT / Customs Duty charge codes, the base for the DIS-01 pre-fill. */
 export const CUSTOMS_VAT_CODE = "CU-02";
@@ -268,7 +270,7 @@ export const CUSTOMS_DUTY_CODE = "CU-03";
 /**
  * Σ(qty × buy) over the International Freight Charges lines, each converted to
  * USD, excluding the forwarding fee itself and cargo insurance, the base the
- * FW-01 1% fee is charged on. Feed it the resolved lines so derived qtys are
+ * FW-01 2% fee is charged on. Feed it the resolved lines so derived qtys are
  * settled. `fx` holds USD→ZAR / CNY→ZAR, so CNY→USD = cny/usd and ZAR→USD = 1/usd.
  */
 export function intlFreightBuyUsd(lines: QuoteLine[], fx: FxRates): number {
@@ -304,8 +306,8 @@ export function customsVatDutyZar(lines: QuoteLine[], fx: FxRates): number {
 }
 
 /** Suggested SELL (R) to drop in when a sell-only code is picked.
- *  IN-01 = 0.50% of Commercial Value ($→ZAR); FW-01 = 1% of International
- *  Freight ($→ZAR); DIS-01 = 2.5% of Customs VAT + Duty (ZAR); CU-05 has no
+ *  IN-01 = 0.50% of Commercial Value ($→ZAR); FW-01 = 2% of International
+ *  Freight ($→ZAR), at least R350; DIS-01 = 2.5% of Customs VAT + Duty (ZAR); CU-05 has no
  *  formula, so 0. `lines` should exclude the line being picked. */
 export function serviceFeePrefillZar(
   code: string,
@@ -316,7 +318,7 @@ export function serviceFeePrefillZar(
   if (code === INSURANCE_CODE)
     return insuranceAmount(commercialValue) * (fx.usd || 0);
   if (code === FORWARDING_CODE)
-    return intlFreightBuyUsd(lines, fx) * FORWARDING_RATE * (fx.usd || 0);
+    return Math.max(intlFreightBuyUsd(lines, fx) * FORWARDING_RATE * (fx.usd || 0), FORWARDING_MIN_ZAR);
   if (code === DISBURSEMENT_CODE)
     return customsVatDutyZar(lines, fx) * DISBURSEMENT_RATE;
   return 0;

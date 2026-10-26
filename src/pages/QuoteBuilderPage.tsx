@@ -457,7 +457,7 @@ export default function QuoteBuilderPage() {
     [draft?.packing, vFactor],
   );
   // Lines with code/unit-driven values resolved (KGS qty -> chargeable weight,
-  // IN-01 -> insurance, FW-01 -> 1% of International Freight).
+  // IN-01 -> insurance, FW-01 -> 2% of International Freight, min R350).
   const resolvedLines = useMemo(
     () =>
       resolveLines(draft?.lines ?? [], {
@@ -1017,7 +1017,9 @@ export default function QuoteBuilderPage() {
       // A duplicated quote takes today's date on its first save.
       await finalizeCopied.mutateAsync(savedId);
       toast("Quotation saved");
-      navigate(`/quotes`);
+      // Stay on the quotation until it's closed. A new one moves to its own
+      // address, so the next Save updates it instead of making another.
+      if (!isEdit) navigate(`/quotes/${savedId}`, { replace: true });
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not save quotation");
     }
@@ -1050,7 +1052,7 @@ export default function QuoteBuilderPage() {
               onClick={() => navigate(-1)}
               disabled={saveQuote.isPending}
             >
-              Cancel
+              {isEdit ? "Close" : "Cancel"}
             </button>
             {isEdit && draft.id && (
               <button
