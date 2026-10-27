@@ -10276,6 +10276,17 @@ select.status-pick-on {
   color: #fff;
 }
 
+/* Inbox compose: Discard / Save draft / Send above the subject. */
+.inbox-compose-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
 /* Mail windows: the send shortcut, beside the buttons. */
 .send-hint {
   align-self: center;

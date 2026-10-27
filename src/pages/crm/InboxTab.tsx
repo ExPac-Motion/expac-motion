@@ -2339,6 +2339,26 @@ function ComposeModal({
           </div>
         )}
       </div>
+      {/* Above the subject: no scrolling past a long reply to send it. */}
+      <div className="inbox-compose-actions">
+        {draftsOn && (
+          <button type="button" className="btn outline warn" onClick={() => void discard()} style={{ marginRight: "auto" }}>
+            Discard
+          </button>
+        )}
+        <span className="hint send-hint">{SEND_SHORTCUT_HINT}</span>
+        <button type="button" className="btn outline" onClick={() => void close()}>
+          {draftsOn ? "Save draft & close" : "Cancel"}
+        </button>
+        <button
+          type="submit"
+          className="btn"
+          disabled={sending || seed === null || loadingTpl}
+          title={SEND_SHORTCUT_HINT}
+        >
+          {sending ? "Sending…" : "Send"}
+        </button>
+      </div>
       <div className="field">
         <label>Subject</label>
         <input value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -2485,25 +2505,6 @@ function ComposeModal({
           )}
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-        {draftsOn && (
-          <button type="button" className="btn outline warn" onClick={() => void discard()} style={{ marginRight: "auto" }}>
-            Discard
-          </button>
-        )}
-        <span className="hint send-hint">{SEND_SHORTCUT_HINT}</span>
-        <button type="button" className="btn outline" onClick={() => void close()}>
-          {draftsOn ? "Save draft & close" : "Cancel"}
-        </button>
-        <button
-          type="submit"
-          className="btn"
-          disabled={sending || seed === null || loadingTpl}
-          title={SEND_SHORTCUT_HINT}
-        >
-          {sending ? "Sending…" : "Send"}
-        </button>
-      </div>
     </form>
   );
   if (inline) {
