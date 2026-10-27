@@ -302,17 +302,17 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
       colgroup: pkColgroup,
       head: (
         <tr>
-          <th>L (cm)</th>
-          <th>W (cm)</th>
-          <th>H (cm)</th>
-          <th>Act (Kg)</th>
-          <th>Qty (Pcs)</th>
-          <th>Qty (Ctns)</th>
+          <th>L<br />(cm)</th>
+          <th>W<br />(cm)</th>
+          <th>H<br />(cm)</th>
+          <th>Act<br />(Kg)</th>
+          <th>Qty<br />(Pcs)</th>
+          <th>Qty<br />(Ctns)</th>
           <th>CBM</th>
           <th>Volume</th>
-          <th>Ttl (Cbm)</th>
-          <th>Ttl Act (Kg)</th>
-          <th>Ttl Vol (Kg)</th>
+          <th>Ttl<br />(Cbm)</th>
+          <th>Ttl Act<br />(Kg)</th>
+          <th>Ttl Vol<br />(Kg)</th>
         </tr>
       ),
       rows: packingRows.map((p, i) => {

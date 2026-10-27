@@ -2309,6 +2309,7 @@ select.badge-select.lost {
   white-space: nowrap;
 }
 .packing-table th {
+  vertical-align: bottom;
   color: var(--muted);
   font-size: 12px;
   text-transform: uppercase;
@@ -3323,6 +3324,7 @@ select.badge-select.lost {
   white-space: nowrap;
 }
 .qs-pk th {
+  vertical-align: bottom;
   font-size: 9.5px;
   text-transform: uppercase;
   color: #444;
