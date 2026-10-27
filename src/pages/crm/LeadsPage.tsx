@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
+import ExpacCcPicks from "../../components/ExpacCcPicks";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -1035,6 +1036,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
           placeholder="cc@example.com, another@example.com"
         />
         <span className="hint">Separate multiple addresses with a comma.</span>
+        <ExpacCcPicks value={cc} onChange={setCc} />
       </div>
       <div className="field">
         <label>Start from a template (optional)</label>

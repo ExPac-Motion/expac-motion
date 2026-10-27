@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loading } from "../../components/common";
+import ExpacCcPicks from "../../components/ExpacCcPicks";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import { useToast } from "../../components/Toast";
 import {
@@ -251,6 +252,7 @@ export default function QuoteCommsPanel({ quote }: { quote: Quote }) {
               onChange={(e) => setCcText(e.target.value)}
               placeholder="extra@address.com, …"
             />
+            <ExpacCcPicks value={ccText} onChange={setCcText} />
           </div>
           <div className="comms-actions" style={{ marginBottom: 6 }}>
             <button

@@ -54,6 +54,7 @@ import { htmlToText, resolveMergeFields, type MergeContext } from "../../lib/mai
 import { linkifyHtml } from "../../lib/mailStyle";
 import { alertsOn, alertsSupported, setAlerts } from "../../lib/inboxAlerts";
 import { formatDateTime } from "../../lib/format";
+import ExpacCcPicks from "../../components/ExpacCcPicks";
 import type {
   InboxCategory,
   InboxDraft,
@@ -1850,26 +1851,6 @@ function originalBlock(msg: InboxMessage, parsed: Parsed | undefined, forward: b
   );
 }
 
-/** ExPac addresses offered as one-click Cc on every reply and new email. */
-const EXPAC_DEPARTMENTS: [string, string][] = [
-  ["Admin", "admin@expac.co.za"],
-  ["Operations", "operations@expac.co.za"],
-  ["Gilbert", "gilbert@expac.co.za"],
-];
-const addressList = (list: string) =>
-  list
-    .split(/[,;]/)
-    .map((e) => e.trim())
-    .filter(Boolean);
-const hasAddress = (list: string, email: string) => addressList(list).some((e) => e.toLowerCase() === email);
-/** Adds the address to a comma-separated list, or takes it out if it's there. */
-const toggleAddress = (list: string, email: string) =>
-  hasAddress(list, email)
-    ? addressList(list)
-        .filter((e) => e.toLowerCase() !== email)
-        .join(", ")
-    : [...addressList(list), email].join(", ");
-
 interface ComposeState {
   replyTo?: InboxMessage;
   /** Reply all: everyone on the original stays on the reply (Cc). */
@@ -2343,24 +2324,7 @@ function ComposeModal({
         <div className="field">
           <label>Cc</label>
           <RecipientInput value={cc} onChange={setCc} book={book} />
-          <div className="inbox-dept-picks">
-            <span className="muted">ExPac:</span>
-            {EXPAC_DEPARTMENTS.map(([label, email]) => {
-              const on = hasAddress(cc, email);
-              return (
-                <button
-                  key={email}
-                  type="button"
-                  className={`inbox-dept${on ? " on" : ""}`}
-                  onClick={() => setCc(toggleAddress(cc, email))}
-                  title={on ? `Remove ${email} from Cc` : `Copy in ${email}`}
-                >
-                  {on ? "✓ " : "+ "}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+          <ExpacCcPicks value={cc} onChange={setCc} />
         </div>
         {showBcc && (
           <div className="field">

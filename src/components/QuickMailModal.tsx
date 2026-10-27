@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
+import ExpacCcPicks from "./ExpacCcPicks";
 import MergeCodeMenu from "./MergeCodeMenu";
 import RichTextEditor from "./RichTextEditor";
 import { useToast } from "./Toast";
@@ -133,6 +134,7 @@ export default function QuickMailModal({
           placeholder="cc@example.com, another@example.com"
         />
         <span className="hint">Separate multiple addresses with a comma.</span>
+        <ExpacCcPicks value={cc} onChange={setCc} />
       </div>
       <div className="field">
         <label>Start from a template (optional)</label>
