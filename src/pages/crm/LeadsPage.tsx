@@ -1077,7 +1077,10 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
         />
       </div>
       <div className="field">
-        <label>Message</label>
+        <div className="merge-code-row">
+          <label>Message</label>
+          <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} inline />
+        </div>
         <RichTextEditor
           value={body}
           onChange={setBody}
@@ -1090,7 +1093,6 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
           Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>
       </div>
-      <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} />
       <div
         style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}
       >

@@ -176,16 +176,19 @@ export default function QuickMailModal({
       <div className="field">
         <div className="merge-code-row">
           <label>Message</label>
-          {quote && (
-            <label className="attach-quote">
-              <input
-                type="checkbox"
-                checked={attachQuote}
-                onChange={(e) => setAttachQuote(e.target.checked)}
-              />
-              Attach “Quotation - {quote.reference}.pdf”
-            </label>
-          )}
+          <span className="mail-head-attach">
+            {quote && (
+              <label className="attach-quote">
+                <input
+                  type="checkbox"
+                  checked={attachQuote}
+                  onChange={(e) => setAttachQuote(e.target.checked)}
+                />
+                Attach “Quotation - {quote.reference}.pdf”
+              </label>
+            )}
+            <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} inline />
+          </span>
         </div>
         <RichTextEditor
           value={body}
@@ -199,7 +202,6 @@ export default function QuickMailModal({
           Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>
       </div>
-      <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} />
       <div
         style={{
           display: "flex",

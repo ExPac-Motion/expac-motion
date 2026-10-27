@@ -6405,6 +6405,25 @@ table.dt .cov-chiprow {
 .comms-attach {
   margin: 2px 0 10px;
 }
+/* Mail-icon windows: 📎 Attach file and its files beside the Message heading. */
+.mail-head-attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.comms-attach.inline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+.comms-attach.inline .comms-attach-chips {
+  margin-top: 0;
+}
 .comms-attach-chips {
   display: flex;
   flex-wrap: wrap;

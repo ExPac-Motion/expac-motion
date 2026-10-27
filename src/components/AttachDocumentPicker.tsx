@@ -13,6 +13,7 @@ export default function AttachDocumentPicker({
   quote,
   picks,
   onChange,
+  inline,
 }: {
   /** The shipment whose documents can be attached (none on an unbooked quote). */
   job: { id: string; reference: string } | null;
@@ -20,6 +21,8 @@ export default function AttachDocumentPicker({
   quote: { id: string; reference: string } | null;
   picks: ShipmentAttachmentPick[];
   onChange: (p: ShipmentAttachmentPick[]) => void;
+  /** On one line with the files, e.g. beside a "Message" heading. */
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,7 +87,7 @@ export default function AttachDocumentPicker({
   );
 
   return (
-    <div className="comms-attach">
+    <div className={`comms-attach${inline ? " inline" : ""}`}>
       <button
         type="button"
         className={`chip${open ? " on" : ""}`}
