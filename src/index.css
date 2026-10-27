@@ -6739,7 +6739,37 @@ table.dt .task-title {
   max-height: 78vh;
 }
 .inbox-read {
-  padding: 14px 18px;
+  --read-pad-top: 14px;
+  --read-pad-x: 18px;
+  padding: var(--read-pad-top) var(--read-pad-x);
+}
+/* Subject, sender, tags and the action buttons stay put while the email
+   scrolls underneath; the "Full view" bar above them stays too. */
+.inbox-reader-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 40px;
+  background: var(--white);
+}
+.inbox-read-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--white);
+  margin: calc(-1 * var(--read-pad-top)) calc(-1 * var(--read-pad-x)) 12px;
+  padding: var(--read-pad-top) var(--read-pad-x) 0;
+}
+.inbox-reader-bar + .inbox-read .inbox-read-top {
+  top: 40px;
+}
+.inbox-read-top .inbox-actions {
+  margin-bottom: 0;
+}
+/* The Sent view has no actions row: a line under the header instead. */
+.inbox-read-top > .inbox-read-head:last-child {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
 .inbox-read-head h3 {
   margin: 0 0 6px;
@@ -6858,13 +6888,16 @@ table.dt .task-title {
 .panel.inbox.expanded .inbox-splitter {
   display: none;
 }
+/* Still its own scroll area, so the header can stay frozen. */
 .panel.inbox.expanded .inbox-reader {
-  max-height: none;
+  max-height: calc(100vh - 120px);
 }
 .panel.inbox.expanded .inbox-reader-bar {
   justify-content: flex-start;
 }
 .panel.inbox.expanded .inbox-read {
+  --read-pad-top: 6px;
+  --read-pad-x: 28px;
   max-width: 1100px;
   margin: 0 auto;
   padding: 6px 28px 24px;
@@ -10179,4 +10212,47 @@ select.status-pick-on {
 }
 .row-icon-btn.mail-due svg path {
   stroke: #fff;
+}
+
+/* Inbox: a reply written in the reading pane, under the email's actions. */
+.inbox-inline-compose {
+  margin: 0 0 14px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--teal);
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: 0 6px 18px rgba(32, 36, 38, 0.08);
+}
+.inbox-inline-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+/* ExPac addresses, one click to copy them in. */
+.inbox-dept-picks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.76rem;
+}
+.inbox-dept {
+  border: 1px solid var(--teal);
+  background: var(--white);
+  color: var(--teal-ink);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.inbox-dept:hover {
+  background: var(--teal-tint);
+}
+.inbox-dept.on {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
 }
