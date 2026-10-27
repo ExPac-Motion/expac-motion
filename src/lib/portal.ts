@@ -112,6 +112,7 @@ export interface QuoteRequestPacking {
   height_cm: string;
   actual_kg: string;
   qty_ctns: string;
+  qty_pcs?: string;
 }
 
 export interface QuoteRequest {

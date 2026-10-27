@@ -19,7 +19,7 @@ const MODES: { mode: QuoteMode; label: string; sub: string; icon: string }[] = [
   { mode: "Road Freight (RDX)", label: "Road Freight", sub: "Cross-border & local", icon: "shipments" },
 ];
 
-const blankRow = (): QuoteRequestPacking => ({ qty_ctns: "1", length_cm: "", width_cm: "", height_cm: "", actual_kg: "" });
+const blankRow = (): QuoteRequestPacking => ({ qty_pcs: "", qty_ctns: "1", length_cm: "", width_cm: "", height_cm: "", actual_kg: "" });
 
 /**
  * Customer Portal › Request a Quote: the basics of a shipment. Submitting
@@ -206,20 +206,21 @@ export default function PortalRequestQuotePage() {
           <table className="table--compact wms-pkg">
             <thead>
               <tr>
-                <th>Qty</th>
+                <th>Qty (Pcs)</th>
+                <th>Qty (Ctns)</th>
                 <th>Length (cm)</th>
                 <th>Width (cm)</th>
                 <th>Height (cm)</th>
-                <th>Weight each (kg)</th>
+                <th>Weight per ctn (kg)</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {r.packing.map((p, i) => (
                 <tr key={i}>
-                  {(["qty_ctns", "length_cm", "width_cm", "height_cm", "actual_kg"] as const).map((k) => (
+                  {(["qty_pcs", "qty_ctns", "length_cm", "width_cm", "height_cm", "actual_kg"] as const).map((k) => (
                     <td key={k}>
-                      <input type="number" step="any" min={0} value={p[k]} onChange={(e) => setRow(i, { [k]: e.target.value })} />
+                      <input type="number" step="any" min={0} value={p[k] ?? ""} onChange={(e) => setRow(i, { [k]: e.target.value })} />
                     </td>
                   ))}
                   <td>
@@ -238,7 +239,7 @@ export default function PortalRequestQuotePage() {
               + Add line
             </button>
             <span className="pt-pack-sum">
-              {pack.qty} pcs · {pack.totalActual.toFixed(1)} kg · {pack.totalCbm.toFixed(3)} CBM · chargeable{" "}
+              {pack.pcs} pcs · {pack.qty} ctns · {pack.totalActual.toFixed(1)} kg · {pack.totalCbm.toFixed(3)} CBM · chargeable{" "}
               <b>{sea ? `${Math.max(pack.totalCbm, pack.totalActual / 1000).toFixed(2)} W/M` : `${pack.chargeable.toFixed(1)} kg`}</b>
             </span>
           </div>
