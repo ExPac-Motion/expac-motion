@@ -55,6 +55,7 @@ import { linkifyHtml } from "../../lib/mailStyle";
 import { alertsOn, alertsSupported, setAlerts } from "../../lib/inboxAlerts";
 import { formatDateTime } from "../../lib/format";
 import ExpacCcPicks from "../../components/ExpacCcPicks";
+import { isSendShortcut, SEND_SHORTCUT_HINT } from "../../lib/shortcuts";
 import type {
   InboxCategory,
   InboxDraft,
@@ -2287,6 +2288,11 @@ function ComposeModal({
   const form = (
     <form
       onSubmit={submit}
+      onKeyDown={(e) => {
+        if (!isSendShortcut(e)) return;
+        e.preventDefault();
+        if (!(sending || seed === null || loadingTpl)) e.currentTarget.requestSubmit();
+      }}
       className={`inbox-compose${dragging ? " dragging" : ""}`}
       onDragOver={(e) => {
         if (![...e.dataTransfer.types].includes("Files")) return;
@@ -2485,10 +2491,16 @@ function ComposeModal({
             Discard
           </button>
         )}
+        <span className="hint send-hint">{SEND_SHORTCUT_HINT}</span>
         <button type="button" className="btn outline" onClick={() => void close()}>
           {draftsOn ? "Save draft & close" : "Cancel"}
         </button>
-        <button type="submit" className="btn" disabled={sending || seed === null || loadingTpl}>
+        <button
+          type="submit"
+          className="btn"
+          disabled={sending || seed === null || loadingTpl}
+          title={SEND_SHORTCUT_HINT}
+        >
           {sending ? "Sending…" : "Send"}
         </button>
       </div>

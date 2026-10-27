@@ -5,6 +5,7 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type KeyboardEvent,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
@@ -56,6 +57,7 @@ import {
 } from "../../lib/shipmentAttachments";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
 import { linkifyHtml } from "../../lib/mailStyle";
+import { isSendShortcut, SEND_SHORTCUT_HINT } from "../../lib/shortcuts";
 import { formatDate, normalizeWebsite, readableText } from "../../lib/format";
 import type { Lead, LeadContactDraft, LeadPatch } from "../../lib/types";
 
@@ -1073,85 +1075,95 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
     }
   }
 
+  function onKeys(e: KeyboardEvent<HTMLDivElement>) {
+    if (!isSendShortcut(e)) return;
+    e.preventDefault();
+    if (!sending && lead.email) void onSend();
+  }
+
   return (
     <Modal title={`Email ${lead.company}`} onClose={onClose} wide>
-      <div className="field">
-        <label>To</label>
-        <strong>{lead.email || "— no email on this lead —"}</strong>
-      </div>
-      <div className="field">
-        <label>CC</label>
-        <input
-          value={cc}
-          onChange={(e) => setCc(e.target.value)}
-          placeholder="cc@example.com, another@example.com"
-        />
-        <span className="hint">Separate multiple addresses with a comma.</span>
-        <ExpacCcPicks value={cc} onChange={setCc} />
-      </div>
-      <div className="field">
-        <label>Start from a template (optional)</label>
-        <select
-          defaultValue=""
-          onChange={(e) => {
-            if (e.target.value) applyTemplate(e.target.value);
-          }}
-        >
-          <option value="">— blank —</option>
-          {(templates ?? []).map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <div className="merge-code-row">
-          <label>Subject</label>
-          <MergeCodeMenu targetRef={subjectRef} onChange={setSubject} />
+      <div onKeyDown={onKeys}>
+        <div className="field">
+          <label>To</label>
+          <strong>{lead.email || "— no email on this lead —"}</strong>
         </div>
-        <input
-          ref={subjectRef}
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-      </div>
-      <div className="field">
-        <div className="merge-code-row">
-          <label>Message</label>
-          <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} inline />
+        <div className="field">
+          <label>CC</label>
+          <input
+            value={cc}
+            onChange={(e) => setCc(e.target.value)}
+            placeholder="cc@example.com, another@example.com"
+          />
+          <span className="hint">Separate multiple addresses with a comma.</span>
+          <ExpacCcPicks value={cc} onChange={setCc} />
         </div>
-        <RichTextEditor
-          value={body}
-          onChange={setBody}
-          onUploadImage={(f) => uploadAsset.mutateAsync(f)}
-        />
-        <span className="hint">
-          {sig
-            ? "Your saved signature is included below, edit or remove it as needed. "
-            : ""}
-          Sends from {settings?.mail_sender_name || "the configured sender"}.
-        </span>
-      </div>
-      <div
-        style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}
-      >
-        <button
-          type="button"
-          className="btn outline"
-          onClick={onClose}
-          disabled={sending}
+        <div className="field">
+          <label>Start from a template (optional)</label>
+          <select
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value) applyTemplate(e.target.value);
+            }}
+          >
+            <option value="">— blank —</option>
+            {(templates ?? []).map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <div className="merge-code-row">
+            <label>Subject</label>
+            <MergeCodeMenu targetRef={subjectRef} onChange={setSubject} />
+          </div>
+          <input
+            ref={subjectRef}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <div className="merge-code-row">
+            <label>Message</label>
+            <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} inline />
+          </div>
+          <RichTextEditor
+            value={body}
+            onChange={setBody}
+            onUploadImage={(f) => uploadAsset.mutateAsync(f)}
+          />
+          <span className="hint">
+            {sig
+              ? "Your saved signature is included below, edit or remove it as needed. "
+              : ""}
+            Sends from {settings?.mail_sender_name || "the configured sender"}.
+          </span>
+        </div>
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}
         >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={onSend}
-          disabled={sending || !lead.email}
-        >
-          {sending ? "Sending…" : "Send Email"}
-        </button>
+          <span className="hint send-hint">{SEND_SHORTCUT_HINT}</span>
+          <button
+            type="button"
+            className="btn outline"
+            onClick={onClose}
+            disabled={sending}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={onSend}
+            disabled={sending || !lead.email}
+            title={SEND_SHORTCUT_HINT}
+          >
+            {sending ? "Sending…" : "Send Email"}
+          </button>
+        </div>
       </div>
     </Modal>
   );

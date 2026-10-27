@@ -10276,6 +10276,17 @@ select.status-pick-on {
   color: #fff;
 }
 
+/* Mail windows: the send shortcut, beside the buttons. */
+.send-hint {
+  align-self: center;
+  margin: 0 4px 0 0;
+}
+@media (max-width: 640px) {
+  .send-hint {
+    display: none;
+  }
+}
+
 /* Leads: "Show converted" beside the filters. */
 .leads-converted-toggle {
   display: inline-flex;
