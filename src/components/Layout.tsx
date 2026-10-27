@@ -261,7 +261,7 @@ export default function Layout() {
     for (const m of recent.slice(0, 3)) notifyNewMail(m, () => navigate("/crm?tab=inbox"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unreadQ.data]);
-  const badge = (n: number) => (n > 0 ? <span className="nav-count">{n > 99 ? "99+" : n}</span> : null);
+  const badge = (n: number) => (n > 0 ? <span className="nav-count">{n > 999 ? "999+" : n}</span> : null);
 
   // Work waiting in each area (0184), refreshed every minute and whenever you
   // move to another page (so a count drops soon after you deal with something).
