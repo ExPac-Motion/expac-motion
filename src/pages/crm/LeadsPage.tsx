@@ -165,9 +165,29 @@ export default function LeadsPage() {
     loadJson<LeadFilters>("leads.filters", EMPTY_FILTERS),
   );
   const [search, setSearch] = useState("");
+  // Leads already made a customer leave the list (they live on under
+  // Customers, and on the customer's Associated Leads tab). They come back
+  // with this switch, when searching, or on an "Active Customer" status.
+  const [showConverted, setShowConverted] = useState(() => {
+    try {
+      return localStorage.getItem("leads.showConverted") === "true";
+    } catch {
+      return false;
+    }
+  });
 
   const rows = useMemo(() => data ?? [], [data]);
   const statuses = statusesQ.data ?? [];
+  const convertedCount = useMemo(() => rows.filter((l) => l.promoted_client_id).length, [rows]);
+  const promotingIds = useMemo(
+    () => new Set((statusesQ.data ?? []).filter((s) => s.promotes_to_customer).map((s) => s.id)),
+    [statusesQ.data],
+  );
+  /** Open leads, or every lead with the switch on. */
+  const listed = useMemo(
+    () => (showConverted ? rows : rows.filter((l) => !l.promoted_client_id)),
+    [rows, showConverted],
+  );
   const sources = sourcesQ.data ?? [];
   const salesPeople = (profilesQ.data ?? []).filter(
     (p) => p.role === "admin" || p.role === "user",
@@ -204,11 +224,12 @@ export default function LeadsPage() {
   const statusCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const l of rows) {
+      if (l.promoted_client_id && !showConverted && !promotingIds.has(l.lead_status_id ?? "")) continue;
       const k = l.lead_status_id || "__none";
       m.set(k, (m.get(k) ?? 0) + 1);
     }
     return m;
-  }, [rows]);
+  }, [rows, showConverted, promotingIds]);
 
   // "+ Add Filter" badge; the status has its own dropdown.
   const activeFilterCount =
@@ -217,8 +238,8 @@ export default function LeadsPage() {
     (filters.hasEmail ? 1 : 0);
 
   const displayed = useMemo(() => {
-    let out = rows.slice();
     const q = norm(search);
+    let out = q || promotingIds.has(filters.statusId) ? rows.slice() : listed.slice();
     if (q) {
       out = out.filter((l) =>
         [l.company, l.contact, l.email, l.phone, l.company_phone]
@@ -241,7 +262,7 @@ export default function LeadsPage() {
     // newest first by default; column sorting is handled by <DataTable>
     out.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     return out;
-  }, [rows, filters, search]);
+  }, [rows, listed, promotingIds, filters, search]);
 
   const sel = useRowSelection(rows, displayed);
 
@@ -636,7 +657,7 @@ export default function LeadsPage() {
             className={filters.statusId ? "status-pick-on" : undefined}
             style={{ width: "auto" }}
           >
-            <option value="">All statuses ({rows.length})</option>
+            <option value="">All statuses ({listed.length})</option>
             {statuses.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} ({statusCounts.get(s.id) ?? 0})
@@ -700,12 +721,28 @@ export default function LeadsPage() {
               </>
             )}
           </Popover>
+          {convertedCount > 0 && (
+            <label
+              className="check leads-converted-toggle"
+              title="Leads already made a customer. They stay under Customers and on the customer's Associated Leads tab."
+            >
+              <input
+                type="checkbox"
+                checked={showConverted}
+                onChange={(e) => {
+                  setShowConverted(e.target.checked);
+                  saveJson("leads.showConverted", e.target.checked);
+                }}
+              />
+              Show converted ({convertedCount})
+            </label>
+          )}
           </>
         }
         count={
           isLoading
             ? undefined
-            : `${displayed.length}${displayed.length !== rows.length ? ` of ${rows.length}` : ""} lead${rows.length === 1 ? "" : "s"}`
+            : `${displayed.length}${displayed.length !== listed.length ? ` of ${listed.length}` : ""} ${showConverted ? "" : "open "}lead${listed.length === 1 ? "" : "s"}`
         }
         onToolsSlot={setToolsSlot}
         primary={

@@ -10276,6 +10276,20 @@ select.status-pick-on {
   color: #fff;
 }
 
+/* Leads: "Show converted" beside the filters. */
+.leads-converted-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 0 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.leads-converted-toggle input {
+  width: auto;
+  margin: 0;
+}
+
 /* Mail history on a customer / lead / shipper (MailHistory.tsx) */
 .view-section-title {
   font-size: 0.95rem;
