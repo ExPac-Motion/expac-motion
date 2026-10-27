@@ -1653,6 +1653,17 @@ export function useUpdateProfile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }),
   });
 }
+export function useDeleteLogin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => db.deleteLogin(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profiles"] });
+      qc.invalidateQueries({ queryKey: ["pending_portal_signups"] });
+      qc.invalidateQueries({ queryKey: ["portal_users"] });
+    },
+  });
+}
 export function useUpdateProfilesBulk() {
   const qc = useQueryClient();
   return useMutation({

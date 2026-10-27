@@ -1235,12 +1235,14 @@ export function forgetPendingInvite(): void {
 }
 
 /** Self-serve portal signups awaiting staff approval (portal_status='pending'). */
+/** Customer sign-ups waiting for an Admin (every self sign-up is one, 0189). */
 export async function listPendingPortalSignups(): Promise<Profile[]> {
   return unwrap<Profile[]>(
     await supabase
       .from("profiles")
       .select("*")
       .eq("portal_status", "pending")
+      .eq("role", "client")
       .order("created_at", { ascending: true }),
   );
 }
@@ -1556,6 +1558,11 @@ export async function updateProfile(
 }
 
 /** Apply one patch to every listed team member (Bulk Edit on Sales Person). */
+/** An Admin deletes a login and its profile (0189). */
+export async function deleteLogin(id: string): Promise<void> {
+  unwrap(await supabase.rpc("admin_delete_login", { p_user: id }));
+}
+
 export async function updateProfilesBulk(
   ids: string[],
   patch: ProfilePatch,

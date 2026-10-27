@@ -12,6 +12,7 @@ import {
   useQuotes,
   useUpdateCompanySettings,
   useUpdateProfile,
+  useDeleteLogin,
   useSetPortalPermissions,
   useUploadMailAsset,
 } from "../lib/hooks";
@@ -296,6 +297,10 @@ function DefaultsTab() {
 function isStaffLogin(p: Profile) {
   return (p.role === "admin" || p.role === "user" || p.role === "restricted") && !p.client_id && !p.partner_id;
 }
+/** A self sign-up still waiting (0189): an Admin can make it a staff login. */
+function isWaitingSignup(p: Profile) {
+  return p.role === "client" && !p.client_id && p.portal_status === "pending";
+}
 function roleRank(p: Profile) {
   if (isStaffLogin(p)) return p.role === "admin" ? 0 : p.role === "user" ? 1 : 2;
   return p.partner_id || p.role === "partner" ? 3 : 4;
@@ -316,8 +321,10 @@ function TeamTab() {
   const myProfileQ = useMyProfile();
   const isAdmin = myProfileQ.data?.role === "admin";
   const update = useUpdateProfile();
+  const deleteLogin = useDeleteLogin();
   const { toast, error: toastError } = useToast();
   const [editingName, setEditingName] = useState<string | null>(null);
+  const myId = myProfileQ.data?.id;
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
@@ -334,6 +341,22 @@ function TeamTab() {
       toast(`${p.full_name || "Member"} is now ${role}`);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not update role");
+    }
+  }
+
+  async function onDelete(p: Profile) {
+    const who = p.full_name || p.email || "this login";
+    if (
+      !window.confirm(
+        `Delete ${who}'s login? They can't sign in again and this can't be undone. Records they made stay in Motion.`,
+      )
+    )
+      return;
+    try {
+      await deleteLogin.mutateAsync(p.id);
+      toast(`${who} deleted`);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not delete the login, is migration 0189 applied?");
     }
   }
 
@@ -355,6 +378,11 @@ function TeamTab() {
         access, Restricted blocks it entirely. Partner Portal and Customer Portal logins are managed on
         the partner / customer record.
       </p>
+      <p className="muted">
+        Nobody can sign up as staff. To add a team member, create their login in Supabase
+        (Authentication › Users › Add user); it shows here as a customer sign-up, then pick Admin User or
+        Standard User for it.
+      </p>
       <div className="table-wrap team-wrap">
         <table>
           <thead>
@@ -364,6 +392,7 @@ function TeamTab() {
               <th>Role</th>
               <th>Access</th>
               <th>Joined</th>
+              {isAdmin && <th></th>}
             </tr>
           </thead>
           <tbody>
@@ -391,11 +420,14 @@ function TeamTab() {
                 </td>
                 <td className="muted">{p.email || "—"}</td>
                 <td>
-                  {isAdmin && isStaffLogin(p) ? (
+                  {isAdmin && (isStaffLogin(p) || isWaitingSignup(p)) ? (
                     <select
                       value={p.role}
-                      onChange={(e) => onRole(p, e.target.value as UserRole)}
+                      onChange={(e) => {
+                        if (e.target.value !== "client") void onRole(p, e.target.value as UserRole);
+                      }}
                     >
+                      {isWaitingSignup(p) && <option value="client">Customer sign-up (awaiting approval)</option>}
                       <option value="admin">Admin User</option>
                       <option value="user">Standard User</option>
                       <option value="restricted">Restricted</option>
@@ -408,6 +440,21 @@ function TeamTab() {
                   <AccessChecklist profile={p} canEdit={isAdmin} />
                 </td>
                 <td className="nowrap">{formatDate(p.created_at)}</td>
+                {isAdmin && (
+                  <td>
+                    {p.id !== myId && (
+                      <button
+                        type="button"
+                        className="btn outline warn btn-sm"
+                        onClick={() => void onDelete(p)}
+                        disabled={deleteLogin.isPending}
+                        title="Delete this login"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

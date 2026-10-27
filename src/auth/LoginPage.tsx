@@ -3,16 +3,17 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
 
 export default function LoginPage() {
-  const { signIn, signUp, requestPasswordReset } = useAuth();
-  const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
-  const [fullName, setFullName] = useState("");
+  const { signIn, requestPasswordReset } = useAuth();
+  // Nobody signs up here: staff logins are made by an Admin, customers ask
+  // for access on the Customer Portal sign-up (0189).
+  const [mode, setMode] = useState<"in" | "forgot">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
 
-  function switchMode(next: "in" | "up" | "forgot") {
+  function switchMode(next: "in" | "forgot") {
     setMode(next);
     setErr("");
     setNotice("");
@@ -26,12 +27,6 @@ export default function LoginPage() {
     try {
       if (mode === "in") {
         await signIn(email, password);
-      } else if (mode === "up") {
-        await signUp(email, password, fullName);
-        setNotice(
-          "Account created. An ExPac admin needs to activate it (Settings › Team) before you can use Motion. Customers: please use the Customer Portal sign-up instead.",
-        );
-        setMode("in");
       } else {
         await requestPasswordReset(email);
         setNotice(
@@ -63,14 +58,12 @@ export default function LoginPage() {
           </div>
         </div>
         <h1>
-          {mode === "in" ? "Sign in" : mode === "up" ? "Create account" : "Reset your password"}
+          {mode === "in" ? "Sign in" : "Reset your password"}
         </h1>
         <p className="sub">
           {mode === "in"
             ? "Use your ExPac Motion login."
-            : mode === "up"
-              ? "Set up a login for a team member."
-              : "Enter your email and we'll send you a link to set a new password."}
+            : "Enter your email and we'll send you a link to set a new password."}
         </p>
 
         {err && <div className="auth-error">{err}</div>}
@@ -83,17 +76,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {mode === "up" && (
-          <div className="field">
-            <label>Full name</label>
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              autoComplete="name"
-              required
-            />
-          </div>
-        )}
         <div className="field">
           <label>Email</label>
           <input
@@ -133,28 +115,21 @@ export default function LoginPage() {
             ? "Please wait…"
             : mode === "in"
               ? "Sign in"
-              : mode === "up"
-                ? "Create account"
-                : "Send reset link"}
+              : "Send reset link"}
         </button>
 
         <div className="auth-toggle">
-          {mode === "in" && (
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => switchMode("up")}
-            >
-              Need a login? Create an account
-            </button>
-          )}
-          {mode !== "in" && (
+          {mode === "in" ? (
+            <a className="link-btn" href="/portal/signup">
+              New customer? Request portal access
+            </a>
+          ) : (
             <button
               type="button"
               className="link-btn"
               onClick={() => switchMode("in")}
             >
-              {mode === "up" ? "Already have a login? Sign in" : "Back to sign in"}
+              Back to sign in
             </button>
           )}
         </div>
