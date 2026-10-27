@@ -3016,3 +3016,37 @@ export async function setClientRateTier(id: string, tier: RateTierId): Promise<v
   const { error } = await supabase.from("clients").update({ rate_tier: tier }).eq("id", id);
   if (error && error.code !== "PGRST204" && error.code !== "42703") throw error;
 }
+
+/* ---------- Mail history on a customer / lead / shipper (0191) ---------- */
+export interface MailHistoryRow {
+  id: string;
+  direction: "in" | "out";
+  from_email: string | null;
+  from_name: string | null;
+  to_emails: string[];
+  cc_emails: string[];
+  subject: string | null;
+  snippet: string | null;
+  sent_at: string;
+  has_attachments: boolean;
+  job_id: string | null;
+}
+export async function listMailHistory(emails: string[]): Promise<MailHistoryRow[]> {
+  return unwrap<MailHistoryRow[]>(await supabase.rpc("mail_history", { p_emails: emails, p_limit: 200 }));
+}
+/** One email's text for reading in the history (plain text, never its html). */
+export async function getMailHistoryBody(id: string): Promise<string> {
+  const row = unwrap<{ body_text: string | null; body_html: string | null }>(
+    await supabase.from("inbox_messages").select("body_text,body_html").eq("id", id).single(),
+  );
+  if (row.body_text?.trim()) return row.body_text.trim();
+  // Text only: tags dropped (a line break kept per block), never rendered as html.
+  const doc = new DOMParser().parseFromString(row.body_html ?? "", "text/html");
+  doc.querySelectorAll("script,style,head").forEach((n) => n.remove());
+  doc.querySelectorAll("br,p,div,tr,li,h1,h2,h3,h4,blockquote").forEach((n) => n.after("\n"));
+  return (doc.body?.textContent || "")
+    .replace(/[ \t\u00a0]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

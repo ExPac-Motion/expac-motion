@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
+import { LeadMailHistory } from "../../components/MailHistory";
 import ExpacCcPicks from "../../components/ExpacCcPicks";
 import AttachDocumentPicker from "../../components/AttachDocumentPicker";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
@@ -867,6 +868,8 @@ export default function LeadsPage() {
               value={formatDate(viewing.promoted_at)}
             />
           )}
+          <h3 className="view-section-title">Mail history</h3>
+          <LeadMailHistory leadId={viewing.id} email={viewing.email} />
         </Modal>
       )}
 

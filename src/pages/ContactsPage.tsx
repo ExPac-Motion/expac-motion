@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
+import MailHistory from "../components/MailHistory";
 import {
   BulkEditModal,
   EmptyState,
@@ -784,6 +785,13 @@ export default function ContactsPage({
                   partnerName={viewing.company}
                 />
               )}
+            </>
+          )}
+          {/* Customers have it as a tab on their record page. */}
+          {!isClient && (
+            <>
+              <h3 className="view-section-title">Mail history</h3>
+              <MailHistory emails={[viewing.email]} />
             </>
           )}
         </Modal>
