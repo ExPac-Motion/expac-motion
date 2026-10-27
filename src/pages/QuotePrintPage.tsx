@@ -308,8 +308,8 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
           <th>Act<br />(Kg)</th>
           <th>Qty<br />(Pcs)</th>
           <th>Qty<br />(Ctns)</th>
-          <th>CBM</th>
-          <th>Volume</th>
+          <th>CBM<br />(Ctn)</th>
+          <th>Volume<br />(Kg)</th>
           <th>Ttl<br />(Cbm)</th>
           <th>Ttl Act<br />(Kg)</th>
           <th>Ttl Vol<br />(Kg)</th>
