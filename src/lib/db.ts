@@ -1916,16 +1916,14 @@ export async function recordMediaAsset(input: {
 }
 
 export async function deleteMediaAsset(id: string): Promise<void> {
-  const row = unwrap<{ storage_path: string }>(
-    await supabase
-      .from("media_assets")
-      .select("storage_path")
-      .eq("id", id)
-      .single(),
+  // The row is the source of truth (it's what the portal lists). A delete RLS
+  // refuses removes nothing without an error, so check before the file goes.
+  const gone = unwrap<{ storage_path: string }[]>(
+    await supabase.from("media_assets").delete().eq("id", id).select("storage_path"),
   );
-  // Best-effort object cleanup; the row delete is the source of truth.
-  await supabase.storage.from(MAIL_ASSETS_BUCKET).remove([row.storage_path]);
-  unwrap(await supabase.from("media_assets").delete().eq("id", id));
+  if (gone.length === 0) throw new Error("The image wasn't deleted: your login may not have delete permission.");
+  // Best-effort object cleanup.
+  await supabase.storage.from(MAIL_ASSETS_BUCKET).remove(gone.map((r) => r.storage_path));
 }
 
 export async function renameMediaAsset(

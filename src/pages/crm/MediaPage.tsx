@@ -259,7 +259,7 @@ export default function MediaPage() {
             onClick={() => fileRef.current?.click()}
             disabled={upload.isPending}
           >
-            {upload.isPending ? "Uploading…" : "Upload"}
+            {upload.isPending ? "Uploading…" : `Upload to ${uploadFolder}`}
           </button>
         }
       >

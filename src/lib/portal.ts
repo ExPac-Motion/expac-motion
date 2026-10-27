@@ -475,6 +475,9 @@ export function markCommsSeen(jobId: string) {
 export const usePortalAnnouncements = () =>
   useQuery({
     queryKey: ["portal", "announcements"],
+    // A swapped image shows on the next visit or tab switch, not only after a reload.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<{ id: string; title: string; url: string; created_at: string }[]> => {
       const { data, error } = await supabase.from("client_announcements").select("*").order("created_at", { ascending: false });
       if (error) return []; // before 0144 is applied
