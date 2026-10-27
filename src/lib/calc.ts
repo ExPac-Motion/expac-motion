@@ -489,6 +489,7 @@ export function packingRow(
 
 export interface PackingTotals {
   qty: number;
+  pcs: number;
   totalCbm: number;
   totalActual: number;
   totalVolume: number;
@@ -501,18 +502,21 @@ export function packingTotals(
   factor: number = VOLUMETRIC_FACTOR,
 ): PackingTotals {
   let qty = 0;
+  let pcs = 0;
   let totalCbm = 0;
   let totalActual = 0;
   let totalVolume = 0;
   (items || []).forEach((p) => {
     const r = packingRow(p, factor);
     qty += Number(p.qty_ctns) || 0;
+    pcs += Number(p.qty_pcs) || 0;
     totalCbm += r.totalCbm;
     totalActual += r.totalActual;
     totalVolume += r.totalVolume;
   });
   return {
     qty,
+    pcs,
     totalCbm,
     totalActual,
     totalVolume,

@@ -120,6 +120,7 @@ function newPackingItem(position: number): PackingItem {
     width_cm: 0,
     height_cm: 0,
     actual_kg: 0,
+    qty_pcs: 0,
     qty_ctns: 1,
     cbm: "",
   };
@@ -257,6 +258,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
       width_cm: p.width_cm ?? 0,
       height_cm: p.height_cm ?? 0,
       actual_kg: p.actual_kg ?? 0,
+      qty_pcs: p.qty_pcs ?? 0,
       qty_ctns: p.qty_ctns ?? 0,
       cbm: p.cbm ?? "",
     })),
@@ -1747,6 +1749,7 @@ export default function QuoteBuilderPage() {
               <col />
               <col />
               <col />
+              <col />
               <col className="pk-x" />
             </colgroup>
             <thead>
@@ -1754,20 +1757,21 @@ export default function QuoteBuilderPage() {
                 <th>L (cm)</th>
                 <th>W (cm)</th>
                 <th>H (cm)</th>
-                <th>Actual (KGS)</th>
-                <th>Qty (CTNS)</th>
-                <th>Cubic M (CBM)</th>
-                <th>Volume (KGS)</th>
-                <th>Total Cbm</th>
-                <th>Total Act (KGS)</th>
-                <th>Total Vol (KGS)</th>
+                <th>Act (Kg)</th>
+                <th>Qty (Pcs)</th>
+                <th>Qty (Ctns)</th>
+                <th>CBM</th>
+                <th>Volume</th>
+                <th>Ttl (Cbm)</th>
+                <th>Ttl Act (Kg)</th>
+                <th>Ttl Vol (Kg)</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {draft.packing.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="muted">
+                  <td colSpan={12} className="muted">
                     No packages. Click "Add package".
                   </td>
                 </tr>
@@ -1806,6 +1810,15 @@ export default function QuoteBuilderPage() {
                           step="any"
                           value={String(p.actual_kg ?? "")}
                           onChange={(e) => setPacking(i, "actual_kg", e.target.value)}
+                        />
+                      </td>
+                      <td className="num">
+                        <input
+                          type="number"
+                          step="any"
+                          value={String(p.qty_pcs ?? "")}
+                          title="Pieces, for information; totals use Qty (Ctns)"
+                          onChange={(e) => setPacking(i, "qty_pcs", e.target.value)}
                         />
                       </td>
                       <td className="num">
@@ -1882,6 +1895,9 @@ export default function QuoteBuilderPage() {
                 <tr>
                   <td colSpan={4} style={{ textAlign: "right", fontWeight: 700 }}>
                     Totals
+                  </td>
+                  <td className="num" style={{ fontWeight: 700 }}>
+                    {packTotals.pcs}
                   </td>
                   <td className="num" style={{ fontWeight: 700 }}>
                     {packTotals.qty}

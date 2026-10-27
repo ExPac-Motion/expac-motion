@@ -274,8 +274,8 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
 
   const pkColgroup = (
     <colgroup>
-      {Array.from({ length: 9 }).map((_, i) => (
-        <col key={i} style={{ width: "10.33%" }} />
+      {Array.from({ length: 10 }).map((_, i) => (
+        <col key={i} style={{ width: "9.3%" }} />
       ))}
       <col style={{ width: "7%" }} />
     </colgroup>
@@ -305,13 +305,14 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
           <th>L (cm)</th>
           <th>W (cm)</th>
           <th>H (cm)</th>
-          <th>Actual</th>
-          <th>Qty</th>
+          <th>Act (Kg)</th>
+          <th>Qty (Pcs)</th>
+          <th>Qty (Ctns)</th>
           <th>CBM</th>
           <th>Volume</th>
-          <th>Ttl CBM</th>
-          <th>Ttl Act</th>
-          <th>Ttl Vol</th>
+          <th>Ttl (Cbm)</th>
+          <th>Ttl Act (Kg)</th>
+          <th>Ttl Vol (Kg)</th>
         </tr>
       ),
       rows: packingRows.map((p, i) => {
@@ -324,6 +325,7 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
               <td>{n2(p.width_cm)}</td>
               <td>{n2(p.height_cm)}</td>
               <td>{n2(p.actual_kg)}</td>
+              <td>{n2(p.qty_pcs)}</td>
               <td>{n2(p.qty_ctns)}</td>
               <td>{n2(r.cbm)}</td>
               <td>{n2(r.volumeKg)}</td>
@@ -337,6 +339,7 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
       tailFoot: (
         <tr>
           <td colSpan={4}>Totals</td>
+          <td>{n2(pack.pcs)}</td>
           <td>{n2(pack.qty)}</td>
           <td />
           <td />

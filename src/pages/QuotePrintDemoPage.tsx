@@ -70,6 +70,7 @@ export default function QuotePrintDemoPage() {
       width_cm: 80 + i,
       height_cm: 90,
       actual_kg: 300 + i * 25,
+      qty_pcs: 10 * (1 + (i % 3)),
       qty_ctns: 1 + (i % 3),
     }),
   );
