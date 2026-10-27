@@ -9,6 +9,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import ExpacCcPicks from "../../components/ExpacCcPicks";
+import AttachDocumentPicker from "../../components/AttachDocumentPicker";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
 import RichTextEditor from "../../components/RichTextEditor";
 import DataTable, { type DataColumn } from "../../components/DataTable";
@@ -47,6 +48,11 @@ import {
 import { createClientInvite, createLeadContacts, listLeadContacts, promoteLeadToCustomer } from "../../lib/db";
 import { useQueryClient } from "@tanstack/react-query";
 import { sendMail, SUPPORT_BCC } from "../../lib/mail";
+import {
+  localAttachError,
+  resolveShipmentAttachments,
+  type ShipmentAttachmentPick,
+} from "../../lib/shipmentAttachments";
 import { htmlToText, resolveMergeFields } from "../../lib/mailMerge";
 import { linkifyHtml } from "../../lib/mailStyle";
 import { formatDate, normalizeWebsite, readableText } from "../../lib/format";
@@ -958,6 +964,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
   const [subject, setSubject] = useState("");
   const [cc, setCc] = useState("");
   const [body, setBody] = useState("");
+  const [files, setFiles] = useState<ShipmentAttachmentPick[]>([]);
   const [sending, setSending] = useState(false);
   const subjectRef = useRef<HTMLInputElement>(null);
 
@@ -998,8 +1005,11 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
       .filter(Boolean);
     const badCc = ccList.find((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
     if (badCc) return toastError(`Not a valid CC address: ${badCc}`);
+    const tooBig = localAttachError(files);
+    if (tooBig) return toastError(tooBig);
     setSending(true);
     try {
+      const attachments = await resolveShipmentAttachments(files);
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
       const html = linkifyHtml(resolveMergeFields(body, mergeCtx));
@@ -1010,6 +1020,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
         subject: resolveMergeFields(subject.trim(), mergeCtx),
         html,
         text: htmlToText(html),
+        attachments: attachments.length ? attachments : undefined,
         fromName: settings?.mail_sender_name || undefined,
         replyTo: settings?.mail_reply_to || undefined,
       });
@@ -1079,6 +1090,7 @@ function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) 
           Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>
       </div>
+      <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} />
       <div
         style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}
       >

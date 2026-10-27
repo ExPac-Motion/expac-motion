@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
+import AttachDocumentPicker from "./AttachDocumentPicker";
 import ExpacCcPicks from "./ExpacCcPicks";
 import MergeCodeMenu from "./MergeCodeMenu";
 import RichTextEditor from "./RichTextEditor";
@@ -17,6 +18,11 @@ import {
 } from "../lib/mailMerge";
 import { linkifyHtml } from "../lib/mailStyle";
 import { buildQuotePdf } from "../lib/quotePdf";
+import {
+  localAttachError,
+  resolveShipmentAttachments,
+  type ShipmentAttachmentPick,
+} from "../lib/shipmentAttachments";
 
 /**
  * Compose-and-send a one-off email to a customer / contact, straight from a
@@ -48,6 +54,7 @@ export default function QuickMailModal({
   const [cc, setCc] = useState("");
   const [body, setBody] = useState("");
   const [attachQuote, setAttachQuote] = useState(false);
+  const [files, setFiles] = useState<ShipmentAttachmentPick[]>([]);
   const [phase, setPhase] = useState<"idle" | "pdf" | "sending">("idle");
   const sending = phase !== "idle";
   const subjectRef = useRef<HTMLInputElement>(null);
@@ -90,12 +97,15 @@ export default function QuickMailModal({
       .filter(Boolean);
     const badCc = ccList.find((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
     if (badCc) return toastError(`Not a valid CC address: ${badCc}`);
+    const tooBig = localAttachError(files);
+    if (tooBig) return toastError(tooBig);
     try {
-      let attachments;
+      const attachments = [];
       if (attachQuote && quote) {
         setPhase("pdf");
-        attachments = [await buildQuotePdf(quote.id, quote.reference)];
+        attachments.push(await buildQuotePdf(quote.id, quote.reference));
       }
+      attachments.push(...(await resolveShipmentAttachments(files)));
       setPhase("sending");
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
@@ -107,7 +117,7 @@ export default function QuickMailModal({
         subject: resolveMergeFields(subject.trim(), mergeCtx),
         html,
         text: htmlToText(html),
-        attachments,
+        attachments: attachments.length ? attachments : undefined,
         fromName: settings?.mail_sender_name || undefined,
         replyTo: settings?.mail_reply_to || undefined,
       });
@@ -189,6 +199,7 @@ export default function QuickMailModal({
           Sends from {settings?.mail_sender_name || "the configured sender"}.
         </span>
       </div>
+      <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} />
       <div
         style={{
           display: "flex",

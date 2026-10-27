@@ -149,6 +149,14 @@ export async function fetchStoredDocument(doc: ShipmentDocument): Promise<QuoteA
   return { filename: doc.name, content: bufferToBase64(await res.arrayBuffer()) };
 }
 
+/** /api/send-mail caps attachments at 15 MB together; files from the
+ *  computer are checked against this before anything is built. */
+export const LOCAL_ATTACH_LIMIT = 14 * 1024 * 1024;
+export function localAttachError(picks: ShipmentAttachmentPick[]): string | null {
+  const bytes = picks.reduce((n, p) => n + (p.kind === "local" ? p.file.size : 0), 0);
+  return bytes > LOCAL_ATTACH_LIMIT ? "The attachments are too large together (max about 14 MB), remove some" : null;
+}
+
 /** Build every picked attachment, in order. */
 export async function resolveShipmentAttachments(
   picks: ShipmentAttachmentPick[],

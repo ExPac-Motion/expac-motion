@@ -5,7 +5,9 @@ import type { ShipmentAttachmentPick } from "../lib/shipmentAttachments";
 /** "📎 Attach document" for Shipment and Quotation Comms: a shipment's
  *  generated documents (sent as PDF) and Document Vault uploads, the
  *  quotation, and files picked from the computer (e.g. a shipper's
- *  invoice). Controlled -- the panel owns `picks` and sends them. */
+ *  invoice). Controlled -- the panel owns `picks` and sends them.
+ *  With no shipment or quotation it's just "📎 Attach file" (customer /
+ *  lead mail). */
 export default function AttachDocumentPicker({
   job,
   quote,
@@ -56,6 +58,7 @@ export default function AttachDocumentPicker({
     return { generated, files, quoteOpt };
   }, [job, quote, docsQ.data, docTypes]);
 
+  const filesOnly = !job && !quote;
   const picked = (key: string) => picks.some((p) => p.key === key);
   const toggle = (o: ShipmentAttachmentPick) =>
     onChange(picked(o.key) ? picks.filter((p) => p.key !== o.key) : [...picks, o]);
@@ -85,10 +88,14 @@ export default function AttachDocumentPicker({
       <button
         type="button"
         className={`chip${open ? " on" : ""}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (filesOnly ? fileRef.current?.click() : setOpen((v) => !v))}
       >
-        📎 Attach document{picks.length ? ` (${picks.length})` : ""}
+        📎 Attach {filesOnly ? "file" : "document"}
+        {picks.length ? ` (${picks.length})` : ""}
       </button>
+      {filesOnly && (
+        <input ref={fileRef} type="file" multiple hidden onChange={(e) => addLocal(e.target.files)} />
+      )}
       {picks.length > 0 && (
         <div className="comms-attach-chips">
           {picks.map((p) => (
@@ -101,7 +108,7 @@ export default function AttachDocumentPicker({
           ))}
         </div>
       )}
-      {open && (
+      {open && !filesOnly && (
         <div className="comms-attach-list">
           {(options.generated.length > 0 || options.quoteOpt.length > 0) && (
             <div className="hint">Documents (sent as PDF)</div>
