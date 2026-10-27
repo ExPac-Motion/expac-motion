@@ -103,6 +103,7 @@ export interface PortalPackingItem {
   actual_kg: number;
   qty_ctns: number;
   cbm: number | null;
+  qty_pcs?: number;
 }
 
 export interface QuoteRequestPacking {

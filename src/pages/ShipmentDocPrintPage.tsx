@@ -145,23 +145,24 @@ export default function ShipmentDocPrintPage() {
           <>
             <table className="qs-pk">
               <colgroup>
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <col key={i} style={{ width: "10.33%" }} />
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <col key={i} style={{ width: "9.3%" }} />
                 ))}
                 <col style={{ width: "7%" }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th>L (cm)</th>
-                  <th>W (cm)</th>
-                  <th>H (cm)</th>
-                  <th>Actual</th>
-                  <th>Qty</th>
-                  <th>CBM</th>
-                  <th>Volume</th>
-                  <th>Tot CBM</th>
-                  <th>Tot Act</th>
-                  <th>Tot Vol</th>
+                  <th>L<br />(cm)</th>
+                  <th>W<br />(cm)</th>
+                  <th>H<br />(cm)</th>
+                  <th>Act<br />(Kg)</th>
+                  <th>Qty<br />(Pcs)</th>
+                  <th>Qty<br />(Ctns)</th>
+                  <th>CBM<br />(Ctn)</th>
+                  <th>Volume<br />(Kg)</th>
+                  <th>Ttl<br />(Cbm)</th>
+                  <th>Ttl Act<br />(Kg)</th>
+                  <th>Ttl Vol<br />(Kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,6 +174,7 @@ export default function ShipmentDocPrintPage() {
                       <td>{n2(p.width_cm)}</td>
                       <td>{n2(p.height_cm)}</td>
                       <td>{n2(p.actual_kg)}</td>
+                      <td>{n2(p.qty_pcs)}</td>
                       <td>{n2(p.qty_ctns)}</td>
                       <td>{n2(r.cbm)}</td>
                       <td>{n2(r.volumeKg)}</td>
@@ -186,6 +188,7 @@ export default function ShipmentDocPrintPage() {
               <tfoot>
                 <tr>
                   <td colSpan={4}>Totals</td>
+                  <td>{n2(pack.pcs)}</td>
                   <td>{n2(pack.qty)}</td>
                   <td />
                   <td />

@@ -218,15 +218,17 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
             <table>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "right" }}>L</th>
-                  <th style={{ textAlign: "right" }}>W</th>
-                  <th style={{ textAlign: "right" }}>H</th>
-                  <th style={{ textAlign: "right" }}>Actual (KGS)</th>
-                  <th style={{ textAlign: "right" }}>Qty</th>
-                  <th style={{ textAlign: "right" }}>CBM</th>
-                  <th style={{ textAlign: "right" }}>Volume (KGS)</th>
-                  <th style={{ textAlign: "right" }}>Total Act</th>
-                  <th style={{ textAlign: "right" }}>Total Vol</th>
+                  <th style={{ textAlign: "right" }}>L<br />(cm)</th>
+                  <th style={{ textAlign: "right" }}>W<br />(cm)</th>
+                  <th style={{ textAlign: "right" }}>H<br />(cm)</th>
+                  <th style={{ textAlign: "right" }}>Act<br />(Kg)</th>
+                  <th style={{ textAlign: "right" }}>Qty<br />(Pcs)</th>
+                  <th style={{ textAlign: "right" }}>Qty<br />(Ctns)</th>
+                  <th style={{ textAlign: "right" }}>CBM<br />(Ctn)</th>
+                  <th style={{ textAlign: "right" }}>Volume<br />(Kg)</th>
+                  <th style={{ textAlign: "right" }}>Ttl<br />(Cbm)</th>
+                  <th style={{ textAlign: "right" }}>Ttl Act<br />(Kg)</th>
+                  <th style={{ textAlign: "right" }}>Ttl Vol<br />(Kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,9 +242,11 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                       <td style={{ textAlign: "right" }}>
                         {(Number(p.actual_kg) || 0).toFixed(2)}
                       </td>
+                      <td style={{ textAlign: "right" }}>{Number(p.qty_pcs) || 0}</td>
                       <td style={{ textAlign: "right" }}>{Number(p.qty_ctns) || 0}</td>
                       <td style={{ textAlign: "right" }}>{r.cbm.toFixed(2)}</td>
                       <td style={{ textAlign: "right" }}>{r.volumeKg.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{r.totalCbm.toFixed(2)}</td>
                       <td style={{ textAlign: "right" }}>{r.totalActual.toFixed(2)}</td>
                       <td style={{ textAlign: "right" }}>{r.totalVolume.toFixed(2)}</td>
                     </tr>
@@ -251,7 +255,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "right" }} className="muted">
+                  <td colSpan={9} style={{ textAlign: "right" }} className="muted">
                     Chg Vol (CBM)
                   </td>
                   <td colSpan={2} style={{ textAlign: "right", fontWeight: 700 }}>
@@ -259,7 +263,7 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "right" }} className="muted">
+                  <td colSpan={9} style={{ textAlign: "right" }} className="muted">
                     Chg Weight (KGS), max(actual{" "}
                     {packTotals.totalActual.toFixed(2)}, volume{" "}
                     {packTotals.totalVolume.toFixed(2)})
