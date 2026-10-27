@@ -7038,14 +7038,36 @@ table.dt .task-title {
   overflow: hidden;
   font-size: 0.8rem;
 }
+.inbox-convo {
+  margin-top: 12px;
+}
 .inbox-convo-head {
-  padding: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  padding: 8px 10px;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--teal-ink);
   background: var(--paper, #faf8f3);
+}
+.inbox-convo-head:hover {
+  background: var(--teal-tint);
+}
+.inbox-convo-last {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+  font-size: 0.76rem;
 }
 .inbox-convo-item {
   display: flex;

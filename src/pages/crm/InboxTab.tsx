@@ -1296,6 +1296,25 @@ function Reader({
 }) {
   const update = useUpdateInboxMessage();
   const saveLead = useSaveLead();
+  // The conversation sits folded under the email; open / folded is remembered.
+  const [convoOpen, setConvoOpen] = useState(() => {
+    try {
+      return localStorage.getItem("inbox.convoOpen") === "1";
+    } catch {
+      return false;
+    }
+  });
+  function toggleConvo() {
+    setConvoOpen((v) => {
+      try {
+        localStorage.setItem("inbox.convoOpen", v ? "0" : "1");
+      } catch {
+        /* private mode */
+      }
+      return !v;
+    });
+  }
+  const latestOther = thread.reduce<InboxMessage | null>((m, t) => (!m || t.sent_at > m.sent_at ? t : m), null);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { toast, error } = useToast();
@@ -1591,36 +1610,6 @@ function Reader({
 
       {composer}
 
-      {thread.length > 0 && (
-        // The whole conversation, oldest first; click one to read it.
-        <div className="inbox-convo">
-          <div className="inbox-convo-head">Conversation · {thread.length + 1} emails</div>
-          {[...thread, msg]
-            .sort((a, b) => a.sent_at.localeCompare(b.sent_at))
-            .map((t) =>
-              t.id === msg.id ? (
-                <div key={t.id} className="inbox-convo-item on">
-                  <strong>{t.direction === "out" ? "ExPac" : t.from_name || t.from_email}</strong>
-                  <span className="muted"> · {formatDateTime(t.sent_at)} · reading now</span>
-                </div>
-              ) : (
-                <button key={t.id} type="button" className="inbox-convo-item" onClick={() => onOpen(t.id)}>
-                  <span>
-                    <strong>
-                      {t.direction === "out"
-                        ? `ExPac${t.mailbox?.endsWith(":sent") ? " (Outlook)" : ""}`
-                        : t.from_name || t.from_email}
-                    </strong>
-                    <span className="muted"> · {formatDateTime(t.sent_at)}</span>
-                    {t.deleted_at && <span className="inbox-chip">In Trash</span>}
-                  </span>
-                  <span className="muted inbox-convo-snippet">{t.snippet || t.subject}</span>
-                </button>
-              ),
-            )}
-        </div>
-      )}
-
       {imagesHeld && (
         <div className="inbox-images-bar">
           Images from this unknown sender are hidden.
@@ -1661,6 +1650,49 @@ function Reader({
                 <span className="muted"> {Math.max(1, Math.round(a.size / 1024))} KB</span>
               </a>
             ))}
+        </div>
+      )}
+
+      {thread.length > 0 && (
+        // The rest of the conversation, under the email being read: one line
+        // until opened (remembered), then oldest first; click one to read it.
+        <div className={`inbox-convo${convoOpen ? " open" : ""}`}>
+          <button type="button" className="inbox-convo-head" onClick={toggleConvo} aria-expanded={convoOpen}>
+            <span>
+              {convoOpen ? "▾" : "▸"} Conversation · {thread.length + 1} emails
+            </span>
+            {latestOther && (
+              <span className="inbox-convo-last">
+                last from{" "}
+                {latestOther.direction === "out" ? "ExPac" : latestOther.from_name || latestOther.from_email} ·{" "}
+                {formatDateTime(latestOther.sent_at)}
+              </span>
+            )}
+          </button>
+          {convoOpen &&
+            [...thread, msg]
+              .sort((a, b) => a.sent_at.localeCompare(b.sent_at))
+              .map((t) =>
+                t.id === msg.id ? (
+                  <div key={t.id} className="inbox-convo-item on">
+                    <strong>{t.direction === "out" ? "ExPac" : t.from_name || t.from_email}</strong>
+                    <span className="muted"> · {formatDateTime(t.sent_at)} · reading now</span>
+                  </div>
+                ) : (
+                  <button key={t.id} type="button" className="inbox-convo-item" onClick={() => onOpen(t.id)}>
+                    <span>
+                      <strong>
+                        {t.direction === "out"
+                          ? `ExPac${t.mailbox?.endsWith(":sent") ? " (Outlook)" : ""}`
+                          : t.from_name || t.from_email}
+                      </strong>
+                      <span className="muted"> · {formatDateTime(t.sent_at)}</span>
+                      {t.deleted_at && <span className="inbox-chip">In Trash</span>}
+                    </span>
+                    <span className="muted inbox-convo-snippet">{t.snippet || t.subject}</span>
+                  </button>
+                ),
+              )}
         </div>
       )}
     </div>
