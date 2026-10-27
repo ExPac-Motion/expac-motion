@@ -2828,6 +2828,10 @@ export interface NavCounts {
   chat_unread: number;
   /** Self-serve portal signups awaiting approval (0185; 0 before it's run). */
   portal_pending?: number;
+  /** How many are on each list (0190; absent before it is run). */
+  leads_total?: number;
+  clients_total?: number;
+  suppliers_total?: number;
 }
 export async function getNavCounts(): Promise<NavCounts> {
   return unwrap<NavCounts>(await supabase.rpc("nav_counts"));

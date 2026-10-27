@@ -287,6 +287,9 @@ export default function Layout() {
       "/ops?tab=tasks": nc.tasks_open,
       "/crm?tab=messages": nc.chat_unread,
       "/clients?tab=portal-access": nc.portal_pending ?? 0,
+      "/crm?tab=leads": nc.leads_total ?? 0,
+      "/clients": nc.clients_total ?? 0,
+      "/suppliers": nc.suppliers_total ?? 0,
     };
     return byLink[to] ?? 0;
   };
