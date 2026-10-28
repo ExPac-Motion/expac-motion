@@ -50,7 +50,7 @@ import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
 import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
 import { stepLabel, timelineSteps } from "../lib/timeline";
-import { ALL_STEPS, stepLabelAny } from "../lib/steps";
+import { ALL_STEPS } from "../lib/steps";
 import { saveShipmentPod } from "../lib/pod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWmsConsols } from "../lib/wms";
@@ -178,6 +178,9 @@ const MODE_TABS: { key: ModeTab; label: string }[] = [
   { key: "Sea", label: "Sea Freight" },
   { key: "Road", label: "Road Freight" },
 ];
+
+/** One mode per family (sea, air, courier, road) for naming the steps. */
+const MODE_SAMPLES = ["Sea Freight (LCL)", "Air Freight (AIR)", "Courier Express (CX)", "Road Freight (RDX)"];
 
 /** A job's transport mode label starts with "Air (AIR)", "Sea (FCL)"… */
 function matchesModeTab(mode: string, tab: ModeTab): boolean {
@@ -383,15 +386,41 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     const k = j.shipment_status || "__none";
     statusCounts.set(k, (statusCounts.get(k) ?? 0) + 1);
   }
-  // The timeline steps in order (this mode's on a mode tab), plus any older
-  // status still on a shipment here (e.g. In Transit) so it can be found.
+  // Every timeline status by its full name, in timeline order. On All
+  // Shipments a step named differently per mode is listed once per name
+  // (Received at CFS / Received at airline / Received at hub ...) and
+  // filters just those shipments. Plus any older status still on a
+  // shipment here (e.g. In Transit) so it can be found.
+  const tabRows = stageRows.filter((x) => matchesModeTab(x.mode, modeTab));
+  const statusOpts: { value: string; label: string; test: (j: Job) => boolean }[] = [];
   const stepList = modeTab === "All" ? ALL_STEPS : timelineSteps(modeTab);
-  const legacy = [...statusCounts.keys()].filter((k) => k !== "__none" && !stepList.includes(k));
-  const statusOptions = [...stepList, ...legacy].filter((st) =>
-    mode === "completed" ? st === DELIVERED_STATUS : st !== DELIVERED_STATUS,
-  );
+  for (const st of stepList) {
+    if (mode === "completed" ? st !== DELIVERED_STATUS : st === DELIVERED_STATUS) continue;
+    if (modeTab !== "All") {
+      statusOpts.push({ value: st, label: stepLabel(st, modeTab), test: (j) => j.shipment_status === st });
+      continue;
+    }
+    const labels = [...new Set(MODE_SAMPLES.filter((m) => timelineSteps(m).includes(st)).map((m) => stepLabel(st, m)))];
+    if (labels.length === 1) {
+      statusOpts.push({ value: st, label: labels[0], test: (j) => j.shipment_status === st });
+    } else {
+      for (const l of labels)
+        statusOpts.push({
+          value: `${st}::${l}`,
+          label: l,
+          test: (j) => j.shipment_status === st && stepLabel(st, j.mode) === l,
+        });
+    }
+  }
+  for (const k of statusCounts.keys())
+    if (k !== "__none" && !stepList.includes(k) && (mode === "completed") === (k === DELIVERED_STATUS))
+      statusOpts.push({ value: k, label: k, test: (j) => j.shipment_status === k });
+  const pickOpt = statusOpts.find((o) => o.value === statusPick);
   const modeRows = stageRows
-    .filter((j) => !statusPick || (statusPick === "__none" ? !j.shipment_status : j.shipment_status === statusPick))
+    .filter((j) =>
+      !statusPick ||
+      (statusPick === "__none" ? !j.shipment_status : pickOpt ? pickOpt.test(j) : j.shipment_status === statusPick),
+    )
     .filter((j) => matchesModeTab(j.mode, modeTab))
     .filter(
       (j) =>
@@ -759,9 +788,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             style={{ width: "auto" }}
           >
             <option value="">All statuses ({stageRows.filter((x) => matchesModeTab(x.mode, modeTab)).length})</option>
-            {statusOptions.map((st) => (
-              <option key={st} value={st}>
-                {modeTab === "All" ? stepLabelAny(st) : stepLabel(st, modeTab)} ({statusCounts.get(st) ?? 0})
+            {statusOpts.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label} ({tabRows.filter(o.test).length})
               </option>
             ))}
             {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}
@@ -842,7 +871,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             {q
               ? `No shipments match "${search.trim()}".`
               : statusPick
-              ? `No shipments with status ${statusPick === "__none" ? "not set" : `"${stepLabelAny(statusPick)}"`} in this view.`
+              ? `No shipments with status ${statusPick === "__none" ? "not set" : `"${pickOpt?.label ?? statusPick}"`} in this view.`
               : recordFilter
               ? "Nothing matches that filter, every shipment in this view has one."
               : modeTab !== "All" && stageRows.length > 0
