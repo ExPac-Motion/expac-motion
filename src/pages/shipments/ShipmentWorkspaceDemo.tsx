@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
 const day = (d: number) => ago(d).slice(0, 10);
 const ID = "demo-job";
-const STEPS = ["Created", "Booked", "Collected", "Received", "Loaded", "Departed", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+const STEPS = ["Created", "Booked", "Collected", "Received", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
 
 export function ShipmentWorkspaceSeed({ children }: { children: ReactNode }) {
   const qc = useQueryClient();

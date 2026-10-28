@@ -14,19 +14,19 @@ import type { TimelineStep } from "../lib/timeline";
 const MODES: Record<string, { mode: string; steps: string[] }> = {
   lcl: {
     mode: "Sea Freight (LCL)",
-    steps: ["Created", "Booked", "Collected", "Received", "Loaded", "Departed", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
+    steps: ["Created", "Booked", "Collected", "Received", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
   },
   fcl: {
     mode: "Sea Freight (FCL)",
-    steps: ["Created", "Booked", "Collected", "Loaded", "Departed", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
+    steps: ["Created", "Booked", "Collected", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
   },
   air: {
     mode: "Air Freight (AIR)",
-    steps: ["Created", "Booked", "Collected", "Received", "Departed", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
+    steps: ["Created", "Booked", "Collected", "Received", "Departed", "In Transit", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
   },
   road: {
     mode: "Road Freight (RDX)",
-    steps: ["Created", "Booked", "Collected", "Departed", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
+    steps: ["Created", "Booked", "Collected", "Departed", "In Transit", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"],
   },
 };
 const DATES: Record<string, [string | null, string | null]> = {
