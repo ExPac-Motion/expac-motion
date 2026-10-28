@@ -15,6 +15,7 @@ import { getShipmentDocumentUrl } from "../../lib/db";
 import { DOCUMENT_TYPES_LIST } from "../../lib/docTemplates";
 import { formatDate } from "../../lib/format";
 import { isShipmentComplete, type Job } from "../../lib/types";
+import { statusLabel } from "../../lib/steps";
 
 interface VaultRow {
   id: string;
@@ -156,7 +157,7 @@ export default function DocumentVaultTab() {
     { key: "shipment", header: "Shipment", width: 120, render: (r) => r.job.reference, sortValue: (r) => r.job.reference },
     { key: "client", header: "Customer", width: 190, render: (r) => r.job.client?.company ?? "—", sortValue: (r) => r.job.client?.company ?? "" },
     { key: "mode", header: "Mode", width: 150, render: (r) => r.job.mode, sortValue: (r) => r.job.mode },
-    { key: "status", header: "Shipment status", width: 140, render: (r) => r.job.shipment_status || "—", defaultHidden: true },
+    { key: "status", header: "Shipment status", width: 140, render: (r) => statusLabel(r.job.shipment_status, r.job.mode) || "—", defaultHidden: true },
     { key: "date", header: "Date", width: 100, render: (r) => formatDate(r.date), sortValue: (r) => r.date },
     { key: "size", header: "Size", width: 80, render: (r) => bytesLabel(r.size), sortValue: (r) => r.size ?? 0 },
     {

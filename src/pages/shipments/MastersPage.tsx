@@ -28,6 +28,7 @@ import {
   type BoardHouse,
   type BoardReceipt,
 } from "../../lib/houses";
+import { statusLabel } from "../../lib/steps";
 
 const isAir = (mode: string) => mode.startsWith("Air") || mode.startsWith("Courier");
 const billOf = (mode: string) => (isAir(mode) ? "HAWB" : "HBL");
@@ -189,7 +190,7 @@ export default function MastersPage() {
                   {job.etd ? ` · ETD ${formatDate(job.etd)}` : ""}
                   {job.eta ? ` · ETA ${formatDate(job.eta)}` : ""}
                 </span>
-                <span className="ms-status">{job.shipment_status || job.milestone}</span>
+                <span className="ms-status">{statusLabel(job.shipment_status, job.mode) || job.milestone}</span>
                 <a className="link-btn" href={`/jobs/${job.id}/houses/print/house`} target="_blank" rel="noopener">
                   Print all {billOf(job.mode)}s
                 </a>

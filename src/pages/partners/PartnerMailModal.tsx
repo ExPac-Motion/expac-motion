@@ -9,6 +9,7 @@ import { useJobs, useQuotes } from "../../lib/hooks";
 import { isShipmentComplete, type Contact, type PartnerKind } from "../../lib/types";
 import { PARTNER_LABEL, partnerIdKey } from "../../lib/tariff";
 import CommsPanel from "../shipments/CommsPanel";
+import { statusLabel } from "../../lib/steps";
 
 export default function PartnerMailModal({
   kind,
@@ -82,7 +83,7 @@ export default function PartnerMailModal({
                 j.reference,
                 j.client?.company,
                 [j.origin, j.destination].filter(Boolean).join(" → "),
-                j.shipment_status || j.milestone,
+                statusLabel(j.shipment_status, j.mode) || j.milestone,
               ]
                 .filter(Boolean)
                 .join(" · ")}

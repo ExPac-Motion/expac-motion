@@ -1,6 +1,7 @@
 import { formatDate, portCode } from "./format";
 import type { Consignee } from "./customers";
 import type { Job, JobTracking, Quote } from "./types";
+import { statusLabel } from "./steps";
 
 export interface DocumentTypeDef {
   slug: string;
@@ -170,7 +171,7 @@ export function shipmentInfoRows(
       ];
   const tail: [string, string][] = [
     ["Incoterms", quote?.incoterms || "—"],
-    ["Shipment Status", job.shipment_status || "—"],
+    ["Shipment Status", statusLabel(job.shipment_status, job.mode) || "—"],
     ["Customer Reference", job.po_no || quote?.customer_reference || "—"],
     ["Delivery Terms", quote?.delivery_terms || "—"],
     ["Commodity", quote?.commodity || "—"],

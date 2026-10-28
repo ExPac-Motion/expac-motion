@@ -17,6 +17,7 @@ import type {
   ShipmentModeKey,
 } from "./types";
 import { STATUS_LABEL } from "./types";
+import { statusLabel } from "./steps";
 
 const RULE = "________________________________________";
 
@@ -228,7 +229,7 @@ export function shipmentMergeContext(job: Job): MergeContext {
     etd: d(job.etd),
     eta: d(job.eta),
     deliveryDate: d(job.provisional_delivery_date),
-    shipmentStatus: job.shipment_status ?? "",
+    shipmentStatus: statusLabel(job.shipment_status, job.mode),
   };
 }
 

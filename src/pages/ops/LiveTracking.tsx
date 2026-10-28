@@ -21,6 +21,7 @@ import {
   type TrackRoute,
 } from "../../lib/trackRoute";
 import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
+import { statusLabel } from "../../lib/steps";
 
 export default function LiveTracking() {
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
@@ -165,9 +166,11 @@ export default function LiveTracking() {
         render: (j) => {
           const status =
             trackingByJob.get(j.id)?.status ?? j.shipment_status ?? "—";
+          // The carrier's own wording as is; our status as the timeline step name.
+          const shown = trackingByJob.get(j.id)?.status ? status : statusLabel(j.shipment_status, j.mode) || "—";
           return (
             <span className={`ms-tag tone-${trackingTone(status)}`}>
-              {status}
+              {shown}
             </span>
           );
         },
