@@ -33,7 +33,7 @@ import {
   OPPORTUNITY_STAGES,
   PIPE_STAGE_COLORS,
   WON_QUOTE_STATUSES,
-  isShipmentComplete,
+  isDelivered,
   type CompanySettingsPatch,
   type OpportunityStatus,
   type QuoteStatus,
@@ -395,7 +395,7 @@ export default function SalesDashboardTab() {
       const q = j.quote_id ? quoteById.get(j.quote_id) : undefined;
       return s + (q ? chargeTotals(q.quote_lines, fxOf(q)).sellIncl : 0);
     }, 0);
-    const completedNotInvoiced = notInvoiced.filter(isShipmentComplete).length;
+    const completedNotInvoiced = notInvoiced.filter(isDelivered).length;
     return {
       revenue,
       cost,

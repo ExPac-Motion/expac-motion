@@ -37,7 +37,7 @@ import { orNull, useWmsLookups } from "./shared";
 import { notifyWms } from "../../lib/wmsNotify";
 import { useQuotes } from "../../lib/hooks";
 import { useAllConsignees } from "../../lib/customers";
-import { isShipmentComplete, type Job } from "../../lib/types";
+import { isDelivered, type Job } from "../../lib/types";
 import { houseFromShipment, jobsOnMasters, shipmentFitsConsol, shipmentHouseNo } from "./houseFromShipment";
 
 /** Default Accounting Information / notify party on a house: ExPac (from the
@@ -463,7 +463,7 @@ export function ConsolEditModal({
   const taken = jobsOnMasters(consolsAll.filter((c) => c.status !== "departed"), consol?.id);
   const inThis = new Set(houses.map((h) => h.job_id).filter(Boolean));
   const candidates = lk.jobs.filter(
-    (j) => !isShipmentComplete(j) && shipmentFitsConsol(j.mode, mode) && !taken.has(j.id) && !inThis.has(j.id),
+    (j) => !isDelivered(j) && shipmentFitsConsol(j.mode, mode) && !taken.has(j.id) && !inThis.has(j.id),
   );
   const quoteOf = (id: string | null) => (id ? (quotesQ.data ?? []).find((q) => q.id === id) : undefined);
 

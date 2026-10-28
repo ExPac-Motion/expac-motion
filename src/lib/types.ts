@@ -1468,6 +1468,10 @@ export interface Job {
   /** Proof of delivery (0151): who signed, and the delivery date. */
   pod_signed_by?: string | null;
   pod_delivered_at?: string | null;
+  /** Ops Complete (0199): Admin's sign-off (invoiced, supplier invoices
+   *  accounted for). Only then does a shipment leave Active Shipments. */
+  ops_completed_at?: string | null;
+  ops_completed_by?: string | null;
   /** Carrier SCAC, set for a bill-of-lading tracking registration. */
   scac: string | null;
   etd: string | null;
@@ -1498,12 +1502,17 @@ export const DELIVERED_STATUS = "Delivered";
 
 /**
  * A shipment is finished, belongs on Completed Shipments and drops off the
- * dashboard, Control Tower and Live Tracking, once its shipment status or its
- * milestone reads Delivered.
+ * active lists and counts, once Admin has marked it Ops Complete (0199):
+ * delivered, invoiced and every supplier invoice accounted for. Delivered
+ * alone keeps it active.
  */
-export function isShipmentComplete(
-  job: Pick<Job, "shipment_status" | "milestone">,
-): boolean {
+export function isShipmentComplete(job: Pick<Job, "ops_completed_at">): boolean {
+  return !!job.ops_completed_at;
+}
+
+/** The goods have arrived: status or milestone Delivered (may still await
+ *  Ops Complete). Tracking, consolidations and the calendar stop here. */
+export function isDelivered(job: Pick<Job, "shipment_status" | "milestone">): boolean {
   return job.shipment_status === DELIVERED_STATUS || job.milestone === "Delivered";
 }
 
@@ -1530,6 +1539,7 @@ export type JobPatch = Partial<
     | "destination"
     | "pod_signed_by"
     | "pod_delivered_at"
+    | "ops_completed_at"
   >
 >;
 

@@ -13,14 +13,17 @@ import {
   useOpsTasks,
   useProfiles,
   useCan,
+  useMyProfile,
+  useUpdateJob,
   useQuote,
   useRevertJobToQuote,
   useSaveOpsTask,
   useShipmentDocuments,
 } from "../../lib/hooks";
 import { chargeTotals, fxOf, groupByCategory, packingRow, packingTotals, volumetricFactor } from "../../lib/calc";
-import { OPTIONAL_STEP, stepLabel, todayIso, useJobTimeline, type TimelineStep } from "../../lib/timeline";
-import { isShipmentComplete, type Job, type OpsTask, type OpsTaskPatch, type ShipmentDocument } from "../../lib/types";
+import { OPTIONAL_STEP, stepLabel, timelineDb, todayIso, useJobTimeline, type TimelineStep } from "../../lib/timeline";
+import { isDelivered, isShipmentComplete, type Job, type OpsTask, type OpsTaskPatch, type ShipmentDocument } from "../../lib/types";
+import Modal from "../../components/Modal";
 import {
   ConsolSection,
   CreateQuoteForJob,
@@ -74,7 +77,8 @@ export function shipmentHealth(
   job: Job,
   steps: TimelineStep[],
 ): { label: string; cls: "ok" | "risk" | "late" | "done"; why: string } {
-  if (isShipmentComplete(job)) return { label: "Delivered", cls: "done", why: "Shipment delivered" };
+  if (isShipmentComplete(job)) return { label: "Ops Complete", cls: "done", why: `Signed off ${formatDate(job.ops_completed_at)}` };
+  if (isDelivered(job)) return { label: "Delivered", cls: "done", why: "Waiting for Admin to mark it Ops Complete" };
   const today = todayIso();
   const arrived = steps.find((s) => s.step === "Arrived");
   if (job.eta && job.eta.slice(0, 10) < today && arrived && !arrived.done) {
@@ -106,6 +110,9 @@ export default function ShipmentWorkspacePage() {
 
   const [quick, setQuick] = useState(false);
   const revert = useRevertJobToQuote();
+  const updateJob = useUpdateJob();
+  const isAdmin = useMyProfile().data?.role === "admin";
+  const [signing, setSigning] = useState(false);
   const canDelete = useCan()("delete");
   const { toast, error: toastError } = useToast();
   // ?comms=1 (from a notification or the Inbox) opens Messages straight away.
@@ -144,11 +151,24 @@ export default function ShipmentWorkspacePage() {
   const doneCount = counted.filter((s) => s.done).length;
   const pct = counted.length ? Math.round((doneCount / counted.length) * 100) : 0;
   const etaDays = job.eta ? daysBetween(todayIso(), job.eta) : null;
-  const delivered = isShipmentComplete(job);
+  const delivered = isDelivered(job);
+  const opsDone = isShipmentComplete(job);
   const onDelivered = () => {
     if (!job.pod_signed_by && !job.pod_delivered_at) setPodJob(job);
   };
   const statusLabel = job.shipment_status ? stepLabel(job.shipment_status, job.mode) : job.milestone;
+  // Ops Complete (0199): Admin signs off once invoiced and every supplier
+  // invoice is in; only then does the shipment leave Active Shipments.
+  async function onReopen() {
+    if (!job || !window.confirm(`Reopen ${job.reference}? It goes back to Active Shipments.`)) return;
+    try {
+      await updateJob.mutateAsync({ id: job.id, patch: { ops_completed_at: null } });
+      await timelineDb.logNote({ jobId: job.id, milestone: job.milestone, note: "Ops Complete undone, back on Active Shipments" });
+      toast(`${job.reference} reopened, back on Active Shipments`);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not reopen");
+    }
+  }
   // Customer not ready yet: back to Quote Sent, off the board, re-accept later.
   const canRevert = !!job.quote_id && !delivered && canDelete;
   async function onRevert() {
@@ -175,8 +195,8 @@ export default function ShipmentWorkspacePage() {
         title={job.reference}
         actions={
           <>
-            <button className="btn outline" onClick={() => navigate(delivered ? "/jobs/completed" : "/jobs")}>
-              ← {delivered ? "Completed" : "Active"} shipments
+            <button className="btn outline" onClick={() => navigate(opsDone ? "/jobs/completed" : "/jobs")}>
+              ← {opsDone ? "Completed" : "Active"} shipments
             </button>
             {canRevert && (
               <button
@@ -194,6 +214,26 @@ export default function ShipmentWorkspacePage() {
             <button className="btn" onClick={() => setQuick(true)}>
               Quick update
             </button>
+            {isAdmin && !opsDone && (
+              <button
+                className="btn ops-complete-btn"
+                onClick={() => setSigning(true)}
+                disabled={!delivered}
+                title={delivered ? "Sign the shipment off: invoiced, supplier invoices accounted for" : "Available once the shipment is Delivered"}
+              >
+                ✓ Mark Ops Complete
+              </button>
+            )}
+            {opsDone && (
+              <span className="ops-complete-tag" title={`Signed off ${formatDateTime(job.ops_completed_at)}`}>
+                ✓ Ops Complete {formatDate(job.ops_completed_at)}
+                {isAdmin && (
+                  <button className="link-btn" onClick={onReopen} disabled={updateJob.isPending}>
+                    Reopen
+                  </button>
+                )}
+              </span>
+            )}
           </>
         }
       />
@@ -291,6 +331,7 @@ export default function ShipmentWorkspacePage() {
         />
       )}
       {podJob && <ShipmentPodModal job={podJob} onClose={() => setPodJob(null)} />}
+      {signing && <OpsCompleteModal job={job} onClose={() => setSigning(false)} onDone={() => navigate("/jobs/completed")} />}
     </>
   );
 }
@@ -332,7 +373,14 @@ function OverviewTab({
       go: () => onTab("tasks"),
       cta: "Tasks",
     });
-  if (missingDocs.length && !isShipmentComplete(job))
+  if (isDelivered(job) && !isShipmentComplete(job))
+    actions.unshift({
+      key: "opscomplete",
+      text: "Delivered. Mark Ops Complete once the customer is invoiced and every supplier invoice is accounted for (Admin)",
+      go: () => onTab("financials"),
+      cta: "Financials",
+    });
+  if (missingDocs.length && !isDelivered(job))
     actions.push({
       key: "docs",
       text: `Documents missing: ${missingDocs
@@ -518,7 +566,7 @@ function DocumentsTab({
                 <span className="muted">
                   {found.length
                     ? found.map((d) => d.name).join(", ")
-                    : r.type === "Proof of Delivery" && !isShipmentComplete(job)
+                    : r.type === "Proof of Delivery" && !isDelivered(job)
                       ? "after delivery"
                       : "missing"}
                 </span>
@@ -705,5 +753,57 @@ function ActivityTab({ job, onMessages }: { job: Job; onMessages: () => void }) 
         </ol>
       )}
     </div>
+  );
+}
+
+/** Admin's sign-off: both checks ticked, then the shipment moves to Completed. */
+function OpsCompleteModal({ job, onClose, onDone }: { job: Job; onClose: () => void; onDone: () => void }) {
+  const updateJob = useUpdateJob();
+  const { toast, error: toastError } = useToast();
+  const [invoiced, setInvoiced] = useState(false);
+  const [suppliers, setSuppliers] = useState(false);
+  async function onConfirm() {
+    try {
+      await updateJob.mutateAsync({ id: job.id, patch: { ops_completed_at: new Date().toISOString() } });
+      await timelineDb.logNote({ jobId: job.id, milestone: job.milestone, note: "Ops Complete: invoiced, supplier invoices accounted for" });
+      toast(`${job.reference} is Ops Complete, moved to Completed Shipments`);
+      onClose();
+      onDone();
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not mark Ops Complete");
+    }
+  }
+  return (
+    <Modal title={`Ops Complete, ${job.reference}`} onClose={onClose}>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Signs the shipment off and moves it to Completed Shipments. Admin can reopen it later.
+      </p>
+      <label className="ops-check">
+        <input type="checkbox" checked={invoiced} onChange={(e) => setInvoiced(e.target.checked)} />
+        <span>
+          <b>Customer invoiced</b>
+          <span className="muted">
+            {job.invoice_no
+              ? ` Invoice ${job.invoice_no}${job.invoiced_at ? `, ${formatDate(job.invoiced_at)}` : ""}`
+              : " No invoice number recorded on the shipment yet"}
+          </span>
+        </span>
+      </label>
+      <label className="ops-check">
+        <input type="checkbox" checked={suppliers} onChange={(e) => setSuppliers(e.target.checked)} />
+        <span>
+          <b>All supplier invoices accounted for</b>
+          <span className="muted"> Agent, shipping line / airline, clearing, transport and any other costs</span>
+        </span>
+      </label>
+      <div className="qu-foot">
+        <button className="btn outline" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn" onClick={onConfirm} disabled={!invoiced || !suppliers || updateJob.isPending}>
+          {updateJob.isPending ? "Saving…" : "✓ Mark Ops Complete"}
+        </button>
+      </div>
+    </Modal>
   );
 }

@@ -1,4 +1,4 @@
-import { isShipmentComplete } from "./types";
+import { isDelivered } from "./types";
 import type { Job, JobTracking, OpsTask, Quote } from "./types";
 
 /** Local YYYY-MM-DD for a Y/M(0-based)/D triple, no timezone drift. */
@@ -125,7 +125,7 @@ export function buildCalendarEvents({
 
   if (sources.has("jobs")) {
     for (const j of jobs) {
-      if (isShipmentComplete(j)) continue;
+      if (isDelivered(j)) continue;
       const lane = `${j.mode} · ${j.client?.company ?? "—"}`;
       const etd = d10(j.etd);
       const eta = d10(j.eta);

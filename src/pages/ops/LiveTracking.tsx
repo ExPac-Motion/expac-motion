@@ -20,7 +20,7 @@ import {
   routeEventsFromRows,
   type TrackRoute,
 } from "../../lib/trackRoute";
-import { isShipmentComplete, type Job, type JobTracking } from "../../lib/types";
+import { isDelivered, type Job, type JobTracking } from "../../lib/types";
 import { statusLabel } from "../../lib/steps";
 
 export default function LiveTracking() {
@@ -33,7 +33,7 @@ export default function LiveTracking() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const activeJobs = useMemo(
-    () => (jobsQ.data ?? []).filter((j) => !isShipmentComplete(j)),
+    () => (jobsQ.data ?? []).filter((j) => !isDelivered(j)),
     [jobsQ.data],
   );
   const trackingByJob = useMemo(() => {

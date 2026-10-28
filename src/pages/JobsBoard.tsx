@@ -63,6 +63,7 @@ import { LOCODES } from "../lib/locodes";
 import { trackableRef } from "../lib/tracking";
 import {
   DELIVERED_STATUS,
+  isShipmentComplete,
   DOCUMENT_TYPES,
   MILESTONE_BY_STATUS,
   SHIPMENT_STATUSES,
@@ -372,11 +373,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     }
   }
 
-  const stageRows = (jobs ?? []).filter((j) =>
-    mode === "completed"
-      ? j.shipment_status === DELIVERED_STATUS
-      : j.shipment_status !== DELIVERED_STATUS,
-  );
+  // Active until Admin marks it Ops Complete (0199); Delivered alone stays here.
+  const stageRows = (jobs ?? []).filter((j) => (mode === "completed") === isShipmentComplete(j));
   // Quick search: shipment no., customer, shipper, PO / reference, AWB/MBL,
   // container, vessel, carrier, ports, notes.
   const q = search.trim().toLowerCase();
@@ -395,7 +393,6 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const statusOpts: { value: string; label: string; test: (j: Job) => boolean }[] = [];
   const stepList = modeTab === "All" ? ALL_STEPS : timelineSteps(modeTab);
   for (const st of stepList) {
-    if (mode === "completed" ? st !== DELIVERED_STATUS : st === DELIVERED_STATUS) continue;
     if (modeTab !== "All") {
       statusOpts.push({ value: st, label: stepLabel(st, modeTab), test: (j) => j.shipment_status === st });
       continue;
@@ -413,7 +410,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     }
   }
   for (const k of statusCounts.keys())
-    if (k !== "__none" && !stepList.includes(k) && (mode === "completed") === (k === DELIVERED_STATUS))
+    if (k !== "__none" && !stepList.includes(k))
       statusOpts.push({ value: k, label: k, test: (j) => j.shipment_status === k });
   const pickOpt = statusOpts.find((o) => o.value === statusPick);
   const modeRows = stageRows
@@ -463,20 +460,14 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       const j = (jobs ?? []).find((x) => x.id === id);
       if (j && !j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
     }
-    const fromDone =
-      mode === "completed" &&
-      patch.shipment_status !== undefined &&
-      patch.shipment_status !== DELIVERED_STATUS;
     updateJob.mutate(
       { id, patch },
       {
         onSuccess: () =>
           toast(
             toDone
-              ? "Shipment delivered, moved to Completed Shipments"
-              : fromDone
-                ? "Shipment reopened, moved to Active Shipments"
-                : "Shipment updated",
+              ? "Shipment delivered. It stays on Active Shipments until Admin marks it Ops Complete"
+              : "Shipment updated",
           ),
         onError: (e) =>
           toastError(e instanceof Error ? e.message : "Could not save"),
@@ -986,7 +977,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               }
               toast(
                 status === DELIVERED_STATUS
-                  ? `${n} shipment${n === 1 ? "" : "s"} delivered, moved to Completed Shipments`
+                  ? `${n} shipment${n === 1 ? "" : "s"} delivered, they stay active until Ops Complete`
                   : `Updated ${n} shipment${n === 1 ? "" : "s"}`,
               );
               sel.clear();

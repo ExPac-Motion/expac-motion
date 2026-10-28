@@ -11284,3 +11284,39 @@ label.ws-tile:hover {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
+
+/* Ops Complete (0199) */
+.ops-complete-btn {
+  background: var(--night);
+  border-color: var(--night);
+  color: #fff;
+}
+.ops-complete-btn:disabled {
+  opacity: 0.45;
+}
+.ops-complete-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--green-tint);
+  color: var(--green-dark);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.ops-complete-tag .link-btn {
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+.ops-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.ops-check input {
+  margin-top: 3px;
+}
