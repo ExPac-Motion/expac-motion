@@ -18,6 +18,7 @@ import { getMyDocumentUrl } from "../../lib/db";
 import { carrierLabel } from "../../lib/docTemplates";
 import { currencyAmount, formatDate, formatDateTime, money, portCode } from "../../lib/format";
 import { packingTotals, volumetricFactor } from "../../lib/calc";
+import { stepLabel, useClientTimeline } from "../../lib/timeline";
 import { MILESTONE_BY_STATUS, SHIPMENT_STATUSES, type ClientDocument, type PackingItem } from "../../lib/types";
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
@@ -75,6 +76,8 @@ export default function PortalShipmentPage() {
   // the rest from the status history, Delivered also from the proof of
   // delivery.
   const historyQ = useMyStatusHistory(id);
+  // The shipment timeline (0196): this mode's steps with their dates.
+  const timelineQ = useClientTimeline(id);
   const reachedAt = useMemo(() => {
     const m = new Map<string, string>();
     if (job) m.set("Created", job.created_at);
@@ -144,6 +147,52 @@ export default function PortalShipmentPage() {
     : byStatus >= 0
       ? byStatus
       : Math.max(0, steps.findIndex((s) => MILESTONE_BY_STATUS[s] === job.milestone));
+  // Progress bar rows: the timeline when there is one, else every status.
+  const tl = timelineQ.data ?? [];
+  const tlCurrent = delivered ? tl.length - 1 : Math.max(0, tl.reduce((n, s, i) => (s.done ? i : n), -1));
+  const progress: { key: string; label: string; state: string; alert: boolean; when: ReactNode }[] = tl.length
+    ? tl.map((s, i) => {
+        const state = i < tlCurrent || (i === tlCurrent && delivered) ? "done" : i === tlCurrent ? "current" : "todo";
+        return {
+          key: s.step,
+          label: stepLabel(s.step, job.mode),
+          state,
+          alert: s.step === "Detained",
+          when:
+            s.done && s.actual_date ? (
+              formatDate(s.actual_date)
+            ) : !s.done && s.planned_date ? (
+              <>Expected {formatDate(s.planned_date)}</>
+            ) : state === "current" ? (
+              "Now"
+            ) : (
+              ""
+            ),
+        };
+      })
+    : steps.map((m, i) => {
+        const state = i < current || (i === current && delivered) ? "done" : i === current ? "current" : "todo";
+        const at = reachedAt.get(m);
+        return {
+          key: m,
+          label: m,
+          state,
+          alert: m === "Detained",
+          when:
+            at && state !== "todo" ? (
+              <>
+                {formatDate(at)}
+                <br />
+                {formatDateTime(at).split(" ").slice(1).join(" ")}
+              </>
+            ) : state === "current" ? (
+              "Now"
+            ) : (
+              ""
+            ),
+        };
+      });
+  const progressAt = tl.length ? tlCurrent : current;
   const status = tracking?.status || job.shipment_status || job.milestone;
   const etd = tracking?.etd || job.etd;
   const eta = tracking?.pod_ata || tracking?.pod_eta || tracking?.eta || job.eta;
@@ -200,33 +249,17 @@ export default function PortalShipmentPage() {
         </div>
         <ol
           className="sp-steps"
-          style={{ ["--sp-frac" as string]: current / (steps.length - 1), ["--sp-n" as string]: steps.length }}
+          style={{ ["--sp-frac" as string]: progressAt / Math.max(1, progress.length - 1), ["--sp-n" as string]: progress.length }}
         >
-          {steps.map((m, i) => {
-            const state = i < current || (i === current && delivered) ? "done" : i === current ? "current" : "todo";
-            const at = reachedAt.get(m);
-            return (
-              <li key={m} className={`sp-step ${state}${m === "Detained" ? " alert" : ""}`}>
-                <span className="sp-dot" aria-hidden>
-                  {state === "done" ? "✓" : i + 1}
-                </span>
-                <span className="sp-label">{m}</span>
-                <span className="sp-when">
-                  {at && state !== "todo" ? (
-                    <>
-                      {formatDate(at)}
-                      <br />
-                      {formatDateTime(at).split(" ").slice(1).join(" ")}
-                    </>
-                  ) : state === "current" ? (
-                    "Now"
-                  ) : (
-                    ""
-                  )}
-                </span>
-              </li>
-            );
-          })}
+          {progress.map((p, i) => (
+            <li key={p.key} className={`sp-step ${p.state}${p.alert ? " alert" : ""}`}>
+              <span className="sp-dot" aria-hidden>
+                {p.state === "done" ? "✓" : i + 1}
+              </span>
+              <span className="sp-label">{p.label}</span>
+              <span className="sp-when">{p.when}</span>
+            </li>
+          ))}
         </ol>
       </div>
 

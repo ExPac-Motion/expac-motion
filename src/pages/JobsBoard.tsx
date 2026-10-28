@@ -7,6 +7,7 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
@@ -50,6 +51,7 @@ import {
 } from "../lib/hooks";
 import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
+import ShipmentTimeline from "../components/ShipmentTimeline";
 import { saveShipmentPod } from "../lib/pod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWmsConsols } from "../lib/wms";
@@ -865,7 +867,13 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 
       {viewing && (
         <JobViewModal
-          job={viewing}
+          job={(jobs ?? []).find((x) => x.id === viewing.id) ?? viewing}
+          onEmail={() => openComms((jobs ?? []).find((x) => x.id === viewing.id) ?? viewing)}
+          onDelivered={() => {
+            const j = (jobs ?? []).find((x) => x.id === viewing.id) ?? viewing;
+            toast("Shipment delivered, moved to Completed Shipments");
+            if (!j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
+          }}
           onClose={() => closeAndReturn(() => setViewing(null))}
           onEdit={() => {
             setEditingJob(viewing);
@@ -1006,11 +1014,18 @@ function JobViewModal({
   job,
   onClose,
   onEdit,
+  onDelivered,
+  onEmail,
 }: {
   job: Job;
   onClose: () => void;
   onEdit: () => void;
+  onDelivered: () => void;
+  /** Opens the shipment's Comms rail (email is logged there). */
+  onEmail: () => void;
 }) {
+  const air = job.mode.startsWith("Air") || job.mode.startsWith("Courier");
+  const sea = job.mode.startsWith("Sea");
   const revert = useRevertJobToQuote();
   const { toast, error: toastError } = useToast();
   const canDelete = useCan()("delete");
@@ -1055,41 +1070,76 @@ function JobViewModal({
         </>
       }
     >
-      <div className="grid2">
-        <ViewField label="Customer" value={job.client?.company ?? "—"} />
-        <ViewField label="Shipper" value={job.supplier?.company ?? "—"} />
-        <ViewField label="Mode" value={job.mode} />
-        <ViewField label="Milestone" value={job.milestone} />
-        <ViewField label="Shipment Status" value={job.shipment_status || "—"} />
-        <ViewField label="Reference" value={job.po_no || "—"} />
-        <ViewField label={docLabel(job.mode)} value={job.awb_mbl || "—"} />
-        <ViewField label="Container No" value={job.container_no || "—"} />
-        <ViewField label={carrierLabel(job.mode)} value={job.shipping_line || "—"} />
-        <ViewField label="Airline" value={job.carrier_name || "—"} />
-        <ViewField label="POL" value={codeOf(job.origin) || "—"} />
-        <ViewField label="POD" value={codeOf(job.destination) || "—"} />
-        <ViewField label="ETD" value={formatDate(job.etd)} />
-        <ViewField label="ETA" value={formatDate(job.eta)} />
-        <ViewField
-          label="PDD"
-          value={formatDate(job.provisional_delivery_date)}
-        />
-        <ViewField label="Created On" value={formatDate(job.created_at)} />
-      </div>
-      <ViewField label="Notes" value={job.notes || "—"} />
-      {job.quote_id ? (
-        <p style={{ marginTop: 8 }}>
-          <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
-            View originating quotation →
-          </Link>
-        </p>
-      ) : (
-        <CreateQuoteForJob job={job} onDone={onClose} />
-      )}
+      <ShipmentTimeline job={job} onDelivered={onDelivered} />
 
-      <PodSection job={job} />
-      <ConsolSection job={job} />
-      <HousesSection job={job} />
+      <div className="jv-cards">
+        <div className="jv-card">
+          <h4>Route &amp; transport</h4>
+          <div className="jv-route">
+            <b>{codeOf(job.origin) || "—"}</b>
+            <span aria-hidden>→</span>
+            <b>{codeOf(job.destination) || "—"}</b>
+          </div>
+          <JvField label="Mode" value={job.mode} />
+          <JvField label={docLabel(job.mode)} value={job.awb_mbl} onAdd={onEdit} />
+          {sea && (
+            <JvField
+              label="Container"
+              value={[job.container_no, job.container_type].filter(Boolean).join(" · ")}
+              onAdd={onEdit}
+            />
+          )}
+          {air ? (
+            <>
+              <JvField label="Airline" value={job.carrier_name} onAdd={onEdit} />
+              {job.shipping_line && <JvField label={carrierLabel(job.mode)} value={job.shipping_line} />}
+            </>
+          ) : (
+            <JvField label={carrierLabel(job.mode)} value={job.shipping_line} onAdd={onEdit} />
+          )}
+          {job.vessel_name && <JvField label="Vessel" value={job.vessel_name} />}
+        </div>
+        <div className="jv-card">
+          <h4>Parties</h4>
+          <JvParty label="Customer" p={job.client} onEmail={onEmail} />
+          <JvParty label="Shipper" p={job.supplier} />
+        </div>
+        <div className="jv-card">
+          <h4>References</h4>
+          <JvField label="Our reference" value={job.reference} />
+          <JvField label="Customer ref / PO" value={job.po_no} onAdd={onEdit} />
+          <JvField
+            label="Quotation"
+            value={
+              job.quote_id ? (
+                <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
+                  View quotation →
+                </Link>
+              ) : null
+            }
+          />
+          <JvField label="Created" value={formatDate(job.created_at)} />
+          {job.invoice_no && (
+            <JvField
+              label="Invoice"
+              value={job.invoice_no + (job.invoiced_at ? " · " + formatDate(job.invoiced_at) : "")}
+            />
+          )}
+        </div>
+      </div>
+      {job.notes && (
+        <div className="jv-notes">
+          <span className="k">Notes</span>
+          <span>{job.notes}</span>
+        </div>
+      )}
+      {!job.quote_id && <CreateQuoteForJob job={job} onDone={onClose} />}
+
+      <div className="jv-extras">
+        <PodSection job={job} />
+        <ConsolSection job={job} />
+        <HousesSection job={job} />
+      </div>
       <DocumentsSection job={job} />
     </Modal>
   );
@@ -1521,13 +1571,55 @@ function JobEditModal({
   );
 }
 
-function ViewField({ label, value }: { label: string; value: string }) {
+/** One line on a shipment View card; empty shows "+ add" (opens Edit). */
+function JvField({ label, value, onAdd }: { label: string; value: ReactNode; onAdd?: () => void }) {
+  const empty = value == null || value === "";
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div className="hint" style={{ marginBottom: 4 }}>
-        {label}
-      </div>
-      <strong>{value}</strong>
+    <div className="jv-field">
+      <span className="k">{label}</span>
+      {empty ? (
+        onAdd ? (
+          <button type="button" className="jv-add" onClick={onAdd}>
+            + add
+          </button>
+        ) : (
+          <span className="muted">—</span>
+        )
+      ) : (
+        <span className="v">{value}</span>
+      )}
+    </div>
+  );
+}
+
+/** Customer / shipper with contact, phone and email. */
+function JvParty({
+  label,
+  p,
+  onEmail,
+}: {
+  label: string;
+  p: { company: string; contact?: string | null; email?: string | null; phone?: string | null; company_phone?: string | null } | null | undefined;
+  onEmail?: () => void;
+}) {
+  if (!p) return <JvField label={label} value={null} />;
+  const phone = p.phone || p.company_phone;
+  return (
+    <div className="jv-party">
+      <span className="k">{label}</span>
+      <b>{p.company}</b>
+      {p.contact && <span>{p.contact}</span>}
+      <span className="jv-contact">
+        {phone && <a href={`tel:${phone.replace(/[^+d]/g, "")}`}>📞 {phone}</a>}
+        {p.email &&
+          (onEmail ? (
+            <button type="button" className="link-btn" onClick={onEmail} title="Email from the shipment's Comms (logged)">
+              ✉ {p.email}
+            </button>
+          ) : (
+            <a href={`mailto:${p.email}`}>✉ {p.email}</a>
+          ))}
+      </span>
     </div>
   );
 }

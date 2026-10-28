@@ -17,6 +17,7 @@ import QuotesListPage from "./pages/QuotesListPage";
 import QuoteBuilderPage from "./pages/QuoteBuilderPage";
 import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
+import TimelineDemoPage from "./pages/TimelineDemoPage";
 import InboxDemoPage from "./pages/InboxDemoPage";
 import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
 // Presentation screenshot mode (dev only). The flag is written out here, not
@@ -229,6 +230,7 @@ function AppRoutes() {
               <Route path="quote" element={<PortalRequestQuotePage />} />
             </Route>
           )}
+          {import.meta.env.DEV && <Route path="/dev/timeline" element={<TimelineDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-settings" element={<SageSettingsDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/customer-messages" element={<CustomerMessagesDemo />} />}
