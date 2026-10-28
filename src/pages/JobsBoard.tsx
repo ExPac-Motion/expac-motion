@@ -558,9 +558,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       {
         key: "shipment_status",
         header: mode === "completed" ? "Shipment Status" : "Status",
-        // Fits the longest step name (Released by customs, Received at airline).
-        width: 200,
-        minWidth: 190,
+        width: 170,
         sortValue: (j) =>
           SHIPMENT_STATUSES.indexOf(
             j.shipment_status as (typeof SHIPMENT_STATUSES)[number],
