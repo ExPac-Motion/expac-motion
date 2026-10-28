@@ -51,7 +51,7 @@ import type {
   VaultTodo,
   UiTableLayout,
 } from "./types";
-import { fetchTracking, trackableRef, trackingEventRowsFrom, trackingRowFrom } from "./tracking";
+import { fetchRoutePath, fetchTracking, trackableRef, trackingEventRowsFrom, trackingRowFrom } from "./tracking";
 import {
   buildShipmentEmail,
   buildShipmentReply,
@@ -568,9 +568,12 @@ export function useRefreshTracking() {
       const ref = trackableRef(input.job);
       if (!ref) throw new Error("This shipment has no AWB / MBL / container number.");
       const normalised = await fetchTracking(ref, input.shipsgoId);
-      const row = await db.upsertJobTracking(
-        trackingRowFrom(input.job.id, ref, normalised),
-      );
+      // The real route for the map (0202); kept as it was when ShipsGo has none.
+      const routePath = await fetchRoutePath(ref, normalised.shipsgo_id);
+      const row = await db.upsertJobTracking({
+        ...trackingRowFrom(input.job.id, ref, normalised),
+        ...(routePath ? { route_path: routePath, route_synced_at: new Date().toISOString() } : {}),
+      });
       // Same event rows the webhook writes, so the map + movements fill in
       // straight away instead of waiting for ShipsGo's next push.
       await db.upsertTrackingEvents(trackingEventRowsFrom(input.job.id, normalised));

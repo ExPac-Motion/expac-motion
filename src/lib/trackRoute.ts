@@ -294,3 +294,89 @@ export function routeEventsFromMovements(
     voyage: m.voyage,
   }));
 }
+
+/* ---------- the real path (0202) ---------- */
+
+/** One stretch of ShipsGo's route: the line the vessel / flight takes, as
+ *  [lat, lon] points, and on the CURRENT stretch where it is now. */
+export interface RouteSegment {
+  s: "PAST" | "CURRENT" | "FUTURE";
+  c: [number, number][];
+  /** Current position [lat, lon] (CURRENT only). */
+  at: [number, number] | null;
+  /** Index into `c` the current position sits at (CURRENT only). */
+  i: number | null;
+}
+export type RoutePath = RouteSegment[];
+
+/**
+ * ShipsGo's /geojson response (or its FeatureCollection) -> the slim
+ * job_tracking.route_path we store: the LineStrings only, coordinates only.
+ * Same shape the webhook writes (functions/api/tracking-webhook.ts).
+ */
+export function slimRoutePath(payload: unknown): RoutePath | null {
+  const p = (payload ?? {}) as { geojson?: { features?: unknown[] }; features?: unknown[] };
+  const features = p.geojson?.features ?? p.features;
+  if (!Array.isArray(features)) return null;
+  const ll = (c: unknown): [number, number] | null =>
+    Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number" ? [c[1], c[0]] : null;
+  const out: RoutePath = [];
+  for (const f of features as { geometry?: { type?: string; coordinates?: unknown[] }; properties?: Record<string, unknown> }[]) {
+    if (f?.geometry?.type !== "LineString" || !Array.isArray(f.geometry.coordinates)) continue;
+    const c = f.geometry.coordinates.map(ll).filter((x): x is [number, number] => !!x);
+    if (c.length < 2) continue;
+    const props = f.properties ?? {};
+    const s = props.status === "PAST" || props.status === "CURRENT" ? props.status : "FUTURE";
+    const cur = (props.current ?? null) as { index?: number; coordinates?: unknown } | null;
+    out.push({
+      s,
+      c,
+      at: s === "CURRENT" && cur ? ll(cur.coordinates) : null,
+      i: s === "CURRENT" && cur && typeof cur.index === "number" ? cur.index : null,
+    });
+  }
+  return out.length ? out : null;
+}
+
+/** Longitudes unwrapped point to point, so a line over the date line draws
+ *  the short way round instead of across the whole map. */
+export function unwrapLine(points: [number, number][], startLon: number | null = null): [number, number][] {
+  let prev = startLon;
+  return points.map(([lat, lon]) => {
+    let l = lon;
+    if (prev != null) {
+      while (l - prev > 180) l -= 360;
+      while (l - prev < -180) l += 360;
+    }
+    prev = l;
+    return [lat, l];
+  });
+}
+
+/** Split a line `f` (0..1) of the way along it, by distance: the part
+ *  travelled, the part to go, and the point between with its bearing. */
+export function splitLine(
+  points: [number, number][],
+  f: number,
+): { done: [number, number][]; todo: [number, number][]; at: { lat: number; lon: number }; bearing: number } {
+  const pt = ([lat, lon]: [number, number]) => ({ lat, lon });
+  const legs = points.slice(1).map((p, k) => kmBetween(pt(points[k]), pt(p)));
+  const total = legs.reduce((a, b) => a + b, 0);
+  let want = total * Math.min(1, Math.max(0, f));
+  for (let k = 0; k < legs.length; k++) {
+    if (want <= legs[k] || k === legs.length - 1) {
+      const t = legs[k] > 0 ? Math.min(1, want / legs[k]) : 0;
+      const [a, b] = [points[k], points[k + 1]];
+      const at = { lat: a[0] + (b[0] - a[0]) * t, lon: a[1] + (b[1] - a[1]) * t };
+      return {
+        done: [...points.slice(0, k + 1), [at.lat, at.lon]],
+        todo: [[at.lat, at.lon], ...points.slice(k + 1)],
+        at,
+        bearing: bearing(pt(a), pt(b)),
+      };
+    }
+    want -= legs[k];
+  }
+  const last = points[points.length - 1];
+  return { done: points, todo: [last], at: pt(last), bearing: 90 };
+}

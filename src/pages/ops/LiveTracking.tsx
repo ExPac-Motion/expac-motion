@@ -318,7 +318,7 @@ function TrackMapModal({
         </p>
       }
     >
-      <TrackingMap height={440} route={route} mode={job.mode} />
+      <TrackingMap height={440} route={route} mode={job.mode} path={tracking?.route_path} />
       <TrackDetail tracking={tracking} route={route} refValue={ref?.value ?? ""} />
     </Modal>
   );

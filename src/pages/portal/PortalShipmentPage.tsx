@@ -474,7 +474,7 @@ export default function PortalShipmentPage() {
           <EmptyState>Tracking will appear here once the shipment is on the water / in the air.</EmptyState>
         ) : (
           <>
-            <TrackingMap height={300} route={trkRoute} mode={job.mode} />
+            <TrackingMap height={300} route={trkRoute} mode={job.mode} path={tracking?.route_path} />
             <TrackMovements route={trkRoute} />
           </>
         )}

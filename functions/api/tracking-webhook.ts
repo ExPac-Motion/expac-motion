@@ -39,6 +39,8 @@
  *                            X-Shipsgo-Signature HMAC, or an X-Webhook-Token
  *                            header, or a ?token= query param.
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY   (already set for mail-webhook)
+ *   SHIPSGO_TOKEN            (already set for /api/track) to pull the route
+ *                            for the map; without it the route is skipped.
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
@@ -423,6 +425,45 @@ async function sbUpsert(env, table, rows, onConflict) {
  *  - active shipments (not Ops Complete) carrying the same container / AWB /
  *    MBL that were never refreshed, they get a job_tracking row here.
  */
+/**
+ * ShipsGo's route (GET /ocean|air/shipments/{id}/geojson, free, no credits)
+ * slimmed to job_tracking.route_path, the same shape as slimRoutePath() in
+ * src/lib/trackRoute.ts: [{ s, c: [[lat, lon]...], at, i }]. Null when
+ * there is no token / id, ShipsGo has no route yet, or the call fails, the
+ * tracking update itself never waits on it.
+ */
+async function fetchRoutePath(env, n) {
+  if (!env.SHIPSGO_TOKEN || !n.id) return null;
+  try {
+    const kind = n.refType === "air" ? "air" : "ocean";
+    const r = await fetch(`https://api.shipsgo.com/v2/${kind}/shipments/${encodeURIComponent(n.id)}/geojson`, {
+      headers: { "X-Shipsgo-User-Token": env.SHIPSGO_TOKEN, accept: "application/json" },
+    });
+    if (!r.ok) return null;
+    const body = await r.json();
+    const features = (body && body.geojson && body.geojson.features) || [];
+    const ll = (c) => (Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number" ? [c[1], c[0]] : null);
+    const out = [];
+    for (const f of features) {
+      if (!f || !f.geometry || f.geometry.type !== "LineString" || !Array.isArray(f.geometry.coordinates)) continue;
+      const c = f.geometry.coordinates.map(ll).filter(Boolean);
+      if (c.length < 2) continue;
+      const props = f.properties || {};
+      const st = props.status === "PAST" || props.status === "CURRENT" ? props.status : "FUTURE";
+      const cur = props.current || null;
+      out.push({
+        s: st,
+        c,
+        at: st === "CURRENT" && cur ? ll(cur.coordinates) : null,
+        i: st === "CURRENT" && cur && typeof cur.index === "number" ? cur.index : null,
+      });
+    }
+    return out.length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
 async function findJobs(env, { shipsgoId, numbers, refType }) {
   const found = new Map();
   if (shipsgoId) {
@@ -514,10 +555,12 @@ export async function onRequestPost(context) {
   const matches = await findJobs(env, { shipsgoId: n.id, numbers: n.numbers, refType: n.refType });
   if (!matches.length) return json({ ok: true, matched: false, event: n.eventName });
 
+  // The real route for the map (0202), once for every matched shipment.
+  const routePath = await fetchRoutePath(env, n);
   const jobIds = [];
   let events = 0;
   for (const found of matches) {
-    events = await applyToJob(env, found, n, payload);
+    events = await applyToJob(env, found, n, payload, routePath);
     jobIds.push(found.job_id);
   }
   return json({ ok: true, matched: true, job_ids: jobIds, event: n.eventName, events });
@@ -525,7 +568,7 @@ export async function onRequestPost(context) {
 
 /** Fold one ShipsGo update into one shipment: job_tracking, the shipment and
  *  quote write-back, and tracking_events. Returns the event count. */
-async function applyToJob(env, found, n, payload) {
+async function applyToJob(env, found, n, payload, routePath) {
   const jobId = found.job_id;
   const patch = {
     synced_at: new Date().toISOString(),
@@ -557,6 +600,10 @@ async function applyToJob(env, found, n, payload) {
   patch.vessel_lon = n.vesselLon;
   patch.position_at = n.positionAt;
   patch.raw = payload;
+  if (routePath) {
+    patch.route_path = routePath;
+    patch.route_synced_at = new Date().toISOString();
+  }
 
   await sbPatch(env, `job_tracking?job_id=eq.${jobId}`, patch);
   await writeBackToShipment(env, jobId, n);

@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import type { Job, JobTracking, TrackingEvent, TrackingMovement } from "./types";
 import { placeOf } from "./places";
+import { slimRoutePath, type RoutePath } from "./trackRoute";
 
 /* ------------------------------------------------------------------ *
  *  ShipsGo v2 wiring
@@ -304,6 +305,22 @@ export async function fetchTracking(
         body: { [numberField]: ref.value },
       };
 
+  const { res, raw } = await callProxy(body);
+  if (!res.ok || raw.error) {
+    // 409 = ShipsGo already tracks this reference; fetch the existing shipment.
+    if (!shipsgoId && res.status === 409) {
+      const existing = existingIdFrom(raw.payload);
+      if (existing) return fetchTracking(ref, existing);
+    }
+    if (res.status === 404) {
+      throw new Error("Live refresh runs on the deployed site (no API here in dev).");
+    }
+    throw new Error(raw.error || `Tracking service returned ${res.status}`);
+  }
+  return normaliseShipsGo(raw.data);
+}
+
+async function callProxy(body: ProxyRequest): Promise<{ res: Response; raw: ProxyResult }> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -317,20 +334,27 @@ export async function fetchTracking(
     },
     body: JSON.stringify(body),
   });
-
   const raw = (await res.json().catch(() => ({}))) as ProxyResult;
-  if (!res.ok || raw.error) {
-    // 409 = ShipsGo already tracks this reference; fetch the existing shipment.
-    if (!shipsgoId && res.status === 409) {
-      const existing = existingIdFrom(raw.payload);
-      if (existing) return fetchTracking(ref, existing);
-    }
-    if (res.status === 404) {
-      throw new Error("Live refresh runs on the deployed site (no API here in dev).");
-    }
-    throw new Error(raw.error || `Tracking service returned ${res.status}`);
+  return { res, raw };
+}
+
+/**
+ * ShipsGo's route for a shipment (GET .../{id}/geojson, free, no credits):
+ * the path actually sailed / flown and still to go, and the current
+ * position. Null when ShipsGo has none yet or the call fails, the map then
+ * works out a sea lane itself.
+ */
+export async function fetchRoutePath(ref: TrackableRef, shipsgoId: string | null): Promise<RoutePath | null> {
+  if (!shipsgoId) return null;
+  try {
+    const { res, raw } = await callProxy({
+      path: `${SHIPSGO_PATH[ref.type]}/${encodeURIComponent(shipsgoId)}/geojson`,
+      method: "GET",
+    });
+    return res.ok && !raw.error ? slimRoutePath(raw.data) : null;
+  } catch {
+    return null;
   }
-  return normaliseShipsGo(raw.data);
 }
 
 /** The subset of a JobTracking row we compute + store after a pull. */

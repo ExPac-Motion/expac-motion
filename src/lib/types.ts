@@ -1,3 +1,5 @@
+import type { RoutePath } from "./trackRoute";
+
 export type QuoteStatus = "open" | "sent" | "accepted" | "completed" | "lost";
 export type QuoteMode =
   | "Air Freight (AIR)"
@@ -1762,6 +1764,9 @@ export interface JobTracking {
   vessel_lat: number | null;
   vessel_lon: number | null;
   position_at: string | null;
+  /** ShipsGo's route, sailed / flown and to go (0202). */
+  route_path: RoutePath | null;
+  route_synced_at: string | null;
   last_event: string | null;
   /** Legacy blob, new events land in the tracking_events table. */
   movements: TrackingMovement[];
@@ -1810,6 +1815,7 @@ export interface ClientJobTracking {
   vessel_lon: number | null;
   position_at: string | null;
   synced_at: string | null;
+  route_path: RoutePath | null;
 }
 
 export interface ClientTrackingEvent {
@@ -1863,6 +1869,7 @@ export interface TrackedShipment {
   vessel_lat: number | null;
   vessel_lon: number | null;
   position_at: string | null;
+  route_path?: RoutePath | null;
   etd: string | null;
   eta: string | null;
   last_event: string | null;

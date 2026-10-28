@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { formatDateTime } from "../lib/format";
-import { arc, type RouteStop, type TrackRoute } from "../lib/trackRoute";
+import {
+  arc,
+  bearing,
+  splitLine,
+  unwrapLine,
+  type RoutePath,
+  type RouteStop,
+  type TrackRoute,
+} from "../lib/trackRoute";
 
 interface Props {
   route: TrackRoute;
@@ -9,6 +17,25 @@ interface Props {
   mode?: string | null;
   /** CSS height, default 320px. */
   height?: number;
+  /** ShipsGo's real route (job_tracking.route_path, 0202), drawn instead of
+   *  straight legs. Without it a sea shipment gets a worked-out sea lane. */
+  path?: RoutePath | null;
+}
+
+type LL = [number, number];
+
+/** Sea lanes between two ports (src/lib/seaLanes.ts), loaded on demand:
+ *  only maps with no ShipsGo route need the lane network. */
+let seaRouter: Promise<(a: LL, b: LL) => LL[] | null> | null = null;
+function loadSeaRouter() {
+  seaRouter ??= import("../lib/seaLanes").then((m) => (a: LL, b: LL) => {
+    try {
+      return m.seaRoute(a, b);
+    } catch {
+      return null;
+    }
+  });
+  return seaRouter;
 }
 
 type Pos = RouteStop & { lat: number; lon: number };
@@ -28,7 +55,7 @@ const PLANE =
  * it is in the air or at sea. Leaflet loads on demand, out of the main
  * bundle. Falls back to a note when no stop has coordinates yet.
  */
-export default function TrackingMap({ route, mode, height = 320 }: Props) {
+export default function TrackingMap({ route, mode, height = 320, path }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -43,6 +70,7 @@ export default function TrackingMap({ route, mode, height = 320 }: Props) {
     route.moving,
     route.position && [route.position.lat.toFixed(3), route.position.lon.toFixed(3)],
     kind,
+    path?.map((p) => [p.s, p.c.length, p.at]),
   ]);
 
   useEffect(() => {
@@ -66,20 +94,62 @@ export default function TrackingMap({ route, mode, height = 320 }: Props) {
         const done = { color: "#8cbc43", weight: 3, opacity: 0.95 };
         const todo = { color: "#3b82c4", weight: 3, opacity: 0.9, dashArray: "8 8" };
 
-        // Legs between consecutive stops that have coordinates. A leg's index
-        // is the index of its start stop in route.stops.
-        for (let i = 0; i < stops.length - 1; i++) {
-          const a = stops[i];
-          const b = stops[i + 1];
-          const leg = route.stops.indexOf(a);
-          if (route.moving && route.moving.leg === leg) {
-            const f = route.moving.fraction;
-            L.polyline(arc(a, b, 0, f), done).addTo(map);
-            L.polyline(arc(a, b, f, 1), todo).addTo(map);
-          } else {
-            L.polyline(arc(a, b), leg < route.doneLegs ? done : todo).addTo(map);
+        let pos = route.position;
+        const line = (pts: LL[], style: object) => {
+          if (pts.length < 2) return;
+          L.polyline(pts, style).addTo(map!);
+          bounds.push(...pts);
+        };
+        const real = (path ?? []).filter((p) => p.c.length >= 2);
+
+        if (real.length) {
+          // ShipsGo's route: sailed solid, still to go dashed, split where the
+          // vessel / flight is now, and that live position for the marker.
+          let lastLon: number | null = null;
+          for (const seg of real) {
+            const pts = unwrapLine(seg.c, lastLon);
+            lastLon = pts[pts.length - 1][1];
+            if (seg.s === "PAST") line(pts, done);
+            else if (seg.s === "FUTURE") line(pts, todo);
+            else {
+              const k = Math.min(pts.length - 1, Math.max(0, seg.i ?? 0));
+              const at: LL | null = seg.at ? unwrapLine([seg.at], pts[k][1])[0] : null;
+              line(at ? [...pts.slice(0, k + 1), at] : pts.slice(0, k + 1), done);
+              line(at ? [at, ...pts.slice(k + 1)] : pts.slice(k), todo);
+              if (at) {
+                const ahead = pts[Math.min(pts.length - 1, k + 1)];
+                pos = {
+                  lat: at[0],
+                  lon: at[1],
+                  label: kind === "air" ? "Flight position (ShipsGo)" : "Vessel position (ShipsGo)",
+                  estimated: false,
+                  bearing: bearing({ lat: at[0], lon: at[1] }, { lat: ahead[0], lon: ahead[1] }),
+                };
+              }
+            }
           }
-          bounds.push(...arc(a, b, 0, 1, 12));
+        } else {
+          // Legs between consecutive stops that have coordinates. A leg's
+          // index is the index of its start stop in route.stops. At sea the
+          // leg follows the shipping lanes, not a straight line over land.
+          const lane = kind === "sea" && stops.length > 1 ? await loadSeaRouter().catch(() => null) : null;
+          if (cancelled) return;
+          for (let i = 0; i < stops.length - 1; i++) {
+            const a = stops[i];
+            const b = stops[i + 1];
+            const leg = route.stops.indexOf(a);
+            const sea = lane?.([a.lat, a.lon], [b.lat, b.lon]);
+            const pts = sea ? unwrapLine(sea) : arc(a, b);
+            if (route.moving && route.moving.leg === leg) {
+              const cut = splitLine(pts, route.moving.fraction);
+              line(cut.done, done);
+              line(cut.todo, todo);
+              // The estimate sits on the lane (on water), not on the straight line.
+              if (sea && pos?.estimated) pos = { ...pos, lat: cut.at.lat, lon: cut.at.lon, bearing: cut.bearing };
+            } else {
+              line(pts, leg < route.doneLegs ? done : todo);
+            }
+          }
         }
 
         stops.forEach((s, i) => {
@@ -105,7 +175,6 @@ export default function TrackingMap({ route, mode, height = 320 }: Props) {
           bounds.push([s.lat, s.lon]);
         });
 
-        const pos = route.position;
         if (pos) {
           const html =
             kind === "air"

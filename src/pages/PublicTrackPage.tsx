@@ -166,7 +166,7 @@ function PublicRoute({ result }: { result: TrackedShipment }) {
   );
   return (
     <>
-      <TrackingMap height={520} route={route} mode={result.mode} />
+      <TrackingMap height={520} route={route} mode={result.mode} path={result.route_path} />
       <TrackMovements route={route} />
     </>
   );
