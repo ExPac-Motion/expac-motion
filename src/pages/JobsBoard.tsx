@@ -241,9 +241,42 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const duplicateJobQuote = useDuplicateJobQuote();
   const setMilestone = useSetJobMilestone();
   const { toast, error: toastError } = useToast();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const modeTab = modeTabFromParam(params.get("mode"));
+  // Status filter and search are part of the address (?status=, ?q=), so
+  // opening a shipment and going Back returns to the same filtered list.
+  function setParam(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setParams(next, { replace: true });
+  }
   const [commsJob, setCommsJob] = useState<Job | null>(null);
+  // Scroll position per view (board + filter + search), restored on Back.
+  const scrollKey = `jobs-scroll:${mode}:${location.search}`;
+  const scrollRestored = useRef(false);
+  useEffect(() => {
+    if (!jobs || scrollRestored.current) return;
+    scrollRestored.current = true;
+    let y = 0;
+    try {
+      y = Number(sessionStorage.getItem(scrollKey) || 0);
+    } catch {
+      /* storage blocked */
+    }
+    if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs]);
+  useEffect(
+    () => () => {
+      try {
+        sessionStorage.setItem(scrollKey, String(window.scrollY));
+      } catch {
+        /* storage blocked */
+      }
+    },
+    [scrollKey],
+  );
   // Pre-filled message for the rail's next email (Notify customer).
   const [commsRemarks, setCommsRemarks] = useState("");
   const [railOpen, setRailOpen] = useState(false);
@@ -290,8 +323,10 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   );
 
   const { closeAndReturn } = useDeepLinkReturn();
-  const [search, setSearch] = useState("");
-  const [statusPick, setStatusPick] = useState<string>("");
+  const search = params.get("q") ?? "";
+  const setSearch = (v: string) => setParam("q", v);
+  const statusPick = params.get("status") ?? "";
+  const setStatusPick = (v: string) => setParam("status", v);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const [recordFilter, setRecordFilter] = useState<
     "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null

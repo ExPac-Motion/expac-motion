@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import QuoteCommsRail from "./QuoteCommsRail";
 import QuoteDetailBody, { quoteFigures } from "./QuoteDetailBody";
 import TimelineProgress from "../../components/TimelineProgress";
-import { ErrorNote, Loading, PageHeader, StatusBadge } from "../../components/common";
+import { ErrorNote, Loading, PageHeader, StatusBadge, useBackTo } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { formatDate, money } from "../../lib/format";
 import { useAcceptQuote, useCan, useDeleteQuote, useJobs, useOpsTasks, useQuote } from "../../lib/hooks";
@@ -43,6 +43,7 @@ export default function QuoteWorkspacePage() {
   const accept = useAcceptQuote();
   const del = useDeleteQuote();
   const canDelete = useCan()("delete");
+  const goBack = useBackTo("/quotes");
   const [railOpen, setRailOpen] = useState(() => params.get("comms") === "1");
 
   const tabParam = params.get("tab") as Tab | null;
@@ -125,7 +126,7 @@ export default function QuoteWorkspacePage() {
         title={q.reference}
         actions={
           <>
-            <button className="btn outline" onClick={() => navigate("/quotes")}>
+            <button className="btn outline" onClick={goBack}>
               ← Quotations
             </button>
             <button className="btn outline" onClick={() => setRailOpen(true)}>

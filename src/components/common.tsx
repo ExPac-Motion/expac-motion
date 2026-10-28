@@ -597,6 +597,17 @@ export function useDeepLinkReturn() {
   return { arm, closeAndReturn };
 }
 
+/** Back to the screen the user came from (same list, filter, search and
+ *  scroll), or to `fallback` when the page was opened directly. */
+export function useBackTo(fallback: string) {
+  const navigate = useNavigate();
+  return () => {
+    const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+    if (canGoBack) navigate(-1);
+    else navigate(fallback);
+  };
+}
+
 export function PageHeader({
   eyebrow,
   title,

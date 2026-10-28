@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ErrorNote, Loading, PageHeader, StatusBadge } from "../../components/common";
+import { ErrorNote, Loading, PageHeader, StatusBadge, useBackTo } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { LeadMailHistory } from "../../components/MailHistory";
 import { formatDate, money, readableText } from "../../lib/format";
@@ -44,6 +44,7 @@ export default function LeadWorkspacePage() {
   const save = useSaveLead();
   const { inviting, invite } = useLeadPortalInvite();
   const [mailing, setMailing] = useState(false);
+  const goBack = useBackTo("/crm?tab=leads");
   const [editingContacts, setEditingContacts] = useState(false);
 
   const tabParam = params.get("tab") as Tab | null;
@@ -109,7 +110,7 @@ export default function LeadWorkspacePage() {
         title={lead.company}
         actions={
           <>
-            <button className="btn outline" onClick={() => navigate("/crm?tab=leads")}>
+            <button className="btn outline" onClick={goBack}>
               ← Leads
             </button>
             <button className="btn outline" onClick={() => setMailing(true)} disabled={!lead.email}>

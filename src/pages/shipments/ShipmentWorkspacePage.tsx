@@ -5,7 +5,7 @@ import ShipmentQuickUpdate from "../../components/ShipmentQuickUpdate";
 import HousesSection from "../../components/HousesSection";
 import TaskEditModal from "../ops/TaskEditModal";
 import CommsRail from "./CommsRail";
-import { ErrorNote, Loading, PageHeader } from "../../components/common";
+import { ErrorNote, Loading, PageHeader, useBackTo } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { formatDate, formatDateTime, money as formatZAR } from "../../lib/format";
 import {
@@ -109,6 +109,7 @@ export default function ShipmentWorkspacePage() {
   const quoteQ = useQuote(job?.quote_id ?? undefined);
 
   const [quick, setQuick] = useState(false);
+  const goBack = useBackTo("/jobs");
   const revert = useRevertJobToQuote();
   const updateJob = useUpdateJob();
   const isAdmin = useMyProfile().data?.role === "admin";
@@ -195,7 +196,7 @@ export default function ShipmentWorkspacePage() {
         title={job.reference}
         actions={
           <>
-            <button className="btn outline" onClick={() => navigate(opsDone ? "/jobs/completed" : "/jobs")}>
+            <button className="btn outline" onClick={goBack}>
               ← {opsDone ? "Completed" : "Active"} shipments
             </button>
             {canRevert && (

@@ -18,6 +18,7 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
+  useBackTo,
   useRowSelection,
   type BulkField,
 } from "../components/common";
@@ -1110,11 +1111,11 @@ function ContactRecord({
   clients: Contact[];
   tasks: OpsTask[];
 }) {
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { toast, error } = useToast();
   const { label, title } = COPY[kind];
   const [mailing, setMailing] = useState(false);
+  const goBack = useBackTo(`/${ROUTE[kind]}`);
   const [editCoverage, setEditCoverage] = useState(false);
   const [coverage, setCoverage] = useState<Coverage>(coverageOf(record));
 
@@ -1181,7 +1182,7 @@ function ContactRecord({
         title={record.company}
         actions={
           <>
-            <button className="btn outline" onClick={() => navigate(`/${ROUTE[kind]}`)}>
+            <button className="btn outline" onClick={goBack}>
               ← {title}
             </button>
             {isPartner ? (
