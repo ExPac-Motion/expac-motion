@@ -349,6 +349,7 @@ function normalise(payload) {
   const numbers = [
     shipment.container_number,
     shipment.booking_number,
+    shipment.bill_of_lading_number,
     shipment.reference,
     shipment.awb_number,
     ...containers.map((c) => c.number),
@@ -357,6 +358,7 @@ function normalise(payload) {
   return {
     id: shipment.id != null ? String(shipment.id) : null,
     numbers,
+    refType: shipment.awb_number ? "air" : "ocean",
     status: shipment.status || null,
     carrier: carrier.name || carrier.scac || null,
     pol: polCode,
@@ -413,23 +415,40 @@ async function sbUpsert(env, table, rows, onConflict) {
   });
 }
 
-async function findJob(env, { shipsgoId, numbers }) {
+/**
+ * Every shipment this ShipsGo update belongs to. Several shipments can share
+ * one container / BL (a consolidation), and ShipsGo tracks that number once,
+ * so the update goes to all of them, not just the first match:
+ *  - job_tracking rows on the ShipsGo id or the tracked number;
+ *  - active shipments (not Ops Complete) carrying the same container / AWB /
+ *    MBL that were never refreshed, they get a job_tracking row here.
+ */
+async function findJobs(env, { shipsgoId, numbers, refType }) {
+  const found = new Map();
   if (shipsgoId) {
-    const byRef = await sbGet(
+    const id = encodeURIComponent(shipsgoId);
+    const rows = await sbGet(
       env,
-      `job_tracking?or=(provider_ref.eq.${encodeURIComponent(shipsgoId)},shipsgo_id.eq.${encodeURIComponent(shipsgoId)})&select=job_id,provider_ref&limit=1`,
+      `job_tracking?or=(provider_ref.eq.${id},shipsgo_id.eq.${id})&select=job_id,provider_ref`,
     );
-    if (byRef[0]) return byRef[0];
+    for (const r of rows) found.set(r.job_id, r);
   }
   for (const n of numbers) {
     if (!n) continue;
-    const rows = await sbGet(
+    const num = encodeURIComponent(n);
+    const rows = await sbGet(env, `job_tracking?ref_value=ilike.${num}&select=job_id,provider_ref`);
+    for (const r of rows) if (!found.has(r.job_id)) found.set(r.job_id, r);
+    const jobs = await sbGet(
       env,
-      `job_tracking?ref_value=ilike.${encodeURIComponent(n)}&select=job_id,provider_ref&limit=1`,
+      `jobs?or=(container_no.ilike.${num},awb_mbl.ilike.${num})&ops_completed_at=is.null&select=id`,
     );
-    if (rows[0]) return rows[0];
+    for (const j of jobs) {
+      if (found.has(j.id)) continue;
+      await sbUpsert(env, "job_tracking", [{ job_id: j.id, ref_type: refType, ref_value: n }], "job_id");
+      found.set(j.id, { job_id: j.id, provider_ref: null });
+    }
   }
-  return null;
+  return [...found.values()];
 }
 
 /**
@@ -492,9 +511,21 @@ export async function onRequestPost(context) {
   if (!n.id && n.numbers.length === 0) {
     return json({ ok: true, matched: false, note: "no shipment in payload" });
   }
-  const found = await findJob(env, { shipsgoId: n.id, numbers: n.numbers });
-  if (!found) return json({ ok: true, matched: false, event: n.eventName });
+  const matches = await findJobs(env, { shipsgoId: n.id, numbers: n.numbers, refType: n.refType });
+  if (!matches.length) return json({ ok: true, matched: false, event: n.eventName });
 
+  const jobIds = [];
+  let events = 0;
+  for (const found of matches) {
+    events = await applyToJob(env, found, n, payload);
+    jobIds.push(found.job_id);
+  }
+  return json({ ok: true, matched: true, job_ids: jobIds, event: n.eventName, events });
+}
+
+/** Fold one ShipsGo update into one shipment: job_tracking, the shipment and
+ *  quote write-back, and tracking_events. Returns the event count. */
+async function applyToJob(env, found, n, payload) {
   const jobId = found.job_id;
   const patch = {
     synced_at: new Date().toISOString(),
@@ -551,6 +582,5 @@ export async function onRequestPost(context) {
   if (eventRows.length) {
     await sbUpsert(env, "tracking_events", eventRows, "job_id,provider,provider_event_id");
   }
-
-  return json({ ok: true, matched: true, job_id: jobId, event: n.eventName, events: eventRows.length });
+  return eventRows.length;
 }
