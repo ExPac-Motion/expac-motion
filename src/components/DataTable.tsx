@@ -181,8 +181,9 @@ export default function DataTable<T>({
     [order, byKey],
   );
 
+  // A saved (or dragged) width never goes below the column's minWidth.
   const widthOf = (c: DataColumn<T>) =>
-    widths[c.key] ?? c.width ?? DEFAULT_WIDTH;
+    Math.max(widths[c.key] ?? c.width ?? DEFAULT_WIDTH, c.minWidth ?? 0);
 
   // The table is exactly as wide as the sum of its columns, so resizing one
   // column grows the table (and the wrapper scrolls) instead of the browser
