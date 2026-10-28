@@ -10911,3 +10911,311 @@ select.status-pick-on {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Shipment workspace page (/jobs/:id) ---------- */
+.ws-head {
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.ws-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.ws-status {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--green-tint);
+  color: var(--green-dark);
+}
+.ws-status.is-risk {
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+}
+.ws-status.is-late {
+  background: var(--orange-tint);
+  color: var(--orange-ink);
+}
+.ws-status.is-done {
+  background: var(--night-tint);
+  color: var(--night);
+}
+.ws-route {
+  font-size: 0.9rem;
+}
+.ws-customer {
+  margin-left: auto;
+  font-weight: 600;
+}
+.ws-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.ws-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  font: inherit;
+  color: inherit;
+  min-width: 0;
+}
+button.ws-tile {
+  cursor: pointer;
+}
+button.ws-tile:hover {
+  border-color: var(--green);
+}
+.ws-tile .k {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.ws-tile b {
+  font-size: 1.15rem;
+}
+.ws-tile .muted,
+.ws-tile .late {
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.late {
+  color: var(--orange-ink);
+}
+.ok {
+  color: var(--green-dark);
+}
+.ws-health.is-ok {
+  color: var(--green-dark);
+}
+.ws-health.is-risk {
+  color: var(--amber-ink);
+}
+.ws-health.is-late {
+  color: var(--orange-ink);
+}
+.ws-progress {
+  margin-top: 14px;
+}
+.ws-progress-k {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.ws-progress .tl-bar {
+  margin: 6px 0 0;
+}
+.ws-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ws-tabs button {
+  border: 0;
+  background: none;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ws-tabs button.on {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom-color: var(--green);
+}
+.ws-count {
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0 7px;
+}
+.ws-count.warn {
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+}
+.ws-panel {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.ws-sec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ws-sec-head h3,
+.ws-keydates h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.ws-pill {
+  background: var(--night-tint);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ws-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.ws-overview .panel {
+  padding: 14px 16px;
+}
+.ws-wide {
+  grid-column: 1 / -1;
+}
+.ws-actions ul,
+.ws-checklist,
+.ws-tasks,
+.ws-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ws-actions li,
+.ws-checklist li,
+.ws-tasks li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.ws-actions li:first-child,
+.ws-checklist li:first-child,
+.ws-tasks li:first-child {
+  border-top: 0;
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.ws-bullet {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--night);
+  flex: none;
+}
+.ws-keydates h3 {
+  margin-bottom: 8px;
+}
+.ws-keydates .link-btn {
+  margin-top: 8px;
+}
+.ws-facts,
+.ws-money {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ws-facts > div,
+.ws-money > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fbfbf8;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.ws-facts .k,
+.ws-money .k {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.ws-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #c9cdc4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+.ws-checklist li.ok .ws-check {
+  background: var(--green);
+  border-color: var(--green);
+}
+.ws-checklist li .muted {
+  font-size: 0.8rem;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ws-tasks li.done .link-btn {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.ws-tasks .muted {
+  font-size: 0.8rem;
+}
+.ws-history li {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.ws-history li:first-child {
+  border-top: 0;
+}
+.ws-history .when {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.ws-money-table {
+  width: 100%;
+}
+.ws-foot {
+  font-size: 0.75rem;
+  margin: 8px 0 0;
+}
+@media (max-width: 900px) {
+  .ws-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ws-overview {
+    grid-template-columns: 1fr;
+  }
+  .ws-customer {
+    margin-left: 0;
+  }
+  .ws-history li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

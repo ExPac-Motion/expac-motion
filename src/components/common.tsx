@@ -157,6 +157,7 @@ export function RowActions({
   onView,
   onEdit,
   editTitle,
+  viewTitle,
   onDelete,
   onDuplicate,
 }: {
@@ -188,6 +189,8 @@ export function RowActions({
   onEdit?: () => void;
   /** Tooltip for the pencil (default "Edit"). */
   editTitle?: string;
+  /** Tooltip for the eye (default "View"). */
+  viewTitle?: string;
   onDelete?: () => void;
   onDuplicate?: () => void;
 }) {
@@ -236,7 +239,7 @@ export function RowActions({
         </button>
       )}
       {onView && (
-        <button className="row-icon-btn" title="View" onClick={stop(onView)}>
+        <button className="row-icon-btn" title={viewTitle ?? "View"} onClick={stop(onView)}>
           {ROW_ICON.view}
         </button>
       )}

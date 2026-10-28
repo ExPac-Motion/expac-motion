@@ -76,7 +76,7 @@ import {
 import CommsRail from "./shipments/CommsRail";
 
 /** "AWB" for air/courier, "MBL" for sea, "Ref" otherwise. */
-function docLabel(mode: string): string {
+export function docLabel(mode: string): string {
   if (mode.startsWith("Air") || mode.startsWith("Courier")) return "AWB No";
   if (mode.startsWith("Sea")) return "MBL No";
   return "Ref No";
@@ -84,7 +84,7 @@ function docLabel(mode: string): string {
 
 /** Port fields on a job hold just the UN/LOCODE (e.g. "ZADUR"), not the
  *  "CODE, City, Country" string used on the quote. */
-function codeOf(s: string | null | undefined): string {
+export function codeOf(s: string | null | undefined): string {
   if (!s || !s.trim()) return "";
   const c = portCode(s);
   return c === "—" ? "" : c;
@@ -495,7 +495,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             onTask={() => setTaskingJob(j)}
             taskTitle="Create a task for this shipment"
             taskOpen={openTaskJobIds.has(j.id)}
-            onView={() => setViewing(j)}
+            onView={() => navigate(`/jobs/${j.id}`)}
+            viewTitle="Open the shipment"
             onEdit={() => setQuickJob(j)}
             editTitle="Quick update: move it on, dates, missing details"
             onDelete={() => onDeleteJob(j)}
@@ -1027,9 +1028,6 @@ function JobViewModal({
   /** Opens the shipment's Comms rail (email is logged there). */
   onEmail: () => void;
 }) {
-  const air = job.mode.startsWith("Air") || job.mode.startsWith("Courier");
-  const sea = job.mode.startsWith("Sea");
-  const [editCard, setEditCard] = useState<"route" | "refs" | null>(null);
   const revert = useRevertJobToQuote();
   const { toast, error: toastError } = useToast();
   const canDelete = useCan()("delete");
@@ -1071,92 +1069,15 @@ function JobViewModal({
           <button className="btn outline" onClick={onEdit}>
             Quick update
           </button>
+          <Link className="btn outline" to={`/jobs/${job.id}`} onClick={onClose}>
+            Open full page ↗
+          </Link>
         </>
       }
     >
       <ShipmentTimeline job={job} onDelivered={onDelivered} />
 
-      <div className="jv-cards">
-        <div className="jv-card">
-          <h4>
-            Route &amp; transport
-            {editCard !== "route" && (
-              <button type="button" className="jv-edit" onClick={() => setEditCard("route")} title="Edit route & transport">
-                ✎
-              </button>
-            )}
-          </h4>
-          {editCard === "route" ? (
-            <JvRouteEdit job={job} air={air} sea={sea} onDone={() => setEditCard(null)} />
-          ) : (
-            <>
-              <div className="jv-route">
-                <b>{codeOf(job.origin) || "—"}</b>
-                <span aria-hidden>→</span>
-                <b>{codeOf(job.destination) || "—"}</b>
-              </div>
-              <JvField label="Mode" value={job.mode} />
-              <JvField label={docLabel(job.mode)} value={job.awb_mbl} onAdd={() => setEditCard("route")} />
-              {sea && (
-                <JvField
-                  label="Container"
-                  value={[job.container_no, job.container_type].filter(Boolean).join(" · ")}
-                  onAdd={() => setEditCard("route")}
-                />
-              )}
-              {air ? (
-                <>
-                  <JvField label="Airline" value={job.carrier_name} onAdd={() => setEditCard("route")} />
-                  {job.shipping_line && <JvField label={carrierLabel(job.mode)} value={job.shipping_line} />}
-                </>
-              ) : (
-                <JvField label={carrierLabel(job.mode)} value={job.shipping_line} onAdd={() => setEditCard("route")} />
-              )}
-              {sea && <JvField label="Vessel" value={job.vessel_name} onAdd={() => setEditCard("route")} />}
-            </>
-          )}
-        </div>
-        <div className="jv-card">
-          <h4>Parties</h4>
-          <JvParty label="Customer" p={job.client} onEmail={onEmail} />
-          <JvParty label="Shipper" p={job.supplier} />
-        </div>
-        <div className="jv-card">
-          <h4>
-            References
-            {editCard !== "refs" && (
-              <button type="button" className="jv-edit" onClick={() => setEditCard("refs")} title="Edit references & notes">
-                ✎
-              </button>
-            )}
-          </h4>
-          {editCard === "refs" ? (
-            <JvRefsEdit job={job} onDone={() => setEditCard(null)} />
-          ) : (
-            <>
-              <JvField label="Our reference" value={job.reference} />
-              <JvField label="Customer ref / PO" value={job.po_no} onAdd={() => setEditCard("refs")} />
-              <JvField
-                label="Quotation"
-                value={
-                  job.quote_id ? (
-                    <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
-                      View quotation →
-                    </Link>
-                  ) : null
-                }
-              />
-              <JvField label="Created" value={formatDate(job.created_at)} />
-              {job.invoice_no && (
-                <JvField
-                  label="Invoice"
-                  value={job.invoice_no + (job.invoiced_at ? " · " + formatDate(job.invoiced_at) : "")}
-                />
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      <ShipmentCards job={job} onEmail={onEmail} onLeave={onClose} />
       {job.notes && (
         <div className="jv-notes">
           <span className="k">Notes</span>
@@ -1177,7 +1098,7 @@ function JobViewModal({
 
 /** Which master (MAWB / MBL) this shipment travels on, as a house, or a
  *  button to put it on one (WMS consolidations, 0139). */
-function ConsolSection({ job }: { job: Job }) {
+export function ConsolSection({ job }: { job: Job }) {
   const can = useCan();
   const navigate = useNavigate();
   const consolsQ = useWmsConsols();
@@ -1222,7 +1143,7 @@ function bytesLabel(n: number | null): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function DocumentsSection({ job }: { job: Job }) {
+export function DocumentsSection({ job }: { job: Job }) {
   const { data, isLoading } = useShipmentDocuments(job.id);
   const upload = useUploadShipmentDocument();
   const updateDoc = useUpdateShipmentDocument();
@@ -1443,6 +1364,108 @@ function DocumentsSection({ job }: { job: Job }) {
   );
 }
 
+/** Route & transport / Parties / References, each card editable in place.
+ *  Shared by the View window and the shipment workspace page. */
+export function ShipmentCards({
+  job,
+  onEmail,
+  onLeave,
+}: {
+  job: Job;
+  /** Opens the shipment's Comms rail (email is logged there). */
+  onEmail: () => void;
+  /** Called before following a link away (e.g. to the quotation). */
+  onLeave?: () => void;
+}) {
+  const air = job.mode.startsWith("Air") || job.mode.startsWith("Courier");
+  const sea = job.mode.startsWith("Sea");
+  const [editCard, setEditCard] = useState<"route" | "refs" | null>(null);
+  const onClose = () => onLeave?.();
+  return (
+        <div className="jv-cards">
+          <div className="jv-card">
+            <h4>
+              Route &amp; transport
+              {editCard !== "route" && (
+                <button type="button" className="jv-edit" onClick={() => setEditCard("route")} title="Edit route & transport">
+                  ✎
+                </button>
+              )}
+            </h4>
+            {editCard === "route" ? (
+              <JvRouteEdit job={job} air={air} sea={sea} onDone={() => setEditCard(null)} />
+            ) : (
+              <>
+                <div className="jv-route">
+                  <b>{codeOf(job.origin) || "—"}</b>
+                  <span aria-hidden>→</span>
+                  <b>{codeOf(job.destination) || "—"}</b>
+                </div>
+                <JvField label="Mode" value={job.mode} />
+                <JvField label={docLabel(job.mode)} value={job.awb_mbl} onAdd={() => setEditCard("route")} />
+                {sea && (
+                  <JvField
+                    label="Container"
+                    value={[job.container_no, job.container_type].filter(Boolean).join(" · ")}
+                    onAdd={() => setEditCard("route")}
+                  />
+                )}
+                {air ? (
+                  <>
+                    <JvField label="Airline" value={job.carrier_name} onAdd={() => setEditCard("route")} />
+                    {job.shipping_line && <JvField label={carrierLabel(job.mode)} value={job.shipping_line} />}
+                  </>
+                ) : (
+                  <JvField label={carrierLabel(job.mode)} value={job.shipping_line} onAdd={() => setEditCard("route")} />
+                )}
+                {sea && <JvField label="Vessel" value={job.vessel_name} onAdd={() => setEditCard("route")} />}
+              </>
+            )}
+          </div>
+          <div className="jv-card">
+            <h4>Parties</h4>
+            <JvParty label="Customer" p={job.client} onEmail={onEmail} />
+            <JvParty label="Shipper" p={job.supplier} />
+          </div>
+          <div className="jv-card">
+            <h4>
+              References
+              {editCard !== "refs" && (
+                <button type="button" className="jv-edit" onClick={() => setEditCard("refs")} title="Edit references & notes">
+                  ✎
+                </button>
+              )}
+            </h4>
+            {editCard === "refs" ? (
+              <JvRefsEdit job={job} onDone={() => setEditCard(null)} />
+            ) : (
+              <>
+                <JvField label="Our reference" value={job.reference} />
+                <JvField label="Customer ref / PO" value={job.po_no} onAdd={() => setEditCard("refs")} />
+                <JvField
+                  label="Quotation"
+                  value={
+                    job.quote_id ? (
+                      <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
+                        View quotation →
+                      </Link>
+                    ) : null
+                  }
+                />
+                <JvField label="Created" value={formatDate(job.created_at)} />
+                {job.invoice_no && (
+                  <JvField
+                    label="Invoice"
+                    value={job.invoice_no + (job.invoiced_at ? " · " + formatDate(job.invoiced_at) : "")}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        </div>
+  );
+}
+
 /** Route & transport card in edit mode (replaces the old Edit window). */
 function JvRouteEdit({ job, air, sea, onDone }: { job: Job; air: boolean; sea: boolean; onDone: () => void }) {
   const updateJob = useUpdateJob();
@@ -1636,7 +1659,7 @@ function JvParty({
 }
 
 /** Proof of delivery upload for a shipment (0151). */
-function ShipmentPodModal({ job, onClose }: { job: Job; onClose: () => void }) {
+export function ShipmentPodModal({ job, onClose }: { job: Job; onClose: () => void }) {
   const qc = useQueryClient();
   return (
     <PodModal
@@ -1655,7 +1678,7 @@ function ShipmentPodModal({ job, onClose }: { job: Job; onClose: () => void }) {
 }
 
 /** Shipment view: POD status + upload (0151). */
-function PodSection({ job }: { job: Job }) {
+export function PodSection({ job }: { job: Job }) {
   const [open, setOpen] = useState(false);
   const has = !!(job.pod_signed_by || job.pod_delivered_at);
   return (

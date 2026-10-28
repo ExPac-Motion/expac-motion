@@ -32,6 +32,8 @@ import OpsControlTowerPage from "./pages/OpsControlTowerPage";
 import JobsPage from "./pages/JobsPage";
 import CompletedJobsPage from "./pages/CompletedJobsPage";
 import MastersPage from "./pages/shipments/MastersPage";
+import ShipmentWorkspacePage from "./pages/shipments/ShipmentWorkspacePage";
+import { ShipmentWorkspaceSeed } from "./pages/shipments/ShipmentWorkspaceDemo";
 import HousePrintPage from "./pages/shipments/HousePrintPage";
 import ClientsPage from "./pages/ClientsPage";
 import SuppliersPage from "./pages/SuppliersPage";
@@ -230,6 +232,9 @@ function AppRoutes() {
               <Route path="quote" element={<PortalRequestQuotePage />} />
             </Route>
           )}
+          {import.meta.env.DEV && (
+            <Route path="/dev/shipment/:id" element={<ShipmentWorkspaceSeed><div className="main"><ShipmentWorkspacePage /></div></ShipmentWorkspaceSeed>} />
+          )}
           {import.meta.env.DEV && <Route path="/dev/timeline" element={<TimelineDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-settings" element={<SageSettingsDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
@@ -350,6 +355,7 @@ function AppRoutes() {
             <Route path="jobs" element={<NeedsPerm perm="shipments"><JobsPage /></NeedsPerm>} />
             <Route path="jobs/completed" element={<NeedsPerm perm="shipments"><CompletedJobsPage /></NeedsPerm>} />
             <Route path="jobs/:id/houses/print/:doc" element={<NeedsAnyPerm perms={["shipments", "warehouse"]}><HousePrintPage /></NeedsAnyPerm>} />
+            <Route path="jobs/:id" element={<NeedsPerm perm="shipments"><ShipmentWorkspacePage /></NeedsPerm>} />
             <Route path="jobs/masters" element={<NeedsAnyPerm perms={["shipments", "warehouse"]}><MastersPage /></NeedsAnyPerm>} />
             <Route path="clients" element={<NeedsPerm perm="customers"><ClientsPage /></NeedsPerm>} />
             <Route path="clients/:id" element={<NeedsPerm perm="customers"><CustomerRecordPage /></NeedsPerm>} />
