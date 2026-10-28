@@ -862,7 +862,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       </div>
 
       <CommsRail
-        job={commsJob}
+        job={(jobs ?? []).find((x) => x.id === commsJob?.id) ?? commsJob}
         open={railOpen}
         initialRemarks={commsRemarks}
         onToggle={() =>
