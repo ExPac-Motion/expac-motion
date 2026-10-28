@@ -55,6 +55,18 @@ export const PLANNED_FIELD: Record<string, string> = {
   Delivered: "PDD",
 };
 
+/** The steps for a mode, in order: same lists as job_timeline_template (0196). */
+export function timelineSteps(mode: string | null | undefined): string[] {
+  const m = mode ?? "";
+  if (m.startsWith("Sea Freight (FCL)"))
+    return ["Created", "Booked", "Collected", "Loaded", "Departed", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+  if (m.startsWith("Sea"))
+    return ["Created", "Booked", "Collected", "Received", "Loaded", "Departed", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+  if (m.startsWith("Road"))
+    return ["Created", "Booked", "Collected", "Departed", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+  return ["Created", "Booked", "Collected", "Received", "Departed", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+}
+
 /** A step's name for this mode (the stored value stays the status). */
 export function stepLabel(step: string, mode: string | null | undefined): string {
   const m = mode ?? "";

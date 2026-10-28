@@ -6,6 +6,7 @@ import { DELIVERED_STATUS } from "../../lib/types";
 import { WMS_STAGE_LABEL, portalQuoteStatus, portalTotals, usePortalLines, usePortalQuotes, wmsStage } from "../../lib/portal";
 import { downloadCsv, todayIso, useWmsBillingRuns, useWmsReceipts, useWmsReleases, useWmsServices } from "../../lib/wms";
 import { useWmsJourney } from "./PortalWmsOverview";
+import { stepLabel } from "../../lib/timeline";
 
 const MODES = ["Air", "Sea", "Road", "Courier"] as const;
 const COLORS: Record<string, string> = { Air: "var(--teal)", Sea: "var(--blue)", Road: "var(--amber)", Courier: "var(--green)" };
@@ -96,7 +97,7 @@ export default function PortalReportsPage() {
             <button
               className="btn outline btn-sm"
               onClick={() =>
-                downloadCsv(`shipments-${todayIso()}.csv`, ["Shipment", "REF", "Mode", "Status", "Origin", "Destination", "AWB / B/L", "Container", "Shipping Line", "Vessel", "Airline", "ETD", "ETA", "Delivered", "Signed for by", "Created"], jobs.map((j) => [j.reference, j.po_no, j.mode, j.shipment_status || j.milestone, j.origin, j.destination, j.awb_mbl, j.container_no, j.shipping_line, j.vessel_name, j.carrier_name, formatDate(j.etd), formatDate(j.eta), formatDate(j.pod_delivered_at), j.pod_signed_by, formatDate(j.created_at)]))
+                downloadCsv(`shipments-${todayIso()}.csv`, ["Shipment", "REF", "Mode", "Status", "Origin", "Destination", "AWB / B/L", "Container", "Shipping Line", "Vessel", "Airline", "ETD", "ETA", "Delivered", "Signed for by", "Created"], jobs.map((j) => [j.reference, j.po_no, j.mode, j.shipment_status ? stepLabel(j.shipment_status, j.mode) : j.milestone, j.origin, j.destination, j.awb_mbl, j.container_no, j.shipping_line, j.vessel_name, j.carrier_name, formatDate(j.etd), formatDate(j.eta), formatDate(j.pod_delivered_at), j.pod_signed_by, formatDate(j.created_at)]))
               }
             >
               Download CSV

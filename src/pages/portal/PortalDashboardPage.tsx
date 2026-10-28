@@ -21,6 +21,7 @@ import PortalTip, { type Tip } from "./PortalTip";
 import { PortalIcon, modeEmoji } from "./PortalLayout";
 import { usePortalAnnouncements } from "../../lib/portal";
 import { invoiceStatus, useCustomerInvoices } from "../../lib/sage";
+import { stepLabel } from "../../lib/timeline";
 
 const isDone = (j: ClientJob) => j.shipment_status === DELIVERED_STATUS || j.milestone === "Delivered";
 const modeKey = (m: string) =>
@@ -274,7 +275,7 @@ export default function PortalDashboardPage() {
                         {modeEmoji(j.mode)} {j.mode}
                       </td>
                       <td>
-                        <span className="badge sent">{j.shipment_status || j.milestone}</span>
+                        <span className="badge sent">{j.shipment_status ? stepLabel(j.shipment_status, j.mode) : j.milestone}</span>
                       </td>
                       <td>{j.supplier_company || "—"}</td>
                       <td>{j.origin || "—"}</td>

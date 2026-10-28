@@ -53,6 +53,7 @@ import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
 import ShipmentTimeline from "../components/ShipmentTimeline";
 import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
+import { stepLabel, timelineSteps } from "../lib/timeline";
 import { saveShipmentPod } from "../lib/pod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWmsConsols } from "../lib/wms";
@@ -574,9 +575,14 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             onChange={(e) => save(j.id, { shipment_status: e.target.value })}
           >
             <option value="">— set status —</option>
-            {SHIPMENT_STATUSES.map((s) => (
+            {/* This mode's timeline steps (0196); an older status outside
+                the list (e.g. In Transit) stays selectable as it is. */}
+            {j.shipment_status && !timelineSteps(j.mode).includes(j.shipment_status) && (
+              <option value={j.shipment_status}>{j.shipment_status}</option>
+            )}
+            {timelineSteps(j.mode).map((s) => (
               <option key={s} value={s}>
-                {s}
+                {stepLabel(s, j.mode)}
               </option>
             ))}
           </select>
@@ -760,7 +766,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             <option value="">All statuses ({stageRows.filter((x) => matchesModeTab(x.mode, modeTab)).length})</option>
             {statusOptions.map((st) => (
               <option key={st} value={st}>
-                {st} ({statusCounts.get(st) ?? 0})
+                {modeTab === "All" ? st : stepLabel(st, modeTab)} ({statusCounts.get(st) ?? 0})
               </option>
             ))}
             {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}

@@ -19,6 +19,7 @@ import {
   usePortalTasks,
   type PortalTask,
 } from "../../lib/portal";
+import { stepLabel } from "../../lib/timeline";
 
 type ModeTab = "All" | "Air" | "Courier" | "Sea" | "Road";
 const MODE_TABS: { key: ModeTab; label: string }[] = [
@@ -145,7 +146,7 @@ export default function PortalShipmentsPage() {
       key: "status",
       header: view === "completed" ? "Shipment Status" : "Status",
       width: 160,
-      render: (j) => <span className={`job-status job-status-ro is-${shipmentStatusSlug(j.shipment_status)}`}>{j.shipment_status || j.milestone}</span>,
+      render: (j) => <span className={`job-status job-status-ro is-${shipmentStatusSlug(j.shipment_status)}`}>{j.shipment_status ? stepLabel(j.shipment_status, j.mode) : j.milestone}</span>,
       sortValue: (j) => j.shipment_status ?? "",
     },
     { key: "awb", header: "AWB/MBL No", width: 150, render: (j) => j.awb_mbl || "—", sortValue: (j) => j.awb_mbl ?? "" },

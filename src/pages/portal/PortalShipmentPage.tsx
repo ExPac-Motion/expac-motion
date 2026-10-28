@@ -193,7 +193,7 @@ export default function PortalShipmentPage() {
         };
       });
   const progressAt = tl.length ? tlCurrent : current;
-  const status = tracking?.status || job.shipment_status || job.milestone;
+  const status = tracking?.status || (job.shipment_status ? stepLabel(job.shipment_status, job.mode) : job.milestone);
   const etd = tracking?.etd || job.etd;
   const eta = tracking?.pod_ata || tracking?.pod_eta || tracking?.eta || job.eta;
   const transitDays =
