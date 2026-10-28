@@ -33,6 +33,9 @@ import JobsPage from "./pages/JobsPage";
 import CompletedJobsPage from "./pages/CompletedJobsPage";
 import MastersPage from "./pages/shipments/MastersPage";
 import ShipmentWorkspacePage from "./pages/shipments/ShipmentWorkspacePage";
+import QuoteWorkspacePage from "./pages/quotes/QuoteWorkspacePage";
+import LeadWorkspacePage from "./pages/crm/LeadWorkspacePage";
+import { WmsConsolPage, WmsCountPage, WmsReceiptPage } from "./pages/wms/WmsRecordPages";
 import { ShipmentWorkspaceSeed } from "./pages/shipments/ShipmentWorkspaceDemo";
 import HousePrintPage from "./pages/shipments/HousePrintPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -235,6 +238,15 @@ function AppRoutes() {
           {import.meta.env.DEV && (
             <Route path="/dev/shipment/:id" element={<ShipmentWorkspaceSeed><div className="main"><ShipmentWorkspacePage /></div></ShipmentWorkspaceSeed>} />
           )}
+          {import.meta.env.DEV && (
+            <Route path="/dev/quote/:id" element={<ShipmentWorkspaceSeed><div className="main"><QuoteWorkspacePage /></div></ShipmentWorkspaceSeed>} />
+          )}
+          {import.meta.env.DEV && (
+            <Route path="/dev/lead/:id" element={<ShipmentWorkspaceSeed><div className="main"><LeadWorkspacePage /></div></ShipmentWorkspaceSeed>} />
+          )}
+          {import.meta.env.DEV && (
+            <Route path="/dev/agents/:id" element={<ShipmentWorkspaceSeed><div className="main"><AgentsPage /></div></ShipmentWorkspaceSeed>} />
+          )}
           {import.meta.env.DEV && <Route path="/dev/timeline" element={<TimelineDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-settings" element={<SageSettingsDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
@@ -349,8 +361,13 @@ function AppRoutes() {
             <Route path="ops" element={<NeedsPerm perm="ops"><OpsControlTowerPage /></NeedsPerm>} />
             <Route path="quotes" element={<NeedsPerm perm="quotes"><QuotesListPage /></NeedsPerm>} />
             <Route path="wms" element={<NeedsPerm perm="warehouse"><WmsPage /></NeedsPerm>} />
+            <Route path="wms/receipts/:id" element={<NeedsPerm perm="warehouse"><WmsReceiptPage /></NeedsPerm>} />
+            <Route path="wms/receipts/:id/edit" element={<NeedsPerm perm="warehouse"><WmsReceiptPage edit /></NeedsPerm>} />
+            <Route path="wms/counts/:id" element={<NeedsPerm perm="warehouse"><WmsCountPage /></NeedsPerm>} />
+            <Route path="wms/consols/:id" element={<NeedsPerm perm="warehouse"><WmsConsolPage /></NeedsPerm>} />
             <Route path="import-vat-duty" element={<NeedsPerm perm="customs"><ImportVatDutyPage /></NeedsPerm>} />
             <Route path="quotes/new" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
+            <Route path="quotes/:id/view" element={<NeedsPerm perm="quotes"><QuoteWorkspacePage /></NeedsPerm>} />
             <Route path="quotes/:id" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
             <Route path="jobs" element={<NeedsPerm perm="shipments"><JobsPage /></NeedsPerm>} />
             <Route path="jobs/completed" element={<NeedsPerm perm="shipments"><CompletedJobsPage /></NeedsPerm>} />
@@ -360,13 +377,19 @@ function AppRoutes() {
             <Route path="clients" element={<NeedsPerm perm="customers"><ClientsPage /></NeedsPerm>} />
             <Route path="clients/:id" element={<NeedsPerm perm="customers"><CustomerRecordPage /></NeedsPerm>} />
             <Route path="crm" element={<CrmPage />} />
+            <Route path="crm/leads/:id" element={<NeedsPerm perm="leads"><LeadWorkspacePage /></NeedsPerm>} />
             <Route path="rates" element={<NeedsPerm perm="rates"><TierSheetsPage /></NeedsPerm>} />
             <Route path="rates/list" element={<NeedsPerm perm="rates"><RatesPage /></NeedsPerm>} />
             <Route path="suppliers" element={<NeedsPerm perm="suppliers"><SuppliersPage /></NeedsPerm>} />
+            <Route path="suppliers/:id" element={<NeedsPerm perm="suppliers"><SuppliersPage /></NeedsPerm>} />
             <Route path="agents" element={<NeedsPerm perm="suppliers"><AgentsPage /></NeedsPerm>} />
+            <Route path="agents/:id" element={<NeedsPerm perm="suppliers"><AgentsPage /></NeedsPerm>} />
             <Route path="transporters" element={<NeedsPerm perm="suppliers"><TransportersPage /></NeedsPerm>} />
+            <Route path="transporters/:id" element={<NeedsPerm perm="suppliers"><TransportersPage /></NeedsPerm>} />
             <Route path="clearing-agents" element={<NeedsPerm perm="suppliers"><ClearingAgentsPage /></NeedsPerm>} />
+            <Route path="clearing-agents/:id" element={<NeedsPerm perm="suppliers"><ClearingAgentsPage /></NeedsPerm>} />
             <Route path="destination-agents" element={<NeedsPerm perm="suppliers"><DestinationAgentsPage /></NeedsPerm>} />
+            <Route path="destination-agents/:id" element={<NeedsPerm perm="suppliers"><DestinationAgentsPage /></NeedsPerm>} />
             <Route path="settings" element={<NeedsPerm perm="settings"><SettingsPage /></NeedsPerm>} />
           </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

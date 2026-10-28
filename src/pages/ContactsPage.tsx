@@ -3,9 +3,8 @@ import {
   useMemo,
   useState,
   type FormEvent,
-  type ReactNode,
 } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Modal from "../components/Modal";
 import MailHistory from "../components/MailHistory";
 import {
@@ -19,14 +18,12 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
-  useDeepLinkReturn,
   useRowSelection,
   type BulkField,
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import {
-  useCreateClientInvite,
   useLeadSources,
   useClients,
   useMyProfile,
@@ -38,9 +35,8 @@ import {
 } from "../lib/hooks";
 import { listClientContacts, setClientRateTier } from "../lib/db";
 import { normalizeWebsite } from "../lib/format";
-import { PORTAL_SIGNUP_ENABLED } from "../lib/flags";
-import ClientActivity from "./ClientActivity";
 import TaskEditModal from "./ops/TaskEditModal";
+import { RecordTasks } from "./shipments/ShipmentWorkspacePage";
 import {
   DEFAULT_RATE_TIER,
   RATE_TIERS,
@@ -107,6 +103,16 @@ const COPY: Record<Kind, { label: string; title: string; eyebrow: string }> = {
   },
 };
 
+/** List route per contact book; a record opens at <route>/<id>. */
+const ROUTE: Record<Kind, string> = {
+  client: "clients",
+  supplier: "suppliers",
+  agent: "agents",
+  transporter: "transporters",
+  clearing_agent: "clearing-agents",
+  destination_agent: "destination-agents",
+};
+
 /** Title-case every word: "clearing agent" -> "Clearing Agent". */
 const titleCase = (s: string) =>
   s.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -132,6 +138,7 @@ export default function ContactsPage({
 }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: recordId } = useParams();
   const { label, title, eyebrow } = COPY[kind];
   const Label = titleCase(label);
   const isClient = kind === "client";
@@ -147,7 +154,6 @@ export default function ContactsPage({
     kind === "destination_agent";
   const { toast, error } = useToast();
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
-  const [viewing, setViewing] = useState<Contact | null>(null);
   const [taskingRow, setTaskingRow] = useState<Contact | null>(null);
   const tasksQ = useOpsTasks();
   // Contacts with an open (not done) task linked, the row task icon is filled.
@@ -167,8 +173,6 @@ export default function ContactsPage({
     );
   }, [tasksQ.data, kind]);
   const [mailingRow, setMailingRow] = useState<Contact | null>(null);
-  const createInvite = useCreateClientInvite();
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
   // Slot in the header row (beside "+ Add ...") that DataTable portals its
@@ -228,8 +232,6 @@ export default function ContactsPage({
   const rows = useMemo(() => query.data ?? [], [query.data]);
   // The open record as the list has it now (a saved rate sheet adds ports /
   // countries to a partner's coverage).
-  const viewingLive = viewing ? (rows.find((r) => r.id === viewing.id) ?? viewing) : null;
-  const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from a Notification: navigate here with
   // { state: { openContactId } } to pop the existing view modal open on a
@@ -244,14 +246,8 @@ export default function ContactsPage({
       navigate("/clients/" + row.id);
       return;
     }
-    if (row) {
-      setViewing(row);
-      arm();
-      navigate(location.pathname + location.search, {
-        replace: true,
-        state: {},
-      });
-    }
+    // Old links (openContactId) open the record page now.
+    if (row) navigate(`/${ROUTE[kind]}/${row.id}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, rows]);
 
@@ -404,30 +400,6 @@ export default function ContactsPage({
     }
   }
 
-  async function onInvite(row: Contact) {
-    // Defaults to the client's own (primary) email; staff can type a
-    // different address to invite a secondary contact at the same company
-    // instead, each gets their own portal login, both scoped to this
-    // client_id.
-    const email = window.prompt(
-      "Portal invite email (defaults to the primary contact, edit to invite a secondary contact instead):",
-      row.email ?? "",
-    );
-    if (email === null) return; // cancelled
-    try {
-      const invite = await createInvite.mutateAsync({ clientId: row.id, email });
-      const link = `${window.location.origin}/portal/signup?token=${invite.token}`;
-      setInviteLink(link);
-      try {
-        await navigator.clipboard.writeText(link);
-        toast("Invite link copied to clipboard");
-      } catch {
-        toast("Invite link created");
-      }
-    } catch (e2) {
-      error(e2 instanceof Error ? e2.message : "Could not create invite");
-    }
-  }
 
   const current = editing === "new" ? null : editing;
 
@@ -469,8 +441,10 @@ export default function ContactsPage({
               taskTitle={`Create a task for this ${label}`}
               taskOpen={openTaskIds.has(r.id)}
               taskOpenAmber
-              onView={() => (isClient ? navigate("/clients/" + r.id) : setViewing(r))}
-              onEdit={() => (isClient ? navigate("/clients/" + r.id) : setEditing(r))}
+              onView={() => navigate(`/${ROUTE[kind]}/${r.id}`)}
+              viewTitle={`Open this ${label}`}
+              onEdit={() => navigate(`/${ROUTE[kind]}/${r.id}`)}
+              editTitle={`Open this ${label} to edit it`}
               onDelete={() => onDelete(r)}
               onDuplicate={() => onDuplicate(r)}
             />
@@ -598,6 +572,24 @@ export default function ContactsPage({
     [sel, kind, Label, clientName, openTaskIds],
   );
 
+  if (recordId && !isClient) {
+    const record = rows.find((r) => r.id === recordId) ?? null;
+    if (query.isLoading) return <Loading />;
+    if (!record) return <ErrorNote error={new Error(`${Label} not found`)} />;
+    return (
+      <ContactRecord
+        kind={kind}
+        record={record}
+        save={save}
+        isPartner={isPartner}
+        canRates={canRates}
+        isAdmin={isAdmin}
+        clients={clientsQ.data ?? []}
+        tasks={(tasksQ.data ?? []).filter((t) => t.kind === "task")}
+      />
+    );
+  }
+
   return (
     <>
       <PageHeader eyebrow={eyebrow} title={title} />
@@ -656,146 +648,6 @@ export default function ContactsPage({
           />
         )}
       </div>
-
-      {viewing && (
-        <Modal
-          title={viewing.company}
-          onClose={() =>
-            closeAndReturn(() => {
-              setViewing(null);
-              setInviteLink(null);
-            })
-          }
-          wide={kind === "client" || isPartner}
-          stickyHeader={kind === "client" || isPartner}
-          headerActions={
-            <>
-              {kind === "client" && PORTAL_SIGNUP_ENABLED && (
-                <button
-                  className="btn outline"
-                  onClick={() => onInvite(viewing)}
-                  disabled={createInvite.isPending}
-                >
-                  {createInvite.isPending ? "Creating…" : "Invite to Portal"}
-                </button>
-              )}
-              <button
-                className="btn outline"
-                onClick={() => {
-                  setEditing(viewing);
-                  setViewing(null);
-                }}
-              >
-                Edit
-              </button>
-            </>
-          }
-        >
-          {inviteLink && (
-            <div
-              className="hint"
-              style={{
-                marginBottom: 14,
-                padding: 10,
-                background: "var(--paper)",
-                borderRadius: 8,
-                wordBreak: "break-all",
-              }}
-            >
-              Share this link with the customer (copied to clipboard): {inviteLink}
-            </div>
-          )}
-          <div className="grid2">
-            <ViewField label="Contact person" value={viewing.contact || "—"} />
-            <ViewField
-              label={isClient ? "Mobile phone" : "Phone"}
-              value={viewing.phone || "—"}
-            />
-            <ViewField label="Email" value={viewing.email || "—"} />
-            {isClient && (
-              <ViewField
-                label="Company phone"
-                value={viewing.company_phone || "—"}
-              />
-            )}
-            {isClient && (
-              <ViewField label="Website">
-                {viewing.website ? (
-                  <a href={viewing.website} target="_blank" rel="noreferrer">
-                    {viewing.website.replace(/^https?:\/\//, "")}
-                  </a>
-                ) : (
-                  "—"
-                )}
-              </ViewField>
-            )}
-            {isClient && (
-              <ViewField label="Source" value={viewing.source || "—"} />
-            )}
-            <ViewField label={`${Label} VAT No`} value={viewing.vat_no || "—"} />
-            <ViewField
-              label={`${Label} Import Code`}
-              value={viewing.import_code || "—"}
-            />
-            {isClient && (
-              <ViewField
-                label="Sales Person"
-                value={viewing.sales_person?.full_name || "—"}
-              />
-            )}
-            {isClient && (
-              <ViewField label="Rate Tier" value={rateTier(viewing.rate_tier).label} />
-            )}
-          </div>
-          {isClient && (
-            <ViewField label="Description" value={viewing.description || "—"} />
-          )}
-          <ViewField label="Address" value={viewing.address || "—"} />
-          {isClient && (
-            <ViewField label="Notes" value={viewing.notes || "—"} />
-          )}
-          {kind === "client" && <ClientActivity clientId={viewing.id} />}
-          {isPartner && (
-            <>
-              <CoverageView value={coverageOf(viewingLive)} />
-              {/* Partner buy rates: Admin, or the "rates" permission (0131). */}
-              {canRates && (
-                <PartnerRateSheets
-                  kind={kind as PartnerKind}
-                  partnerId={viewing.id}
-                  partnerName={viewing.company}
-                  modes={viewingLive?.modes}
-                  countries={viewingLive?.countries}
-                  showHistory
-                />
-              )}
-              {/* Partner logins: admin only. */}
-              {isAdmin && (
-                <PartnerLoginAccess
-                  kind={kind as PartnerKind}
-                  partnerId={viewing.id}
-                  company={viewing.company}
-                  email={viewing.email}
-                />
-              )}
-              {canRates && (
-                <LegacyRateStructures
-                  kind={kind as PartnerKind}
-                  partnerId={viewing.id}
-                  partnerName={viewing.company}
-                />
-              )}
-            </>
-          )}
-          {/* Customers have it as a tab on their record page. */}
-          {!isClient && (
-            <>
-              <h3 className="view-section-title">Mail history</h3>
-              <MailHistory emails={[viewing.email]} />
-            </>
-          )}
-        </Modal>
-      )}
 
       {editing !== null && (
         <Modal
@@ -1208,25 +1060,6 @@ export default function ContactsPage({
   );
 }
 
-function ViewField({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div className="hint" style={{ marginBottom: 4 }}>
-        {label}
-      </div>
-      <strong>{children ?? value}</strong>
-    </div>
-  );
-}
-
 /** Old-format rate structures (0114), shown under the code-based rate
  *  sheets only while a partner still has any, read and copy across. */
 function LegacyRateStructures({
@@ -1247,5 +1080,453 @@ function LegacyRateStructures({
       </summary>
       <RateStructures kind={kind} partnerId={partnerId} partnerName={partnerName} />
     </details>
+  );
+}
+
+type ContactPatch = Partial<ContactValues>;
+
+/**
+ * Record page for a shipper, agent, transporter, clearing or destination
+ * agent (/suppliers/:id ...): same build as the shipment / quote / lead
+ * pages. Cards edit in place; coverage, rates, logins, mail and tasks in
+ * tabs. Replaces the contact View pop-up.
+ */
+function ContactRecord({
+  kind,
+  record,
+  save,
+  isPartner,
+  canRates,
+  isAdmin,
+  clients,
+  tasks: allTasks,
+}: {
+  kind: Kind;
+  record: Contact;
+  save: UseMutationResult<Contact, Error, { id?: string; values: ContactValues }>;
+  isPartner: boolean;
+  canRates: boolean;
+  isAdmin: boolean;
+  clients: Contact[];
+  tasks: OpsTask[];
+}) {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const { toast, error } = useToast();
+  const { label, title } = COPY[kind];
+  const [mailing, setMailing] = useState(false);
+  const [editCoverage, setEditCoverage] = useState(false);
+  const [coverage, setCoverage] = useState<Coverage>(coverageOf(record));
+
+  const linkKey =
+    kind === "supplier" ? "supplier_id"
+    : kind === "agent" ? "agent_id"
+    : kind === "transporter" ? "transporter_id"
+    : kind === "clearing_agent" ? "clearing_agent_id"
+    : null;
+  const tasks = linkKey ? allTasks.filter((t) => t[linkKey] === record.id) : [];
+  const openTasks = tasks.filter((t) => t.status !== "done");
+  const mirror =
+    (kind === "agent" && record.source_clearing_agent_id) || (kind === "clearing_agent" && record.source_agent_id);
+
+  type Tab = "overview" | "coverage" | "rates" | "logins" | "mail" | "tasks";
+  const tabs: Tab[] = [
+    "overview",
+    ...(isPartner ? (["coverage"] as Tab[]) : []),
+    ...(isPartner && canRates ? (["rates"] as Tab[]) : []),
+    ...(isPartner && isAdmin ? (["logins"] as Tab[]) : []),
+    "mail",
+    ...(linkKey ? (["tasks"] as Tab[]) : []),
+  ];
+  const TAB_LABEL: Record<Tab, string> = {
+    overview: "Overview",
+    coverage: "Coverage",
+    rates: "Rates",
+    logins: "Partner login",
+    mail: "Mail history",
+    tasks: "Tasks",
+  };
+  const tabParam = params.get("tab") as Tab | null;
+  const tab: Tab = tabParam && tabs.includes(tabParam) ? tabParam : "overview";
+  const setTab = (t: Tab) => {
+    const next = new URLSearchParams(params);
+    if (t === "overview") next.delete("tab");
+    else next.set("tab", t);
+    setParams(next, { replace: true });
+  };
+
+  async function patch(p: ContactPatch, msg = "Saved") {
+    const values = {
+      company: record.company,
+      contact: record.contact,
+      email: record.email,
+      phone: record.phone,
+      ...p,
+    } as ContactValues;
+    if (!values.company?.trim()) return error("Company name is required");
+    try {
+      await save.mutateAsync({ id: record.id, values });
+      toast(msg);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not save");
+    }
+  }
+
+  const owner = clients.find((c) => c.id === record.client_id);
+
+  return (
+    <>
+      <PageHeader
+        eyebrow={title}
+        title={record.company}
+        actions={
+          <>
+            <button className="btn outline" onClick={() => navigate(`/${ROUTE[kind]}`)}>
+              ← {title}
+            </button>
+            {isPartner ? (
+              <button className="btn outline" onClick={() => setMailing(true)} disabled={!record.email}>
+                Send email
+              </button>
+            ) : record.email ? (
+              <a className="btn outline" href={`mailto:${record.email}`}>
+                Send email
+              </a>
+            ) : null}
+            {linkKey && (
+              <button className="btn" onClick={() => setTab("tasks")}>
+                Tasks{openTasks.length ? ` (${openTasks.length})` : ""}
+              </button>
+            )}
+          </>
+        }
+      />
+
+      {mirror && (
+        <div className="jv-notes">
+          <span className="k">Synced</span>
+          <span>This {label} is mirrored from the other contact book, edit it there.</span>
+        </div>
+      )}
+
+      <div className="ws-head panel">
+        <div className="ws-title">
+          <span className="ws-status">{titleCase(label)}</span>
+          <span className="ws-route">{[record.contact, record.email, record.phone].filter(Boolean).join(" · ") || "No contact details yet"}</span>
+          {owner && (
+            <span className="ws-customer">
+              Shipper for <Link to={`/clients/${owner.id}`}>{owner.company}</Link>
+            </span>
+          )}
+        </div>
+        <div className="ws-tiles">
+          <div className="ws-tile">
+            <span className="k">Contact person</span>
+            <b>{record.contact || "—"}</b>
+            <span className="muted">{record.phone || "no phone"}</span>
+          </div>
+          <div className="ws-tile">
+            <span className="k">Email</span>
+            <b style={{ fontSize: "0.95rem", overflowWrap: "anywhere" }}>{record.email || "—"}</b>
+          </div>
+          {isPartner ? (
+            <button className="ws-tile" onClick={() => setTab("coverage")}>
+              <span className="k">Coverage</span>
+              <b>{(record.modes ?? []).length} modes</b>
+              <span className="muted">
+                {(record.countries ?? []).length} countries · {(record.ports ?? []).length} ports
+              </span>
+            </button>
+          ) : (
+            <div className="ws-tile">
+              <span className="k">VAT No</span>
+              <b>{record.vat_no || "—"}</b>
+            </div>
+          )}
+          {linkKey ? (
+            <button className="ws-tile" onClick={() => setTab("tasks")}>
+              <span className="k">Open tasks</span>
+              <b>{openTasks.length}</b>
+              <span className="muted">{tasks.length - openTasks.length} done</span>
+            </button>
+          ) : (
+            <div className="ws-tile">
+              <span className="k">Since</span>
+              <b>{new Date(record.created_at).toLocaleDateString("en-GB")}</b>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <nav className="ws-tabs" role="tablist">
+        {tabs.map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
+            {TAB_LABEL[t]}
+            {t === "tasks" && openTasks.length > 0 && <span className="ws-count">{openTasks.length}</span>}
+          </button>
+        ))}
+      </nav>
+
+      <div className="ws-body">
+        {tab === "overview" && (
+          <div className="jv-cards">
+            <ContactCard
+              title="Contact"
+              record={record}
+              readOnly={!!mirror}
+              fields={[
+                ["contact", "Contact person"],
+                ["email", "Email"],
+                ["phone", "Phone"],
+              ]}
+              onSave={patch}
+            />
+            <ContactCard
+              title="Company"
+              record={record}
+              readOnly={!!mirror}
+              fields={[
+                ["company", "Company"],
+                ["vat_no", "VAT No"],
+                ["import_code", "Import code"],
+                ["address", "Address", true],
+              ]}
+              onSave={patch}
+            />
+            <div className="jv-card panel">
+              <h4>Settings</h4>
+              {kind === "supplier" && (
+                <>
+                  <label className="jv-field">
+                    <span className="k">Belongs to customer</span>
+                    <select
+                      value={record.client_id ?? ""}
+                      onChange={(e) => void patch({ client_id: e.target.value || null }, "Customer updated")}
+                    >
+                      <option value="">— none —</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.company}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="jv-field">
+                    <span className="k">Also a customer</span>
+                    <input
+                      type="checkbox"
+                      checked={!!record.also_customer}
+                      onChange={(e) => void patch({ also_customer: e.target.checked })}
+                    />
+                  </label>
+                </>
+              )}
+              {kind === "agent" && !mirror && (
+                <label className="jv-field">
+                  <span className="k">Also a clearing agent</span>
+                  <input
+                    type="checkbox"
+                    checked={!!record.also_clearing_agent}
+                    onChange={(e) => void patch({ also_clearing_agent: e.target.checked })}
+                  />
+                </label>
+              )}
+              {kind === "clearing_agent" && !mirror && (
+                <label className="jv-field">
+                  <span className="k">Also a forwarding agent</span>
+                  <input
+                    type="checkbox"
+                    checked={!!record.also_agent}
+                    onChange={(e) => void patch({ also_agent: e.target.checked })}
+                  />
+                </label>
+              )}
+              <div className="jv-field">
+                <span className="k">Added</span>
+                <span className="v">{new Date(record.created_at).toLocaleDateString("en-GB")}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "coverage" && isPartner && (
+          <div className="panel ws-panel">
+            <div className="ws-sec-head">
+              <h3>Coverage</h3>
+              {!editCoverage && !mirror && (
+                <button
+                  className="btn outline small"
+                  onClick={() => {
+                    setCoverage(coverageOf(record));
+                    setEditCoverage(true);
+                  }}
+                >
+                  ✎ Edit coverage
+                </button>
+              )}
+            </div>
+            {editCoverage ? (
+              <>
+                <CoverageEditor value={coverage} onChange={setCoverage} />
+                <div className="jv-form-foot" style={{ marginTop: 10 }}>
+                  <button className="btn ghost small" onClick={() => setEditCoverage(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="btn small"
+                    disabled={save.isPending}
+                    onClick={async () => {
+                      await patch(
+                        {
+                          modes: coverage.modes,
+                          countries: coverage.countries,
+                          ports: coverage.ports,
+                          coverage_notes: coverage.coverage_notes.trim() || null,
+                        },
+                        "Coverage saved",
+                      );
+                      setEditCoverage(false);
+                    }}
+                  >
+                    Save coverage
+                  </button>
+                </div>
+              </>
+            ) : (
+              <CoverageView value={coverageOf(record)} />
+            )}
+          </div>
+        )}
+
+        {tab === "rates" && isPartner && canRates && (
+          <div className="panel ws-panel">
+            <PartnerRateSheets
+              kind={kind as PartnerKind}
+              partnerId={record.id}
+              partnerName={record.company}
+              modes={record.modes}
+              countries={record.countries}
+              showHistory
+            />
+            <LegacyRateStructures kind={kind as PartnerKind} partnerId={record.id} partnerName={record.company} />
+          </div>
+        )}
+
+        {tab === "logins" && isPartner && isAdmin && (
+          <div className="panel ws-panel">
+            <PartnerLoginAccess kind={kind as PartnerKind} partnerId={record.id} company={record.company} email={record.email} />
+          </div>
+        )}
+
+        {tab === "mail" && (
+          <div className="panel ws-panel">
+            <MailHistory emails={[record.email]} />
+          </div>
+        )}
+
+        {tab === "tasks" && linkKey && (
+          <RecordTasks
+            tasks={tasks}
+            defaults={{ [linkKey]: record.id, title: `Follow up: ${record.company}` }}
+            empty={`No tasks for this ${label}.`}
+          />
+        )}
+      </div>
+
+      {mailing && isPartner && (
+        <PartnerMailModal kind={kind as PartnerKind} partner={record} onClose={() => setMailing(false)} />
+      )}
+    </>
+  );
+}
+
+type ContactField = "company" | "contact" | "email" | "phone" | "vat_no" | "import_code" | "address";
+
+/** A contact card that edits in place (✎), "+ add" on empty fields. */
+function ContactCard({
+  title,
+  record,
+  fields,
+  onSave,
+  readOnly,
+}: {
+  title: string;
+  record: Contact;
+  fields: [ContactField, string, boolean?][];
+  onSave: (p: ContactPatch) => Promise<void> | void;
+  readOnly?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const p: Record<string, string | null> = {};
+    for (const [k] of fields) {
+      const v = String(fd.get(k) ?? "").trim();
+      p[k] = k === "company" ? v : v || null;
+    }
+    await onSave(p as ContactPatch);
+    setEditing(false);
+  }
+  return (
+    <div className="jv-card panel">
+      <h4>
+        {title}
+        {!editing && !readOnly && (
+          <button type="button" className="jv-edit" onClick={() => setEditing(true)} title={`Edit ${title.toLowerCase()}`}>
+            ✎
+          </button>
+        )}
+      </h4>
+      {editing ? (
+        <form className="jv-form" onSubmit={onSubmit}>
+          {fields.map(([k, lbl, long]) => (
+            <label key={k}>
+              {lbl}
+              {long ? (
+                <textarea name={k} rows={3} defaultValue={record[k] ?? ""} />
+              ) : (
+                <input name={k} type={k === "email" ? "email" : "text"} defaultValue={record[k] ?? ""} required={k === "company"} />
+              )}
+            </label>
+          ))}
+          <div className="jv-form-foot">
+            <button type="button" className="btn ghost small" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn small">
+              Save
+            </button>
+          </div>
+        </form>
+      ) : (
+        fields.map(([k, lbl, long]) => {
+          const v = record[k];
+          if (long)
+            return (
+              <div key={k} className="jv-long">
+                <span className="k">{lbl}</span>
+                {v ? <p>{v}</p> : readOnly ? <span className="muted">—</span> : <button className="jv-add" onClick={() => setEditing(true)}>+ add</button>}
+              </div>
+            );
+          return (
+            <div key={k} className="jv-field">
+              <span className="k">{lbl}</span>
+              {v ? (
+                <span className="v">
+                  {k === "email" ? <a href={`mailto:${v}`}>{v}</a> : k === "phone" ? <a href={`tel:${v.replace(/[^+\d]/g, "")}`}>{v}</a> : v}
+                </span>
+              ) : readOnly ? (
+                <span className="muted">—</span>
+              ) : (
+                <button type="button" className="jv-add" onClick={() => setEditing(true)}>
+                  + add
+                </button>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
   );
 }

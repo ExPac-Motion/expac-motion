@@ -14,7 +14,6 @@ import {
 } from "../components/common";
 import { useToast } from "../components/Toast";
 import DataTable, { type DataColumn } from "../components/DataTable";
-import QuoteDetailModal from "./QuoteDetailModal";
 import QuoteCommsRail from "./quotes/QuoteCommsRail";
 import TaskEditModal from "./ops/TaskEditModal";
 import {
@@ -130,7 +129,6 @@ function QuoteNotesCell({ quote }: { quote: Quote }) {
 export default function QuotesListPage() {
   const navigate = useNavigate();
   const { data: quotes, isLoading, isError, error } = useQuotes();
-  const [openId, setOpenId] = useState<string | null>(null);
   const [commsQuote, setCommsQuote] = useState<Quote | null>(null);
   const [railOpen, setRailOpen] = useState(false);
   const [taskingQuote, setTaskingQuote] = useState<Quote | null>(null);
@@ -281,7 +279,8 @@ export default function QuotesListPage() {
             onTask={() => setTaskingQuote(q)}
             taskTitle="Create a task for this quote"
             taskOpen={openTaskQuoteIds.has(q.id)}
-            onView={() => setOpenId(q.id)}
+            onView={() => navigate(`/quotes/${q.id}/view`)}
+            viewTitle="Open the quotation"
             onEdit={() => navigate(`/quotes/${q.id}`)}
             onDelete={() => onDelete(q)}
             onDuplicate={() => onDuplicate(q)}
@@ -691,7 +690,7 @@ export default function QuotesListPage() {
             columns={columns}
             rows={rows}
             rowKey={(q) => q.id}
-            onRowClick={(q) => setOpenId(q.id)}
+            onRowClick={(q) => navigate(`/quotes/${q.id}/view`)}
             toolsPortal={toolsSlot}
           />
         )}
@@ -704,9 +703,6 @@ export default function QuotesListPage() {
         onToggle={() => setRailOpen((v) => !v)}
       />
 
-      {openId && (
-        <QuoteDetailModal quoteId={openId} onClose={() => setOpenId(null)} />
-      )}
 
       {taskingQuote && (
         <TaskEditModal

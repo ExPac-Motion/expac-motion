@@ -641,7 +641,7 @@ export function AssociatedLeadsTab({ client }: { client: CustomerRecord }) {
                   <td>{o.title || "—"}</td>
                   <td>{o.status.replace(/_/g, " ")}</td>
                   <td>{money(o.opportunity_value ?? o.value)}</td>
-                  <td>{o.quote ? <Link to={`/quotes/${o.quote.id}`}>{o.quote.reference}</Link> : "—"}</td>
+                  <td>{o.quote ? <Link to={`/quotes/${o.quote.id}/view`}>{o.quote.reference}</Link> : "—"}</td>
                   <td>{formatDate(o.created_at)}</td>
                 </tr>
               ))}

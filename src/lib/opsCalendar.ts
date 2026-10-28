@@ -203,7 +203,7 @@ export function buildCalendarEvents({
         kind: "quote-expiry",
         label: `${q.reference} expires`,
         sub: q.client?.company ?? "—",
-        href: `/quotes/${q.id}`,
+        href: `/quotes/${q.id}/view`,
       });
     }
   }

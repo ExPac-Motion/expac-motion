@@ -197,7 +197,7 @@ function ActivePortalUsers() {
 
   function onOpenCustomer(clientId: string | null) {
     if (!clientId) return;
-    navigate("/clients", { state: { openContactId: clientId } });
+    navigate(`/clients/${clientId}`);
   }
 
   async function onTogglePermission(

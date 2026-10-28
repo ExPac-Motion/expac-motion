@@ -29,7 +29,6 @@ import {
   type Opportunity,
   type Quote,
 } from "../../lib/types";
-import QuoteDetailModal from "../QuoteDetailModal";
 
 type Preset = "this_month" | "this_year" | "last_6" | "last_12" | "custom";
 
@@ -289,7 +288,6 @@ export default function TrendsTab() {
   const [drill, setDrill] = useState<{ kind: DrillKind; bucket: MonthBucket } | null>(
     null,
   );
-  const [openQuoteId, setOpenQuoteId] = useState<string | null>(null);
 
   const isLoading =
     quotesQ.isLoading || leadsQ.isLoading || oppsQ.isLoading || settingsQ.isLoading;
@@ -667,7 +665,7 @@ export default function TrendsTab() {
                         className="clickable"
                         onClick={() => {
                           setDrill(null);
-                          navigate("/crm?tab=leads", { state: { openLeadId: l.id } });
+                          navigate(`/crm/leads/${l.id}`);
                         }}
                       >
                         <td>
@@ -715,7 +713,7 @@ export default function TrendsTab() {
                             className="clickable"
                             onClick={() => {
                               setDrill(null);
-                              setOpenQuoteId(q.id);
+                              navigate(`/quotes/${q.id}/view`);
                             }}
                           >
                             <td>
@@ -779,12 +777,6 @@ export default function TrendsTab() {
         </Modal>
       )}
 
-      {openQuoteId && (
-        <QuoteDetailModal
-          quoteId={openQuoteId}
-          onClose={() => setOpenQuoteId(null)}
-        />
-      )}
     </>
   );
 }

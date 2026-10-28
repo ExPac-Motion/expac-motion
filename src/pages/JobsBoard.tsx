@@ -50,6 +50,7 @@ import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
 import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
 import { stepLabel, timelineSteps } from "../lib/timeline";
+import { ALL_STEPS, stepLabelAny } from "../lib/steps";
 import { saveShipmentPod } from "../lib/pod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWmsConsols } from "../lib/wms";
@@ -382,7 +383,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     const k = j.shipment_status || "__none";
     statusCounts.set(k, (statusCounts.get(k) ?? 0) + 1);
   }
-  const statusOptions = SHIPMENT_STATUSES.filter((st) =>
+  // The timeline steps in order (this mode's on a mode tab), plus any older
+  // status still on a shipment here (e.g. In Transit) so it can be found.
+  const stepList = modeTab === "All" ? ALL_STEPS : timelineSteps(modeTab);
+  const legacy = [...statusCounts.keys()].filter((k) => k !== "__none" && !stepList.includes(k));
+  const statusOptions = [...stepList, ...legacy].filter((st) =>
     mode === "completed" ? st === DELIVERED_STATUS : st !== DELIVERED_STATUS,
   );
   const modeRows = stageRows
@@ -514,7 +519,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         sortValue: (j) => j.reference,
         render: (j) =>
           j.quote_id ? (
-            <Link className="job-ref" to={`/quotes/${j.quote_id}`}>
+            <Link className="job-ref" to={`/quotes/${j.quote_id}/view`}>
               {j.reference}
             </Link>
           ) : (
@@ -756,7 +761,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             <option value="">All statuses ({stageRows.filter((x) => matchesModeTab(x.mode, modeTab)).length})</option>
             {statusOptions.map((st) => (
               <option key={st} value={st}>
-                {modeTab === "All" ? st : stepLabel(st, modeTab)} ({statusCounts.get(st) ?? 0})
+                {modeTab === "All" ? stepLabelAny(st) : stepLabel(st, modeTab)} ({statusCounts.get(st) ?? 0})
               </option>
             ))}
             {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}
@@ -837,7 +842,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             {q
               ? `No shipments match "${search.trim()}".`
               : statusPick
-              ? `No shipments with status ${statusPick === "__none" ? "not set" : `"${statusPick}"`} in this view.`
+              ? `No shipments with status ${statusPick === "__none" ? "not set" : `"${stepLabelAny(statusPick)}"`} in this view.`
               : recordFilter
               ? "Nothing matches that filter, every shipment in this view has one."
               : modeTab !== "All" && stageRows.length > 0
@@ -1022,7 +1027,7 @@ export function ConsolSection({ job }: { job: Job }) {
             key={c.id}
             type="button"
             className="link-btn"
-            onClick={() => navigate(`/wms?tab=release&consol=${c.id}`)}
+            onClick={() => navigate(`/wms/consols/${c.id}`)}
           >
             {houseLabel(c.mode)} {houseNo(c, h, i)} on {c.consol_no}
             {c.master_no ? `, ${masterLabel(c.mode)} ${c.master_no}` : ""} ({c.status})
@@ -1351,7 +1356,7 @@ export function ShipmentCards({
                   label="Quotation"
                   value={
                     job.quote_id ? (
-                      <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
+                      <Link to={`/quotes/${job.quote_id}/view`} onClick={onClose}>
                         View quotation →
                       </Link>
                     ) : null

@@ -20,7 +20,7 @@ import {
 } from "../../lib/hooks";
 import { chargeTotals, fxOf, groupByCategory, packingRow, packingTotals, volumetricFactor } from "../../lib/calc";
 import { OPTIONAL_STEP, stepLabel, todayIso, useJobTimeline, type TimelineStep } from "../../lib/timeline";
-import { isShipmentComplete, type Job, type OpsTask, type ShipmentDocument } from "../../lib/types";
+import { isShipmentComplete, type Job, type OpsTask, type OpsTaskPatch, type ShipmentDocument } from "../../lib/types";
 import {
   ConsolSection,
   CreateQuoteForJob,
@@ -274,7 +274,9 @@ export default function ShipmentWorkspacePage() {
         {tab === "timeline" && <ShipmentTimeline job={job} onDelivered={onDelivered} onNotify={openRail} />}
         {tab === "cargo" && <CargoTab job={job} quote={quoteQ.data ?? null} loading={quoteQ.isLoading} />}
         {tab === "documents" && <DocumentsTab job={job} docs={docs} required={required} />}
-        {tab === "tasks" && <TasksTab job={job} tasks={tasks} />}
+        {tab === "tasks" && (
+          <RecordTasks tasks={tasks} defaults={{ job_id: job.id, client_id: job.client_id, title: "" }} empty="No tasks for this shipment." />
+        )}
         {tab === "financials" && <FinancialsTab job={job} quote={quoteQ.data ?? null} loading={quoteQ.isLoading} />}
         {tab === "activity" && <ActivityTab job={job} onMessages={() => openRail()} />}
       </div>
@@ -413,7 +415,7 @@ function CargoTab({ job, quote, loading }: { job: Job; quote: QuoteData | null; 
         <div className="ws-sec-head">
           <h3>Cargo</h3>
           {quote && (
-            <Link className="btn ghost small" to={`/quotes/${quote.id}`}>
+            <Link className="btn ghost small" to={`/quotes/${quote.id}/view`}>
               From quotation {quote.reference} →
             </Link>
           )}
@@ -533,7 +535,16 @@ function DocumentsTab({
 }
 
 /* ---------- Tasks ---------- */
-function TasksTab({ job, tasks }: { job: Job; tasks: OpsTask[] }) {
+/** A record's tasks with tick boxes and + Add task (shipment and quote pages). */
+export function RecordTasks({
+  tasks,
+  defaults,
+  empty = "No tasks yet.",
+}: {
+  tasks: OpsTask[];
+  defaults: Partial<OpsTaskPatch> & { title: string };
+  empty?: string;
+}) {
   const save = useSaveOpsTask();
   const { error: toastError } = useToast();
   const [editing, setEditing] = useState<OpsTask | null | "new">(null);
@@ -556,7 +567,7 @@ function TasksTab({ job, tasks }: { job: Job; tasks: OpsTask[] }) {
         </button>
       </div>
       {sorted.length === 0 ? (
-        <p className="muted">No tasks for this shipment.</p>
+        <p className="muted">{empty}</p>
       ) : (
         <ul className="ws-tasks">
           {sorted.map((t) => (
@@ -582,7 +593,7 @@ function TasksTab({ job, tasks }: { job: Job; tasks: OpsTask[] }) {
       {editing && (
         <TaskEditModal
           task={editing === "new" ? null : editing}
-          defaults={{ job_id: job.id, client_id: job.client_id, title: "" }}
+          defaults={defaults}
           onClose={() => setEditing(null)}
         />
       )}
@@ -605,7 +616,7 @@ function FinancialsTab({ job, quote, loading }: { job: Job; quote: QuoteData | n
     <div className="panel ws-panel">
       <div className="ws-sec-head">
         <h3>Financials</h3>
-        <Link className="btn ghost small" to={`/quotes/${quote.id}`}>
+        <Link className="btn ghost small" to={`/quotes/${quote.id}/view`}>
           Quotation {quote.reference} →
         </Link>
       </div>

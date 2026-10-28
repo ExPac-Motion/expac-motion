@@ -342,44 +342,42 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     if (t.quote?.reference)
       return {
         label: t.quote.reference,
-        go: () => navigate(`/quotes/${t.quote_id}`),
+        go: () => navigate(`/quotes/${t.quote_id}/view?tab=tasks`),
       };
     if (t.client?.company)
       return {
         label: t.client.company,
         go: () =>
-          navigate("/clients", { state: { openContactId: t.client_id } }),
+          navigate(`/clients/${t.client_id}`),
       };
     if (t.lead?.company)
       return {
         label: t.lead.company,
         go: () =>
-          navigate("/crm?tab=leads", { state: { openLeadId: t.lead_id } }),
+          navigate(`/crm/leads/${t.lead_id}?tab=tasks`),
       };
     if (t.supplier?.company)
       return {
         label: t.supplier.company,
         go: () =>
-          navigate("/suppliers", { state: { openContactId: t.supplier_id } }),
+          navigate(`/suppliers/${t.supplier_id}?tab=tasks`),
       };
     if (t.agent?.company)
       return {
         label: t.agent.company,
-        go: () => navigate("/agents", { state: { openContactId: t.agent_id } }),
+        go: () => navigate(`/agents/${t.agent_id}?tab=tasks`),
       };
     if (t.transporter?.company)
       return {
         label: t.transporter.company,
         go: () =>
-          navigate("/transporters", { state: { openContactId: t.transporter_id } }),
+          navigate(`/transporters/${t.transporter_id}?tab=tasks`),
       };
     if (t.clearing_agent?.company)
       return {
         label: t.clearing_agent.company,
         go: () =>
-          navigate("/clearing-agents", {
-            state: { openContactId: t.clearing_agent_id },
-          }),
+          navigate(`/clearing-agents/${t.clearing_agent_id}?tab=tasks`),
       };
     return null;
   }

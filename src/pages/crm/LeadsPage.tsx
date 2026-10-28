@@ -9,7 +9,6 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
-import { LeadMailHistory } from "../../components/MailHistory";
 import ExpacCcPicks from "../../components/ExpacCcPicks";
 import AttachDocumentPicker from "../../components/AttachDocumentPicker";
 import MergeCodeMenu from "../../components/MergeCodeMenu";
@@ -27,7 +26,6 @@ import {
   RowActions,
   RowActionsHead,
   SearchInput,
-  useDeepLinkReturn,
   useRowSelection,
 } from "../../components/common";
 import { useToast } from "../../components/Toast";
@@ -35,7 +33,6 @@ import {
   useCompanySettings,
   useCreateLeadsBulk,
   useDeleteLead,
-  useLeadContacts,
   useLeadStatuses,
   useLeadSources,
   useLeads,
@@ -126,6 +123,67 @@ function saveJson(key: string, value: unknown) {
 }
 
 
+/** One click: lead -> customer (quotes move with it), portal invite, and the
+ *  sign-up link emailed to the lead (support in BCC). If the email can't go
+ *  (e.g. local dev), the link is copied instead. Used on the Leads list and
+ *  the lead page. */
+export function useLeadPortalInvite() {
+  const qc = useQueryClient();
+  const companySettingsQ = useCompanySettings();
+  const { toast, error: toastError } = useToast();
+  const [inviting, setInviting] = useState(false);
+  async function invite(lead: Lead): Promise<boolean> {
+    const email = (lead.email ?? "").trim();
+    if (!email) {
+      toastError("This lead has no email address, add one first.");
+      return false;
+    }
+    if (
+      !window.confirm(
+        `${lead.promoted_client_id ? "" : `Make ${lead.company} a customer and `}email a portal invite to ${email}?`,
+      )
+    )
+      return false;
+    setInviting(true);
+    try {
+      const clientId = await promoteLeadToCustomer(lead.id);
+      const invite = await createClientInvite(clientId, email);
+      const url = `${window.location.origin}/portal/signup?token=${invite.token}`;
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      const hi = lead.contact ? `Hi ${lead.contact.split(" ")[0]}` : "Good day";
+      try {
+        await sendMail({
+          to: [email],
+          bcc: SUPPORT_BCC,
+          subject: "Your ExPac Motion portal access",
+          text: `${hi},\n\nThank you for your quote request. As requested, here is your access to the ExPac Motion portal, where you can request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.\n\nCreate your login here:\n${url}\n\nPlease sign up with this email address (${email}).\n\nKind regards`,
+          html: `<p>${hi},</p><p>Thank you for your quote request. As requested, here is your access to the <strong>ExPac Motion portal</strong>, where you can request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.</p><p><a href="${url}">Create your portal login</a></p><p>Please sign up with this email address (${email}).</p><p>Kind regards</p>`,
+          fromName: companySettingsQ.data?.mail_sender_name || undefined,
+          replyTo: companySettingsQ.data?.mail_reply_to || undefined,
+        });
+        toast(`${lead.company} is now a customer, portal invite emailed to ${email}`);
+      } catch {
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          /* clipboard blocked */
+        }
+        toast(`${lead.company} is now a customer. The email didn't send, the invite link is copied: ${url}`);
+      }
+      return true;
+    } catch (e2) {
+      toastError(e2 instanceof Error ? e2.message : "Could not invite to the portal");
+      return false;
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  return { inviting, invite };
+}
+
 export default function LeadsPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -136,8 +194,6 @@ export default function LeadsPage() {
   const bulkCreate = useCreateLeadsBulk();
   const bulkUpdate = useUpdateLeadsBulk();
   const { toast, error: toastError } = useToast();
-  const qc = useQueryClient();
-  const companySettingsQ = useCompanySettings();
   const [bulkOpen, setBulkOpen] = useState(false);
   // Slot in the header row (beside "+ Add Lead") that DataTable portals its
   // Save Grid / Reset columns / Table settings controls into, keeps the
@@ -146,11 +202,9 @@ export default function LeadsPage() {
 
   const profilesQ = useProfiles();
   const [editing, setEditing] = useState<Lead | "new" | null>(null);
-  const [viewing, setViewing] = useState<Lead | null>(null);
   const [mailing, setMailing] = useState<Lead | null>(null);
   const [taskingLead, setTaskingLead] = useState<Lead | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const viewContactsQ = useLeadContacts(viewing?.id);
   const tasksQ = useOpsTasks();
   // Leads with an open (not done) task linked, the row task icon is filled.
   const openTaskLeadIds = useMemo(
@@ -195,7 +249,6 @@ export default function LeadsPage() {
     (p) => p.role === "admin" || p.role === "user",
   );
 
-  const { arm, closeAndReturn } = useDeepLinkReturn();
 
   // Deep-link from Notifications/Trends/Tasks: navigate here with
   // { state: { openLeadId } } to pop the existing view modal open on a
@@ -207,12 +260,8 @@ export default function LeadsPage() {
     if (!openId || rows.length === 0) return;
     const lead = rows.find((l) => l.id === openId);
     if (lead) {
-      setViewing(lead);
-      arm();
-      navigate(location.pathname + location.search, {
-        replace: true,
-        state: {},
-      });
+      // Old links (openLeadId) open the lead page now.
+      navigate(`/crm/leads/${lead.id}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, rows]);
@@ -289,54 +338,6 @@ export default function LeadsPage() {
   const PORTAL_ASK = "Would like access to the ExPac Motion portal.";
   const wantsPortal = (l: Lead) => !l.promoted_client_id && (l.notes ?? "").includes(PORTAL_ASK);
 
-  // One click: lead -> customer (quotes move with it), portal invite, and the
-  // sign-up link emailed to the lead (support in BCC). If the email can't go
-  // (e.g. local dev), the link is copied instead.
-  const [inviting, setInviting] = useState(false);
-  async function onPortalInvite(lead: Lead) {
-    const email = (lead.email ?? "").trim();
-    if (!email) return toastError("This lead has no email address, add one first.");
-    if (
-      !window.confirm(
-        `${lead.promoted_client_id ? "" : `Make ${lead.company} a customer and `}email a portal invite to ${email}?`,
-      )
-    )
-      return;
-    setInviting(true);
-    try {
-      const clientId = await promoteLeadToCustomer(lead.id);
-      const invite = await createClientInvite(clientId, email);
-      const url = `${window.location.origin}/portal/signup?token=${invite.token}`;
-      qc.invalidateQueries({ queryKey: ["leads"] });
-      qc.invalidateQueries({ queryKey: ["clients"] });
-      qc.invalidateQueries({ queryKey: ["quotes"] });
-      const hi = lead.contact ? `Hi ${lead.contact.split(" ")[0]}` : "Good day";
-      try {
-        await sendMail({
-          to: [email],
-          bcc: SUPPORT_BCC,
-          subject: "Your ExPac Motion portal access",
-          text: `${hi},\n\nThank you for your quote request. As requested, here is your access to the ExPac Motion portal, where you can request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.\n\nCreate your login here:\n${url}\n\nPlease sign up with this email address (${email}).\n\nKind regards`,
-          html: `<p>${hi},</p><p>Thank you for your quote request. As requested, here is your access to the <strong>ExPac Motion portal</strong>, where you can request and accept quotes online, follow every shipment on a live map and chat with the ExPac team.</p><p><a href="${url}">Create your portal login</a></p><p>Please sign up with this email address (${email}).</p><p>Kind regards</p>`,
-          fromName: companySettingsQ.data?.mail_sender_name || undefined,
-          replyTo: companySettingsQ.data?.mail_reply_to || undefined,
-        });
-        toast(`${lead.company} is now a customer, portal invite emailed to ${email}`);
-      } catch {
-        try {
-          await navigator.clipboard.writeText(url);
-        } catch {
-          /* clipboard blocked */
-        }
-        toast(`${lead.company} is now a customer. The email didn't send, the invite link is copied: ${url}`);
-      }
-      setViewing(null);
-    } catch (e2) {
-      toastError(e2 instanceof Error ? e2.message : "Could not invite to the portal");
-    } finally {
-      setInviting(false);
-    }
-  }
 
   async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -474,7 +475,6 @@ export default function LeadsPage() {
 
   const statusOf = (id: string | null) => statuses.find((s) => s.id === id) ?? null;
   const statusName = (id: string | null) => statusOf(id)?.name ?? "—";
-  const viewContacts = viewContactsQ.data ?? [];
 
   const leadCols = useMemo<DataColumn<Lead>[]>(
     () => [
@@ -501,7 +501,8 @@ export default function LeadsPage() {
             taskTitle="Create a task for this lead"
             taskOpen={openTaskLeadIds.has(r.id)}
             taskOpenAmber
-            onView={() => setViewing(r)}
+            onView={() => navigate(`/crm/leads/${r.id}`)}
+            viewTitle="Open the lead"
             onEdit={() => setEditing(r)}
             onDelete={() => onDelete(r)}
           />
@@ -808,110 +809,6 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {viewing && (
-        <Modal
-          title={viewing.company}
-          onClose={() => closeAndReturn(() => setViewing(null))}
-          headerActions={
-            <>
-              <button
-                className={wantsPortal(viewing) ? "btn" : "btn outline"}
-                onClick={() => onPortalInvite(viewing)}
-                disabled={inviting || !viewing.email}
-                title={
-                  viewing.email
-                    ? "Makes this lead a customer (its quotes move with it) and emails a portal invite"
-                    : "Add an email address to invite this lead"
-                }
-              >
-                {inviting
-                  ? "Inviting…"
-                  : viewing.promoted_client_id
-                    ? "Invite to portal"
-                    : "Make customer & invite to portal"}
-              </button>
-              <button
-                className="btn outline"
-                onClick={() => onNewQuote(viewing)}
-              >
-                + New quote
-              </button>
-              <button
-                className="btn outline"
-                onClick={() => {
-                  setEditing(viewing);
-                  setViewing(null);
-                }}
-              >
-                Edit
-              </button>
-            </>
-          }
-        >
-          <div className="grid2">
-            <ViewField label="Primary contact" value={viewing.contact || "—"} />
-            <ViewField label="Company phone" value={viewing.company_phone || "—"} />
-            <ViewField label="Email" value={viewing.email || "—"} />
-            <ViewField label="Mobile phone" value={viewing.phone || "—"} />
-            <ViewField label="Website" value={viewing.website || "—"} />
-            <ViewField label="Customer VAT No" value={viewing.vat_no || "—"} />
-            <ViewField
-              label="Customer Import Code"
-              value={viewing.import_code || "—"}
-            />
-            <ViewField label="Address" value={viewing.address || "—"} />
-            <ViewField label="Source" value={viewing.source || "—"} />
-            <ViewField label="Description" value={viewing.description || "—"} />
-            <ViewField
-              label="Status"
-              value={viewing.lead_status?.name ?? statusName(viewing.lead_status_id)}
-            />
-            <ViewField
-              label="Sales Person"
-              value={viewing.sales_person?.full_name || "—"}
-            />
-          </div>
-          {viewContacts.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div className="hint" style={{ marginBottom: 4 }}>
-                Additional contacts
-              </div>
-              <div className="table-wrap">
-                <table className="table--compact">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Role</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {viewContacts.map((c) => (
-                      <tr key={c.id}>
-                        <td>{c.name || "—"}</td>
-                        <td>{c.role || "—"}</td>
-                        <td>{c.email || "—"}</td>
-                        <td>{c.phone || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          <ViewField label="Notes" value={viewing.notes || "—"} />
-          {viewing.promoted_at && (
-            <ViewField
-              label="Promoted to Customer"
-              value={formatDate(viewing.promoted_at)}
-            />
-          )}
-          <h3 className="view-section-title">Mail history</h3>
-          <LeadMailHistory leadId={viewing.id} email={viewing.email} />
-        </Modal>
-      )}
-
       {editing !== null && (
         <LeadEditModal
           key={editing === "new" ? "new" : editing.id}
@@ -998,7 +895,7 @@ export default function LeadsPage() {
   );
 }
 
-function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+export function QuickMailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const { data: templates } = useMailTemplates();
   const { data: settings } = useCompanySettings();
   const uploadAsset = useUploadMailAsset();
@@ -1455,7 +1352,7 @@ const URL_RE = /(https?:\/\/[^\s]+)/g;
  *  a web-form "Image upload" answer lands here as a bare storage URL.
  *  Splitting on a capturing group interleaves the URL matches themselves
  *  into the result at odd indices, so no separate regex test is needed. */
-function linkify(text: string) {
+export function linkify(text: string) {
   return text.split(URL_RE).map((part, i) =>
     i % 2 === 1 ? (
       <a key={i} href={part} target="_blank" rel="noopener noreferrer">
@@ -1467,13 +1364,3 @@ function linkify(text: string) {
   );
 }
 
-function ViewField({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div className="hint" style={{ marginBottom: 4 }}>
-        {label}
-      </div>
-      <strong style={{ whiteSpace: "pre-wrap" }}>{linkify(value)}</strong>
-    </div>
-  );
-}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToast } from "./Toast";
+import DateInput from "./DateInput";
 import { formatDate } from "../lib/format";
 import {
   notifyText,
@@ -14,8 +15,8 @@ import {
   type TimelineStep,
 } from "../lib/timeline";
 
-/** A yyyy-mm-dd input that saves on blur / Enter, not on every keystroke
- *  (typing a year fires a change per digit). */
+/** Planned / actual date: dd/mm/yyyy whatever the browser's locale, saves
+ *  once a full date is entered or picked (DateInput). */
 function DateCell({
   value,
   onSave,
@@ -27,27 +28,7 @@ function DateCell({
   title: string;
   disabled?: boolean;
 }) {
-  const [draft, setDraft] = useState(value ?? "");
-  useEffect(() => setDraft(value ?? ""), [value]);
-  function commit() {
-    if (draft === (value ?? "")) return;
-    if (draft && !/^(19|20)\d{2}-\d{2}-\d{2}$/.test(draft)) {
-      setDraft(value ?? "");
-      return;
-    }
-    onSave(draft);
-  }
-  return (
-    <input
-      type="date"
-      value={draft}
-      title={title}
-      disabled={disabled}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-    />
-  );
+  return <DateInput value={value ?? ""} onChange={onSave} title={title} disabled={disabled} />;
 }
 
 function NoteCell({ value, onSave }: { value: string | null; onSave: (v: string) => void }) {
@@ -206,7 +187,7 @@ export default function ShipmentTimeline({
           <b>{stepLabel(next.step, job.mode)}</b>
           <label>
             Date
-            <input type="date" value={moveDate} onChange={(e) => setMoveDate(e.target.value)} />
+            <DateInput value={moveDate} onChange={setMoveDate} />
           </label>
           <input
             className="tl-note"

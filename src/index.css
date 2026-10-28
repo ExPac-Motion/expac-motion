@@ -11237,3 +11237,50 @@ button.ws-tile:hover {
   font-size: 0.82rem;
   color: var(--ink);
 }
+
+/* Lead / record pages: inline selects in the summary tiles, long text fields */
+.ws-tile-select {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 2px 0;
+  margin-left: -2px;
+  cursor: pointer;
+}
+label.ws-tile:hover {
+  border-color: var(--green);
+}
+.jv-long {
+  padding: 4px 0;
+  border-top: 1px dashed var(--line);
+  font-size: 0.85rem;
+}
+.jv-long .k {
+  color: var(--muted);
+  font-size: 0.78rem;
+  display: block;
+}
+.jv-long p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ws-contacts {
+  margin-top: 6px;
+}
+.ws-contacts .link-btn {
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+
+/* Record screens shown as a page (PageOrModal) */
+.record-page-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}

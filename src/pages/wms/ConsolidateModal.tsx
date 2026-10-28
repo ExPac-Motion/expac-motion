@@ -84,7 +84,7 @@ export default function ConsolidateModal({ jobs, onClose }: { jobs: Job[]; onClo
           toast(`${houses.length} ${HL}${houses.length === 1 ? "" : "s"} added`);
           void notifyWms("preparing", houses.flatMap((h) => h.receipt_ids), consolNoticeDetail({ ...blankConsol(mode), consol_no: null }, houses, lk.jobRef, "preparing"));
           onClose();
-          navigate(`/wms?tab=release&consol=${id}`);
+          navigate(`/wms/consols/${id}`);
         },
         onError: (e) => error(e.message),
       },

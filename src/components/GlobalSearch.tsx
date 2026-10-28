@@ -117,7 +117,7 @@ function SearchPalette({ onClose }: { onClose: () => void }) {
         label: x.reference,
         sub: [x.client?.company ?? x.lead?.company, x.supplier?.company].filter(Boolean).join(" → ") ||
           x.mode,
-        to: `/quotes/${x.id}`,
+        to: `/quotes/${x.id}/view`,
       });
     for (const x of jobs)
       out.push({

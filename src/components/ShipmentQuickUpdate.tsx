@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Modal from "./Modal";
+import DateInput from "./DateInput";
 import { useToast } from "./Toast";
 import { formatDate } from "../lib/format";
 import { useUpdateJob } from "../lib/hooks";
@@ -165,7 +166,7 @@ export default function ShipmentQuickUpdate({
               </select>
               {target !== "__none" && (
                 <>
-                  <input type="date" value={moveDate} onChange={(e) => setMoveDate(e.target.value)} />
+                  <DateInput value={moveDate} onChange={setMoveDate} />
                   <input
                     className="qu-grow"
                     placeholder="Note (optional)"
@@ -184,11 +185,7 @@ export default function ShipmentQuickUpdate({
             {DATE_FIELDS.map((d) => (
               <label key={d.key} className={(dates[d.key] || "") !== (job[d.key] ?? "") ? "changed" : ""}>
                 <span>{d.label}</span>
-                <input
-                  type="date"
-                  value={dates[d.key]}
-                  onChange={(e) => setDates((x) => ({ ...x, [d.key]: e.target.value }))}
-                />
+                <DateInput value={dates[d.key]} onChange={(v) => setDates((x) => ({ ...x, [d.key]: v }))} />
               </label>
             ))}
           </div>

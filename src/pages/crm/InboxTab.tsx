@@ -107,7 +107,7 @@ const RECORD_ROUTE: Record<string, string> = {
   transporter: "/transporters",
   clearing_agent: "/clearing-agents",
   destination_agent: "/destination-agents",
-  lead: "/crm?tab=leads",
+  lead: "/crm/leads",
 };
 /** Our own mail (any expac.co.za address, incl. a sending subdomain like
  *  send.expac.co.za) never needs a reply. */
@@ -1241,7 +1241,7 @@ function SentReader({ mail }: { mail: SentMail }) {
               </button>
             )}
             {mail.quote_id && (
-              <button type="button" className="btn ghost small" onClick={() => navigate(`/quotes/${mail.quote_id}`)}>
+              <button type="button" className="btn ghost small" onClick={() => navigate(`/quotes/${mail.quote_id}/view?comms=1`)}>
                 Open quotation {mail.quote_reference} ›
               </button>
             )}
@@ -1415,9 +1415,7 @@ function Reader({
                 type="button"
                 className="btn ghost small"
                 onClick={() =>
-                  navigate(RECORD_ROUTE[msg.record_kind as string], {
-                    state: { openContactId: msg.record_id },
-                  })
+                  navigate(`${RECORD_ROUTE[msg.record_kind as string]}/${msg.record_id}?tab=mail`)
                 }
               >
                 Open record ›

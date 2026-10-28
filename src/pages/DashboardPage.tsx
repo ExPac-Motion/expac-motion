@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ErrorNote, Loading, PageHeader, StatusBadge } from "../components/common";
-import QuoteDetailModal from "./QuoteDetailModal";
 import { useJobs, useQuotes } from "../lib/hooks";
 import { chargeTotals, fxOf } from "../lib/calc";
 import { formatDate, money, portCode } from "../lib/format";
@@ -85,7 +84,6 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const quotesQ = useQuotes();
   const jobsQ = useJobs();
-  const [openId, setOpenId] = useState<string | null>(null);
   const [modeFilter, setModeFilter] = useState<ModeFilter>("All");
 
   // Grow the bars from zero on first paint.
@@ -548,7 +546,7 @@ export default function DashboardPage() {
                         <tr
                           key={q.id}
                           className="clickable"
-                          onClick={() => setOpenId(q.id)}
+                          onClick={() => navigate(`/quotes/${q.id}/view`)}
                         >
                           <td>
                             <span className="ref-link">{q.reference}</span>
@@ -577,9 +575,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      {openId && (
-        <QuoteDetailModal quoteId={openId} onClose={() => setOpenId(null)} />
-      )}
     </>
   );
 }

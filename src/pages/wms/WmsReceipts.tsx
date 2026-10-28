@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useJobHouses, useMastersBoard, type BoardHouse } from "../../lib/houses";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
-import Modal from "../../components/Modal";
+import PageOrModal from "../../components/PageOrModal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import DateInput from "../../components/DateInput";
 import {
@@ -58,7 +58,6 @@ export default function WmsReceipts() {
   const [status, setStatus] = useState<StatusFilter>("stock");
   const [whId, setWhId] = useState("");
   const [editing, setEditing] = useState<WmsReceipt | "new" | null>(null);
-  const [viewing, setViewing] = useState<WmsReceipt | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const del = useWmsMutation(wmsDb.deleteReceipt);
@@ -120,8 +119,9 @@ export default function WmsReceipts() {
         <RowActions
           selected={sel.isSelected(r.id)}
           onSelectToggle={() => sel.toggle(r.id)}
-          onView={() => setViewing(r)}
-          onEdit={() => setEditing(r)}
+          onView={() => navigate(`/wms/receipts/${r.id}`)}
+          viewTitle="Open the receipt"
+          onEdit={() => navigate(`/wms/receipts/${r.id}/edit`)}
           onDelete={() => {
             if (!confirm(`Delete ${r.receipt_no}? Its movements and stock history go with it.`)) return;
             del.mutate(r.id, { onSuccess: () => toast("Receipt deleted"), onError: (e) => error(e.message) });
@@ -258,7 +258,7 @@ export default function WmsReceipts() {
             columns={columns}
             rows={filtered}
             rowKey={(r) => r.id}
-            onRowClick={(r) => setViewing(r)}
+            onRowClick={(r) => navigate(`/wms/receipts/${r.id}`)}
           />
         )}
       </div>
@@ -271,16 +271,6 @@ export default function WmsReceipts() {
           onSaved={(id) => {
             setEditing(null);
             if (editing === "new") navigate(`/wms/print/receipt/${id}`);
-          }}
-        />
-      )}
-      {viewing && (
-        <ReceiptViewModal
-          receipt={rows.find((r) => r.id === viewing.id) ?? viewing}
-          onClose={() => setViewing(null)}
-          onEdit={() => {
-            setEditing(viewing);
-            setViewing(null);
           }}
         />
       )}
@@ -313,14 +303,17 @@ export default function WmsReceipts() {
 
 /* ---------- View ---------- */
 
-function ReceiptViewModal({
+export function ReceiptViewModal({
   receipt: r,
   onClose,
   onEdit,
+  page,
 }: {
   receipt: WmsReceipt;
   onClose: () => void;
   onEdit: () => void;
+  /** Full page (/wms/receipts/:id) instead of a pop-up. */
+  page?: boolean;
 }) {
   const navigate = useNavigate();
   const lk = useWmsLookups();
@@ -374,7 +367,10 @@ function ReceiptViewModal({
     }
   }
   return (
-    <Modal
+    <PageOrModal
+      page={page}
+      eyebrow="Warehouse receipt"
+      backLabel="Receipts"
       title={`${r.receipt_no}, ${lk.clientName(r.client_id)}`}
       onClose={onClose}
       wide
@@ -451,7 +447,7 @@ function ReceiptViewModal({
           ))}
         </tbody>
       </table>
-    </Modal>
+    </PageOrModal>
   );
 }
 
@@ -523,11 +519,14 @@ export function ReceiptEditModal({
   onClose,
   onSaved,
   defaults,
+  page,
 }: {
   receipt: WmsReceipt | null;
   onClose: () => void;
   onSaved?: (id: string) => void;
   defaults?: Partial<WmsReceiptInput>;
+  /** Full page (/wms/receipts/:id/edit) instead of a pop-up. */
+  page?: boolean;
 }) {
   const lk = useWmsLookups();
   const { toast, error } = useToast();
@@ -628,7 +627,15 @@ export function ReceiptEditModal({
   const recDate = f.received_at.slice(0, 10);
 
   return (
-    <Modal title={receipt ? `Edit ${receipt.receipt_no}` : "New warehouse receipt"} onClose={onClose} wide stickyHeader>
+    <PageOrModal
+      page={page}
+      eyebrow={receipt ? "Edit warehouse receipt" : "Warehouse receipts"}
+      backLabel={receipt ? receipt.receipt_no : "Receipts"}
+      title={receipt ? `Edit ${receipt.receipt_no}` : "New warehouse receipt"}
+      onClose={onClose}
+      wide
+      stickyHeader
+    >
       <form onSubmit={submit}>
         <div className="grid4">
           <div className="field">
@@ -914,7 +921,7 @@ export function ReceiptEditModal({
         </div>
         {!receipt && <p className="hint" style={{ textAlign: "right" }}>The Warehouse Receipt opens to print once saved.</p>}
       </form>
-    </Modal>
+    </PageOrModal>
   );
 }
 

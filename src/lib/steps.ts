@@ -40,6 +40,28 @@ export function stepLabel(step: string, mode: string | null | undefined): string
   }
 }
 
+/** Every step of every mode, in timeline order (filters across modes). */
+export const ALL_STEPS = [
+  "Created", "Booked", "Collected", "Received", "Loaded", "Departed", "Arrived",
+  "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered",
+];
+
+/** A step's name when the mode isn't known (e.g. the All Shipments filter). */
+export function stepLabelAny(step: string): string {
+  switch (step) {
+    case "Unloaded":
+      return "Discharged";
+    case "Customs":
+      return "Customs clearance";
+    case "Released":
+      return "Released by customs";
+    case "On-Delivery":
+      return "Out for delivery";
+    default:
+      return step;
+  }
+}
+
 /** A Shipment Status for display: the step's friendly name for this mode,
  *  any other value as it is. */
 export function statusLabel(status: string | null | undefined, mode: string | null | undefined): string {

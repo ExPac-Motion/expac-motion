@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import Modal from "../../components/Modal";
+import PageOrModal from "../../components/PageOrModal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import DateInput from "../../components/DateInput";
 import {
@@ -101,8 +101,8 @@ export default function WmsConsols({
     if (!openId) return;
     const c = consolsQ.data?.find((x) => x.id === openId);
     if (c) {
-      setEditing(c);
       onOpened?.();
+      navigate(`/wms/consols/${c.id}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openId, consolsQ.data]);
@@ -146,7 +146,7 @@ export default function WmsConsols({
       width: 96,
       render: (c) => (
         <RowActions
-          onEdit={() => setEditing(c)}
+          onEdit={() => navigate(`/wms/consols/${c.id}`)}
           onDelete={() => {
             if (!confirm(`Delete ${c.consol_no}? (Goods already released stay released.)`)) return;
             del.mutate(c.id, { onSuccess: () => toast("Consolidation deleted"), onError: (e) => error(e.message) });
@@ -295,7 +295,7 @@ export default function WmsConsols({
             columns={columns}
             rows={filtered}
             rowKey={(c) => c.id}
-            onRowClick={(c) => setEditing(c)}
+            onRowClick={(c) => navigate(`/wms/consols/${c.id}`)}
           />
         )}
       </div>
@@ -350,7 +350,18 @@ export const blankConsol = (mode: ConsolMode): WmsConsolInput => ({
   containers: [],
 });
 
-function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; mode: ConsolMode; onClose: () => void }) {
+export function ConsolEditModal({
+  consol,
+  mode,
+  onClose,
+  page,
+}: {
+  consol: WmsConsol | null;
+  mode: ConsolMode;
+  onClose: () => void;
+  /** Full page (/wms/consols/:id) instead of a pop-up. */
+  page?: boolean;
+}) {
   const lk = useWmsLookups();
   const { toast, error } = useToast();
   const receiptsQ = useWmsReceipts();
@@ -504,7 +515,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
   const title = consol ? `${CONSOL_MODE_LABEL[mode]} ${consol.consol_no}` : `New ${CONSOL_MODE_LABEL[mode].toLowerCase()}`;
 
   return (
-    <Modal title={title} onClose={onClose} wide stickyHeader>
+    <PageOrModal page={page} eyebrow="Consolidation" backLabel="Consolidations" title={title} onClose={onClose} wide stickyHeader>
       {sea ? (
         <>
           <h4 className="wms-subhead" style={{ marginTop: 0 }}>
@@ -829,7 +840,7 @@ function ConsolEditModal({ consol, mode, onClose }: { consol: WmsConsol | null; 
       <p className="hint" style={{ textAlign: "right" }}>
         {ML} {f.master_no || "not set yet"}, save, then print the {HL}s, manifest and load plan from the list.
       </p>
-    </Modal>
+    </PageOrModal>
   );
 }
 

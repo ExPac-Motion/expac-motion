@@ -58,6 +58,10 @@ export function ShipmentWorkspaceSeed({ children }: { children: ReactNode }) {
     ]);
     seed(["quotes", "q-demo"], {
       id: "q-demo", reference: "SEA744180", commodity: "Collectible figurines", incoterms: "FOB",
+      mode: "Sea Freight (LCL)", origin: "USNYC, New York, United States", destination: "ZADUR, Durban, South Africa",
+      status: "sent", sent_at: ago(6), created_at: ago(9), valid_until: day(-2), revision_no: 1, client_id: "c1",
+      client: { id: "c1", company: "Netina Beukes", email: "netina@example.co.za" }, supplier: { id: "s1", company: "Stackery" },
+      customer_reference: "Fragile Collectibles", etd: day(-3), eta: day(-60), request_pickup: "Stackery warehouse, Brooklyn", request_notes: "Fragile, please quote with insurance.",
       fx_usd_zar: 18.2, fx_cny_zar: 2.5, fx_eur_zar: 19.8, fx_gbp_zar: 23,
       quote_lines: [
         { id: "l1", position: 0, category: "International Freight Charges", code: "OF-06", description: "Ocean freight LCL", unit: "CBM", qty: 1.81, cur: "ZAR", buy: 2375, margin: 15, vat_pct: 0, sell: 2731.25 },
@@ -68,6 +72,16 @@ export function ShipmentWorkspaceSeed({ children }: { children: ReactNode }) {
         { id: "p1", position: 0, length_cm: 63.5, width_cm: 43.5, height_cm: 65.5, actual_kg: 16, qty_ctns: 10, qty_pcs: 120, cbm: null },
       ],
     });
+    seed(["lead_statuses"], [
+      { id: "ls1", name: "Hot Lead", promotes_to_customer: false, sort_order: 1, color: "#e8590c", created_at: ago(90) },
+      { id: "ls2", name: "Contacted", promotes_to_customer: false, sort_order: 2, color: "#1971c2", created_at: ago(90) },
+    ]);
+    seed(["lead_sources"], [{ id: "src1", name: "Website", sort_order: 1, created_at: ago(90) }]);
+    seed(["leads"], [{ id: "lead-demo", company: "Kalahari Tools (Pty) Ltd", contact: "Pieter Venter", email: "pieter@kalaharitools.co.za", phone: "+27 82 555 0123", company_phone: null, website: "kalaharitools.co.za", address: "12 Main Rd, Upington", vat_no: null, import_code: null, source: "Website", description: "Imports hand tools from Ningbo, 2-3 LCL a month.", notes: "Would like access to the ExPac Motion portal.", lead_status_id: "ls1", sales_person_id: "u1", promoted_client_id: null, promoted_at: null, unsubscribed_at: null, created_at: ago(12), updated_at: ago(2), lead_status: { id: "ls1", name: "Hot Lead", promotes_to_customer: false }, sales_person: { id: "u1", full_name: "Admin" } }]);
+    seed(["lead_contacts", "lead-demo"], [{ id: "lc1", lead_id: "lead-demo", name: "Anna Venter", role: "Accounts", email: "accounts@kalaharitools.co.za", phone: null, created_at: ago(10) }]);
+    seed(["quotes"], []);
+    seed(["agents"], [{ id: "ag1", company: "Ningbo Ocean Logistics", contact: "Lily Zhang", email: "lily@nbocean.example", phone: "+86 574 5550 1234", vat_no: null, import_code: null, address: "88 Zhongshan Rd, Ningbo", modes: ["Sea Freight (LCL)", "Sea Freight (FCL)"], countries: ["China"], ports: ["CNNGB", "CNSHA"], coverage_notes: "Weekly LCL to Durban.", also_clearing_agent: false, created_at: ago(200) }]);
+    seed(["clients"], []);
     return null;
   });
   return <>{children}</>;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
+import PageOrModal from "../../components/PageOrModal";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, ErrorNote, Loading, PageTools, RowActions, RowActionsHead } from "../../components/common";
 import { useToast } from "../../components/Toast";
@@ -20,7 +21,7 @@ export default function WmsCycleCount() {
   const { toast, error } = useToast();
   const countsQ = useWmsCounts();
   const [creating, setCreating] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const del = useWmsMutation(wmsDb.deleteCount);
   const rows = countsQ.data ?? [];
@@ -34,7 +35,7 @@ export default function WmsCycleCount() {
       width: 96,
       render: (c) => (
         <RowActions
-          onView={() => setOpen(c.id)}
+          onView={() => navigate(`/wms/counts/${c.id}`)}
           onDelete={
             c.status === "completed"
               ? undefined
@@ -66,8 +67,6 @@ export default function WmsCycleCount() {
     { key: "closed", header: "Completed", width: 140, render: (c) => (c.completed_at ? formatDateTime(c.completed_at) : "—") },
   ];
 
-  const current = rows.find((c) => c.id === open);
-
   return (
     <>
       <PageTools
@@ -88,7 +87,7 @@ export default function WmsCycleCount() {
         ) : rows.length === 0 ? (
           <EmptyState>No cycle counts yet.</EmptyState>
         ) : (
-          <DataTable tableKey="wms-counts" className="table--compact" toolsPortal={toolsSlot} columns={columns} rows={rows} rowKey={(c) => c.id} onRowClick={(c) => setOpen(c.id)} />
+          <DataTable tableKey="wms-counts" className="table--compact" toolsPortal={toolsSlot} columns={columns} rows={rows} rowKey={(c) => c.id} onRowClick={(c) => navigate(`/wms/counts/${c.id}`)} />
         )}
       </div>
       {creating && (
@@ -96,11 +95,10 @@ export default function WmsCycleCount() {
           onClose={() => setCreating(false)}
           onStarted={(id) => {
             setCreating(false);
-            setOpen(id);
+            navigate(`/wms/counts/${id}`);
           }}
         />
       )}
-      {current && <CountSheetModal count={current} onClose={() => setOpen(null)} />}
     </>
   );
 }
@@ -153,7 +151,7 @@ function NewCountModal({ onClose, onStarted }: { onClose: () => void; onStarted:
   );
 }
 
-function CountSheetModal({ count, onClose }: { count: WmsCount; onClose: () => void }) {
+export function CountSheetModal({ count, onClose, page }: { count: WmsCount; onClose: () => void; page?: boolean }) {
   const navigate = useNavigate();
   const lk = useWmsLookups();
   const { toast, error } = useToast();
@@ -187,7 +185,10 @@ function CountSheetModal({ count, onClose }: { count: WmsCount; onClose: () => v
   }
 
   return (
-    <Modal
+    <PageOrModal
+      page={page}
+      eyebrow="Cycle count"
+      backLabel="Cycle counts"
       title={`${count.count_no}, ${lk.whCode(count.warehouse_id)} ${count.location_id ? lk.locName(count.location_id) : "(whole warehouse)"}`}
       onClose={onClose}
       wide
@@ -294,6 +295,6 @@ function CountSheetModal({ count, onClose }: { count: WmsCount; onClose: () => v
           </button>
         </div>
       )}
-    </Modal>
+    </PageOrModal>
   );
 }

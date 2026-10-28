@@ -70,8 +70,7 @@ export function buildNotifications(
         domain: "sales",
         text: `New lead, ${l.company}`,
         when: l.created_at,
-        to: "/crm?tab=leads",
-        navState: { openLeadId: l.id },
+        to: `/crm/leads/${l.id}`,
         leadId: l.id,
       });
     }
@@ -81,10 +80,7 @@ export function buildNotifications(
         domain: "sales",
         text: `Lead converted to customer, ${l.company}`,
         when: l.promoted_at as string,
-        to: "/clients",
-        navState: l.promoted_client_id
-          ? { openContactId: l.promoted_client_id }
-          : undefined,
+        to: l.promoted_client_id ? `/clients/${l.promoted_client_id}` : `/crm/leads/${l.id}`,
         leadId: l.id,
         clientId: l.promoted_client_id,
       });
@@ -99,7 +95,7 @@ export function buildNotifications(
         domain: "sales",
         text: `Portal quote request, ${q.client?.company ?? "customer"} · ${q.reference}`,
         when: q.portal_requested_at as string,
-        to: `/quotes/${q.id}`,
+        to: `/quotes/${q.id}/view`,
         quoteId: q.id,
         clientId: q.client_id,
       });
@@ -110,7 +106,7 @@ export function buildNotifications(
         domain: "sales",
         text: `Quote declined on the portal, ${q.reference}${q.portal_decline_reason ? `: ${q.portal_decline_reason}` : ""}`,
         when: q.portal_decided_at as string,
-        to: `/quotes/${q.id}`,
+        to: `/quotes/${q.id}/view`,
         quoteId: q.id,
         clientId: q.client_id,
       });
@@ -121,7 +117,7 @@ export function buildNotifications(
         domain: "sales",
         text: `Quote won, ${q.reference}`,
         when: q.accepted_at as string,
-        to: `/quotes/${q.id}`,
+        to: `/quotes/${q.id}/view`,
         quoteId: q.id,
         clientId: q.client_id,
       });
@@ -260,8 +256,7 @@ export function buildNotifications(
               ? `Follow-up skipped, ${f.email}`
               : `Follow-up sent, ${f.email}`,
         when: f.created_at,
-        to: f.lead_id ? "/crm?tab=leads" : "/crm?tab=followups",
-        navState: f.lead_id ? { openLeadId: f.lead_id } : undefined,
+        to: f.lead_id ? `/crm/leads/${f.lead_id}?tab=mail` : "/crm?tab=followups",
         leadId: f.lead_id,
       });
 
