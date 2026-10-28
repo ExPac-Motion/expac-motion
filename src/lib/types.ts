@@ -834,6 +834,8 @@ export const MILESTONES: Milestone[] = [
 export const SHIPMENT_STATUSES: string[] = [
   "Created",
   "Booked",
+  "Vessel Booked",
+  "Flight Booked",
   "Collected",
   "Received",
   "Loaded",
@@ -863,6 +865,8 @@ export function shipmentStatusSlug(s: string | null | undefined): string {
 export const MILESTONE_BY_STATUS: Record<string, Milestone> = {
   Created: "Created",
   Booked: "Booked",
+  "Vessel Booked": "Booked",
+  "Flight Booked": "Booked",
   Collected: "Booked",
   Received: "Booked",
   Loaded: "In Transit",

@@ -5,12 +5,12 @@
 export function timelineSteps(mode: string | null | undefined): string[] {
   const m = mode ?? "";
   if (m.startsWith("Sea Freight (FCL)"))
-    return ["Created", "Booked", "Collected", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+    return ["Created", "Booked", "Vessel Booked", "Collected", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
   if (m.startsWith("Sea"))
-    return ["Created", "Booked", "Collected", "Received", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+    return ["Created", "Booked", "Vessel Booked", "Collected", "Received", "Loaded", "Departed", "In Transit", "Arrived", "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
   if (m.startsWith("Road"))
     return ["Created", "Booked", "Collected", "Departed", "In Transit", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
-  return ["Created", "Booked", "Collected", "Received", "Departed", "In Transit", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
+  return ["Created", "Booked", "Flight Booked", "Collected", "Received", "Departed", "In Transit", "Arrived", "Customs", "Detained", "Released", "On-Delivery", "Delivered"];
 }
 
 /** A step's name for this mode (the stored value stays the status). */
@@ -42,7 +42,7 @@ export function stepLabel(step: string, mode: string | null | undefined): string
 
 /** Every step of every mode, in timeline order (filters across modes). */
 export const ALL_STEPS = [
-  "Created", "Booked", "Collected", "Received", "Loaded", "Departed", "In Transit", "Arrived",
+  "Created", "Booked", "Vessel Booked", "Flight Booked", "Collected", "Received", "Loaded", "Departed", "In Transit", "Arrived",
   "Unloaded", "Customs", "Detained", "Released", "On-Delivery", "Delivered",
 ];
 

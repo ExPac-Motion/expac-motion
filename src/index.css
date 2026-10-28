@@ -993,6 +993,11 @@ table.dt th.dt-sortable {
   background: hsl(175, 55%, 90%) !important;
   color: hsl(175, 60%, 26%);
 }
+.job-status.is-vessel-booked,
+.job-status.is-flight-booked {
+  background: hsl(200, 70%, 91%) !important;
+  color: hsl(200, 60%, 30%);
+}
 .job-status.is-departed {
   background: hsl(235, 60%, 93%) !important;
   color: hsl(235, 45%, 42%);
