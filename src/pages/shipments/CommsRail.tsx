@@ -10,10 +10,13 @@ export default function CommsRail({
   job,
   open,
   onToggle,
+  initialRemarks,
 }: {
   job: Job | null;
   open: boolean;
   onToggle: () => void;
+  /** Pre-filled message for the next email (Notify customer). */
+  initialRemarks?: string;
 }) {
   if (!open) {
     return (
@@ -43,7 +46,7 @@ export default function CommsRail({
       </div>
       <div className="comms-rail-body">
         {job ? (
-          <CommsPanel key={job.id} job={job} />
+          <CommsPanel key={job.id + "|" + (initialRemarks ?? "")} job={job} initialRemarks={initialRemarks} />
         ) : (
           <p className="hint" style={{ padding: "12px 2px" }}>
             Pick a shipment from the list, click its <strong>✉ Messages</strong>{" "}

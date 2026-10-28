@@ -82,6 +82,21 @@ export function stepLabel(step: string, mode: string | null | undefined): string
   }
 }
 
+/** The message Notify customer pre-fills in Comms (editable before sending). */
+export function notifyText(
+  mode: string | null | undefined,
+  moved: { step: string; date: string } | null,
+  revised: string[] = [],
+): string {
+  const lines: string[] = [];
+  if (moved) {
+    const [y, m, d] = moved.date.split("-");
+    lines.push(`Your shipment has moved to: ${stepLabel(moved.step, mode)}${d ? ` on ${d}/${m}/${y}` : ""}.`);
+  }
+  lines.push(...revised);
+  return lines.join("\n");
+}
+
 /** Today in South Africa, yyyy-mm-dd (what the database uses). */
 export function todayIso(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });

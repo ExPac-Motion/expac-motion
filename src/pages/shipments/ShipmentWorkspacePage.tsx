@@ -103,6 +103,11 @@ export default function ShipmentWorkspacePage() {
 
   const [quick, setQuick] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
+  const [railRemarks, setRailRemarks] = useState("");
+  const openRail = (message = "") => {
+    setRailRemarks(message);
+    setRailOpen(true);
+  };
   const [podJob, setPodJob] = useState<Job | null>(null);
 
   const tabParam = params.get("tab") as Tab | null;
@@ -148,7 +153,7 @@ export default function ShipmentWorkspacePage() {
             <button className="btn outline" onClick={() => navigate(delivered ? "/jobs/completed" : "/jobs")}>
               ← {delivered ? "Completed" : "Active"} shipments
             </button>
-            <button className="btn outline" onClick={() => setRailOpen(true)}>
+            <button className="btn outline" onClick={() => openRail()}>
               Messages &amp; email
             </button>
             <button className="btn" onClick={() => setQuick(true)}>
@@ -228,24 +233,24 @@ export default function ShipmentWorkspacePage() {
             missingDocs={required.filter((r) => !have.includes(r))}
             onTab={setTab}
             onQuick={() => setQuick(true)}
-            onEmail={() => setRailOpen(true)}
+            onEmail={() => openRail()}
           />
         )}
-        {tab === "timeline" && <ShipmentTimeline job={job} onDelivered={onDelivered} />}
+        {tab === "timeline" && <ShipmentTimeline job={job} onDelivered={onDelivered} onNotify={openRail} />}
         {tab === "cargo" && <CargoTab job={job} quote={quoteQ.data ?? null} loading={quoteQ.isLoading} />}
         {tab === "documents" && <DocumentsTab job={job} docs={docs} required={required} />}
         {tab === "tasks" && <TasksTab job={job} tasks={tasks} />}
         {tab === "financials" && <FinancialsTab job={job} quote={quoteQ.data ?? null} loading={quoteQ.isLoading} />}
-        {tab === "activity" && <ActivityTab job={job} onMessages={() => setRailOpen(true)} />}
+        {tab === "activity" && <ActivityTab job={job} onMessages={() => openRail()} />}
       </div>
 
-      <CommsRail job={job} open={railOpen} onToggle={() => setRailOpen((v) => !v)} />
+      <CommsRail job={job} open={railOpen} onToggle={() => setRailOpen((v) => !v)} initialRemarks={railRemarks} />
       {quick && (
         <ShipmentQuickUpdate
           job={job}
           onClose={() => setQuick(false)}
           onDelivered={onDelivered}
-          onEmail={() => setRailOpen(true)}
+          onEmail={(m) => openRail(m)}
         />
       )}
       {podJob && <ShipmentPodModal job={podJob} onClose={() => setPodJob(null)} />}

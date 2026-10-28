@@ -5,7 +5,7 @@ import { useToast } from "./Toast";
 import { formatDate } from "../lib/format";
 import { useUpdateJob } from "../lib/hooks";
 import type { Job, JobPatch } from "../lib/types";
-import { OPTIONAL_STEP, stepLabel, timelineDb, todayIso, useJobTimeline } from "../lib/timeline";
+import { notifyText, OPTIONAL_STEP, stepLabel, timelineDb, todayIso, useJobTimeline } from "../lib/timeline";
 
 type FieldKey = "awb_mbl" | "container_no" | "container_type" | "vessel_name" | "shipping_line" | "carrier_name";
 
@@ -55,7 +55,8 @@ export default function ShipmentQuickUpdate({
   job: Job;
   onClose: () => void;
   onDelivered: () => void;
-  onEmail: () => void;
+  /** Opens Comms, with the update pre-filled. */
+  onEmail: (message?: string) => void;
 }) {
   const qc = useQueryClient();
   const { toast, error: toastError } = useToast();
@@ -120,7 +121,13 @@ export default function ShipmentQuickUpdate({
       toast(status ? `${job.reference} moved to ${stepLabel(status, job.mode)}` : `${job.reference} updated`);
       onClose();
       if (status === "Delivered") onDelivered();
-      if (email) onEmail();
+      if (email) {
+        const revised = changedDates.map(
+          (d) =>
+            `Revised ${d.label}: ${formatDate(dates[d.key] || null)}${reason.trim() ? ` (${reason.trim()})` : ""}.`,
+        );
+        onEmail(notifyText(job.mode, status ? { step: status, date: moveDate } : null, revised));
+      }
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not save");
     } finally {
@@ -217,7 +224,7 @@ export default function ShipmentQuickUpdate({
 
         <label className="qu-email">
           <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} />
-          Email the customer an update (opens Comms after saving, nothing is sent automatically)
+          Notify customer (opens Comms with the update filled in, nothing is sent automatically)
         </label>
 
         <div className="qu-foot">

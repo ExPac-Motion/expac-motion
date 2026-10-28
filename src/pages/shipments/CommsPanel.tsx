@@ -33,7 +33,16 @@ export interface Recipient {
  *  partner email dialog, there `to` replaces the customer / shipper
  *  recipients with the agent / transporter / clearing agent, and the message
  *  still lands on the shipment's thread. */
-export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) {
+export default function CommsPanel({
+  job,
+  to,
+  initialRemarks,
+}: {
+  job: Job;
+  to?: Recipient[];
+  /** Pre-filled message, e.g. from Notify customer on a step move. */
+  initialRemarks?: string;
+}) {
   const { toast, error } = useToast();
   const msgsQ = useMessages(job.id);
   const send = useSendMessage();
@@ -45,7 +54,7 @@ export default function CommsPanel({ job, to }: { job: Job; to?: Recipient[] }) 
   // Shipment Comms). 'reply' = quick chat-style message, no shipment-data
   // block, picked by hand when answering the customer.
   const [template, setTemplate] = useState<"update" | "reply">("update");
-  const [remarks, setRemarks] = useState("");
+  const [remarks, setRemarks] = useState(initialRemarks ?? "");
   const remarksRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState("");
   const [ccText, setCcText] = useState("");

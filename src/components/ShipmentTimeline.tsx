@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "./Toast";
 import { formatDate } from "../lib/format";
 import {
+  notifyText,
   OPTIONAL_STEP,
   PLANNED_FIELD,
   stepLabel,
@@ -73,10 +74,13 @@ function NoteCell({ value, onSave }: { value: string | null; onSave: (v: string)
 export default function ShipmentTimeline({
   job,
   onDelivered,
+  onNotify,
 }: {
   job: { id: string; mode: string | null; reference: string };
   /** Called when the shipment reaches Delivered (POD prompt, Completed). */
   onDelivered?: () => void;
+  /** Opens Comms with this message pre-filled (Notify customer). */
+  onNotify?: (message: string) => void;
 }) {
   const { toast, error: toastError } = useToast();
   const stepsQ = useJobTimeline(job.id);
@@ -85,6 +89,7 @@ export default function ShipmentTimeline({
   const [moving, setMoving] = useState(false);
   const [moveDate, setMoveDate] = useState(todayIso());
   const [moveNote, setMoveNote] = useState("");
+  const [notify, setNotify] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
   const steps = stepsQ.data ?? [];
@@ -123,6 +128,8 @@ export default function ShipmentTimeline({
       setMoving(false);
       setMoveNote("");
       after(status, `${job.reference} moved to ${stepLabel(status, job.mode)}`);
+      if (notify && onNotify) onNotify(notifyText(job.mode, { step: status, date: moveDate }));
+      setNotify(false);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not move the shipment");
     }
@@ -209,6 +216,12 @@ export default function ShipmentTimeline({
             onKeyDown={(e) => e.key === "Enter" && onMove()}
             autoFocus
           />
+          {onNotify && (
+            <label className="tl-notify" title="Opens Comms with the update ready to check and send, nothing is sent automatically">
+              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+              Notify customer
+            </label>
+          )}
           <button className="btn small" onClick={onMove} disabled={busy || !moveDate}>
             Save
           </button>

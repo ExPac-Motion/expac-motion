@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import TrackingMap from "../components/TrackingMap";
 import TrackMovements from "../components/TrackMovements";
+import TimelineProgress from "../components/TimelineProgress";
+import { stepLabel } from "../lib/timeline";
 import { buildRoute, routeEventsFromRows } from "../lib/trackRoute";
 import { trackShipment } from "../lib/db";
 import { carrierLabel } from "../lib/docTemplates";
@@ -102,7 +104,7 @@ export default function PublicTrackPage() {
                 {result.customer_ref && <Field label="Reference" value={result.customer_ref} />}
                 {result.shipper && <Field label="Shipper Name" value={result.shipper} />}
                 <Field label="Mode" value={result.mode} />
-                <Field label="Status" value={result.status || "—"} />
+                <Field label="Status" value={result.status ? stepLabel(result.status, result.mode) : "—"} />
                 <Field label={carrierLabel(result.mode)} value={result.carrier || "—"} />
                 {result.vessel_name && (
                   <Field label="Vessel" value={result.vessel_name} />
@@ -123,6 +125,17 @@ export default function PublicTrackPage() {
                   value={result.ttl_vol != null ? `${result.ttl_vol.toFixed(3)} m³` : "—"}
                 />
               </div>
+
+              {(result.timeline ?? []).length > 0 && (
+                <div className="track-timeline">
+                  <h3>Shipment progress</h3>
+                  <TimelineProgress
+                    steps={result.timeline ?? []}
+                    mode={result.mode}
+                    delivered={(result.status ?? "") === "Delivered"}
+                  />
+                </div>
+              )}
 
               <PublicRoute result={result} />
             </div>

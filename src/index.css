@@ -11219,3 +11219,21 @@ button.ws-tile:hover {
     gap: 2px;
   }
 }
+
+/* Public /track page: the shipment timeline (0197) */
+.track-timeline {
+  margin: 18px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.track-timeline h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+.tl-notify {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--ink);
+}

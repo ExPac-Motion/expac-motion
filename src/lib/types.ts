@@ -1858,6 +1858,8 @@ export interface TrackedShipment {
   qty: number | null;
   cw_kg: number | null;
   ttl_vol: number | null;
+  /** Customer-visible timeline steps (0197); missing before that migration. */
+  timeline?: { step: string; done: boolean; actual_date: string | null; planned_date: string | null }[];
   events: TrackedShipmentEvent[];
 }
 

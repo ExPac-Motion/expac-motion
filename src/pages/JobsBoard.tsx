@@ -242,6 +242,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [params] = useSearchParams();
   const modeTab = modeTabFromParam(params.get("mode"));
   const [commsJob, setCommsJob] = useState<Job | null>(null);
+  // Pre-filled message for the rail's next email (Notify customer).
+  const [commsRemarks, setCommsRemarks] = useState("");
   const [railOpen, setRailOpen] = useState(false);
   const [viewing, setViewing] = useState<Job | null>(null);
   const [quickJob, setQuickJob] = useState<Job | null>(null);
@@ -294,8 +296,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null
   >(null);
 
-  function openComms(j: Job) {
+  function openComms(j: Job, remarks = "") {
     setCommsJob(j);
+    setCommsRemarks(remarks);
     setRailOpen(true);
     if (unreadJobIds.has(j.id)) markRead.mutate(j.id);
   }
@@ -861,6 +864,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       <CommsRail
         job={commsJob}
         open={railOpen}
+        initialRemarks={commsRemarks}
         onToggle={() =>
           railOpen
             ? closeAndReturn(() => setRailOpen(false))
@@ -871,7 +875,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       {viewing && (
         <JobViewModal
           job={(jobs ?? []).find((x) => x.id === viewing.id) ?? viewing}
-          onEmail={() => openComms((jobs ?? []).find((x) => x.id === viewing.id) ?? viewing)}
+          onEmail={(m) => openComms((jobs ?? []).find((x) => x.id === viewing.id) ?? viewing, m)}
           onDelivered={() => {
             const j = (jobs ?? []).find((x) => x.id === viewing.id) ?? viewing;
             toast("Shipment delivered, moved to Completed Shipments");
@@ -893,7 +897,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             const j = (jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob;
             if (!j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
           }}
-          onEmail={() => openComms((jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob)}
+          onEmail={(m) => openComms((jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob, m)}
         />
       )}
 
@@ -1025,8 +1029,8 @@ function JobViewModal({
   onClose: () => void;
   onEdit: () => void;
   onDelivered: () => void;
-  /** Opens the shipment's Comms rail (email is logged there). */
-  onEmail: () => void;
+  /** Opens the shipment's Comms rail (email is logged there), optionally pre-filled. */
+  onEmail: (message?: string) => void;
 }) {
   const revert = useRevertJobToQuote();
   const { toast, error: toastError } = useToast();
@@ -1075,9 +1079,9 @@ function JobViewModal({
         </>
       }
     >
-      <ShipmentTimeline job={job} onDelivered={onDelivered} />
+      <ShipmentTimeline job={job} onDelivered={onDelivered} onNotify={onEmail} />
 
-      <ShipmentCards job={job} onEmail={onEmail} onLeave={onClose} />
+      <ShipmentCards job={job} onEmail={() => onEmail()} onLeave={onClose} />
       {job.notes && (
         <div className="jv-notes">
           <span className="k">Notes</span>
@@ -1647,7 +1651,7 @@ function JvParty({
         {phone && <a href={`tel:${phone.replace(/[^+d]/g, "")}`}>📞 {phone}</a>}
         {p.email &&
           (onEmail ? (
-            <button type="button" className="link-btn" onClick={onEmail} title="Email from the shipment's Comms (logged)">
+            <button type="button" className="link-btn" onClick={() => onEmail()} title="Email from the shipment's Comms (logged)">
               ✉ {p.email}
             </button>
           ) : (
