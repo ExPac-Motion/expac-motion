@@ -10790,3 +10790,124 @@ select.status-pick-on {
 .jv-extras .houses-sec {
   padding: 8px 0;
 }
+
+/* ---------- Shipment Quick update + View card edit ---------- */
+.qu section {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.qu h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--teal-ink);
+}
+.qu-now {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.qu-now b {
+  color: var(--green-dark);
+}
+.qu-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.qu-row select {
+  min-width: 200px;
+}
+.qu-grow {
+  flex: 1;
+  min-width: 160px;
+}
+.qu-dates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.qu-dates label,
+.qu-missing label,
+.jv-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.qu-dates label.changed input {
+  border-color: var(--amber);
+  background: var(--amber-tint);
+}
+.qu-reason {
+  width: 100%;
+  margin-top: 8px;
+}
+.qu-missing {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.qu-missing input {
+  border-color: var(--teal);
+}
+.qu-email {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.qu-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+.jv-card h4 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.jv-edit {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--teal-ink);
+  font-size: 14px;
+  padding: 0 4px;
+  border-radius: 6px;
+}
+.jv-edit:hover {
+  background: var(--teal-tint);
+}
+.jv-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jv-form input,
+.jv-form textarea {
+  font-size: 0.85rem;
+}
+.jv-form-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.jv-form-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .qu-dates,
+  .qu-missing {
+    grid-template-columns: 1fr;
+  }
+}

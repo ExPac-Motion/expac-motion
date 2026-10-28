@@ -52,6 +52,7 @@ import {
 import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
 import ShipmentTimeline from "../components/ShipmentTimeline";
+import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
 import { saveShipmentPod } from "../lib/pod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWmsConsols } from "../lib/wms";
@@ -243,7 +244,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [commsJob, setCommsJob] = useState<Job | null>(null);
   const [railOpen, setRailOpen] = useState(false);
   const [viewing, setViewing] = useState<Job | null>(null);
-  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [quickJob, setQuickJob] = useState<Job | null>(null);
   const [taskingJob, setTaskingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [consolidating, setConsolidating] = useState<Job[] | null>(null);
@@ -367,7 +368,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         carrier_name: j.carrier_name,
       });
       toast("Shipment duplicated");
-      setEditingJob(created);
+      setViewing(created);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not duplicate shipment");
     }
@@ -495,7 +496,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             taskTitle="Create a task for this shipment"
             taskOpen={openTaskJobIds.has(j.id)}
             onView={() => setViewing(j)}
-            onEdit={() => setEditingJob(j)}
+            onEdit={() => setQuickJob(j)}
+            editTitle="Quick update: move it on, dates, missing details"
             onDelete={() => onDeleteJob(j)}
             onDuplicate={() => onDuplicateJob(j)}
           />
@@ -876,20 +878,21 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           }}
           onClose={() => closeAndReturn(() => setViewing(null))}
           onEdit={() => {
-            setEditingJob(viewing);
+            setQuickJob(viewing);
             setViewing(null);
           }}
         />
       )}
 
-      {editingJob && (
-        <JobEditModal
-          job={editingJob}
-          onClose={() => closeAndReturn(() => setEditingJob(null))}
-          onSave={(patch) => {
-            save(editingJob.id, patch);
-            closeAndReturn(() => setEditingJob(null));
+      {quickJob && (
+        <ShipmentQuickUpdate
+          job={(jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob}
+          onClose={() => closeAndReturn(() => setQuickJob(null))}
+          onDelivered={() => {
+            const j = (jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob;
+            if (!j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
           }}
+          onEmail={() => openComms((jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob)}
         />
       )}
 
@@ -1026,6 +1029,7 @@ function JobViewModal({
 }) {
   const air = job.mode.startsWith("Air") || job.mode.startsWith("Courier");
   const sea = job.mode.startsWith("Sea");
+  const [editCard, setEditCard] = useState<"route" | "refs" | null>(null);
   const revert = useRevertJobToQuote();
   const { toast, error: toastError } = useToast();
   const canDelete = useCan()("delete");
@@ -1065,7 +1069,7 @@ function JobViewModal({
             </button>
           )}
           <button className="btn outline" onClick={onEdit}>
-            Edit
+            Quick update
           </button>
         </>
       }
@@ -1074,30 +1078,43 @@ function JobViewModal({
 
       <div className="jv-cards">
         <div className="jv-card">
-          <h4>Route &amp; transport</h4>
-          <div className="jv-route">
-            <b>{codeOf(job.origin) || "—"}</b>
-            <span aria-hidden>→</span>
-            <b>{codeOf(job.destination) || "—"}</b>
-          </div>
-          <JvField label="Mode" value={job.mode} />
-          <JvField label={docLabel(job.mode)} value={job.awb_mbl} onAdd={onEdit} />
-          {sea && (
-            <JvField
-              label="Container"
-              value={[job.container_no, job.container_type].filter(Boolean).join(" · ")}
-              onAdd={onEdit}
-            />
-          )}
-          {air ? (
-            <>
-              <JvField label="Airline" value={job.carrier_name} onAdd={onEdit} />
-              {job.shipping_line && <JvField label={carrierLabel(job.mode)} value={job.shipping_line} />}
-            </>
+          <h4>
+            Route &amp; transport
+            {editCard !== "route" && (
+              <button type="button" className="jv-edit" onClick={() => setEditCard("route")} title="Edit route & transport">
+                ✎
+              </button>
+            )}
+          </h4>
+          {editCard === "route" ? (
+            <JvRouteEdit job={job} air={air} sea={sea} onDone={() => setEditCard(null)} />
           ) : (
-            <JvField label={carrierLabel(job.mode)} value={job.shipping_line} onAdd={onEdit} />
+            <>
+              <div className="jv-route">
+                <b>{codeOf(job.origin) || "—"}</b>
+                <span aria-hidden>→</span>
+                <b>{codeOf(job.destination) || "—"}</b>
+              </div>
+              <JvField label="Mode" value={job.mode} />
+              <JvField label={docLabel(job.mode)} value={job.awb_mbl} onAdd={() => setEditCard("route")} />
+              {sea && (
+                <JvField
+                  label="Container"
+                  value={[job.container_no, job.container_type].filter(Boolean).join(" · ")}
+                  onAdd={() => setEditCard("route")}
+                />
+              )}
+              {air ? (
+                <>
+                  <JvField label="Airline" value={job.carrier_name} onAdd={() => setEditCard("route")} />
+                  {job.shipping_line && <JvField label={carrierLabel(job.mode)} value={job.shipping_line} />}
+                </>
+              ) : (
+                <JvField label={carrierLabel(job.mode)} value={job.shipping_line} onAdd={() => setEditCard("route")} />
+              )}
+              {sea && <JvField label="Vessel" value={job.vessel_name} onAdd={() => setEditCard("route")} />}
+            </>
           )}
-          {job.vessel_name && <JvField label="Vessel" value={job.vessel_name} />}
         </div>
         <div className="jv-card">
           <h4>Parties</h4>
@@ -1105,25 +1122,38 @@ function JobViewModal({
           <JvParty label="Shipper" p={job.supplier} />
         </div>
         <div className="jv-card">
-          <h4>References</h4>
-          <JvField label="Our reference" value={job.reference} />
-          <JvField label="Customer ref / PO" value={job.po_no} onAdd={onEdit} />
-          <JvField
-            label="Quotation"
-            value={
-              job.quote_id ? (
-                <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
-                  View quotation →
-                </Link>
-              ) : null
-            }
-          />
-          <JvField label="Created" value={formatDate(job.created_at)} />
-          {job.invoice_no && (
-            <JvField
-              label="Invoice"
-              value={job.invoice_no + (job.invoiced_at ? " · " + formatDate(job.invoiced_at) : "")}
-            />
+          <h4>
+            References
+            {editCard !== "refs" && (
+              <button type="button" className="jv-edit" onClick={() => setEditCard("refs")} title="Edit references & notes">
+                ✎
+              </button>
+            )}
+          </h4>
+          {editCard === "refs" ? (
+            <JvRefsEdit job={job} onDone={() => setEditCard(null)} />
+          ) : (
+            <>
+              <JvField label="Our reference" value={job.reference} />
+              <JvField label="Customer ref / PO" value={job.po_no} onAdd={() => setEditCard("refs")} />
+              <JvField
+                label="Quotation"
+                value={
+                  job.quote_id ? (
+                    <Link to={`/quotes/${job.quote_id}`} onClick={onClose}>
+                      View quotation →
+                    </Link>
+                  ) : null
+                }
+              />
+              <JvField label="Created" value={formatDate(job.created_at)} />
+              {job.invoice_no && (
+                <JvField
+                  label="Invoice"
+                  value={job.invoice_no + (job.invoiced_at ? " · " + formatDate(job.invoiced_at) : "")}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -1413,165 +1443,146 @@ function DocumentsSection({ job }: { job: Job }) {
   );
 }
 
-function JobEditModal({
-  job,
-  onClose,
-  onSave,
-}: {
-  job: Job;
-  onClose: () => void;
-  onSave: (patch: JobPatch) => void;
-}) {
+/** Route & transport card in edit mode (replaces the old Edit window). */
+function JvRouteEdit({ job, air, sea, onDone }: { job: Job; air: boolean; sea: boolean; onDone: () => void }) {
+  const updateJob = useUpdateJob();
+  const { toast, error: toastError } = useToast();
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    onSave({
-      po_no: String(fd.get("po_no") || ""),
-      shipment_status: String(fd.get("shipment_status") || ""),
-      notes: String(fd.get("notes") || ""),
-      ops_remarks: String(fd.get("ops_remarks") || ""),
-      awb_mbl: String(fd.get("awb_mbl") || ""),
-      container_no: String(fd.get("container_no") || ""),
-      container_type: String(fd.get("container_type") || ""),
-      shipping_line: String(fd.get("shipping_line") || ""),
-      carrier_name: String(fd.get("carrier_name") || ""),
-      provisional_delivery_date: String(fd.get("provisional_delivery_date") || ""),
-      etd: String(fd.get("etd") || ""),
-      eta: String(fd.get("eta") || ""),
-      origin: codeOf(String(fd.get("origin") || "")),
-      destination: codeOf(String(fd.get("destination") || "")),
-    });
+    const v = (k: string) => String(fd.get(k) ?? "").trim();
+    const patch: JobPatch = {
+      origin: codeOf(v("origin")),
+      destination: codeOf(v("destination")),
+      awb_mbl: v("awb_mbl"),
+      shipping_line: v("shipping_line"),
+    };
+    if (air) patch.carrier_name = v("carrier_name");
+    if (sea) {
+      patch.container_no = v("container_no");
+      patch.container_type = v("container_type");
+      patch.vessel_name = v("vessel_name");
+    }
+    updateJob.mutate(
+      { id: job.id, patch },
+      {
+        onSuccess: () => {
+          toast("Route & transport saved");
+          onDone();
+        },
+        onError: (err) => toastError(err instanceof Error ? err.message : "Could not save"),
+      },
+    );
   }
-
   return (
-    <Modal title={`Edit ${job.reference}`} onClose={onClose} wide>
-      <form onSubmit={onSubmit}>
-        <datalist id="job-locodes">
-          {LOCODES.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.city}, {l.country}
-            </option>
-          ))}
-        </datalist>
-        <div className="grid2">
-          <div className="field">
-            <label>Reference</label>
-            <input
-              name="po_no"
-              defaultValue={job.po_no ?? ""}
-              placeholder="Customer ref / PO"
-              autoFocus
-            />
-          </div>
-          <div className="field">
-            <label>Shipment Status</label>
-            <select name="shipment_status" defaultValue={job.shipment_status ?? ""}>
-              <option value="">— set status —</option>
-              {SHIPMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid2">
-          <div className="field">
-            <label>{docLabel(job.mode)}</label>
-            <input name="awb_mbl" defaultValue={job.awb_mbl ?? ""} />
-          </div>
-          <div className="field">
-            <label>Container No</label>
+    <form className="jv-form" onSubmit={onSubmit}>
+      <datalist id="jv-locodes">
+        {LOCODES.map((l) => (
+          <option key={l.code} value={l.code}>
+            {l.city}, {l.country}
+          </option>
+        ))}
+      </datalist>
+      <div className="jv-form-2">
+        <label>
+          POL
+          <input name="origin" list="jv-locodes" defaultValue={codeOf(job.origin)} autoFocus />
+        </label>
+        <label>
+          POD
+          <input name="destination" list="jv-locodes" defaultValue={codeOf(job.destination)} />
+        </label>
+      </div>
+      <label>
+        {docLabel(job.mode)}
+        <input name="awb_mbl" defaultValue={job.awb_mbl ?? ""} />
+      </label>
+      {sea && (
+        <div className="jv-form-2">
+          <label>
+            Container No
             <input name="container_no" defaultValue={job.container_no ?? ""} />
-          </div>
+          </label>
+          <label>
+            Container Type
+            <input name="container_type" defaultValue={job.container_type ?? ""} placeholder="1x 20GP" />
+          </label>
         </div>
-        <div className="field">
-          <label>Container Type</label>
-          <input
-            name="container_type"
-            defaultValue={job.container_type ?? ""}
-            placeholder="e.g. 1x 20GP, 2x 40HC"
-          />
-        </div>
-        <div className="grid2">
-          <div className="field">
-            <label>{carrierLabel(job.mode)}</label>
-            <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
-          </div>
-          <div className="field">
-            <label>Airline</label>
-            <input name="carrier_name" defaultValue={job.carrier_name ?? ""} />
-          </div>
-        </div>
-        <div className="grid2">
-          <div className="field">
-            <label>POL</label>
-            <input
-              name="origin"
-              list="job-locodes"
-              defaultValue={codeOf(job.origin)}
-            />
-          </div>
-          <div className="field">
-            <label>POD</label>
-            <input
-              name="destination"
-              list="job-locodes"
-              defaultValue={codeOf(job.destination)}
-            />
-          </div>
-        </div>
-        <div className="grid3">
-          <div className="field">
-            <label>ETD</label>
-            <DateInput name="etd" defaultValue={job.etd ?? ""} />
-          </div>
-          <div className="field">
-            <label>ETA</label>
-            <DateInput name="eta" defaultValue={job.eta ?? ""} />
-          </div>
-          <div className="field">
-            <label>PDD</label>
-            <DateInput
-              name="provisional_delivery_date"
-              defaultValue={job.provisional_delivery_date ?? ""}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label>Notes</label>
-          <textarea name="notes" rows={2} defaultValue={job.notes ?? ""} />
-        </div>
-        <div className="field">
-          <label>Remarks</label>
-          <textarea
-            name="ops_remarks"
-            rows={2}
-            defaultValue={job.ops_remarks ?? ""}
-            placeholder="Only used to pre-fill the Remarks line on Document Vault documents, not shown anywhere else."
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 8,
-            marginTop: 8,
-          }}
-        >
-          <button type="button" className="btn outline" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn">
-            Save
-          </button>
-        </div>
-      </form>
-    </Modal>
+      )}
+      {air && (
+        <label>
+          Airline
+          <input name="carrier_name" defaultValue={job.carrier_name ?? ""} />
+        </label>
+      )}
+      <label>
+        {carrierLabel(job.mode)}
+        <input name="shipping_line" defaultValue={job.shipping_line ?? ""} />
+      </label>
+      {sea && (
+        <label>
+          Vessel
+          <input name="vessel_name" defaultValue={job.vessel_name ?? ""} />
+        </label>
+      )}
+      <div className="jv-form-foot">
+        <button type="button" className="btn ghost small" onClick={onDone}>
+          Cancel
+        </button>
+        <button type="submit" className="btn small" disabled={updateJob.isPending}>
+          Save
+        </button>
+      </div>
+    </form>
   );
 }
 
-/** One line on a shipment View card; empty shows "+ add" (opens Edit). */
+/** References card in edit mode: customer ref / PO, notes, remarks. */
+function JvRefsEdit({ job, onDone }: { job: Job; onDone: () => void }) {
+  const updateJob = useUpdateJob();
+  const { toast, error: toastError } = useToast();
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const v = (k: string) => String(fd.get(k) ?? "").trim();
+    updateJob.mutate(
+      { id: job.id, patch: { po_no: v("po_no"), notes: v("notes"), ops_remarks: v("ops_remarks") } },
+      {
+        onSuccess: () => {
+          toast("References saved");
+          onDone();
+        },
+        onError: (err) => toastError(err instanceof Error ? err.message : "Could not save"),
+      },
+    );
+  }
+  return (
+    <form className="jv-form" onSubmit={onSubmit}>
+      <label>
+        Customer ref / PO
+        <input name="po_no" defaultValue={job.po_no ?? ""} autoFocus />
+      </label>
+      <label>
+        Notes
+        <textarea name="notes" rows={2} defaultValue={job.notes ?? ""} />
+      </label>
+      <label>
+        Remarks <span className="muted">(Document Vault documents only)</span>
+        <textarea name="ops_remarks" rows={2} defaultValue={job.ops_remarks ?? ""} />
+      </label>
+      <div className="jv-form-foot">
+        <button type="button" className="btn ghost small" onClick={onDone}>
+          Cancel
+        </button>
+        <button type="submit" className="btn small" disabled={updateJob.isPending}>
+          Save
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** One line on a shipment View card; empty shows "+ add" (edits the card). */
 function JvField({ label, value, onAdd }: { label: string; value: ReactNode; onAdd?: () => void }) {
   const empty = value == null || value === "";
   return (

@@ -156,6 +156,7 @@ export function RowActions({
   quoteTitle = "New quote",
   onView,
   onEdit,
+  editTitle,
   onDelete,
   onDuplicate,
 }: {
@@ -185,6 +186,8 @@ export function RowActions({
    *  that are view + edit only, or a sent campaign that can't be edited). */
   onView?: () => void;
   onEdit?: () => void;
+  /** Tooltip for the pencil (default "Edit"). */
+  editTitle?: string;
   onDelete?: () => void;
   onDuplicate?: () => void;
 }) {
@@ -238,7 +241,7 @@ export function RowActions({
         </button>
       )}
       {onEdit && (
-        <button className="row-icon-btn" title="Edit" onClick={stop(onEdit)}>
+        <button className="row-icon-btn" title={editTitle ?? "Edit"} onClick={stop(onEdit)}>
           {ROW_ICON.edit}
         </button>
       )}

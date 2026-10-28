@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import ShipmentTimeline from "../components/ShipmentTimeline";
+import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
+import type { Job } from "../lib/types";
 import type { TimelineStep } from "../lib/timeline";
 
 /**
@@ -59,9 +61,22 @@ export default function TimelineDemoPage() {
     qc.setQueryData(["job_timeline", "demo"], steps);
     return null;
   });
+  const [quick, setQuick] = useState(false);
+  const job = {
+    id: "demo", reference: "SEA744180", mode: m.mode, milestone: "Booked", shipment_status: "Received",
+    etd: "2026-11-01", eta: "2027-01-02", provisional_delivery_date: "2027-01-08",
+    awb_mbl: null, container_no: null, container_type: "1x 20GP", shipping_line: "OOCL", vessel_name: null, carrier_name: null,
+    client: { id: "c1", company: "Netina Beukes" },
+  } as unknown as Job;
   return (
     <div className="main" style={{ maxWidth: 1100, margin: "24px auto" }}>
-      <p className="muted">DEV demo, sample data. ?mode=lcl | fcl | air | road</p>
+      <p className="muted">
+        DEV demo, sample data. ?mode=lcl | fcl | air | road{" "}
+        <button className="btn small" onClick={() => setQuick(true)}>
+          Open Quick update
+        </button>
+      </p>
+      {quick && <ShipmentQuickUpdate job={job} onClose={() => setQuick(false)} onDelivered={() => {}} onEmail={() => {}} />}
       <ShipmentTimeline job={{ id: "demo", mode: m.mode, reference: "SEA744180" }} />
     </div>
   );

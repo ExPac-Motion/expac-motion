@@ -105,6 +105,15 @@ export const timelineDb = {
   async set(input: { stepId: string; patch: TimelinePatch }): Promise<string> {
     return unwrap(await supabase.rpc("job_timeline_set", { p_step: input.stepId, p: input.patch })) as string;
   },
+  /** A line in the shipment's history (job_events), e.g. a revised ETA. */
+  async logNote(input: { jobId: string; milestone: string; note: string }): Promise<void> {
+    unwrap(
+      await supabase
+        .from("job_events")
+        .insert({ job_id: input.jobId, milestone: input.milestone, note: input.note })
+        .select("id"),
+    );
+  },
   async clientSteps(jobId: string): Promise<ClientTimelineStep[]> {
     const r = await supabase.from("client_job_timeline").select("*").eq("job_id", jobId).order("sort_order");
     if (r.error) return []; // before 0196: the portal falls back to the status history
