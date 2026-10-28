@@ -12,7 +12,9 @@ import {
   useJobs,
   useOpsTasks,
   useProfiles,
+  useCan,
   useQuote,
+  useRevertJobToQuote,
   useSaveOpsTask,
   useShipmentDocuments,
 } from "../../lib/hooks";
@@ -21,6 +23,7 @@ import { OPTIONAL_STEP, stepLabel, todayIso, useJobTimeline, type TimelineStep }
 import { isShipmentComplete, type Job, type OpsTask, type ShipmentDocument } from "../../lib/types";
 import {
   ConsolSection,
+  CreateQuoteForJob,
   DocumentsSection,
   PodSection,
   ShipmentCards,
@@ -102,7 +105,11 @@ export default function ShipmentWorkspacePage() {
   const quoteQ = useQuote(job?.quote_id ?? undefined);
 
   const [quick, setQuick] = useState(false);
-  const [railOpen, setRailOpen] = useState(false);
+  const revert = useRevertJobToQuote();
+  const canDelete = useCan()("delete");
+  const { toast, error: toastError } = useToast();
+  // ?comms=1 (from a notification or the Inbox) opens Messages straight away.
+  const [railOpen, setRailOpen] = useState(() => params.get("comms") === "1");
   const [railRemarks, setRailRemarks] = useState("");
   const openRail = (message = "") => {
     setRailRemarks(message);
@@ -142,6 +149,24 @@ export default function ShipmentWorkspacePage() {
     if (!job.pod_signed_by && !job.pod_delivered_at) setPodJob(job);
   };
   const statusLabel = job.shipment_status ? stepLabel(job.shipment_status, job.mode) : job.milestone;
+  // Customer not ready yet: back to Quote Sent, off the board, re-accept later.
+  const canRevert = !!job.quote_id && !delivered && canDelete;
+  async function onRevert() {
+    if (!job) return;
+    if (
+      !window.confirm(
+        `Move ${job.reference} back to Quote Sent?\n\nThe shipment is removed from Active Shipments, along with its emails, documents and tracking. The quotation stays and can be accepted again later.`,
+      )
+    )
+      return;
+    try {
+      await revert.mutateAsync(job);
+      toast(`${job.reference} moved back to Quote Sent`);
+      navigate("/jobs");
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not move it back to a quote");
+    }
+  }
 
   return (
     <>
@@ -153,6 +178,16 @@ export default function ShipmentWorkspacePage() {
             <button className="btn outline" onClick={() => navigate(delivered ? "/jobs/completed" : "/jobs")}>
               ← {delivered ? "Completed" : "Active"} shipments
             </button>
+            {canRevert && (
+              <button
+                className="btn outline"
+                onClick={onRevert}
+                disabled={revert.isPending}
+                title="Remove this shipment and put its quotation back to Quote Sent"
+              >
+                Back to Quote Sent
+              </button>
+            )}
             <button className="btn outline" onClick={() => openRail()}>
               Messages &amp; email
             </button>
@@ -350,6 +385,7 @@ function OverviewTab({
       </div>
 
       <div className="ws-wide">
+        {!job.quote_id && <CreateQuoteForJob job={job} onDone={() => {}} />}
         <ShipmentCards job={job} onEmail={onEmail} />
         {job.notes && (
           <div className="jv-notes">

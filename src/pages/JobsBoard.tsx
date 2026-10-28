@@ -1,4 +1,3 @@
-import HousesSection from "../components/HousesSection";
 import { useJobHouses, useSetDocumentHouse } from "../lib/houses";
 import {
   useEffect,
@@ -10,7 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import Modal from "../components/Modal";
 import DateInput from "../components/DateInput";
 import DataTable, { type DataColumn } from "../components/DataTable";
 import TaskEditModal from "./ops/TaskEditModal";
@@ -43,7 +41,6 @@ import {
   useEmailsSentToday,
   useUpdateJob,
   useUpdateJobsBulk,
-  useRevertJobToQuote,
   useUpdateShipmentDocument,
   useUploadShipmentDocument,
   useCan,
@@ -51,7 +48,6 @@ import {
 } from "../lib/hooks";
 import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
-import ShipmentTimeline from "../components/ShipmentTimeline";
 import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
 import { stepLabel, timelineSteps } from "../lib/timeline";
 import { saveShipmentPod } from "../lib/pod";
@@ -246,7 +242,6 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   // Pre-filled message for the rail's next email (Notify customer).
   const [commsRemarks, setCommsRemarks] = useState("");
   const [railOpen, setRailOpen] = useState(false);
-  const [viewing, setViewing] = useState<Job | null>(null);
   const [quickJob, setQuickJob] = useState<Job | null>(null);
   const [taskingJob, setTaskingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -289,7 +284,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     [tasksQ.data],
   );
 
-  const { arm, closeAndReturn } = useDeepLinkReturn();
+  const { closeAndReturn } = useDeepLinkReturn();
   const [search, setSearch] = useState("");
   const [statusPick, setStatusPick] = useState<string>("");
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
@@ -315,13 +310,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       | { openJobId?: string; openComms?: boolean }
       | null;
     if (!state?.openJobId || !jobs?.length) return;
-    const job = jobs.find((j) => j.id === state.openJobId);
-    if (job) {
-      if (state.openComms) openComms(job);
-      else setViewing(job);
-      arm();
-      navigate(location.pathname + location.search, { replace: true, state: {} });
-    }
+    // Old links (openJobId) now open the shipment's workspace page.
+    navigate(`/jobs/${state.openJobId}${state.openComms ? "?comms=1" : ""}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, jobs]);
 
@@ -372,7 +362,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         carrier_name: j.carrier_name,
       });
       toast("Shipment duplicated");
-      setViewing(created);
+      navigate(`/jobs/${created.id}`);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not duplicate shipment");
     }
@@ -878,23 +868,6 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         }
       />
 
-      {viewing && (
-        <JobViewModal
-          job={(jobs ?? []).find((x) => x.id === viewing.id) ?? viewing}
-          onEmail={(m) => openComms((jobs ?? []).find((x) => x.id === viewing.id) ?? viewing, m)}
-          onDelivered={() => {
-            const j = (jobs ?? []).find((x) => x.id === viewing.id) ?? viewing;
-            toast("Shipment delivered, moved to Completed Shipments");
-            if (!j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
-          }}
-          onClose={() => closeAndReturn(() => setViewing(null))}
-          onEdit={() => {
-            setQuickJob(viewing);
-            setViewing(null);
-          }}
-        />
-      )}
-
       {quickJob && (
         <ShipmentQuickUpdate
           job={(jobs ?? []).find((x) => x.id === quickJob.id) ?? quickJob}
@@ -943,7 +916,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               label: "Shipment Status",
               type: "select",
               allowClear: false,
-              options: SHIPMENT_STATUSES.map((s) => ({ value: s, label: s })),
+              // On a mode tab: that mode's timeline steps; All: every status.
+              options:
+                modeTab === "All"
+                  ? SHIPMENT_STATUSES.map((s) => ({ value: s, label: s }))
+                  : timelineSteps(modeTab).map((s) => ({ value: s, label: stepLabel(s, modeTab) })),
             },
             {
               key: "shipping_line",
@@ -996,7 +973,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
 /** For a shipment with no quote (e.g. duplicated before Duplicate copied
  *  quotes): builds a quote from the shipment's fields, links it, and opens it
  *  in the Quote Builder so its details can be completed. */
-function CreateQuoteForJob({ job, onDone }: { job: Job; onDone: () => void }) {
+export function CreateQuoteForJob({ job, onDone }: { job: Job; onDone: () => void }) {
   const navigate = useNavigate();
   const createQuote = useCreateQuoteForJob();
   const { toast, error: toastError } = useToast();
@@ -1021,88 +998,6 @@ function CreateQuoteForJob({ job, onDone }: { job: Job; onDone: () => void }) {
         {createQuote.isPending ? "Creating…" : "Create quotation"}
       </button>
     </p>
-  );
-}
-
-function JobViewModal({
-  job,
-  onClose,
-  onEdit,
-  onDelivered,
-  onEmail,
-}: {
-  job: Job;
-  onClose: () => void;
-  onEdit: () => void;
-  onDelivered: () => void;
-  /** Opens the shipment's Comms rail (email is logged there), optionally pre-filled. */
-  onEmail: (message?: string) => void;
-}) {
-  const revert = useRevertJobToQuote();
-  const { toast, error: toastError } = useToast();
-  const canDelete = useCan()("delete");
-  // Customer not ready yet: back to Quote Sent, off the board, re-accept later.
-  const canRevert =
-    !!job.quote_id && job.shipment_status !== DELIVERED_STATUS && canDelete;
-  async function onRevert() {
-    if (
-      !window.confirm(
-        `Move ${job.reference} back to Quote Sent?\n\nThe shipment is removed from Active Shipments, along with its emails, documents and tracking. The quotation stays and can be accepted again later.`,
-      )
-    )
-      return;
-    try {
-      await revert.mutateAsync(job);
-      toast(`${job.reference} moved back to Quote Sent`);
-      onClose();
-    } catch (e) {
-      toastError(e instanceof Error ? e.message : "Could not move it back to a quote");
-    }
-  }
-  return (
-    <Modal
-      title={job.reference}
-      onClose={onClose}
-      wide
-      headerActions={
-        <>
-          {canRevert && (
-            <button
-              className="btn outline"
-              onClick={onRevert}
-              disabled={revert.isPending}
-              title="Remove this shipment and put its quotation back to Quote Sent"
-            >
-              Back to Quote Sent
-            </button>
-          )}
-          <button className="btn outline" onClick={onEdit}>
-            Quick update
-          </button>
-          <Link className="btn outline" to={`/jobs/${job.id}`} onClick={onClose}>
-            Open full page ↗
-          </Link>
-        </>
-      }
-    >
-      <ShipmentTimeline job={job} onDelivered={onDelivered} onNotify={onEmail} />
-
-      <ShipmentCards job={job} onEmail={() => onEmail()} onLeave={onClose} />
-      {job.notes && (
-        <div className="jv-notes">
-          <span className="k">Notes</span>
-          <span>{job.notes}</span>
-        </div>
-      )}
-      {!job.quote_id && <CreateQuoteForJob job={job} onDone={onClose} />}
-
-      <div className="jv-extras">
-        <PodSection job={job} />
-        <ConsolSection job={job} />
-        <HousesSection job={job} />
-      </div>
-      <DocumentsSection job={job} />
-    </Modal>
   );
 }
 

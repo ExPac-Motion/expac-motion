@@ -1235,7 +1235,7 @@ function SentReader({ mail }: { mail: SentMail }) {
               <button
                 type="button"
                 className="btn ghost small"
-                onClick={() => navigate("/jobs", { state: { openJobId: mail.job_id } })}
+                onClick={() => navigate(`/jobs/${mail.job_id}?comms=1`)}
               >
                 Open shipment {mail.job_reference} ›
               </button>
@@ -1601,7 +1601,7 @@ function Reader({
             ))}
           </select>
           {msg.job_id && (
-            <button type="button" className="btn ghost small" onClick={() => navigate("/jobs", { state: { openJobId: msg.job_id } })}>
+            <button type="button" className="btn ghost small" onClick={() => navigate(`/jobs/${msg.job_id}?comms=1`)}>
               Open shipment ›
             </button>
           )}

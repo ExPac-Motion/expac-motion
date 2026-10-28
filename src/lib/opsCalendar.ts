@@ -136,8 +136,7 @@ export function buildCalendarEvents({
           kind: "etd",
           label: `ETD ${j.reference}`,
           sub: lane,
-          href: "/jobs",
-          navState: { openJobId: j.id },
+          href: `/jobs/${j.id}?tab=timeline`,
         });
       if (eta)
         out.push({
@@ -146,8 +145,7 @@ export function buildCalendarEvents({
           kind: "eta",
           label: `ETA ${j.reference}`,
           sub: lane,
-          href: "/jobs",
-          navState: { openJobId: j.id },
+          href: `/jobs/${j.id}?tab=timeline`,
         });
     }
   }
@@ -163,8 +161,7 @@ export function buildCalendarEvents({
         kind: "track-eta",
         label: `ETA ${j?.reference ?? "shipment"}`,
         sub: `${t.carrier ?? "carrier —"} · ${t.status ?? "in transit"}`,
-        href: "/jobs",
-        navState: { openJobId: t.job_id },
+        href: `/jobs/${t.job_id}?tab=timeline`,
       });
     }
   }

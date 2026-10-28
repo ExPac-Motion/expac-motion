@@ -135,7 +135,7 @@ export default function SageAccountTab({ client }: { client: CustomerRecord }) {
                   tableKey="customer-sage-invoices"
                   toolsPortal={toolsSlot}
                   shipments={shipments}
-                  shipmentLink={(id) => ({ to: "/jobs", state: { openJobId: id } })}
+                  shipmentLink={(id) => ({ to: `/jobs/${id}?tab=financials` })}
                 />
               )}
             </>

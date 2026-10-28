@@ -74,10 +74,10 @@ export default function QuoteDetailModal({ quoteId, onClose }: Props) {
   async function onAccept() {
     if (!q) return;
     try {
-      await accept.mutateAsync(q.id);
-      toast("Shipment created, check Active Shipments");
+      const jobId = await accept.mutateAsync(q.id);
+      toast("Shipment created");
       onClose();
-      navigate("/jobs");
+      navigate(jobId ? `/jobs/${jobId}` : "/jobs");
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not accept quote");
     }

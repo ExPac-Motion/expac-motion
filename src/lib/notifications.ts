@@ -137,8 +137,7 @@ export function buildNotifications(
         domain: "shipments",
         text: `New shipment, ${j.reference}`,
         when: j.created_at,
-        to: "/jobs",
-        navState: { openJobId: j.id },
+        to: `/jobs/${j.id}`,
         jobId: j.id,
         clientId: j.client_id,
         quoteId: j.quote_id,
@@ -151,8 +150,7 @@ export function buildNotifications(
           domain: "shipments",
           text: `${j.reference}, ${e.note || `moved to ${e.milestone}`}`,
           when: e.created_at,
-          to: "/jobs",
-          navState: { openJobId: j.id },
+          to: `/jobs/${j.id}?tab=activity`,
           jobId: j.id,
           clientId: j.client_id,
         });
@@ -218,8 +216,7 @@ export function buildNotifications(
           ? `New reply, ${j?.reference ?? "shipment"}`
           : `Sent, ${m.subject || "email"} (${j?.reference ?? "shipment"})`,
       when: m.created_at,
-      to: "/jobs",
-      navState: { openJobId: m.job_id, openComms: true },
+      to: `/jobs/${m.job_id}?comms=1`,
       jobId: m.job_id,
       clientId: j?.client_id ?? null,
     });
@@ -245,8 +242,7 @@ export function buildNotifications(
         domain: "shipments",
         text: `Document uploaded, ${d.name} (${j?.reference ?? "shipment"})`,
         when: d.created_at,
-        to: "/jobs",
-        navState: { openJobId: d.job_id },
+        to: `/jobs/${d.job_id}?tab=documents`,
         jobId: d.job_id,
         clientId: j?.client_id ?? null,
       });

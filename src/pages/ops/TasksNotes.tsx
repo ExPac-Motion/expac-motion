@@ -337,7 +337,7 @@ export default function TasksNotes({ focus }: { focus?: string }) {
     if (t.job?.reference)
       return {
         label: t.job.reference,
-        go: () => navigate("/jobs", { state: { openJobId: t.job_id } }),
+        go: () => navigate(`/jobs/${t.job_id}?tab=tasks`),
       };
     if (t.quote?.reference)
       return {

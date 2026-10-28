@@ -179,7 +179,7 @@ export default function MastersPage() {
           return (
             <div key={job.id} className="panel ms-master">
               <div className="ms-master-head">
-                <button type="button" className="ms-ref" onClick={() => navigate("/jobs", { state: { openJobId: job.id } })} title="Open the shipment">
+                <button type="button" className="ms-ref" onClick={() => navigate(`/jobs/${job.id}?tab=cargo`)} title="Open the shipment">
                   {job.reference}
                 </button>
                 <span className="ms-cust">{job.client?.company ?? "Customer"}</span>

@@ -400,7 +400,7 @@ export default function DashboardPage() {
                   <li key={j.id}>
                     <button
                       className="arrival-row"
-                      onClick={() => navigate("/jobs", { state: { openJobId: j.id } })}
+                      onClick={() => navigate(`/jobs/${j.id}`)}
                       title="Open this shipment"
                     >
                       <span className="ref-link">{j.reference}</span>
