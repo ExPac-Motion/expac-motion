@@ -131,6 +131,7 @@ function useInvalidateTimeline() {
   return (jobId: string) => {
     qc.invalidateQueries({ queryKey: ["job_timeline", jobId] });
     qc.invalidateQueries({ queryKey: ["jobs"] });
+    qc.invalidateQueries({ queryKey: ["quotes"] });
     qc.invalidateQueries({ queryKey: ["nav_counts"] });
   };
 }

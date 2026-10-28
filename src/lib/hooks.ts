@@ -293,7 +293,7 @@ export function useSaveQuote() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (draft: QuoteDraft) => db.saveQuote(draft),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
+    onSuccess: () => refreshShipmentData(qc),
   });
 }
 export function useConfirmQuoteMode() {
@@ -360,6 +360,7 @@ export function useAcceptQuote() {
       // accept_quote also promotes a linked lead into a real customer.
       qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["job_timeline"] });
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["opportunities"] });
@@ -403,6 +404,57 @@ export function useAddCustomsLineToQuote() {
       qc.invalidateQueries({ queryKey: ["quotes", input.quoteId] });
     },
   });
+}
+
+/** A shipment and its quotation share fields (synced both ways in the
+ *  database, 0198) and the timeline follows the shipment's dates and
+ *  status, so a save on any of them refreshes all of them. */
+export function refreshShipmentData(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["jobs"] });
+  qc.invalidateQueries({ queryKey: ["job_timeline"] });
+  qc.invalidateQueries({ queryKey: ["quotes"] });
+  qc.invalidateQueries({ queryKey: ["nav_counts"] });
+}
+
+/** Live updates (0198): any change to shipments, quotes, the timeline,
+ *  tasks, documents or history, by anyone, refreshes what's on screen. A
+ *  burst of changes (one save touches several tables) refreshes once. */
+export function useLiveSync(enabled: boolean) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    const pending = new Set<string>();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const KEYS: Record<string, string[]> = {
+      jobs: ["jobs", "job_timeline", "quotes", "nav_counts", "my_jobs"],
+      quotes: ["quotes", "jobs", "nav_counts", "my_quotes"],
+      quote_lines: ["quotes"],
+      packing_list_items: ["quotes"],
+      job_timeline_steps: ["job_timeline", "jobs", "my_timeline"],
+      job_events: ["jobs"],
+      ops_tasks: ["ops_tasks", "nav_counts"],
+      shipment_documents: ["shipment_documents", "my_documents"],
+    };
+    const bump = (table: string) => {
+      for (const k of KEYS[table] ?? []) pending.add(k);
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        for (const k of pending) qc.invalidateQueries({ queryKey: [k] });
+        pending.clear();
+      }, 400);
+    };
+    // Random channel name per mount (StrictMode double-mount, see useTrackingRealtime).
+    let channel = supabase.channel(`motion-live-${Math.random().toString(36).slice(2)}`);
+    for (const table of Object.keys(KEYS)) {
+      channel = channel.on("postgres_changes", { event: "*", schema: "public", table }, () => bump(table));
+    }
+    channel.subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [enabled, qc]);
 }
 
 /* ---------- Ops Control Tower: Tasks & Notes ---------- */
@@ -1730,7 +1782,7 @@ export function useUpdateJob() {
   return useMutation({
     mutationFn: (input: { id: string; patch: JobPatch }) =>
       db.updateJob(input.id, input.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+    onSuccess: () => refreshShipmentData(qc),
   });
 }
 export function useDeleteJob() {
@@ -1757,7 +1809,7 @@ export function useUpdateJobsBulk() {
   return useMutation({
     mutationFn: (input: { ids: string[]; patch: JobPatch }) =>
       db.updateJobsBulk(input.ids, input.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+    onSuccess: () => refreshShipmentData(qc),
   });
 }
 /** Duplicate a shipment together with its quote (see db.duplicateJobQuote). */
@@ -1794,7 +1846,7 @@ export function useSetJobMilestone() {
   return useMutation({
     mutationFn: (input: { jobId: string; milestone: Milestone; note?: string }) =>
       db.setJobMilestone(input.jobId, input.milestone, input.note),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+    onSuccess: () => refreshShipmentData(qc),
   });
 }
 

@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewActive, setPortalPreview } from "../lib/db";
-import { useCan, useInboxUnread, useMyProfile, useNavCounts } from "../lib/hooks";
+import { useCan, useInboxUnread, useLiveSync, useMyProfile, useNavCounts } from "../lib/hooks";
 import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
@@ -166,6 +166,8 @@ export default function Layout() {
   const profileQ = useMyProfile();
   const isAdmin = profileQ.data?.role === "admin";
   const can = useCan();
+  // Every open Motion screen follows changes made anywhere, by anyone (0198).
+  useLiveSync(profileQ.data?.role === "admin" || profileQ.data?.role === "user");
   // The Team name (profiles.full_name) first: the sign-up name stored on the
   // login is never updated, so it can be someone else's (e.g. whoever created it).
   const name =

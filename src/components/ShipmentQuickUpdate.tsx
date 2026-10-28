@@ -118,6 +118,7 @@ export default function ShipmentQuickUpdate({
 
       qc.invalidateQueries({ queryKey: ["job_timeline", job.id] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["quotes"] });
       qc.invalidateQueries({ queryKey: ["nav_counts"] });
       toast(status ? `${job.reference} moved to ${stepLabel(status, job.mode)}` : `${job.reference} updated`);
       onClose();
