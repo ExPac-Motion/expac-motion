@@ -128,6 +128,9 @@ export default function CustomerRecordPage() {
       patch[k] = d[k] === null || d[k] === "" || d[k] === undefined ? null : Number(d[k]);
     if (!patch.company) throw new Error("Company name is required");
     if (isNew) {
+      // Leave untouched fields out so the column defaults apply (an explicit
+      // null breaks the not-null columns, e.g. is_also_agent, wms_notify).
+      for (const k of Object.keys(patch)) if (patch[k] === null) delete patch[k];
       const newId = await customersDb.create(patch as Partial<CustomerRecord>);
       if (tier) await setClientRateTier(newId, tier);
       return newId;
