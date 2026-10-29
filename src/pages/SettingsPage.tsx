@@ -705,6 +705,11 @@ function EmailTab() {
       mail_reply_to: String(fd.get("mail_reply_to") || "").trim(),
       mail_signature_html: signature,
     };
+    // The send.* subdomain only sends (no MX), so replies to it bounce.
+    if (/@send\./i.test(patch.mail_reply_to ?? "")) {
+      toastError("Reply-to can't be a send-only address. Use support@expac.co.za.");
+      return;
+    }
     try {
       await update.mutateAsync(patch);
       toast("Email settings saved");

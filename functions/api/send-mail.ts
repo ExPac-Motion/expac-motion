@@ -194,9 +194,16 @@ export async function onRequestPost(context) {
     const m = String(baseFrom).match(/<([^>]+)>/);
     from = fromName + " <" + (m ? m[1] : baseFrom) + ">";
   }
+  // Replies must land in a real mailbox. The Resend sending subdomain
+  // (send.expac.co.za) has no MX record, so a reply-to there bounces; skip
+  // any such address and fall through to the next one.
+  const usableReplyTo = (v) => {
+    const s = typeof v === "string" ? v.trim() : "";
+    return /^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/.test(s) && !/@send\./i.test(s) ? s : "";
+  };
   const replyTo =
-    (typeof body.replyTo === "string" && body.replyTo.trim()) ||
-    env.MAIL_REPLY_TO ||
+    usableReplyTo(body.replyTo) ||
+    usableReplyTo(env.MAIL_REPLY_TO) ||
     "support@expac.co.za";
 
   const headers = {};
