@@ -416,8 +416,8 @@ export function refreshShipmentData(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["nav_counts"] });
 }
 
-/** Live updates (0198): any change to shipments, quotes, the timeline,
- *  tasks, documents or history, by anyone, refreshes what's on screen. A
+/** Live updates (0198, 0203): any change to shipments, quotes, the timeline,
+ *  tasks, documents, history or the Inbox, by anyone, refreshes what's on screen. A
  *  burst of changes (one save touches several tables) refreshes once. */
 export function useLiveSync(enabled: boolean) {
   const qc = useQueryClient();
@@ -434,6 +434,10 @@ export function useLiveSync(enabled: boolean) {
       job_events: ["jobs"],
       ops_tasks: ["ops_tasks", "nav_counts"],
       shipment_documents: ["shipment_documents", "my_documents"],
+      // Live Inbox (0203); the polls on the inbox queries stay as a fallback.
+      inbox_messages: ["inbox", "inbox_unread", "inbox_search", "inbox_sent"],
+      inbox_drafts: ["inbox_drafts"],
+      inbox_state: ["inbox_state"],
     };
     const bump = (table: string) => {
       for (const k of KEYS[table] ?? []) pending.add(k);
