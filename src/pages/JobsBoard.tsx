@@ -36,6 +36,7 @@ import {
   useMarkJobMessagesRead,
   useOpsTasks,
   useSetJobMilestone,
+  refreshShipmentData,
   useShipmentDocuments,
   useUnreadMessages,
   useEmailsSentToday,
@@ -49,7 +50,8 @@ import {
 import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
 import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
-import { stepLabel, timelineSteps } from "../lib/timeline";
+import { notifyText, stepLabel, timelineDb, timelineSteps } from "../lib/timeline";
+import StatusDateModal, { type StatusDateInput } from "../components/StatusDateModal";
 import { ALL_STEPS } from "../lib/steps";
 import { saveShipmentPod } from "../lib/pod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -252,31 +254,58 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     setParams(next, { replace: true });
   }
   const [commsJob, setCommsJob] = useState<Job | null>(null);
-  // Scroll position per view (board + filter + search), restored on Back.
+  // Scroll position per view (board + tab + filter + search), restored on
+  // Back. The list scrolls inside its own box (.table-wrap, up and across),
+  // so that box is remembered as well as the page. Saved as you scroll:
+  // on leaving, the grid is already gone from the page.
   const scrollKey = `jobs-scroll:${mode}:${location.search}`;
+  const panelRef = useRef<HTMLDivElement>(null);
   const scrollRestored = useRef(false);
+  const gridBox = () => panelRef.current?.querySelector<HTMLElement>(".table-wrap") ?? null;
   useEffect(() => {
     if (!jobs || scrollRestored.current) return;
     scrollRestored.current = true;
-    let y = 0;
+    let saved: { x?: number; y?: number; page?: number } = {};
     try {
-      y = Number(sessionStorage.getItem(scrollKey) || 0);
+      saved = JSON.parse(sessionStorage.getItem(scrollKey) || "{}");
     } catch {
       /* storage blocked */
     }
-    if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
+    requestAnimationFrame(() => {
+      if (saved.page) window.scrollTo(0, saved.page);
+      const box = gridBox();
+      if (box) box.scrollTo(saved.x ?? 0, saved.y ?? 0);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs]);
-  useEffect(
-    () => () => {
-      try {
-        sessionStorage.setItem(scrollKey, String(window.scrollY));
-      } catch {
-        /* storage blocked */
-      }
-    },
-    [scrollKey],
-  );
+  useEffect(() => {
+    const panel = panelRef.current;
+    let frame = 0;
+    const remember = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const box = gridBox();
+        try {
+          sessionStorage.setItem(
+            scrollKey,
+            JSON.stringify({ x: box?.scrollLeft ?? 0, y: box?.scrollTop ?? 0, page: window.scrollY }),
+          );
+        } catch {
+          /* storage blocked */
+        }
+      });
+    };
+    // Scroll doesn't bubble: listen in the capture phase for the grid box.
+    panel?.addEventListener("scroll", remember, true);
+    window.addEventListener("scroll", remember);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      panel?.removeEventListener("scroll", remember, true);
+      window.removeEventListener("scroll", remember);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollKey]);
   // Pre-filled message for the rail's next email (Notify customer).
   const [commsRemarks, setCommsRemarks] = useState("");
   const [railOpen, setRailOpen] = useState(false);
@@ -286,6 +315,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [consolidating, setConsolidating] = useState<Job[] | null>(null);
   // Proof of delivery (0151): asked for when a shipment is set to Delivered.
   const [podJob, setPodJob] = useState<Job | null>(null);
+  // Status picked in the grid, waiting for its date (StatusDateModal).
+  const [statusJob, setStatusJob] = useState<{ job: Job; status: string } | null>(null);
+  const qc = useQueryClient();
   const canWms = useCan()("warehouse");
   const unreadMessagesQ = useUnreadMessages();
   const unreadJobIds = useMemo(
@@ -328,9 +360,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const statusPick = params.get("status") ?? "";
   const setStatusPick = (v: string) => setParam("status", v);
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
-  const [recordFilter, setRecordFilter] = useState<
-    "nostatus" | "notracking" | "atrisk" | "uninvoiced" | null
-  >(null);
+  // The record filter (At risk, chips from Control Tower) is in the address
+  // too (?f=), so Back keeps it.
+  type RecordFilter = "nostatus" | "notracking" | "atrisk" | "uninvoiced";
+  const recordFilter = (params.get("f") as RecordFilter | null) || null;
+  const setRecordFilter = (v: RecordFilter | null) => setParam("f", v ?? "");
 
   function openComms(j: Job, remarks = "") {
     setCommsJob(j);
@@ -363,8 +397,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       | { filter?: "nostatus" | "notracking" | "uninvoiced" }
       | null;
     if (!state?.filter) return;
-    setRecordFilter(state.filter);
-    navigate(location.pathname + location.search, { replace: true, state: {} });
+    const next = new URLSearchParams(location.search);
+    next.set("f", state.filter);
+    navigate(`${location.pathname}?${next}`, { replace: true, state: {} });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
@@ -523,6 +558,36 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     }
   }
 
+  /** Status picked on the board, with its date from the pop-up: save the
+   *  status, then put the date (and note) on that timeline step. */
+  async function saveStatus(j: Job, status: string, input: StatusDateInput) {
+    try {
+      await updateJob.mutateAsync({ id: j.id, patch: { shipment_status: status } });
+      const step = (await timelineDb.steps(j.id)).find((s) => s.step === status);
+      if (step && (step.actual_date !== input.date || input.note)) {
+        await timelineDb.set({
+          stepId: step.id,
+          patch: { actual_date: input.date, ...(input.note ? { note: input.note } : {}) },
+        });
+      }
+      const milestone = MILESTONE_BY_STATUS[status];
+      if (milestone) {
+        setMilestone.mutate({ jobId: j.id, milestone, note: `Shipment Status set to "${status}"` });
+      }
+      refreshShipmentData(qc);
+      if (status === DELIVERED_STATUS) {
+        toast("Shipment delivered. It stays on Active Shipments until Admin marks it Ops Complete");
+        if (!j.pod_signed_by && !j.pod_delivered_at) setPodJob(j);
+      } else {
+        toast(`${j.reference} moved to ${stepLabel(status, j.mode)}`);
+      }
+      if (input.email) openComms(j, notifyText(j.mode, { step: status, date: input.date }));
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not save");
+      throw e;
+    }
+  }
+
   const copy = COPY[mode];
 
   const jobCols = useMemo<DataColumn<Job>[]>(
@@ -622,7 +687,11 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           <select
             className={`job-status is-${shipmentStatusSlug(j.shipment_status)}`}
             value={j.shipment_status ?? ""}
-            onChange={(e) => save(j.id, { shipment_status: e.target.value })}
+            onChange={(e) =>
+              e.target.value
+                ? setStatusJob({ job: j, status: e.target.value })
+                : save(j.id, { shipment_status: "" })
+            }
           >
             <option value="">— set status —</option>
             {/* This mode's timeline steps (0196); an older status outside
@@ -887,7 +956,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         )}
       </PageTools>
 
-      <div className="panel jobs-panel">
+      <div className="panel jobs-panel" ref={panelRef}>
         {isLoading ? (
           <Loading />
         ) : isError ? (
@@ -954,6 +1023,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       )}
 
       {podJob && <ShipmentPodModal job={podJob} onClose={() => setPodJob(null)} />}
+
+      {statusJob && (
+        <StatusDateModal
+          job={statusJob.job}
+          status={statusJob.status}
+          onClose={() => setStatusJob(null)}
+          onSave={(input) => saveStatus(statusJob.job, statusJob.status, input)}
+        />
+      )}
       {consolidating && (
         <ConsolidateModal
           jobs={consolidating}
