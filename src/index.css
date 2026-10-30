@@ -11325,3 +11325,41 @@ label.ws-tile:hover {
 .ops-check input {
   margin-top: 3px;
 }
+
+/* Vessel tracking card (shipment Overview, Sea Freight, 0204). */
+.vt-actions {
+  display: flex;
+  gap: 6px;
+}
+.vt-card .trk-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 6px;
+}
+.vt-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.vt-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.vt-form .hint,
+.vt-form .vt-foot {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.vt-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.vt-err {
+  color: var(--orange-ink);
+}

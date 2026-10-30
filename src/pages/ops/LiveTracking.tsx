@@ -11,10 +11,14 @@ import {
   useTrackingEvents,
 } from "../../lib/hooks";
 import { formatDate, formatDateTime, portCode } from "../../lib/format";
-import { etaSlipped, trackableRef, trackingTone } from "../../lib/tracking";
+import { etaSlipped, isTracked, trackableRef, trackingTone, vesselRef } from "../../lib/tracking";
+import { checkVessel } from "../../lib/db";
+import { useQueryClient } from "@tanstack/react-query";
 import TrackingMap from "../../components/TrackingMap";
+import { VesselFacts } from "../../components/VesselTracking";
 import TrackMovements from "../../components/TrackMovements";
 import {
+  aisRoute,
   buildRoute,
   routeEventsFromMovements,
   routeEventsFromRows,
@@ -43,13 +47,14 @@ export default function LiveTracking() {
   }, [trackQ.data]);
 
   const trackable = useMemo(
-    () => activeJobs.filter((j) => trackableRef(j)),
+    () => activeJobs.filter((j) => isTracked(j)),
     [activeJobs],
   );
   const noNumber = useMemo(
-    () => activeJobs.filter((j) => !trackableRef(j)),
+    () => activeJobs.filter((j) => !isTracked(j)),
     [activeJobs],
   );
+  const qc = useQueryClient();
 
   const summary = useMemo(() => {
     let onTrack = 0;
@@ -73,6 +78,14 @@ export default function LiveTracking() {
   async function onRefresh(job: Job) {
     setBusyId(job.id);
     try {
+      // Vessel tracking (AIS): listen for the ship now, server side.
+      if (vesselRef(job)) {
+        const r = await checkVessel(job.id);
+        qc.invalidateQueries({ queryKey: ["job_tracking"] });
+        if (r.warning) error(r.warning);
+        else if (!r.heard) error("No AIS signal from the vessel right now (out of coastal range). It is checked every 10 minutes.");
+        return;
+      }
       const existing = trackingByJob.get(job.id);
       const ref = trackableRef(job);
       // A stored ShipsGo id only applies to the number it was resolved
@@ -145,12 +158,17 @@ export default function LiveTracking() {
         header: "Reference",
         width: 180,
         cellClass: "nowrap",
-        sortValue: (j) => trackableRef(j)?.value ?? "",
+        sortValue: (j) => trackableRef(j)?.value ?? vesselRef(j)?.label ?? "",
         render: (j) => {
           const ref = trackableRef(j);
+          const vessel = vesselRef(j);
           return ref ? (
             <>
               <span className="ref-badge">{ref.label}</span> {ref.value}
+            </>
+          ) : vessel ? (
+            <>
+              <span className="ref-badge">VESSEL</span> {vessel.label}
             </>
           ) : (
             "—"
@@ -256,7 +274,8 @@ export default function LiveTracking() {
             <h3>Not trackable yet</h3>
             <p className="hint">
               Add an AWB / MBL or container number on the{" "}
-              <Link to="/jobs">Active Shipments</Link> board.
+              <Link to="/jobs">Active Shipments</Link> board. Sea freight without
+              one: add the vessel's MMSI on the shipment (Overview, Vessel tracking).
             </p>
             <ul>
               {noNumber.map((j) => (
@@ -291,19 +310,21 @@ function TrackMapModal({
   onClose: () => void;
 }) {
   const ref = trackableRef(job);
+  const vessel = vesselRef(job);
+  const ais = !ref && tracking?.provider === "ais" ? tracking : null;
   const eventsQ = useTrackingEvents(job.id);
   const events = eventsQ.data;
   // Prefer the tracking_events rows; fall back to the legacy movements blob.
   const route = useMemo(
     () =>
-      buildRoute(
+      ais ? aisRoute(ais) : buildRoute(
         events && events.length > 0
           ? routeEventsFromRows(events)
           : routeEventsFromMovements(tracking?.movements ?? []),
         { code: tracking?.pol ?? job.origin, lat: tracking?.pol_lat, lon: tracking?.pol_lon },
         { code: tracking?.pod ?? job.destination, lat: tracking?.pod_lat, lon: tracking?.pod_lon },
       ),
-    [events, tracking, job.origin, job.destination],
+    [events, tracking, ais, job.origin, job.destination],
   );
   return (
     <Modal
@@ -313,13 +334,19 @@ function TrackMapModal({
       belowHeader={
         <p className="muted" style={{ margin: "6px 0 0" }}>
           {tracking?.carrier ?? job.mode}
-          {ref ? ` · ${ref.label} ${ref.value}` : ""}
+          {ref ? ` · ${ref.label} ${ref.value}` : vessel ? ` · Vessel ${vessel.label}` : ""}
           {tracking?.status ? ` · ${tracking.status}` : ""}
         </p>
       }
     >
-      <TrackingMap height={440} route={route} mode={job.mode} path={tracking?.route_path} />
-      <TrackDetail tracking={tracking} route={route} refValue={ref?.value ?? ""} />
+      <TrackingMap height={440} route={route} mode={job.mode} path={ais ? null : tracking?.route_path} />
+      {ais || vessel ? (
+        <div className="trk-detail">
+          <VesselFacts job={job} tracking={ais} />
+        </div>
+      ) : (
+        <TrackDetail tracking={tracking} route={route} refValue={ref?.value ?? ""} />
+      )}
     </Modal>
   );
 }

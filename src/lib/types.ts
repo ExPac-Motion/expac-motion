@@ -1464,6 +1464,11 @@ export interface Job {
   /** Sea Freight details for the customer update email; persist on the board. */
   shipping_line: string | null;
   vessel_name: string | null;
+  /** The vessel's 9-digit MMSI: tracks the ship on AIS when there is no
+   *  container / BL (0204). */
+  vessel_mmsi?: string | null;
+  /** Carrier voyage, in step with the quotation's voyage_no (0204). */
+  voyage_no?: string | null;
   provisional_delivery_date: string | null;
   /** Date invoiced (migration 0110), null = not yet invoiced. Entered by
    *  hand for now; a future Sage Accounting sync fills it. */
@@ -1537,6 +1542,8 @@ export type JobPatch = Partial<
     | "container_type"
     | "shipping_line"
     | "vessel_name"
+    | "vessel_mmsi"
+    | "voyage_no"
     | "carrier_name"
     | "provisional_delivery_date"
     | "etd"
@@ -1764,6 +1771,17 @@ export interface JobTracking {
   vessel_lat: number | null;
   vessel_lon: number | null;
   position_at: string | null;
+  /** Vessel tracking on AIS (provider "ais", 0204). */
+  vessel_mmsi?: string | null;
+  /** Actual departure from the port of loading. */
+  atd?: string | null;
+  pol_seen_at?: string | null;
+  /** The ship's own AIS destination and its ETA there. */
+  next_port?: string | null;
+  next_port_eta?: string | null;
+  static_at?: string | null;
+  speed_kn?: number | null;
+  nav_status?: string | null;
   /** ShipsGo's route, sailed / flown and to go (0202). */
   route_path: RoutePath | null;
   route_synced_at: string | null;

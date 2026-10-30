@@ -2975,6 +2975,28 @@ export async function syncInbox(): Promise<{ added: number; pending: number }> {
   return { added: raw.added ?? 0, pending: raw.pending ?? 0 };
 }
 
+/** Runs /api/vessel-sync now for one shipment (the cron checks every
+ *  vessel every 10 minutes, 0204). Listens to AIS for up to ~40 s. */
+export async function checkVessel(jobId: string): Promise<{ heard: number; warning?: string }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const res = await fetch("/api/vessel-sync", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify({ jobId }),
+  });
+  const raw = (await res.json().catch(() => ({}))) as { heard?: number; warning?: string; error?: string };
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Vessel tracking runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Vessel check returned ${res.status}`);
+  }
+  return { heard: raw.heard ?? 0, warning: raw.warning };
+}
+
 /** The signed-in login's effective permissions (0131). */
 export async function getMyPermissions(): Promise<Partial<Record<PermKey, boolean>>> {
   return unwrap<Partial<Record<PermKey, boolean>>>(await supabase.rpc("my_permissions"));

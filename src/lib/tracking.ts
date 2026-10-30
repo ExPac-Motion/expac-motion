@@ -64,6 +64,30 @@ export function trackableRef(job: Job): TrackableRef | null {
   return { type: "ocean", value: doc, label: "REF" };
 }
 
+/**
+ * Vessel tracking on AIS (0204): a Sea job with no container / BL for
+ * ShipsGo, but a vessel MMSI. The server (/api/vessel-sync) follows the
+ * ship; this is only what the screens show and which button refreshes it.
+ */
+export function vesselRef(job: Job): { mmsi: string; label: string } | null {
+  if (trackableRef(job) || !(job.mode ?? "").startsWith("Sea")) return null;
+  const mmsi = (job.vessel_mmsi ?? "").trim();
+  if (!/^\d{9}$/.test(mmsi)) return null;
+  const label = [job.vessel_name, job.voyage_no].filter((v) => (v ?? "").trim()).join(" / ") || `MMSI ${mmsi}`;
+  return { mmsi, label };
+}
+
+/** Tracked one way or the other: ShipsGo number or AIS vessel. */
+export function isTracked(job: Job): boolean {
+  return !!trackableRef(job) || !!vesselRef(job);
+}
+
+/** VesselFinder search by name, where the MMSI is found (free). */
+export function vesselSearchUrl(name: string | null | undefined): string {
+  const q = (name ?? "").trim();
+  return q ? `https://www.vesselfinder.com/vessels?name=${encodeURIComponent(q)}` : "https://www.vesselfinder.com/vessels";
+}
+
 /** Colour band for a tracking status pill: start | mid | done | alert. */
 export function trackingTone(status: string | null | undefined): string {
   const s = (status ?? "").toLowerCase();
@@ -365,6 +389,8 @@ export function trackingRowFrom(
 ): Partial<JobTracking> & { job_id: string } {
   return {
     job_id: jobId,
+    // Takes over from vessel tracking (provider "ais", 0204) once a number is tracked.
+    provider: "shipsgo",
     ref_type: ref.type,
     ref_value: ref.value,
     carrier: n.carrier,

@@ -8,7 +8,7 @@ import {
   useQuotes,
 } from "../lib/hooks";
 import { isTaskOverdue, todayIso } from "../lib/opsCalendar";
-import { trackableRef, trackingTone } from "../lib/tracking";
+import { isTracked, trackingTone } from "../lib/tracking";
 import { isShipmentComplete } from "../lib/types";
 import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
@@ -78,7 +78,7 @@ export default function OpsControlTowerPage() {
     const noStatus = activeJobs.filter(
       (j) => !j.shipment_status || j.shipment_status === "Booked",
     ).length;
-    const noNumber = activeJobs.filter((j) => !trackableRef(j)).length;
+    const noNumber = activeJobs.filter((j) => !isTracked(j)).length;
 
     const arriving = activeJobs.filter((j) => {
       const eta = trackByJob.get(j.id)?.eta ?? j.eta;

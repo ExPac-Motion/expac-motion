@@ -62,7 +62,7 @@ import { getShipmentDocumentUrl } from "../lib/db";
 import { DOCUMENT_TYPES_LIST, carrierLabel } from "../lib/docTemplates";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
-import { trackableRef } from "../lib/tracking";
+import { isTracked } from "../lib/tracking";
 import {
   DELIVERED_STATUS,
   isShipmentComplete,
@@ -510,7 +510,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     recordFilter === "nostatus"
       ? modeRows.filter((j) => !j.shipment_status || j.shipment_status === "Booked")
       : recordFilter === "notracking"
-        ? modeRows.filter((j) => !trackableRef(j))
+        ? modeRows.filter((j) => !isTracked(j))
         : recordFilter === "uninvoiced"
           ? modeRows.filter((j) => !j.invoiced_at)
           : recordFilter === "atrisk"

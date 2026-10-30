@@ -241,6 +241,57 @@ export function buildRoute(
   return { stops, doneLegs, moving, position };
 }
 
+/**
+ * Vessel tracking on AIS (0204): port of loading -> port of discharge, with
+ * the ship's real last AIS fix as the marker (not an estimate along the
+ * leg) until it has arrived.
+ */
+export function aisRoute(t: {
+  pol: string | null;
+  pod: string | null;
+  pol_lat: number | null;
+  pol_lon: number | null;
+  pod_lat: number | null;
+  pod_lon: number | null;
+  atd?: string | null;
+  pod_ata: string | null;
+  pod_eta: string | null;
+  eta: string | null;
+  vessel_name: string | null;
+  voyage: string | null;
+  vessel_lat: number | null;
+  vessel_lon: number | null;
+  position_at: string | null;
+}): TrackRoute {
+  const via = { via: t.vessel_name, voyage: t.voyage };
+  const events: RouteEvent[] = [
+    { code: "DEP", place: t.pol, placeCode: t.pol, lat: t.pol_lat, lon: t.pol_lon, at: t.atd ?? null, actual: !!t.atd, ...via },
+    {
+      code: "ARR",
+      place: t.pod,
+      placeCode: t.pod,
+      lat: t.pod_lat,
+      lon: t.pod_lon,
+      at: t.pod_ata ?? t.pod_eta ?? t.eta,
+      actual: !!t.pod_ata,
+      ...via,
+    },
+  ];
+  const route = buildRoute(events);
+  if (!t.pod_ata && typeof t.vessel_lat === "number" && typeof t.vessel_lon === "number") {
+    const here = { lat: t.vessel_lat, lon: t.vessel_lon };
+    const pod = typeof t.pod_lat === "number" && typeof t.pod_lon === "number" ? { lat: t.pod_lat, lon: t.pod_lon } : null;
+    const seen = t.position_at ? new Date(t.position_at).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short" }) : "";
+    route.position = {
+      ...here,
+      label: `${t.vessel_name ?? "Vessel"}, last AIS position${seen ? ` ${seen}` : ""}`,
+      estimated: false,
+      bearing: pod ? bearing(here, pod) : 90,
+    };
+  }
+  return route;
+}
+
 /** tracking_events rows (Motion, portal view, public RPC) -> route events. */
 export function routeEventsFromRows(
   rows: {
