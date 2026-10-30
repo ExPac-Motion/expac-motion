@@ -23,7 +23,8 @@ import { MILESTONE_BY_STATUS, SHIPMENT_STATUSES, type ClientDocument, type Packi
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
 import TrackMovements from "../../components/TrackMovements";
-import { buildRoute, routeEventsFromRows } from "../../lib/trackRoute";
+import { aisRoute, buildRoute, routeEventsFromRows, withLivePosition } from "../../lib/trackRoute";
+import { VesselSummary } from "../../components/VesselTracking";
 import { houseTotals, useMyJobHouses } from "../../lib/houses";
 import PortalQuoteModal from "./PortalQuoteViewPage";
 import { modeEmoji } from "./PortalLayout";
@@ -62,14 +63,16 @@ export default function PortalShipmentPage() {
   const linesQ = usePortalLines(quote ? [quote.id] : []);
   const packQ = usePortalPacking(quote?.id);
 
+  // Vessel tracking (AIS, 0204): the ship's real last position.
+  const ais = tracking?.provider === "ais" ? tracking : null;
   const trkRoute = useMemo(
     () =>
-      buildRoute(
+      ais ? aisRoute(ais) : withLivePosition(buildRoute(
         routeEventsFromRows(trkEventsQ.data ?? []),
         { code: tracking?.pol ?? job?.origin, lat: tracking?.pol_lat, lon: tracking?.pol_lon },
         { code: tracking?.pod ?? job?.destination, lat: tracking?.pod_lat, lon: tracking?.pod_lon },
-      ),
-    [trkEventsQ.data, tracking, job?.origin, job?.destination],
+      ), tracking),
+    [trkEventsQ.data, tracking, ais, job?.origin, job?.destination],
   );
 
   // When each Shipment Status was set (0166): Created = booked into Motion,
@@ -474,8 +477,19 @@ export default function PortalShipmentPage() {
           <EmptyState>Tracking will appear here once the shipment is on the water / in the air.</EmptyState>
         ) : (
           <>
-            <TrackingMap height={300} route={trkRoute} mode={job.mode} path={tracking?.route_path} />
-            <TrackMovements route={trkRoute} />
+            <TrackingMap height={300} route={trkRoute} mode={job.mode} path={ais ? null : tracking?.route_path} />
+            {ais ? (
+              <VesselSummary
+                vessel={ais.vessel_name}
+                voyage={ais.voyage}
+                atd={ais.atd}
+                eta={ais.pod_eta}
+                ata={ais.pod_ata}
+                seenAt={ais.position_at}
+              />
+            ) : (
+              <TrackMovements route={trkRoute} />
+            )}
           </>
         )}
       </div>

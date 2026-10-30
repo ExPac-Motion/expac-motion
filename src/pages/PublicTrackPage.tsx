@@ -4,7 +4,8 @@ import TrackingMap from "../components/TrackingMap";
 import TrackMovements from "../components/TrackMovements";
 import TimelineProgress from "../components/TimelineProgress";
 import { stepLabel } from "../lib/timeline";
-import { buildRoute, routeEventsFromRows } from "../lib/trackRoute";
+import { aisRoute, buildRoute, routeEventsFromRows, withLivePosition } from "../lib/trackRoute";
+import { VesselSummary } from "../components/VesselTracking";
 import { trackShipment } from "../lib/db";
 import { carrierLabel } from "../lib/docTemplates";
 import { formatDate, portCode } from "../lib/format";
@@ -159,15 +160,33 @@ function Field({ label, value }: { label: string; value: string }) {
 
 /** Map + movements, built once per result. */
 function PublicRoute({ result }: { result: TrackedShipment }) {
-  const route = buildRoute(
-    routeEventsFromRows(result.events),
-    { code: result.pol, lat: result.pol_lat, lon: result.pol_lon },
-    { code: result.pod, lat: result.pod_lat, lon: result.pod_lon },
-  );
+  // Vessel tracking (AIS, 0205): the ship's real last position.
+  const ais = result.provider === "ais";
+  const route = ais
+    ? aisRoute({ ...result, atd: result.atd ?? null, pod_eta: result.pod_eta ?? null, pod_ata: result.pod_ata ?? null })
+    : withLivePosition(
+        buildRoute(
+          routeEventsFromRows(result.events),
+          { code: result.pol, lat: result.pol_lat, lon: result.pol_lon },
+          { code: result.pod, lat: result.pod_lat, lon: result.pod_lon },
+        ),
+        result,
+      );
   return (
     <>
-      <TrackingMap height={520} route={route} mode={result.mode} path={result.route_path} />
-      <TrackMovements route={route} />
+      <TrackingMap height={520} route={route} mode={result.mode} path={ais ? null : result.route_path} />
+      {ais ? (
+        <VesselSummary
+          vessel={result.vessel_name}
+          voyage={result.voyage}
+          atd={result.atd}
+          eta={result.pod_eta}
+          ata={result.pod_ata}
+          seenAt={result.position_at}
+        />
+      ) : (
+        <TrackMovements route={route} />
+      )}
     </>
   );
 }

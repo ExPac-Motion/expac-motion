@@ -14,8 +14,14 @@
  *     discharge; otherwise that destination + ETA as "next port"
  *   - ATA: first fix stopped (anchored / moored / under 1 kn) near the port
  *     of discharge, after departure or after the ETD
- * and marks Departed / Arrived on the timeline (ais_mark_step). Supabase
- * Realtime then refreshes the open screens.
+ * and marks Departed / Arrived on the timeline (ais_mark_step), and moves
+ * the shipment's ETD / ETA to the actual departure / vessel ETA (via the
+ * quotation, with a history line). Supabase Realtime then refreshes the
+ * open screens.
+ *
+ * Shipments ShipsGo tracks (container / BL) are followed too (0205), but
+ * only for the live position (ais_lat / ais_lon / ais_at) and the ship's
+ * next port: ShipsGo keeps its status, dates and map ends.
  *
  * Terrestrial AIS: ships near the coast and in port are seen within
  * seconds; mid-ocean they drop out until the next coast, which is fine for
@@ -222,6 +228,40 @@ async function listen(apiKey, mmsis) {
 }
 
 /* ---------- Fold one ship's news into its shipment ---------- */
+/** A timestamp's date in South Africa, yyyy-mm-dd (what the dates use). */
+function saDate(iso) {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+}
+
+/**
+ * ShipsGo tracks this shipment (container / BL): AIS only adds the live
+ * position and the ship's own next port. ShipsGo's status, dates and map
+ * ends are left alone, so the two never overwrite each other.
+ */
+function follow(job, news) {
+  const row = { job_id: job.id, vessel_mmsi: job.vessel_mmsi };
+  const pos = news && news.pos;
+  if (pos) {
+    Object.assign(row, {
+      ais_lat: pos.lat,
+      ais_lon: pos.lon,
+      ais_at: pos.at.toISOString(),
+      speed_kn: pos.sog,
+      nav_status: NAV_TEXT[pos.nav] || null,
+    });
+  }
+  const stat = news && news.stat;
+  if (stat) {
+    const eta = aisEta(stat.eta, new Date());
+    Object.assign(row, {
+      next_port: stat.destination || null,
+      next_port_eta: eta ? eta.toISOString() : null,
+      static_at: stat.at.toISOString(),
+    });
+  }
+  return { row, marks: [], writeBack: null };
+}
+
 function update(job, prev, news, now) {
   const pol = coordsOf(job.origin);
   const pod = coordsOf(job.destination);
@@ -262,6 +302,9 @@ function update(job, prev, news, now) {
       vessel_lat: pos.lat,
       vessel_lon: pos.lon,
       position_at: at,
+      ais_lat: pos.lat,
+      ais_lon: pos.lon,
+      ais_at: at,
       speed_kn: pos.sog,
       nav_status: NAV_TEXT[pos.nav] || null,
     });
@@ -302,10 +345,17 @@ function update(job, prev, news, now) {
     if (!row.vessel_name && stat.name) row.vessel_name = stat.name;
     if (eta && isPod(stat.destination, job) && !row.pod_ata) {
       row.pod_eta = eta.toISOString();
-      row.eta = eta.toISOString().slice(0, 10);
+      row.eta = saDate(row.pod_eta);
     }
   }
-  return { row, marks };
+
+  // The shipment's ETD / ETA follow the vessel, as ShipsGo's do on its
+  // shipments (tracking overwrites, 2026-09-30): ETD becomes the actual
+  // departure, ETA the vessel's own ETA for our port of discharge.
+  const writeBack = {};
+  if (row.atd && !(prev && prev.atd) && saDate(row.atd) !== job.etd) writeBack.etd = saDate(row.atd);
+  if (row.eta && row.eta !== job.eta) writeBack.eta = row.eta;
+  return { row, marks, writeBack: Object.keys(writeBack).length ? writeBack : null };
 }
 
 export async function onRequestPost(context) {
@@ -329,12 +379,26 @@ export async function onRequestPost(context) {
   }
   const onlyJob = typeof body.jobId === "string" ? body.jobId : null;
 
+  // Vessels Motion already knows (0205): a shipment on the same ship (same
+  // IMO from ShipsGo, or same name) gets its MMSI filled in. Before 0205
+  // the function is missing; tracking carries on without it.
+  try {
+    await sbJson(env, "/rest/v1/rpc/fill_vessel_mmsi", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+  } catch {
+    /* 0205 not run yet */
+  }
+
   // Active sea shipments with a vessel MMSI, not yet arrived.
   const filter = onlyJob ? `&id=eq.${encodeURIComponent(onlyJob)}` : "";
   const jobs = (
     await sbJson(
       env,
-      `/rest/v1/jobs?select=id,reference,mode,origin,destination,vessel_name,vessel_mmsi,voyage_no,shipping_line,etd,shipment_status,ops_completed_at` +
+      `/rest/v1/jobs?select=id,reference,quote_id,mode,milestone,origin,destination,vessel_name,vessel_mmsi,voyage_no,` +
+        `shipping_line,container_no,awb_mbl,etd,eta,shipment_status,ops_completed_at` +
         `&vessel_mmsi=not.is.null&mode=ilike.Sea*${filter}`,
     )
   ).filter((j) => /^\d{9}$/.test(String(j.vessel_mmsi || "").trim()) && !j.ops_completed_at);
@@ -346,11 +410,25 @@ export async function onRequestPost(context) {
     `/rest/v1/job_tracking?select=job_id,provider,atd,pol_seen_at,pod_ata,vessel_name,carrier&job_id=in.(${ids.join(",")})`,
   );
   const prevByJob = new Map(prevRows.map((r) => [r.job_id, r]));
-  // ShipsGo stays in charge where it tracks the shipment; arrived ones are done.
+  // A container / BL means ShipsGo is in charge (registered by
+  // /api/tracking-register): AIS just follows the ship for the live
+  // position, once ShipsGo's row exists. Otherwise AIS tracks it all.
+  // Arrived ships are done (unless "Check now").
+  // A real number, not a placeholder ("-", "TBA"): as realNumber in src/lib/tracking.ts.
+  const real = (v) => {
+    const core = String(v || "").replace(/[^A-Za-z0-9]/g, "");
+    return core.length >= 8 && (core.match(/\d/g) || []).length >= 5;
+  };
+  const shipsgoJob = (j) => real(j.container_no) || real(j.awb_mbl);
+  for (const j of jobs) {
+    const p = prevByJob.get(j.id);
+    j.follow = shipsgoJob(j) || (!!p && p.provider !== "ais");
+  }
   const tracked = jobs
     .filter((j) => {
       const p = prevByJob.get(j.id);
-      return !p || (p.provider === "ais" && (!p.pod_ata || onlyJob));
+      if (j.follow) return !!p && (!p.pod_ata || !!onlyJob);
+      return !p || !p.pod_ata || !!onlyJob;
     })
     .slice(0, MAX_VESSELS);
   if (tracked.length === 0) return json({ ok: true, checked: 0 });
@@ -362,13 +440,15 @@ export async function onRequestPost(context) {
   const now = new Date();
   const rows = [];
   const marks = [];
+  const writeBacks = [];
   for (const job of tracked) {
     const prev = prevByJob.get(job.id) || null;
     const news = heard.get(job.vessel_mmsi) || null;
     if (!news && prev) continue; // nothing new, nothing to write
-    const r = update(job, prev, news, now);
+    const r = job.follow ? follow(job, news) : update(job, prev, news, now);
     rows.push(r.row);
     for (const m of r.marks) marks.push({ job: job.id, ...m });
+    if (r.writeBack) writeBacks.push({ job, patch: r.writeBack });
   }
 
   // One upsert per set of columns: in a bulk upsert PostgREST writes every
@@ -395,12 +475,40 @@ export async function onRequestPost(context) {
     });
   }
 
+  // ETD / ETA onto the quotation (its trigger, 0198, copies them to the
+  // shipment and the timeline), or the shipment when there's no quotation;
+  // and a line in the shipment's history.
+  for (const { job, patch } of writeBacks) {
+    try {
+      const target = job.quote_id ? `quotes?id=eq.${job.quote_id}` : `jobs?id=eq.${job.id}`;
+      await sbJson(env, `/rest/v1/${target}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", prefer: "return=minimal" },
+        body: JSON.stringify(patch),
+      });
+      const what = [
+        patch.etd ? `ETD ${job.etd || "—"} → ${patch.etd} (actual departure)` : null,
+        patch.eta ? `ETA ${job.eta || "—"} → ${patch.eta} (vessel's AIS ETA)` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      await sbJson(env, "/rest/v1/job_events", {
+        method: "POST",
+        headers: { "content-type": "application/json", prefer: "return=minimal" },
+        body: JSON.stringify({ job_id: job.id, milestone: job.milestone, note: `Vessel tracking (AIS): ${what}` }),
+      });
+    } catch {
+      /* the tracking itself is saved; dates catch up on the next run */
+    }
+  }
+
   return json({
     ok: true,
     checked: tracked.length,
     heard: [...heard.keys()].length,
     updated: rows.length,
     marked: marks.map((m) => `${m.step} ${m.job}`),
+    dates: writeBacks.map((w) => `${w.job.reference} ${JSON.stringify(w.patch)}`),
     ...(error ? { warning: error } : {}),
   });
 }

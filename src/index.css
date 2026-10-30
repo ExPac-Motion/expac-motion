@@ -11363,3 +11363,83 @@ label.ws-tile:hover {
 .vt-err {
   color: var(--orange-ink);
 }
+/* Vessel tracking for customers (portal, /track, 0205). */
+.vt-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 10px 0 4px;
+  font-size: 0.85rem;
+}
+.vt-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vt-summary .k {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+/* Settings › Operations workspace (0205). */
+.ops-ws-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.ops-ws-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.ops-ws-tools input[type="text"],
+.ops-ws-tools > input {
+  min-width: 240px;
+}
+.ops-ws-tools .grow {
+  flex: 1;
+}
+.ops-ws-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.ops-ws-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ops-ws-table th {
+  text-align: left;
+  font-size: 12px;
+  padding: 6px;
+  white-space: nowrap;
+}
+.ops-ws-table td {
+  padding: 4px 6px;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+.ops-ws-table td input {
+  width: 100%;
+  font-size: 12px;
+}
+.ops-ws-table td.num {
+  text-align: center;
+}
+.ops-ws-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.ops-ws-unlisted td:first-child input {
+  font-style: italic;
+}
+.ops-ws-need {
+  border-color: var(--amber-ink, #b7791f) !important;
+}
+.ops-ws-bad {
+  border-color: var(--orange-ink) !important;
+}

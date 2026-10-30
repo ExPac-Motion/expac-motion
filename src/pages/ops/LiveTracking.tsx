@@ -20,6 +20,7 @@ import TrackMovements from "../../components/TrackMovements";
 import {
   aisRoute,
   buildRoute,
+  withLivePosition,
   routeEventsFromMovements,
   routeEventsFromRows,
   type TrackRoute,
@@ -317,13 +318,13 @@ function TrackMapModal({
   // Prefer the tracking_events rows; fall back to the legacy movements blob.
   const route = useMemo(
     () =>
-      ais ? aisRoute(ais) : buildRoute(
+      ais ? aisRoute(ais) : withLivePosition(buildRoute(
         events && events.length > 0
           ? routeEventsFromRows(events)
           : routeEventsFromMovements(tracking?.movements ?? []),
         { code: tracking?.pol ?? job.origin, lat: tracking?.pol_lat, lon: tracking?.pol_lon },
         { code: tracking?.pod ?? job.destination, lat: tracking?.pod_lat, lon: tracking?.pod_lon },
-      ),
+      ), tracking),
     [events, tracking, ais, job.origin, job.destination],
   );
   return (

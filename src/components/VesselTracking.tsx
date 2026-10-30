@@ -59,6 +59,42 @@ export function VesselFacts({ job, tracking }: { job: Job; tracking: JobTracking
   );
 }
 
+/** Customer-facing vessel tracking line (portal, /track): vessel, the
+ *  actual departure, the vessel's ETA, arrival and when it was last seen.
+ *  Nothing internal (no MMSI). */
+export function VesselSummary({
+  vessel,
+  voyage,
+  atd,
+  eta,
+  ata,
+  seenAt,
+}: {
+  vessel: string | null | undefined;
+  voyage: string | null | undefined;
+  atd: string | null | undefined;
+  eta: string | null | undefined;
+  ata: string | null | undefined;
+  seenAt: string | null | undefined;
+}) {
+  const rows: [string, string][] = [
+    ["Vessel / voyage", [vessel, voyage].filter((v) => (v ?? "").trim()).join(" / ") || "—"],
+    ["Departed (ATD)", atd ? formatDateTime(atd) : "—"],
+    [ata ? "Arrived (ATA)" : "Vessel ETA", ata ? formatDateTime(ata) : eta ? formatDateTime(eta) : "—"],
+  ];
+  if (seenAt && !ata) rows.push(["Last position", formatDateTime(seenAt)]);
+  return (
+    <div className="vt-summary">
+      {rows.map(([k, v]) => (
+        <div key={k}>
+          <span className="k">{k}</span>
+          <span className="v">{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Shipment page (Overview), Sea Freight: vessel, voyage and MMSI, and the
  * AIS tracking that follows from the MMSI when there is no container / BL
@@ -127,7 +163,7 @@ export default function VesselTrackingCard({ job }: { job: Job }) {
       <div className="ws-sec-head">
         <h3>Vessel tracking</h3>
         <div className="vt-actions">
-          {vessel && !editing && (
+          {/^\d{9}$/.test(job.vessel_mmsi ?? "") && !editing && (
             <button className="btn outline small" onClick={() => void checkNow()} disabled={checking}>
               {checking ? "Listening…" : "Check now"}
             </button>
@@ -160,10 +196,20 @@ export default function VesselTrackingCard({ job }: { job: Job }) {
           </label>
           <p className="hint">
             Find the MMSI on{" "}
-            <a href={vesselSearchUrl(form.vessel_name)} target="_blank" rel="noreferrer">
+            <a
+              href={
+                tracking?.vessel_imo
+                  ? `https://www.vesselfinder.com/vessels/details/${tracking.vessel_imo}`
+                  : vesselSearchUrl(form.vessel_name)
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
               VesselFinder
             </a>{" "}
-            (search the vessel name, check the IMO / flag match, copy its MMSI). Once per vessel.
+            ({tracking?.vessel_imo ? `opens IMO ${tracking.vessel_imo}` : "search the vessel name, check the IMO / flag match"},
+            copy its MMSI). Once per vessel: Motion remembers it for every later shipment on that ship (Settings ›
+            Operations).
             {!mmsiOk && <b className="vt-err"> An MMSI is 9 digits.</b>}
           </p>
           <div className="vt-foot">
@@ -178,13 +224,44 @@ export default function VesselTrackingCard({ job }: { job: Job }) {
       ) : shipsgo ? (
         <>
           <p className="hint">
-            Tracked on ShipsGo by {shipsgo.label.toLowerCase()} {shipsgo.value} (Control Tower › Live Tracking). Vessel
-            tracking is for sea shipments without a container or BL number.
+            Tracked on ShipsGo by {shipsgo.label.toLowerCase()} {shipsgo.value}: status, ETD / ETA and arrival come from
+            the carrier.{" "}
+            {mmsiOk && /^\d{9}$/.test(job.vessel_mmsi ?? "")
+              ? "The vessel's live AIS position is added on top."
+              : "Add the vessel's MMSI for its live position on the map (once per vessel, Motion remembers it)."}
           </p>
           <div className="jv-field">
             <span className="k">Vessel / voyage</span>
             <span className="v">{[job.vessel_name, job.voyage_no].filter((v) => (v ?? "").trim()).join(" / ") || "—"}</span>
           </div>
+          <div className="jv-field">
+            <span className="k">IMO / MMSI</span>
+            <span className="v">
+              {tracking?.vessel_imo ? (
+                <a href={`https://www.vesselfinder.com/vessels/details/${tracking.vessel_imo}`} target="_blank" rel="noreferrer">
+                  {tracking.vessel_imo}
+                </a>
+              ) : (
+                "—"
+              )}{" "}
+              / {job.vessel_mmsi || "—"}
+            </span>
+          </div>
+          {tracking?.ais_at && (
+            <div className="jv-field">
+              <span className="k">Live AIS position</span>
+              <span className="v">
+                {[
+                  formatDateTime(tracking.ais_at),
+                  typeof tracking.speed_kn === "number" ? `${tracking.speed_kn.toFixed(1)} kn` : null,
+                  tracking.nav_status,
+                  tracking.next_port ? `next port ${tracking.next_port}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </div>
+          )}
         </>
       ) : vessel ? (
         <>

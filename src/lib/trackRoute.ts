@@ -46,7 +46,8 @@ export interface TrackRoute {
   /** The leg in the air / at sea right now, with how far along it is. */
   moving: { leg: number; fraction: number } | null;
   /** Where the cargo is: on a stop, or estimated along the moving leg. */
-  position: { lat: number; lon: number; label: string; estimated: boolean; bearing: number } | null;
+  /** `live`: a real AIS fix (0205), kept over ShipsGo's own marker. */
+  position: { lat: number; lon: number; label: string; estimated: boolean; bearing: number; live?: boolean } | null;
 }
 
 const DEPARTURE = /^(DEP|DEPA|VD|VDL|DEPARTED|DEPARTURE)$/i;
@@ -290,6 +291,38 @@ export function aisRoute(t: {
     };
   }
   return route;
+}
+
+/**
+ * The live AIS fix (0205), on any tracked sea shipment the vessel is
+ * followed for: replaces the estimated marker, until arrival.
+ */
+export function withLivePosition(
+  route: TrackRoute,
+  t: {
+    ais_lat?: number | null;
+    ais_lon?: number | null;
+    ais_at?: string | null;
+    pod_ata?: string | null;
+    pod_lat?: number | null;
+    pod_lon?: number | null;
+    vessel_name?: string | null;
+  } | null | undefined,
+): TrackRoute {
+  if (!t || t.pod_ata || typeof t.ais_lat !== "number" || typeof t.ais_lon !== "number") return route;
+  const here = { lat: t.ais_lat, lon: t.ais_lon };
+  const pod = typeof t.pod_lat === "number" && typeof t.pod_lon === "number" ? { lat: t.pod_lat, lon: t.pod_lon } : null;
+  const seen = t.ais_at ? new Date(t.ais_at).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short" }) : "";
+  return {
+    ...route,
+    position: {
+      ...here,
+      label: `${t.vessel_name ?? "Vessel"}, live AIS position${seen ? ` ${seen}` : ""}`,
+      estimated: false,
+      live: true,
+      bearing: pod ? bearing(here, pod) : 90,
+    },
+  };
 }
 
 /** tracking_events rows (Motion, portal view, public RPC) -> route events. */

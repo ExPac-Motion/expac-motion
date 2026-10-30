@@ -116,7 +116,7 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
               const at: LL | null = seg.at ? unwrapLine([seg.at], pts[k][1])[0] : null;
               line(at ? [...pts.slice(0, k + 1), at] : pts.slice(0, k + 1), done);
               line(at ? [at, ...pts.slice(k + 1)] : pts.slice(k), todo);
-              if (at) {
+              if (at && !route.position?.live) {
                 const ahead = pts[Math.min(pts.length - 1, k + 1)];
                 pos = {
                   lat: at[0],

@@ -48,10 +48,10 @@ export interface TrackableRef {
  *  - AWB/MBL on a Sea job -> ocean (Bill of Lading)
  */
 export function trackableRef(job: Job): TrackableRef | null {
-  const container = (job.container_no ?? "").trim();
+  const container = realNumber(job.container_no);
   if (container) return { type: "ocean", value: container, label: "CONTAINER" };
 
-  const doc = (job.awb_mbl ?? "").trim();
+  const doc = realNumber(job.awb_mbl);
   if (!doc) return null;
 
   const mode = job.mode ?? "";
@@ -86,6 +86,18 @@ export function isTracked(job: Job): boolean {
 export function vesselSearchUrl(name: string | null | undefined): string {
   const q = (name ?? "").trim();
   return q ? `https://www.vesselfinder.com/vessels?name=${encodeURIComponent(q)}` : "https://www.vesselfinder.com/vessels";
+}
+
+/**
+ * A real container / BL / AWB number, not a placeholder typed while it's
+ * unknown ("-", "TBA", "N/A", "TBC 2026"): every real container, BL and
+ * AWB has at least 8 letters / digits, 5 of them digits. Same rule in
+ * functions/api/vessel-sync.ts and tracking-register.ts.
+ */
+export function realNumber(v: string | null | undefined): string {
+  const s = (v ?? "").trim();
+  const core = s.replace(/[^A-Za-z0-9]/g, "");
+  return core.length >= 8 && (core.match(/\d/g) || []).length >= 5 ? s : "";
 }
 
 /** Colour band for a tracking status pill: start | mid | done | alert. */

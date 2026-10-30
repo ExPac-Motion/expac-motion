@@ -1782,6 +1782,10 @@ export interface JobTracking {
   static_at?: string | null;
   speed_kn?: number | null;
   nav_status?: string | null;
+  /** Live AIS position, on ShipsGo shipments too (0205). */
+  ais_lat?: number | null;
+  ais_lon?: number | null;
+  ais_at?: string | null;
   /** ShipsGo's route, sailed / flown and to go (0202). */
   route_path: RoutePath | null;
   route_synced_at: string | null;
@@ -1834,6 +1838,12 @@ export interface ClientJobTracking {
   position_at: string | null;
   synced_at: string | null;
   route_path: RoutePath | null;
+  /** "ais" = vessel tracking (0204); its ATD (0205). */
+  provider?: string | null;
+  atd?: string | null;
+  ais_lat?: number | null;
+  ais_lon?: number | null;
+  ais_at?: string | null;
 }
 
 export interface ClientTrackingEvent {
@@ -1888,6 +1898,14 @@ export interface TrackedShipment {
   vessel_lon: number | null;
   position_at: string | null;
   route_path?: RoutePath | null;
+  /** Vessel tracking (0205): "ais", ATD, the vessel's ETA and ATA. */
+  provider?: string | null;
+  atd?: string | null;
+  pod_eta?: string | null;
+  pod_ata?: string | null;
+  ais_lat?: number | null;
+  ais_lon?: number | null;
+  ais_at?: string | null;
   etd: string | null;
   eta: string | null;
   last_event: string | null;
