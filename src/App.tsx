@@ -70,6 +70,7 @@ import PortalTasksPage from "./pages/portal/PortalTasksPage";
 import PortalRequestQuotePage from "./pages/portal/PortalRequestQuotePage";
 import PortalItemsPage from "./pages/portal/PortalItemsPage";
 import PortalReportsPage from "./pages/portal/PortalReportsPage";
+import PortalInfoHubPage from "./pages/portal/PortalInfoHubPage";
 import PartnerPortalPage from "./pages/partner/PartnerPortalPage";
 import PartnerSignupPage from "./pages/partner/PartnerSignupPage";
 import RestrictedAccountPage from "./pages/RestrictedAccountPage";
@@ -337,6 +338,7 @@ function AppRoutes() {
               }
             />
             <Route path="portal/reports" element={<PortalReportsPage />} />
+            <Route path="portal/hub" element={<PortalInfoHubPage />} />
             <Route path="portal/tasks" element={<PortalTasksPage />} />
             <Route
               path="portal/warehouse"

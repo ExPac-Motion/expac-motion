@@ -107,6 +107,7 @@ const EMOJI: Record<string, string> = {
   reports: "📈",
   tasks: "📝",
   warehouse: "🏭",
+  hub: "📚",
   calendar: "📅",
   plane: "✈️",
   ship: "🚢",
@@ -162,6 +163,7 @@ const NAV: NavItem[] = [
     ],
   },
   { to: "/portal/reports", label: "Reports", icon: "reports" },
+  { to: "/portal/hub", label: "Information Hub", icon: "hub" },
 ];
 
 function isActive(to: string, pathname: string): boolean {

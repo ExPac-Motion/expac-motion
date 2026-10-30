@@ -11443,3 +11443,69 @@ label.ws-tile:hover {
 .ops-ws-bad {
   border-color: var(--orange-ink) !important;
 }
+/* Portal › Information Hub: guides and presentations. */
+.pt-hub {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
+}
+.pt-hub-card {
+  background: var(--white, #fff);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pt-hub-cover {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #10263e;
+  overflow: hidden;
+}
+.pt-hub-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+.pt-hub-cover:hover img {
+  transform: scale(1.03);
+}
+.pt-hub-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.pt-hub-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-dark, #5f9a22);
+}
+.pt-hub-body h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.pt-hub-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  flex: 1;
+}
+.pt-hub-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.pt-hub-actions {
+  display: flex;
+  gap: 6px;
+}
