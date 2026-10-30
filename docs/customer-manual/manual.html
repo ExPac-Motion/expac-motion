@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ExPac Motion: Quote Request Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --navy: #10263e; --card: #1b3554; --card2: #22406a; --coral: #f0505f; --lime: #8dc63f;
+    --lime-dark: #5f9a22; --text: #ffffff; --muted: #b9c6d6; --line: rgba(255,255,255,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0b1b2d; }
+  body { font-family: "Red Hat Display", system-ui, sans-serif; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide { width: 1280px; height: 720px; background: var(--navy); position: relative; overflow: hidden; page-break-after: always; break-after: page; }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  /* the brochure's lime shards on the right edge */
+  .shards::before, .shards::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; }
+  .shards::before { width: 120px; background: var(--lime); clip-path: polygon(70% 0, 100% 0, 100% 100%, 40% 100%, 100% 55%, 55% 40%); opacity: .95; }
+  .shards::after { width: 230px; background: var(--lime-dark); clip-path: polygon(100% 62%, 100% 100%, 20% 100%); opacity: .9; }
+  .pad { position: absolute; inset: 0; padding: 62px 80px 50px 80px; }
+  .eyebrow { color: var(--lime); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; font-size: 15px; margin-bottom: 10px; }
+  h1 { font-size: 58px; line-height: 1.05; font-weight: 700; }
+  h2 { color: var(--coral); font-size: 42px; line-height: 1.12; font-weight: 700; margin-bottom: 26px; }
+  .lead { color: var(--muted); font-size: 20px; line-height: 1.5; }
+  .steps { list-style: none; display: grid; gap: 20px; }
+  .steps li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; }
+  .num { width: 34px; height: 34px; border-radius: 50%; background: var(--lime); color: var(--navy); font-weight: 800; font-size: 17px; display: grid; place-items: center; }
+  .steps b { display: block; font-size: 20px; font-weight: 600; margin-bottom: 3px; }
+  .steps span { color: var(--muted); font-size: 16px; line-height: 1.45; display: block; }
+  .two { display: grid; grid-template-columns: 330px 1fr; gap: 44px; height: 100%; align-items: center; }
+  .two.wide-text { grid-template-columns: 400px 1fr; }
+  /* browser frame around a screenshot */
+  .browser { background: #f4f1ea; border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,.45); overflow: hidden; position: relative; }
+  .browser .bar { height: 26px; background: #e9e5dc; display: flex; align-items: center; gap: 7px; padding-left: 12px; }
+  .browser .bar i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .browser .bar i:nth-child(1) { background: #f05f57; } .browser .bar i:nth-child(2) { background: #f8bd2e; } .browser .bar i:nth-child(3) { background: #2ac940; }
+  .browser .shot { position: relative; }
+  .browser img { display: block; width: 100%; }
+  .crop { overflow: hidden; }
+  .pin { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--coral); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; box-shadow: 0 0 0 4px rgba(240,80,95,.3), 0 4px 10px rgba(0,0,0,.35); }
+  .cards { display: grid; gap: 18px; }
+  .card { background: var(--card); border-radius: 14px; padding: 22px 22px 20px; }
+  .card .ico { width: 38px; height: 38px; border-radius: 50%; background: var(--lime); color: var(--navy); display: grid; place-items: center; font-weight: 800; font-size: 17px; margin-bottom: 14px; }
+  .card b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .card span { color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .tip { margin-top: 22px; background: rgba(141,198,63,.12); border-left: 4px solid var(--lime); border-radius: 0 10px 10px 0; padding: 12px 16px; color: #dfe9d2; font-size: 15px; line-height: 1.45; }
+  .tip b { color: var(--lime); }
+  .status { display: grid; grid-template-columns: 170px 1fr; gap: 10px 14px; font-size: 15px; align-items: center; }
+  .chip { border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: 13px; text-align: center; }
+  .chip.req { background: #fdf0d5; color: #8a5a00; } .chip.resp { background: #d9f1ee; color: #0b6b62; }
+  .chip.rev { background: #ece7fb; color: #5a3fb0; } .chip.acc { background: #dff2cf; color: #3d6e12; } .chip.closed { background: #e6e9ee; color: #4b5563; }
+  .status span { color: var(--muted); line-height: 1.4; }
+  .footer { position: absolute; left: 80px; bottom: 24px; font-size: 12px; color: #7d8ea6; letter-spacing: .04em; }
+  .pageno { position: absolute; right: 150px; bottom: 24px; font-size: 12px; color: #7d8ea6; }
+  .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 28px; }
+  .faq div { background: var(--card); border-radius: 12px; padding: 16px 18px; }
+  .faq b { display: block; font-size: 16px; margin-bottom: 6px; }
+  .faq span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+  .contact { list-style: none; display: grid; gap: 16px; margin-top: 30px; }
+  .contact li { display: flex; align-items: center; gap: 16px; font-size: 24px; font-weight: 600; }
+  .contact .num { width: 46px; height: 46px; font-size: 20px; }
+</style>
+</head>
+<body>
+
+<!-- 1. Cover -->
+<section class="slide shards">
+  <div class="pad" style="padding-top:70px">
+    <img src="img/logo-white.png" alt="ExPac" style="width:190px;margin-bottom:26px" />
+    <div class="eyebrow">ExPac Motion · Customer Portal</div>
+    <h1 style="max-width:560px">Quote Request<br />&amp; Portal Manual</h1>
+    <p style="color:var(--coral);font-size:26px;font-weight:600;margin:18px 0 16px">Request, approve and track, step by step</p>
+    <p class="lead" style="max-width:500px">How to request a quotation online, ask for a revision, accept it, add your shippers and follow every shipment, live.</p>
+  </div>
+  <div class="browser" style="position:absolute;left:600px;top:130px;width:600px">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <div class="shot"><img src="img/02-request-quote.jpg" alt="Request a Quote" /></div>
+  </div>
+</section>
+
+<!-- 2. Contents -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">What's inside</div>
+    <h2>Everything you need, from quote to delivery</h2>
+    <div class="cards" style="grid-template-columns:repeat(4,1fr);max-width:1060px">
+      <div class="card"><div class="ico">1</div><b>Getting started</b><span>Sign in and find your way around the dashboard.</span></div>
+      <div class="card"><div class="ico">2</div><b>Request a quote</b><span>Mode, route, cargo and addresses, in four steps.</span></div>
+      <div class="card"><div class="ico">3</div><b>Your quotations</b><span>Every quote in one list, with its status.</span></div>
+      <div class="card"><div class="ico">4</div><b>Ask for a revision</b><span>Tell us what to change, same quote number.</span></div>
+      <div class="card"><div class="ico">5</div><b>Accept or decline</b><span>One click books your shipment.</span></div>
+      <div class="card"><div class="ico">6</div><b>Add your shippers</b><span>Suppliers and their contacts, ready for bookings.</span></div>
+      <div class="card"><div class="ico">7</div><b>Track &amp; trace</b><span>Timeline, live map and email updates.</span></div>
+      <div class="card"><div class="ico">8</div><b>Documents &amp; chat</b><span>Upload, download and talk to our team.</span></div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">2</div>
+</section>
+
+<!-- 3. Getting started -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">1 · Getting started</div>
+        <h2>Sign in to your portal</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Open expac-motion.co.za</b><span>On a computer or phone, no app to install. Use the login link in your welcome email.</span></div></li>
+          <li><div class="num">2</div><div><b>Sign in</b><span>With the email and password you set up from our invite. No login yet? Ask us, or request access on the sign-in page.</span></div></li>
+          <li><div class="num">3</div><div><b>Start from the dashboard</b><span><b style="display:inline;font-size:16px">Request Quote</b> starts a new quotation; <b style="display:inline;font-size:16px">Waiting for you</b> shows what needs your attention.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/01-dashboard.jpg" alt="Dashboard" />
+          <span class="pin" style="left:93.5%;top:7.4%">3</span>
+          <span class="pin" style="left:44%;top:5.6%">!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">3</div>
+</section>
+
+<!-- 4. Before you request -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">2 · Request a quote</div>
+    <h2>Have these ready for an accurate price</h2>
+    <div class="cards" style="grid-template-columns:repeat(4,1fr);max-width:1060px">
+      <div class="card"><div class="ico">✈</div><b>Mode</b><span>Air, air consol, sea LCL or FCL, courier or road. Not sure? Pick the closest, we'll advise.</span></div>
+      <div class="card"><div class="ico">⇄</div><b>Route &amp; terms</b><span>Origin and destination (city, port or airport) and the Incoterm, e.g. FOB or EXW.</span></div>
+      <div class="card"><div class="ico">📅</div><b>Ready date</b><span>When the cargo can be collected from your supplier.</span></div>
+      <div class="card"><div class="ico">$</div><b>Goods value</b><span>Commercial value and currency, for insurance and duties.</span></div>
+      <div class="card"><div class="ico">▦</div><b>Cargo</b><span>Pieces, cartons, size per carton (L × W × H cm) and weight per carton.</span></div>
+      <div class="card"><div class="ico">⌂</div><b>Addresses</b><span>Your supplier's collection address and the delivery address.</span></div>
+      <div class="card"><div class="ico">#</div><b>Your reference</b><span>Your PO or order number, so the quote and shipment carry it.</span></div>
+      <div class="card"><div class="ico">!</div><b>Special notes</b><span>Hazardous, stackable, container sizes (FCL), customs clearance needed.</span></div>
+    </div>
+    <div class="tip" style="max-width:1060px"><b>Tip:</b> add your supplier under <b>Customer Party</b> first (section 6), so their details are on file for the quote and the booking.</div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">4</div>
+</section>
+
+<!-- 5. Request a quote -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">2 · Request a quote</div>
+        <h2>Request a quote in four steps</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>How should it move?</b><span>Go to <b style="display:inline;font-size:16px">Quotations › + Request Quote</b> and pick the mode.</span></div></li>
+          <li><div class="num">2</div><div><b>Route &amp; terms</b><span>Origin, destination, Incoterm, ready date, commodity, your PO and the goods value.</span></div></li>
+          <li><div class="num">3</div><div><b>Cargo</b><span>One line per carton size. <b style="display:inline;font-size:16px">+ Add line</b> for more; the chargeable weight is worked out for you.</span></div></li>
+          <li><div class="num">4</div><div><b>Addresses &amp; send</b><span>Collection and delivery addresses, any notes, then <b style="display:inline;font-size:16px">Request a Quote</b>.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/02-request-quote.jpg" alt="Request a Quote form" />
+          <span class="pin" style="left:51.8%;top:21%">1</span>
+          <span class="pin" style="left:32.2%;top:40.3%">2</span>
+          <span class="pin" style="left:27%;top:61.4%">3</span>
+          <span class="pin" style="left:88%;top:91.6%">4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">5</div>
+</section>
+
+<!-- 6. Quotations list -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two wide-text">
+      <div>
+        <div class="eyebrow">3 · Your quotations</div>
+        <h2>Every quotation, one list</h2>
+        <p class="lead" style="font-size:17px;margin-bottom:20px">Under <b>Quotations</b>. The ones waiting for your answer are highlighted at the top. Filter by status with the buttons above the list.</p>
+        <div class="status">
+          <div class="chip req">Requested</div><span>Received, our team is pricing it.</span>
+          <div class="chip rev">Revision requested</div><span>Your changes are with us.</span>
+          <div class="chip resp">Response available</div><span>Priced and ready: open it to accept, decline or revise.</span>
+          <div class="chip acc">Accepted</div><span>Booked, the shipment is under Shipments.</span>
+          <div class="chip closed">Closed</div><span>Declined or expired.</span>
+        </div>
+        <div class="tip"><b>You'll get an email</b> as soon as a quotation is ready, with a link straight to it.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/04-quotes-list.jpg" alt="Quotations list" /></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">6</div>
+</section>
+
+<!-- 7. Review -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">3 · Your quotations</div>
+        <h2>Review the quotation</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Open it</b><span>Click the quotation number: route, terms, packing list, every charge and the total incl. VAT.</span></div></li>
+          <li><div class="num">2</div><div><b>Download it</b><span><b style="display:inline;font-size:16px">Quotation document</b> gives you the PDF to share or file.</span></div></li>
+          <li><div class="num">3</div><div><b>Decide</b><span>Accept, decline or request a revision, from the buttons at the top.</span></div></li>
+        </ul>
+        <div class="tip"><b>Check "Valid until".</b> Rates are held until that date; after it, ask for a revision to re-price.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/05-quote-detail.jpg" alt="Quotation detail" />
+          <span class="pin" style="left:3.6%;top:4.7%">1</span>
+          <span class="pin" style="left:58%;top:17%">2</span>
+          <span class="pin" style="left:87.4%;top:17%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">7</div>
+</section>
+
+<!-- 8. Revision -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">4 · Ask for a revision</div>
+        <h2>Need something changed?</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Request a revision</b><span>On the open quotation, click <b style="display:inline;font-size:16px">Request a revision</b>.</span></div></li>
+          <li><div class="num">2</div><div><b>Tick what to change</b><span>Better price, route or mode, dates or transit time, cargo details, or other.</span></div></li>
+          <li><div class="num">3</div><div><b>Add a target and a note</b><span>Optional target price incl. VAT, and anything that helps us, then <b style="display:inline;font-size:16px">Request revision</b>.</span></div></li>
+        </ul>
+        <div class="tip"><b>Same quote number.</b> The revised quotation comes back as "Revision 2" in the same place, and by email.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/06-revision-modal.jpg" alt="Request a revision" />
+          <span class="pin" style="left:70%;top:17%">1</span>
+          <span class="pin" style="left:31.5%;top:36.5%">2</span>
+          <span class="pin" style="left:31.5%;top:56.5%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">8</div>
+</section>
+
+<!-- 9. Accept / decline -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">5 · Accept or decline</div>
+        <h2>Happy with it? Accept online</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Accept quotation</b><span>Check the total and route in the confirmation, then accept. We book your shipment straight away.</span></div></li>
+          <li><div class="num">2</div><div><b>Follow it under Shipments</b><span>The accepted quote becomes a shipment with the same number, e.g. SEA616004.</span></div></li>
+          <li><div class="num">3</div><div><b>Not going ahead?</b><span><b style="display:inline;font-size:16px">Decline</b> and, if you like, tell us why: price, timing, another option.</span></div></li>
+        </ul>
+        <div class="tip"><b>Changed your mind?</b> A declined quotation that is still valid can be accepted after all, from the same screen.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/07-accept-modal.jpg" alt="Accept quotation" />
+          <span class="pin" style="left:69.8%;top:56%">1</span>
+          <span class="pin" style="left:78.8%;top:17%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">9</div>
+</section>
+
+<!-- 10. Shippers -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">6 · Add your shippers</div>
+        <h2>Keep your suppliers on file</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Customer Party</b><span>In the menu. Every shipper you've used is listed, with their shipments.</span></div></li>
+          <li><div class="num">2</div><div><b>+ Add shipper</b><span>Company name, contact person, email, phone, VAT / tax number and address, then <b style="display:inline;font-size:16px">Add shipper</b>.</span></div></li>
+          <li><div class="num">3</div><div><b>Keep it current</b><span><b style="display:inline;font-size:16px">Edit</b> on a card to update details; <b style="display:inline;font-size:16px">View shipments</b> lists everything from that supplier.</span></div></li>
+        </ul>
+        <div class="tip"><b>Why it helps:</b> we use these details on your quotations, bookings and documents, so collections go to the right place first time.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/13-add-shipper.jpg" alt="Add a shipper" />
+          <span class="pin" style="left:18.1%;top:35.4%">1</span>
+          <span class="pin" style="left:87.2%;top:12.4%">2</span>
+          <span class="pin" style="left:41.2%;top:18.5%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">10</div>
+</section>
+
+<!-- 11. Shipment timeline -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">7 · Track &amp; trace</div>
+        <h2>Follow every shipment</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Shipments</b><span>All your active shipments; filter by mode or status, or search any AWB, B/L, container or PO.</span></div></li>
+          <li><div class="num">2</div><div><b>The timeline</b><span>Open one: every step from Created to Delivered, each dated as it happens.</span></div></li>
+          <li><div class="num">3</div><div><b>All the details</b><span>Vessel or flight, ports, ETD / ETA, delivery date, cargo and the quotation behind it.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/09-shipment-detail.jpg" alt="Shipment timeline" />
+          <span class="pin" style="left:5.5%;top:17.7%">1</span>
+          <span class="pin" style="left:46%;top:27%">2</span>
+          <span class="pin" style="left:24%;top:66%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">11</div>
+</section>
+
+<!-- 12. Live tracking -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">7 · Track &amp; trace</div>
+        <h2 style="font-size:36px">Live tracking, online and by email</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Live map</b><span>The route, the ship's position and each port on the way.</span></div></li>
+          <li><div class="num">2</div><div><b>Latest update</b><span>The most recent carrier event, with date and vessel.</span></div></li>
+          <li><div class="num">3</div><div><b>Every movement</b><span>Loaded, departed, arrived, discharged: confirmed or planned.</span></div></li>
+        </ul>
+        <div class="tip"><b>On the move?</b> Our shipment update emails include a <b>Live Tracking</b> button that opens this view, no login needed. Reply to the email and it reaches our team on that shipment.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/10-live-tracking.jpg" alt="Live tracking" />
+          <span class="pin" style="left:62%;top:30%">1</span>
+          <span class="pin" style="left:17.6%;top:50.6%">2</span>
+          <span class="pin" style="left:17.6%;top:61.2%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">12</div>
+</section>
+
+<!-- 13. Documents & chat -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">8 · Documents &amp; chat</div>
+    <h2>Documents and a direct line to our team</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px;max-width:1060px">
+      <div>
+        <div class="browser" style="margin-bottom:18px"><div class="bar"><i></i><i></i><i></i></div><div class="shot"><img src="img/11-shipment-documents.jpg" alt="Shipment documents" /></div></div>
+        <ul class="steps" style="gap:12px">
+          <li><div class="num">1</div><div><b>Shipment documents</b><span>Download ours (invoices, bills, delivery notes) and upload yours (commercial invoice, packing list) on the shipment.</span></div></li>
+        </ul>
+      </div>
+      <div>
+        <div class="browser" style="margin-bottom:18px"><div class="bar"><i></i><i></i><i></i></div><div class="shot"><img src="img/16-chat.jpg" alt="Chat with ExPac" /></div></div>
+        <ul class="steps" style="gap:12px">
+          <li><div class="num">2</div><div><b>Chat with ExPac</b><span>The <b style="display:inline;font-size:16px">Chat</b> button, bottom right of every page: a general question or one about a shipment.</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">13</div>
+</section>
+
+<!-- 14. Quick answers -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">Quick answers</div>
+    <h2>Good to know</h2>
+    <div class="faq" style="max-width:1060px">
+      <div><b>How long does a quote take?</b><span>Our team prices requests during business hours. You're emailed as soon as it's ready.</span></div>
+      <div><b>I'm not sure of the Incoterm or mode.</b><span>Choose "Not sure" or the closest mode and say so in the notes; we'll advise the best option.</span></div>
+      <div><b>Full container (FCL)?</b><span>Cargo lines are optional: put the container sizes in the notes, e.g. 2 × 40HC.</span></div>
+      <div><b>Can I change a quote after sending it?</b><span>Yes: once it's priced, use Request a revision. Before that, message us on Chat.</span></div>
+      <div><b>Where's my accepted quote?</b><span>Under Shipments, with the same number. Its timeline starts at Booked.</span></div>
+      <div><b>Does the portal work on my phone?</b><span>Yes, in any phone browser. The menu folds away and everything stacks.</span></div>
+      <div><b>Can colleagues use it too?</b><span>Yes, ask us for a login per person; each sees your company's quotes and shipments.</span></div>
+      <div><b>What do the dates on tracking mean?</b><span>Ticked steps are confirmed with their date; "Expected" dates are the current plan and update as the shipment moves.</span></div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Quote Request &amp; Portal Manual</div><div class="pageno">14</div>
+</section>
+
+<!-- 15. Thank you -->
+<section class="slide shards">
+  <div class="pad" style="padding-top:110px">
+    <img src="img/logo-white.png" alt="ExPac" style="width:190px;margin-bottom:22px" />
+    <h1 style="font-size:76px">Thank you!</h1>
+    <p style="color:var(--coral);font-size:28px;font-weight:600;margin:14px 0 10px">Let's get your shipments moving.</p>
+    <p class="lead" style="max-width:520px">Questions, a portal login for a colleague, or a walk-through with your own shipments: we're a message away.</p>
+    <ul class="contact">
+      <li><span class="num">☎</span>+27 11 568 8281</li>
+      <li><span class="num">✉</span>support@expac.co.za</li>
+      <li><span class="num">⌁</span>expac-motion.co.za</li>
+    </ul>
+  </div>
+  <div style="position:absolute;right:0;top:0;width:560px;height:720px;background:url(img/brochure-p17.png) right center / auto 100% no-repeat"></div>
+</section>
+
+</body>
+</html>
