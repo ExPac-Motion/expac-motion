@@ -486,6 +486,9 @@ export default function PortalShipmentPage() {
                 eta={ais.pod_eta}
                 ata={ais.pod_ata}
                 seenAt={ais.position_at}
+                departedOn={tl.find((s) => s.step === "Departed" && s.done)?.actual_date}
+                plannedEtd={job.etd}
+                plannedEta={job.eta}
               />
             ) : (
               <TrackMovements route={trkRoute} />

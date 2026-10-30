@@ -183,6 +183,9 @@ function PublicRoute({ result }: { result: TrackedShipment }) {
           eta={result.pod_eta}
           ata={result.pod_ata}
           seenAt={result.position_at}
+          departedOn={result.timeline?.find((s) => s.step === "Departed" && s.done)?.actual_date}
+          plannedEtd={result.etd}
+          plannedEta={result.eta}
         />
       ) : (
         <TrackMovements route={route} />

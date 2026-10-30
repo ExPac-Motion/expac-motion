@@ -309,14 +309,26 @@ function update(job, prev, news, now) {
       nav_status: NAV_TEXT[pos.nav] || null,
     });
 
+    const afterEtd = job.etd && at.slice(0, 10) >= job.etd;
     if (!row.atd) {
       if (dPol <= POL_KM) row.pol_seen_at = at;
       else if (row.pol_seen_at && pos.sog !== null && pos.sog >= UNDERWAY_KN) {
         row.atd = row.pol_seen_at;
         marks.push({ step: "Departed", at: row.atd });
+      } else if (!row.pol_seen_at && afterEtd && dPod > POD_KM) {
+        // Tracking started after the ship sailed: first seen at sea, past
+        // the ETD and clearly on its way to our port (its AIS destination,
+        // or nearer the port of discharge than the port of loading). The
+        // real departure time is unknown: the planned ETD stands in, and
+        // the history line says so. Not while it may still be heading TO
+        // the port of loading.
+        const dest = (news && news.stat && news.stat.destination) || (prev && prev.next_port);
+        if (isPod(dest, job) || dPod < dPol) {
+          row.atd = `${job.etd}T10:00:00Z`;
+          marks.push({ step: "Departed", at: row.atd, estimated: true });
+        }
       }
     }
-    const afterEtd = job.etd && at.slice(0, 10) >= job.etd;
     if (!row.pod_ata && dPod <= POD_KM && stopped && (row.atd || afterEtd)) {
       row.pod_ata = at;
       marks.push({ step: "Arrived", at });
@@ -407,7 +419,7 @@ export async function onRequestPost(context) {
   const ids = jobs.map((j) => j.id);
   const prevRows = await sbJson(
     env,
-    `/rest/v1/job_tracking?select=job_id,provider,atd,pol_seen_at,pod_ata,vessel_name,carrier&job_id=in.(${ids.join(",")})`,
+    `/rest/v1/job_tracking?select=job_id,provider,atd,pol_seen_at,pod_ata,vessel_name,carrier,next_port&job_id=in.(${ids.join(",")})`,
   );
   const prevByJob = new Map(prevRows.map((r) => [r.job_id, r]));
   // A container / BL means ShipsGo is in charge (registered by
@@ -473,6 +485,18 @@ export async function onRequestPost(context) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ p_job: m.job, p_step: m.step, p_at: m.at }),
     });
+    if (m.estimated) {
+      const job = tracked.find((j) => j.id === m.job);
+      await sbJson(env, "/rest/v1/job_events", {
+        method: "POST",
+        headers: { "content-type": "application/json", prefer: "return=minimal" },
+        body: JSON.stringify({
+          job_id: m.job,
+          milestone: job ? job.milestone : null,
+          note: "Vessel tracking (AIS): the ship was first seen already at sea, so Departed is set to the planned ETD (actual time unknown)",
+        }),
+      });
+    }
   }
 
   // ETD / ETA onto the quotation (its trigger, 0198, copies them to the

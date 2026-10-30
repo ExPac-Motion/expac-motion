@@ -581,6 +581,8 @@ export function useRefreshTracking() {
       // Same event rows the webhook writes, so the map + movements fill in
       // straight away instead of waiting for ShipsGo's next push.
       await db.upsertTrackingEvents(trackingEventRowsFrom(input.job.id, normalised));
+      // Shipment progress follows the confirmed events (0206).
+      await supabase.rpc("timeline_from_tracking", { p_job: input.job.id });
       return row;
     },
     onSuccess: () => {

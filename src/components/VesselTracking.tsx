@@ -69,6 +69,9 @@ export function VesselSummary({
   eta,
   ata,
   seenAt,
+  departedOn,
+  plannedEtd,
+  plannedEta,
 }: {
   vessel: string | null | undefined;
   voyage: string | null | undefined;
@@ -76,11 +79,28 @@ export function VesselSummary({
   eta: string | null | undefined;
   ata: string | null | undefined;
   seenAt: string | null | undefined;
+  /** The timeline's Departed date, when AIS didn't see the ship leave. */
+  departedOn?: string | null;
+  /** The shipment's ETD / ETA, shown as planned until AIS has better. */
+  plannedEtd?: string | null;
+  plannedEta?: string | null;
 }) {
+  const departed = atd
+    ? formatDateTime(atd)
+    : departedOn
+      ? formatDate(departedOn)
+      : plannedEtd
+        ? `${formatDate(plannedEtd)} (planned)`
+        : "—";
+  const arrival: [string, string] = ata
+    ? ["Arrived (ATA)", formatDateTime(ata)]
+    : eta
+      ? ["Vessel ETA", formatDateTime(eta)]
+      : ["ETA", plannedEta ? `${formatDate(plannedEta)} (planned)` : "—"];
   const rows: [string, string][] = [
     ["Vessel / voyage", [vessel, voyage].filter((v) => (v ?? "").trim()).join(" / ") || "—"],
-    ["Departed (ATD)", atd ? formatDateTime(atd) : "—"],
-    [ata ? "Arrived (ATA)" : "Vessel ETA", ata ? formatDateTime(ata) : eta ? formatDateTime(eta) : "—"],
+    [atd || departedOn ? "Departed (ATD)" : "Departed", departed],
+    arrival,
   ];
   if (seenAt && !ata) rows.push(["Last position", formatDateTime(seenAt)]);
   return (

@@ -629,5 +629,20 @@ async function applyToJob(env, found, n, payload, routePath) {
   if (eventRows.length) {
     await sbUpsert(env, "tracking_events", eventRows, "job_id,provider,provider_event_id");
   }
+  // Shipment progress follows the confirmed events (0206): Loaded,
+  // Departed / In Transit, Arrived / Unloaded at the port of discharge.
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/timeline_from_tracking`, {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ p_job: jobId }),
+    });
+  } catch {
+    /* before 0206, or a hiccup: the next update catches up */
+  }
   return eventRows.length;
 }
