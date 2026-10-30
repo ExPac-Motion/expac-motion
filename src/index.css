@@ -11509,3 +11509,13 @@ label.ws-tile:hover {
   display: flex;
   gap: 6px;
 }
+/* Active Shipments: sea shipments not tracking yet (beside At risk). */
+.btn.outline.notrack {
+  border-color: var(--teal-ink);
+  color: var(--teal-ink);
+}
+.btn.notrack-on {
+  background: var(--teal-ink);
+  border-color: var(--teal-ink);
+  color: #fff;
+}

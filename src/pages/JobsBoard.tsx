@@ -362,7 +362,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   // The record filter (At risk, chips from Control Tower) is in the address
   // too (?f=), so Back keeps it.
-  type RecordFilter = "nostatus" | "notracking" | "atrisk" | "uninvoiced";
+  type RecordFilter = "nostatus" | "notracking" | "atrisk" | "uninvoiced" | "seanotrack";
   const recordFilter = (params.get("f") as RecordFilter | null) || null;
   const setRecordFilter = (v: RecordFilter | null) => setParam("f", v ?? "");
 
@@ -515,7 +515,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           ? modeRows.filter((j) => !j.invoiced_at)
           : recordFilter === "atrisk"
           ? modeRows.filter((j) => etaUrgency(j, openTaskJobIds.has(j.id)) === "risk")
+          : recordFilter === "seanotrack"
+          ? modeRows.filter(seaNotTracked)
           : modeRows;
+  // Sea shipments neither live tracking method can follow yet: no real
+  // container / BL for ShipsGo and no vessel MMSI for AIS (0204, 0205).
+  function seaNotTracked(j: Job) {
+    return (j.mode ?? "").startsWith("Sea") && !isTracked(j) && !/^\d{9}$/.test((j.vessel_mmsi ?? "").trim());
+  }
+  const seaNotTrackedCount = mode === "active" ? modeRows.filter(seaNotTracked).length : 0;
   const atRiskCount =
     mode === "active"
       ? modeRows.filter((j) => etaUrgency(j, openTaskJobIds.has(j.id)) === "risk")
@@ -900,7 +908,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                     ? "shipments not yet invoiced"
                     : recordFilter === "atrisk"
                       ? "at-risk shipments (ETA ≤5 days, work outstanding)"
-                      : "shipments without a tracking no."}
+                      : recordFilter === "seanotrack"
+                        ? "sea shipments not tracking yet (no container / BL, no vessel MMSI)"
+                        : "shipments without a tracking no."}
               </strong>{" "}
               ·{" "}
               <button className="link-btn" onClick={() => setRecordFilter(null)}>
@@ -926,6 +936,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
             title="ETA within 5 days (or passed) with an open task or not yet cleared"
           >
             At risk ({atRiskCount})
+          </button>
+        )}
+        {mode === "active" && (
+          <button
+            className={`btn ${recordFilter === "seanotrack" ? "notrack-on" : "outline notrack"}`}
+            onClick={() => setRecordFilter(recordFilter === "seanotrack" ? null : "seanotrack")}
+            title="Sea shipments with no container / BL number for ShipsGo and no vessel MMSI for AIS: add one of them to start live tracking"
+          >
+            🚢 Not tracking ({seaNotTrackedCount})
           </button>
         )}
         <button
