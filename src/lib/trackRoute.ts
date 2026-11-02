@@ -255,6 +255,7 @@ export function aisRoute(t: {
   pod_lat: number | null;
   pod_lon: number | null;
   atd?: string | null;
+  etd?: string | null;
   pod_ata: string | null;
   pod_eta: string | null;
   eta: string | null;
@@ -265,20 +266,27 @@ export function aisRoute(t: {
   position_at: string | null;
 }): TrackRoute {
   const via = { via: t.vessel_name, voyage: t.voyage };
-  const events: RouteEvent[] = [
-    { code: "DEP", place: t.pol, placeCode: t.pol, lat: t.pol_lat, lon: t.pol_lon, at: t.atd ?? null, actual: !!t.atd, ...via },
-    {
-      code: "ARR",
-      place: t.pod,
-      placeCode: t.pod,
-      lat: t.pod_lat,
-      lon: t.pod_lon,
-      at: t.pod_ata ?? t.pod_eta ?? t.eta,
-      actual: !!t.pod_ata,
-      ...via,
-    },
-  ];
-  const route = buildRoute(events);
+  const arrival: RouteEvent = {
+    code: "ARR",
+    place: t.pod,
+    placeCode: t.pod,
+    lat: t.pod_lat,
+    lon: t.pod_lon,
+    at: t.pod_ata ?? t.pod_eta ?? t.eta,
+    actual: !!t.pod_ata,
+    ...via,
+  };
+  // buildRoute orders by date and puts undated events last: before the ship
+  // is seen leaving, the planned ETD dates the departure, and with no date
+  // at all the port of loading goes in as the route's start instead, so it
+  // never ends up after the port of discharge.
+  const depAt = t.atd ?? t.etd ?? null;
+  const route = depAt
+    ? buildRoute([
+        { code: "DEP", place: t.pol, placeCode: t.pol, lat: t.pol_lat, lon: t.pol_lon, at: depAt, actual: !!t.atd, ...via },
+        arrival,
+      ])
+    : buildRoute([arrival], { code: t.pol, lat: t.pol_lat, lon: t.pol_lon });
   if (!t.pod_ata && typeof t.vessel_lat === "number" && typeof t.vessel_lon === "number") {
     const here = { lat: t.vessel_lat, lon: t.vessel_lon };
     const pod = typeof t.pod_lat === "number" && typeof t.pod_lon === "number" ? { lat: t.pod_lat, lon: t.pod_lon } : null;
