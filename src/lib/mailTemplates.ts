@@ -450,7 +450,8 @@ export function shipmentEmailHtml(
     body = insertAfterLabelLine(
       body,
       TRACKING_ANCHOR_LABEL,
-      emailButtonHtml(trackingUrl(entity), "ExPac Motion Live Tracking"),
+      // As wide as the "Provisional Delivery Date:" label above it.
+      emailButtonHtml(trackingUrl(entity), "Live Tracking", undefined, 172),
     );
   }
   // Plain text in the house font, no logo image (it rendered as a broken

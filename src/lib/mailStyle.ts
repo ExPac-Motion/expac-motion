@@ -34,18 +34,23 @@ export function emailButtonHtml(
   href: string,
   label: string,
   color = "#719d2f",
+  fixedWidth?: number,
 ): string {
-  // VML needs a fixed width: roughly the bold label plus the padding.
-  const width = Math.round(label.length * 8.6 + 44);
+  // VML needs a fixed width: the one asked for, else roughly the bold
+  // label plus the padding.
+  const width = fixedWidth ?? Math.round(label.length * 8.6 + 44);
   const mso =
     `<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" ` +
     `href="${href}" style="height:40px;v-text-anchor:middle;width:${width}px" arcsize="15%" stroke="f" fillcolor="${color}">` +
     `<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">${label}</center>` +
     `</v:roundrect><![endif]-->`;
+  const size = fixedWidth
+    ? `width:${fixedWidth}px;box-sizing:border-box;text-align:center;padding:10px 0;`
+    : "padding:10px 20px;";
   const link =
     `<a href="${href}" style="display:inline-block;background:${color};` +
     `color:#fff;font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};` +
-    `font-weight:700;text-decoration:none;padding:10px 20px;border-radius:6px;` +
+    `font-weight:700;text-decoration:none;${size}border-radius:6px;` +
     `margin:4px 12px 4px 0">${label}</a>`;
   return `${mso}<!--[if !mso]><!-- -->${link}<!--<![endif]-->`;
 }
