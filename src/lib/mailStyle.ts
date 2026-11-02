@@ -131,8 +131,10 @@ export function emailProgressHtml(current: number, href: string, width = 600): s
   const cells = PROGRESS_STEPS.map((label, i) => {
     const done = i < current;
     const now = i === current;
+    // Every milestone reached (the current one too) gets a ✓; the ones
+    // still to come keep their number.
     const circle = progressCircle(
-      done ? "&#10003;" : String(i + 1),
+      done || now ? "&#10003;" : String(i + 1),
       done || now ? PROGRESS_TEAL : "#ffffff",
       done || now ? PROGRESS_TEAL : PROGRESS_GREY,
       done || now ? "#ffffff" : PROGRESS_MUTED,
@@ -186,7 +188,7 @@ export function signatureBannerWidth(signatureHtml?: string | null): number {
 export function emailProgressText(current: number): string {
   return (
     "Progress: " +
-    PROGRESS_STEPS.map((s, i) => (i < current ? `${s} ✓` : i === current ? `${s} (now)` : s)).join(" > ")
+    PROGRESS_STEPS.map((s, i) => (i < current ? `${s} ✓` : i === current ? `${s} ✓ (now)` : s)).join(" > ")
   );
 }
 
