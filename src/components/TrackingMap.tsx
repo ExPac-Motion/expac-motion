@@ -89,7 +89,18 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
         const L = (await import("leaflet")).default;
         if (cancelled || !boxRef.current) return;
 
-        map = L.map(boxRef.current, { scrollWheelZoom: false, attributionControl: true, worldCopyJump: true });
+        // Dragging stops at the world's top and bottom edges (no grey band
+        // past the poles); left / right wraps round as before.
+        map = L.map(boxRef.current, {
+          scrollWheelZoom: false,
+          attributionControl: true,
+          worldCopyJump: true,
+          maxBounds: [
+            [-85, -100000],
+            [85, 100000],
+          ],
+          maxBoundsViscosity: 1,
+        });
         // Esri World Street Map: English labels everywhere (the standard OSM
         // tiles name each country in its own script). Note the {y}/{x} order.
         L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
@@ -251,8 +262,13 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
         // opening, a hidden tab shown), else a map laid out at 0 x 0 keeps a
         // wild zoom.
         const frame = () => {
-          if (!map) return;
+          if (!map || !boxRef.current) return;
           map.invalidateSize();
+          // Never zoom out past the point where the world (256px tall at
+          // zoom 0, doubling each level) fills the box: on a narrow phone
+          // fitBounds would otherwise go so far out that grey shows above
+          // and below the map.
+          map.setMinZoom(Math.max(1, Math.ceil(Math.log2(boxRef.current.clientHeight / 256))));
           if (bounds.length === 1) map.setView(bounds[0], 5);
           else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 6 });
         };

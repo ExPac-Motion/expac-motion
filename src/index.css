@@ -4957,6 +4957,13 @@ select.badge-select.lost {
   overflow: hidden;
   z-index: 0; /* keep Leaflet panes under app modals/menus */
 }
+/* Phones: a shorter map (the pages set up to 520px inline), so it doesn't
+   fill the screen and the route stays framed. */
+@media (max-width: 600px) {
+  .trk-map {
+    height: 340px !important;
+  }
+}
 .trk-map-empty {
   width: 100%;
   border: 1px dashed var(--line);
