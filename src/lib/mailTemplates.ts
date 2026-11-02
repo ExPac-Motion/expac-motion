@@ -451,7 +451,7 @@ export function shipmentEmailHtml(
       body,
       TRACKING_ANCHOR_LABEL,
       // As wide as the "Provisional Delivery Date:" label above it.
-      emailButtonHtml(trackingUrl(entity), "Live Tracking", undefined, 172),
+      emailButtonHtml(trackingUrl(entity), "ExPac Live Tracking", undefined, 172),
     );
   }
   // Plain text in the house font, no logo image (it rendered as a broken

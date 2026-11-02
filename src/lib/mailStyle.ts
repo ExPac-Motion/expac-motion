@@ -42,7 +42,7 @@ export function emailButtonHtml(
   const mso =
     `<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" ` +
     `href="${href}" style="height:40px;v-text-anchor:middle;width:${width}px" arcsize="15%" stroke="f" fillcolor="${color}">` +
-    `<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">${label}</center>` +
+    `<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:${fixedWidth ? 14 : 15}px;font-weight:bold">${label}</center>` +
     `</v:roundrect><![endif]-->`;
   const size = fixedWidth
     ? `width:${fixedWidth}px;box-sizing:border-box;text-align:center;padding:10px 0;`
