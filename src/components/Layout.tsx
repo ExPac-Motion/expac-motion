@@ -5,6 +5,8 @@ import { useAuth } from "../auth/AuthProvider";
 import { isVaultOwner } from "../lib/flags";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewActive, setPortalPreview } from "../lib/db";
+import { formatDateTime } from "../lib/format";
+import { healthProblems, useSystemHealth } from "../lib/systemHealth";
 import { useCan, useInboxUnread, useLiveSync, useMyProfile, useNavCounts } from "../lib/hooks";
 import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
@@ -355,8 +357,33 @@ export default function Layout() {
 
       <main className={`main${activeModule?.children ? " has-subnav" : ""}`}>
         {previewActive(profileQ.data) && <MotionPreviewBanner />}
+        {profileQ.data?.role === "admin" && <SystemHealthBanner />}
         <Outlet />
       </main>
+    </div>
+  );
+}
+
+/**
+ * Admins: a background job (inbox, vessel positions, tracking, Sage) or the
+ * notification emails failing (0207), so it's noticed in minutes, not weeks.
+ * Hidden when all is well, or before 0207 is applied.
+ */
+function SystemHealthBanner() {
+  const { pathname, search } = useLocation();
+  const problems = healthProblems(useSystemHealth().data);
+  if (problems.length === 0 || (pathname === "/settings" && search.includes("tab=health"))) return null;
+  const [first, ...rest] = problems;
+  return (
+    <div className="health-banner" role="alert">
+      <span>
+        ⚠ <b>{first.label}</b>
+        {first.since ? ` failing since ${formatDateTime(first.since)}` : " failing"}: {first.detail}
+        {rest.length > 0 && ` (+${rest.length} more)`}
+      </span>
+      <Link to="/settings?tab=health" className="btn outline btn-sm">
+        View System health
+      </Link>
     </div>
   );
 }

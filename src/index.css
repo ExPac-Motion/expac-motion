@@ -10261,6 +10261,84 @@ th.sage-num {
 }
 
 /* Admin portal preview banner (0167) */
+/* System health (0207): Admin banner when a background job or the
+   notification emails fail, and Settings › System health. */
+.health-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--orange-tint);
+  border: 1px solid var(--orange);
+  color: var(--orange-ink);
+  font-size: 0.86rem;
+}
+.health-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.health-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+.health-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 700;
+}
+.health-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  white-space: normal; /* details are sentences; app tables default to nowrap */
+}
+.health-table td:last-child {
+  white-space: nowrap;
+}
+.health-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.health-pill.ok {
+  background: #e6f2d6;
+  color: var(--green-dark, #5e8a24);
+}
+.health-pill.bad {
+  background: var(--orange-tint);
+  color: var(--orange-ink);
+}
+.health-sub {
+  margin: 22px 0 8px;
+  font-size: 0.95rem;
+}
+.health-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.84rem;
+}
+.health-log li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
 .pt-preview-banner {
   display: flex;
   align-items: center;

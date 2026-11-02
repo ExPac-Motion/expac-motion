@@ -56,6 +56,7 @@ import {
 } from "../lib/permissions";
 import SageSettingsTab from "./SageSettingsTab";
 import OperationsSettingsTab from "./OperationsSettingsTab";
+import SystemHealthTab from "./SystemHealthTab";
 
 type Tab =
   | "company"
@@ -68,7 +69,8 @@ type Tab =
   | "qcomms"
   | "qreplies"
   | "operations"
-  | "sage";
+  | "sage"
+  | "health";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company Details" },
@@ -82,6 +84,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "qreplies", label: "Quotation Replies" },
   { key: "operations", label: "Operations" },
   { key: "sage", label: "Sage Accounting" },
+  { key: "health", label: "System health" },
 ];
 
 export default function SettingsPage() {
@@ -114,6 +117,7 @@ export default function SettingsPage() {
         {tab === "qreplies" && <QuotationRepliesTab />}
         {tab === "operations" && <OperationsSettingsTab />}
         {tab === "sage" && <SageSettingsTab />}
+        {tab === "health" && <SystemHealthTab />}
       </div>
     </>
   );
