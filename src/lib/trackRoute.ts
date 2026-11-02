@@ -304,7 +304,7 @@ export function aisRoute(t: {
     const seen = t.position_at ? new Date(t.position_at).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short" }) : "";
     route.position = {
       ...here,
-      label: `${t.vessel_name ?? "Vessel"}, last AIS position${seen ? ` ${seen}` : ""}`,
+      label: `${t.vessel_name ?? "Vessel"}, last position${seen ? ` ${seen}` : ""}`,
       estimated: false,
       live: true,
       seenAt: t.position_at,
@@ -327,7 +327,7 @@ export function aisRoute(t: {
       route.moving = { leg: 0, fraction };
       route.position = {
         ...p,
-        label: `${t.vessel_name ?? "Vessel"}, estimated position (no live AIS signal yet)`,
+        label: `${t.vessel_name ?? "Vessel"}, estimated position`,
         estimated: true,
         bearing: bearing(p, along(a, b, Math.min(1, fraction + 0.01))),
       };
@@ -361,7 +361,7 @@ export function withLivePosition(
     ...route,
     position: {
       ...here,
-      label: `${t.vessel_name ?? "Vessel"}, live AIS position${seen ? ` ${seen}` : ""}`,
+      label: `${t.vessel_name ?? "Vessel"}, live position${seen ? ` ${seen}` : ""}`,
       estimated: false,
       live: true,
       seenAt: t.ais_at ?? null,

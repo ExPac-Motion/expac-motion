@@ -128,7 +128,7 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
                 pos = {
                   lat: at[0],
                   lon: at[1],
-                  label: kind === "air" ? "Flight position (ShipsGo)" : "Vessel position (ShipsGo)",
+                  label: kind === "air" ? "Flight position" : "Vessel position",
                   estimated: false,
                   bearing: bearing({ lat: at[0], lon: at[1] }, { lat: ahead[0], lon: ahead[1] }),
                 };
@@ -205,18 +205,11 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
           const named = route.stops.flatMap((s) => s.events).filter((e) => (e.via ?? "").trim());
           const via = named[named.length - 1];
           const name = via?.via?.trim() || "";
-          const source = pos.estimated
-            ? "Estimated from the departure and ETA dates"
-            : pos.live
-              ? "AIS signal from the ship"
-              : path?.length
-                ? "Carrier tracking (ShipsGo)"
-                : "Last carrier event";
+          // No tracking source named (ShipsGo, AIS): customers see these maps.
           const rows = [
             ["Status", `<span class="trk-pop-state ${state}">${esc(pos.estimated ? "Estimated" : "Live")}</span>`],
             pos.seenAt ? ["Last update", esc(formatDateTime(pos.seenAt))] : null,
             typeof pos.speedKn === "number" ? ["Speed", `${pos.speedKn.toFixed(1)} kn`] : null,
-            ["Source", esc(source)],
           ].filter((r): r is string[] => !!r);
           const popup =
             `<div class="trk-pop-vessel"><b>${esc(name || title)}</b>` +
