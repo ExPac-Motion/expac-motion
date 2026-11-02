@@ -44,6 +44,7 @@ export const PROGRESS_STEPS = ["Created", "Booked", "Collected", "Shipped", "In 
 
 const PROGRESS_TEAL = "#02858a"; // brand teal, darkened for white-on-teal contrast
 const PROGRESS_HALO = "#cceced";
+const PROGRESS_BAND = "#eef7f7";
 const PROGRESS_GREY = "#c7c7c2";
 const PROGRESS_MUTED = "#8a8a85";
 
@@ -87,10 +88,13 @@ export function emailProgressHtml(current: number, href: string): string {
       `font-weight:${now ? 700 : 400};color:${done || now ? "#2e2e2e" : PROGRESS_MUTED}">${label}</div></td>`
     );
   }).join("");
+  // A light teal band behind it, so it reads as the email's top banner.
   return (
     `<a href="${href}" style="text-decoration:none;display:block">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ` +
-    `style="width:100%;max-width:640px;border-collapse:collapse;margin:12px 0 10px"><tr>${cells}</tr></table></a>`
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PROGRESS_BAND}" ` +
+    `style="width:100%;max-width:640px;border-collapse:separate;background:${PROGRESS_BAND};border-radius:8px;margin:0 0 16px">` +
+    `<tr><td style="padding:14px 6px 10px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ` +
+    `style="width:100%;border-collapse:collapse"><tr>${cells}</tr></table></td></tr></table></a>`
   );
 }
 

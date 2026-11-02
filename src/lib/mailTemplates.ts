@@ -455,24 +455,15 @@ export function shipmentEmailHtml(
   // attachment in Outlook); branding lives in the signature.
   const pre = (t: string) =>
     `<pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${t}</pre>`;
-  // The progress bar goes right under the first line (the customer's
-  // name), between two <pre> blocks: a table can't sit inside a <pre>.
-  const split = progress != null && entity ? splitAfterFirstLine(body) : null;
+  // The progress bar is the top banner, above the customer's name (outside
+  // the <pre>: a table can't sit inside one).
   const inner =
-    split && entity && progress != null
-      ? `${pre(split[0])}\n  ${emailProgressHtml(progress, trackingUrl(entity))}\n  ${pre(split[1])}`
+    entity && progress != null
+      ? `${emailProgressHtml(progress, trackingUrl(entity))}\n  ${pre(body.replace(/^\n+/, ""))}`
       : pre(body);
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   ${inner}
 </div>`;
-}
-
-/** [the first non-blank line (with any blank lines before it), the rest],
- *  or null when nothing follows it. */
-function splitAfterFirstLine(text: string): [string, string] | null {
-  const m = text.match(/^\s*[^\n]*\S[^\n]*\n/);
-  if (!m) return null;
-  return [m[0].replace(/\n$/, ""), text.slice(m[0].length).replace(/^\n+/, "")];
 }
 
 /**
@@ -536,11 +527,10 @@ export function buildShipmentEmail(
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(job)}`,
   );
-  // The milestone progress bar under the customer's name (html), and a
-  // one-line twin in the text part.
+  // The milestone progress bar as the top banner (html), and a one-line
+  // twin at the top of the text part.
   const step = progressStep(job.shipment_status);
-  const split = splitAfterFirstLine(textWithLink);
-  const textWithProgress = split ? `${split[0]}\n\n${emailProgressText(step)}\n\n${split[1]}` : textWithLink;
+  const textWithProgress = `${emailProgressText(step)}\n\n${textWithLink.replace(/^\n+/, "")}`;
   return withSignature(
     { subject, text: textWithProgress, html: shipmentEmailHtml(text, true, job, step) },
     signatureHtml,
