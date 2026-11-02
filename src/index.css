@@ -277,6 +277,14 @@ input[type="number"] {
   background: var(--green-tint);
   color: var(--green-dark);
 }
+/* The same pills as <button>s (in-page tabs, e.g. Shipment Comms modes,
+   Operations): drop the browser's button border and grey fill. */
+button.subnav-tab {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: inherit;
+}
 .brand {
   display: flex;
   flex-direction: column;
