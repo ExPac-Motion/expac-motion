@@ -295,8 +295,30 @@ export function aisRoute(t: {
       ...here,
       label: `${t.vessel_name ?? "Vessel"}, last AIS position${seen ? ` ${seen}` : ""}`,
       estimated: false,
+      live: true,
       bearing: pod ? bearing(here, pod) : 90,
     };
+  } else if (!t.pod_ata && !route.position && depAt) {
+    // No AIS fix yet (mid-ocean, out of coastal range): once the ship is due
+    // to have sailed, estimate where it is between departure and ETA, as
+    // buildRoute does for carrier-tracked legs. The map puts it on the lane.
+    const [a, b] = route.stops;
+    const dep = Date.parse(depAt);
+    const arrAt = t.pod_eta ?? t.eta;
+    const arr = arrAt ? Date.parse(arrAt) : NaN;
+    const now = Date.now();
+    if (route.stops.length === 2 && hasPos(a) && hasPos(b) && Number.isFinite(dep) && dep <= now) {
+      const raw = Number.isFinite(arr) && arr > dep ? (now - dep) / (arr - dep) : 0.5;
+      const fraction = Math.min(0.97, Math.max(0.03, raw));
+      const p = along(a, b, fraction);
+      route.moving = { leg: 0, fraction };
+      route.position = {
+        ...p,
+        label: `${t.vessel_name ?? "Vessel"}, estimated position (no live AIS signal yet)`,
+        estimated: true,
+        bearing: bearing(p, along(a, b, Math.min(1, fraction + 0.01))),
+      };
+    }
   }
   return route;
 }

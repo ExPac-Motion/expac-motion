@@ -4962,12 +4962,84 @@ select.badge-select.lost {
   color: var(--muted);
   background: #faf9f5;
 }
-.trk-vessel,
-.trk-vehicle {
+.trk-vessel {
   font-size: 18px;
   line-height: 22px;
   text-align: center;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+/* Where the cargo is now: a badge that stands out from the numbered stops.
+   Live (AIS / carrier fix): green with a pulsing ring. Estimated: grey-blue
+   with a dashed ring. */
+.trk-vehicle {
+  position: relative;
+  cursor: pointer;
+}
+.trk-vehicle-badge {
+  position: absolute;
+  inset: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--green-dark, #5e8a24);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.trk-vehicle-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--green, #8cbc43);
+  animation: trk-pulse 1.8s ease-out infinite;
+}
+.trk-vehicle.est .trk-vehicle-badge {
+  background: #5b7a99;
+}
+.trk-vehicle.est .trk-vehicle-ring {
+  border: 2px dashed #5b7a99;
+  animation: none;
+  opacity: 0.9;
+}
+@keyframes trk-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trk-vehicle-ring { animation: none; }
+}
+/* On-map button: jump to the vessel. */
+.trk-locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--night, #1d2b36);
+  font: 600 12px/1.2 var(--body, sans-serif);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+.trk-locate:hover {
+  background: #f3f6ee;
+}
+.trk-locate .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green, #8cbc43);
+  box-shadow: 0 0 0 3px rgba(140, 188, 67, 0.3);
+}
+.trk-locate.est .dot {
+  background: #5b7a99;
+  box-shadow: 0 0 0 3px rgba(91, 122, 153, 0.25);
+}
+.trk-pop-note {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
 }
 /* Route map (ShipsGo-style): numbered stops, green once reached. */
 .trk-stop span {

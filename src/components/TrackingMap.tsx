@@ -45,8 +45,13 @@ const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
 
 // Plane pointing north, rotated to the leg's bearing.
-const PLANE =
-  '<svg viewBox="0 0 24 24" width="26" height="26"><path fill="#1d5ba8" stroke="#fff" stroke-width="1" d="M12 1.5c.9 0 1.5 1.1 1.5 2.4v5.4l8 4.7v2.2l-8-2.4v5l2.3 1.7V22L12 21l-3.8 1v-1.5l2.3-1.7v-5l-8 2.4V15l8-4.7V3.9c0-1.3.6-2.4 1.5-2.4z"/></svg>';
+const PLANE_WHITE =
+  '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="#fff" d="M12 1.5c.9 0 1.5 1.1 1.5 2.4v5.4l8 4.7v2.2l-8-2.4v5l2.3 1.7V22L12 21l-3.8 1v-1.5l2.3-1.7v-5l-8 2.4V15l8-4.7V3.9c0-1.3.6-2.4 1.5-2.4z"/></svg>';
+// Cargo ship and truck glyphs for the vehicle badge (white on the badge colour).
+const SHIP =
+  '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="#fff" d="M9 3h4v3h4l1 5H5.5L7 6h2V3zm-6 9h18l-2.6 6.2c-.3.5-.8.8-1.4.8H6.9c-.6 0-1.1-.3-1.4-.8L3 12zm1 9c1.3 0 2-.6 2.7-1 .6.4 1.4 1 2.6 1s2-.6 2.7-1c.6.4 1.4 1 2.7 1s2-.6 2.6-1c.7.4 1.4 1 2.7 1v1.5c-1.3 0-2-.5-2.7-.9-.6.4-1.3.9-2.6.9s-2.1-.5-2.7-.9c-.7.4-1.4.9-2.7.9s-2-.5-2.6-.9c-.7.4-1.4.9-2.7.9V21z"/></svg>';
+const TRUCK =
+  '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="#fff" d="M2 5h12v10H2V5zm13 3h4l3 3.5V15h-7V8zM6 19a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm12 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>';
 
 /**
  * Leaflet map of a shipment's route, like the ShipsGo view: numbered stops,
@@ -178,16 +183,48 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
         });
 
         if (pos) {
-          const html =
+          // A badge that stands out from the stops: pulsing when it's a real
+          // position (AIS / carrier), dashed when it's only an estimate.
+          const state = pos.estimated ? "est" : "live";
+          const glyph =
             kind === "air"
-              ? `<span style="display:block;transform:rotate(${pos.bearing}deg)">${PLANE}</span>`
+              ? `<span style="display:block;transform:rotate(${pos.bearing}deg)">${PLANE_WHITE}</span>`
               : kind === "road"
-                ? "🚚"
-                : "🚢";
-          const icon = L.divIcon({ className: "trk-vehicle", html, iconSize: [26, 26], iconAnchor: [13, 13] });
-          L.marker([pos.lat, pos.lon], { icon, zIndexOffset: 200 })
+                ? TRUCK
+                : SHIP;
+          const icon = L.divIcon({
+            className: `trk-vehicle ${state}`,
+            html: `<span class="trk-vehicle-ring"></span><span class="trk-vehicle-badge">${glyph}</span>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -18],
+          });
+          const what = kind === "air" ? "flight" : kind === "road" ? "truck" : "vessel";
+          const title = `${pos.estimated ? "Estimated" : "Live"} ${what} position`;
+          const marker = L.marker([pos.lat, pos.lon], { icon, zIndexOffset: 200, title })
             .addTo(map)
-            .bindPopup(esc(pos.label));
+            .bindPopup(
+              `<b>${esc(title)}</b><br>${esc(pos.label)}` +
+                (pos.estimated ? `<div class="trk-pop-note">Worked out from the departure and ETA dates.</div>` : ""),
+            );
+          bounds.push([pos.lat, pos.lon]);
+
+          // On-map call to action: jump to the vessel and open its details.
+          const Locate = L.Control.extend({
+            onAdd() {
+              const btn = L.DomUtil.create("button", `trk-locate ${state}`);
+              btn.type = "button";
+              btn.innerHTML = `<span class="dot"></span>${esc(title)}`;
+              L.DomEvent.disableClickPropagation(btn);
+              const at = marker.getLatLng();
+              L.DomEvent.on(btn, "click", () => {
+                map?.flyTo(at, Math.max(map.getZoom(), 5), { duration: 0.8 });
+                marker.openPopup();
+              });
+              return btn;
+            },
+          });
+          new Locate({ position: "topright" }).addTo(map);
         }
 
         // Frame the route; again whenever the box changes size (a modal
