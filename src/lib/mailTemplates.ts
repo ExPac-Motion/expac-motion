@@ -5,6 +5,9 @@ import {
   EMAIL_FONT_SIZE,
   EMAIL_FONT_STACK,
   emailButtonHtml,
+  emailProgressHtml,
+  emailProgressText,
+  PROGRESS_STEPS,
   PUBLIC_APP_URL,
 } from "./mailStyle";
 import type {
@@ -434,6 +437,7 @@ export function shipmentEmailHtml(
   text: string,
   boldHeadings = false,
   entity?: { reference: string; track_key?: string },
+  progress?: number,
 ): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -449,9 +453,42 @@ export function shipmentEmailHtml(
   }
   // Plain text in the house font, no logo image (it rendered as a broken
   // attachment in Outlook); branding lives in the signature.
+  const pre = (t: string) =>
+    `<pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${t}</pre>`;
+  // The progress bar goes right under the first line (the customer's
+  // name), between two <pre> blocks: a table can't sit inside a <pre>.
+  const split = progress != null && entity ? splitAfterFirstLine(body) : null;
+  const inner =
+    split && entity && progress != null
+      ? `${pre(split[0])}\n  ${emailProgressHtml(progress, trackingUrl(entity))}\n  ${pre(split[1])}`
+      : pre(body);
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
-  <pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${body}</pre>
+  ${inner}
 </div>`;
+}
+
+/** [the first non-blank line (with any blank lines before it), the rest],
+ *  or null when nothing follows it. */
+function splitAfterFirstLine(text: string): [string, string] | null {
+  const m = text.match(/^\s*[^\n]*\S[^\n]*\n/);
+  if (!m) return null;
+  return [m[0].replace(/\n$/, ""), text.slice(m[0].length).replace(/^\n+/, "")];
+}
+
+/**
+ * Where a shipment is on the six customer milestones (PROGRESS_STEPS),
+ * from its Shipment Status. Arrived / customs / on-delivery are still In
+ * Transit to the customer; Delivered ticks all six.
+ */
+export function progressStep(status: string | null | undefined): number {
+  const s = (status ?? "").trim().toLowerCase();
+  if (s === "delivered") return PROGRESS_STEPS.length;
+  if (["in transit", "arrived", "unloaded", "customs", "detained", "released", "on-delivery", "on delivery"].includes(s))
+    return 4;
+  if (s === "loaded" || s === "departed") return 3;
+  if (s === "collected" || s === "received") return 2;
+  if (s === "booked" || s === "vessel booked" || s === "flight booked") return 1;
+  return 0;
 }
 
 function formatShipmentBody(text: string, esc: (s: string) => string): string {
@@ -499,8 +536,13 @@ export function buildShipmentEmail(
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(job)}`,
   );
+  // The milestone progress bar under the customer's name (html), and a
+  // one-line twin in the text part.
+  const step = progressStep(job.shipment_status);
+  const split = splitAfterFirstLine(textWithLink);
+  const textWithProgress = split ? `${split[0]}\n\n${emailProgressText(step)}\n\n${split[1]}` : textWithLink;
   return withSignature(
-    { subject, text: textWithLink, html: shipmentEmailHtml(text, true, job) },
+    { subject, text: textWithProgress, html: shipmentEmailHtml(text, true, job, step) },
     signatureHtml,
   );
 }
