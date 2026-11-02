@@ -464,11 +464,27 @@ export function shipmentEmailHtml(
   const split = entity && progress != null ? splitForProgress(body) : null;
   const inner =
     split && entity && progress != null
-      ? `${pre(split[0])}\n  ${emailProgressHtml(progress, trackingUrl(entity), progressWidth)}\n  ${pre(split[1])}`
+      ? `${previewText(split[0])}${pre(split[0])}\n  ${emailProgressHtml(progress, trackingUrl(entity), progressWidth)}\n  ${pre(split[1])}`
       : pre(body);
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   ${inner}
 </div>`;
+}
+
+/**
+ * The inbox preview line (preheader): hidden in the opened mail, shown in
+ * the message list. Without it Outlook previews the first text it finds,
+ * which runs on into the progress bar's ✓. It's the text above the bar
+ * (the customer's name, already escaped html), then invisible spacing so
+ * nothing after it is pulled into the preview.
+ */
+function previewText(aboveHtml: string): string {
+  const text = aboveHtml.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  return (
+    `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">` +
+    `${text}${"&#847;&zwnj;&nbsp;".repeat(90)}</div>`
+  );
 }
 
 /** Where the progress bar goes: [the text above it, the text below it],

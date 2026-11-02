@@ -44,9 +44,11 @@ export function emailButtonHtml(
     `href="${href}" style="height:40px;v-text-anchor:middle;width:${width}px" arcsize="15%" stroke="f" fillcolor="${color}">` +
     `<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:${fixedWidth ? 14 : 15}px;font-weight:bold">${label}</center>` +
     `</v:roundrect><![endif]-->`;
+  // Fixed width as a minimum: phone mail apps that enlarge text widen the
+  // button instead of wrapping the label onto two lines.
   const size = fixedWidth
-    ? `width:${fixedWidth}px;box-sizing:border-box;text-align:center;padding:10px 0;`
-    : "padding:10px 20px;";
+    ? `min-width:${fixedWidth}px;box-sizing:border-box;text-align:center;padding:10px 14px;white-space:nowrap;`
+    : "padding:10px 20px;white-space:nowrap;";
   const link =
     `<a href="${href}" style="display:inline-block;background:${color};` +
     `color:#fff;font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};` +
