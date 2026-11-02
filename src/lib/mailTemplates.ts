@@ -457,15 +457,34 @@ export function shipmentEmailHtml(
   // attachment in Outlook); branding lives in the signature.
   const pre = (t: string) =>
     `<pre style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};white-space:pre-wrap;margin:0">${t}</pre>`;
-  // The progress bar is the top banner, above the customer's name (outside
-  // the <pre>: a table can't sit inside one).
+  // The progress bar goes just above the "Shipment Status:" line (in the
+  // team's template that's right under the customer's name), else under
+  // the first line; between two <pre> blocks, a table can't sit in one.
+  const split = entity && progress != null ? splitForProgress(body) : null;
   const inner =
-    entity && progress != null
-      ? `${emailProgressHtml(progress, trackingUrl(entity), progressWidth)}\n  ${pre(body.replace(/^\n+/, ""))}`
+    split && entity && progress != null
+      ? `${pre(split[0])}\n  ${emailProgressHtml(progress, trackingUrl(entity), progressWidth)}\n  ${pre(split[1])}`
       : pre(body);
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   ${inner}
 </div>`;
+}
+
+/** Where the progress bar goes: [the text above it, the text below it],
+ *  split just above the "Shipment Status:" line (tags ignored, so it works
+ *  on the formatted html too), else under the first non-blank line; blank
+ *  lines at the cut are dropped so the bar sits snug. null: nowhere. */
+function splitForProgress(text: string): [string, string] | null {
+  const lines = text.split("\n");
+  let at = lines.findIndex((l) => /^\s*Shipment Status\s*:/i.test(l.replace(/<[^>]+>/g, "")));
+  if (at <= 0) {
+    const first = lines.findIndex((l) => l.trim() !== "");
+    if (first === -1 || first === lines.length - 1) return null;
+    at = first + 1;
+  }
+  const above = lines.slice(0, at).join("\n").replace(/\n+$/, "");
+  const below = lines.slice(at).join("\n").replace(/^\n+/, "");
+  return [above, below];
 }
 
 /**
@@ -529,10 +548,11 @@ export function buildShipmentEmail(
     TRACKING_ANCHOR_LABEL,
     `Live Tracking: ${trackingUrl(job)}`,
   );
-  // The milestone progress bar as the top banner (html), and a one-line
-  // twin at the top of the text part.
+  // The milestone progress bar above "Shipment Status:" (html), and a
+  // one-line twin in the same place in the text part.
   const step = progressStep(job.shipment_status);
-  const textWithProgress = `${emailProgressText(step)}\n\n${textWithLink.replace(/^\n+/, "")}`;
+  const cut = splitForProgress(textWithLink);
+  const textWithProgress = cut ? `${cut[0]}\n\n${emailProgressText(step)}\n\n${cut[1]}` : textWithLink;
   return withSignature(
     {
       subject,

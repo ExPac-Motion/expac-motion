@@ -152,7 +152,7 @@ export function emailProgressHtml(current: number, href: string, width = 600): s
   return (
     `<!--[if mso]><table role="presentation" width="${width}" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ` +
-    `style="width:100%;max-width:${width}px;border-collapse:collapse;margin:0 0 16px"><tr>${cells}</tr></table>` +
+    `style="width:100%;max-width:${width}px;border-collapse:collapse;margin:10px 0 12px"><tr>${cells}</tr></table>` +
     `<!--[if mso]></td></tr></table><![endif]-->`
   );
 }
