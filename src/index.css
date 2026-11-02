@@ -10261,6 +10261,59 @@ th.sage-num {
 }
 
 /* Admin portal preview banner (0167) */
+/* Settings: grouped side menu + the section's panel. Stacks on narrow screens. */
+.set-layout {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.set-nav {
+  padding: 10px 8px;
+}
+.set-nav-group + .set-nav-group {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.set-nav-title {
+  padding: 6px 10px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.set-nav-item {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.set-nav-item:hover {
+  background: #f5f4ef;
+}
+.set-nav-item.active {
+  background: var(--green-tint);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+.set-body {
+  min-width: 0;
+}
+@media (max-width: 860px) {
+  .set-layout {
+    grid-template-columns: 1fr;
+  }
+}
 /* System health (0207): Admin banner when a background job or the
    notification emails fail, and Settings › System health. */
 .health-banner {

@@ -72,19 +72,42 @@ type Tab =
   | "sage"
   | "health";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "company", label: "Company Details" },
-  { key: "defaults", label: "Quote Defaults" },
-  { key: "team", label: "Team" },
-  { key: "roles", label: "Roles & Permissions" },
-  { key: "email", label: "Email" },
-  { key: "comms", label: "Shipment Comms" },
-  { key: "replies", label: "Shipment Replies" },
-  { key: "qcomms", label: "Quotation Comms" },
-  { key: "qreplies", label: "Quotation Replies" },
-  { key: "operations", label: "Operations" },
-  { key: "sage", label: "Sage Accounting" },
-  { key: "health", label: "System health" },
+// The side menu, grouped (12 sections no longer fit one row of tabs). The
+// ?tab= keys stay as they were, so existing links (e.g. ?tab=health in the
+// health alert email) keep working.
+const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
+  {
+    title: "Company",
+    tabs: [
+      { key: "company", label: "Company Details" },
+      { key: "defaults", label: "Quote Defaults" },
+    ],
+  },
+  {
+    title: "People & access",
+    tabs: [
+      { key: "team", label: "Team" },
+      { key: "roles", label: "Roles & Permissions" },
+    ],
+  },
+  {
+    title: "Communication",
+    tabs: [
+      { key: "email", label: "Email" },
+      { key: "comms", label: "Shipment Comms" },
+      { key: "replies", label: "Shipment Replies" },
+      { key: "qcomms", label: "Quotation Comms" },
+      { key: "qreplies", label: "Quotation Replies" },
+    ],
+  },
+  {
+    title: "Operations & integrations",
+    tabs: [
+      { key: "operations", label: "Operations" },
+      { key: "sage", label: "Sage Accounting" },
+      { key: "health", label: "System health" },
+    ],
+  },
 ];
 
 export default function SettingsPage() {
@@ -94,30 +117,39 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader eyebrow="Configuration" title="Settings" />
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`subnav-tab${tab === t.key ? " active" : ""}`}
-            onClick={() => setParams({ tab: t.key })}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="panel">
-        {tab === "company" && <CompanyTab />}
-        {tab === "defaults" && <DefaultsTab />}
-        {tab === "team" && <TeamTab />}
-        {tab === "roles" && <RolesTab />}
-        {tab === "email" && <EmailTab />}
-        {tab === "comms" && <ShipmentCommsTab />}
-        {tab === "replies" && <ShipmentRepliesTab />}
-        {tab === "qcomms" && <QuotationCommsTab />}
-        {tab === "qreplies" && <QuotationRepliesTab />}
-        {tab === "operations" && <OperationsSettingsTab />}
-        {tab === "sage" && <SageSettingsTab />}
-        {tab === "health" && <SystemHealthTab />}
+      <div className="set-layout">
+        <nav className="set-nav panel" aria-label="Settings sections">
+          {GROUPS.map((g) => (
+            <div key={g.title} className="set-nav-group">
+              <div className="set-nav-title">{g.title}</div>
+              {g.tabs.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`set-nav-item${tab === t.key ? " active" : ""}`}
+                  aria-current={tab === t.key ? "page" : undefined}
+                  onClick={() => setParams({ tab: t.key })}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div className="panel set-body">
+          {tab === "company" && <CompanyTab />}
+          {tab === "defaults" && <DefaultsTab />}
+          {tab === "team" && <TeamTab />}
+          {tab === "roles" && <RolesTab />}
+          {tab === "email" && <EmailTab />}
+          {tab === "comms" && <ShipmentCommsTab />}
+          {tab === "replies" && <ShipmentRepliesTab />}
+          {tab === "qcomms" && <QuotationCommsTab />}
+          {tab === "qreplies" && <QuotationRepliesTab />}
+          {tab === "operations" && <OperationsSettingsTab />}
+          {tab === "sage" && <SageSettingsTab />}
+          {tab === "health" && <SystemHealthTab />}
+        </div>
       </div>
     </>
   );
