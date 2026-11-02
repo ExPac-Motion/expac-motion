@@ -6718,7 +6718,7 @@ table.dt .task-title {
 .team-group th.tm-dept { width: 13%; }
 .team-group th.tm-role { width: 15%; }
 .team-group th.tm-joined { width: 9%; }
-.team-portal th.tm-role { width: 26%; }
+.team-wrap--portal th.tm-role { width: 26%; }
 .team-group th.tm-del { width: 84px; }
 .team-group .team-wrap td {
   overflow: hidden;
@@ -6726,24 +6726,6 @@ table.dt .task-title {
 }
 .team-group .team-wrap select {
   max-width: 100%;
-}
-details.team-portal {
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-details.team-portal > summary {
-  cursor: pointer;
-  list-style: none;
-}
-details.team-portal > summary::-webkit-details-marker {
-  display: none;
-}
-details.team-portal > summary::before {
-  content: "▸";
-  color: var(--muted);
-}
-details.team-portal[open] > summary::before {
-  content: "▾";
 }
 .team-wrap .ui-pop-menu {
   width: auto;

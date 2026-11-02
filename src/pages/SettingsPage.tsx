@@ -63,6 +63,7 @@ type Tab =
   | "company"
   | "defaults"
   | "team"
+  | "portal"
   | "roles"
   | "email"
   | "comms"
@@ -88,6 +89,7 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
     title: "People & access",
     tabs: [
       { key: "team", label: "Team" },
+      { key: "portal", label: "Customers on Portal" },
       { key: "roles", label: "Roles & Permissions" },
     ],
   },
@@ -140,7 +142,8 @@ export default function SettingsPage() {
         <div className="panel set-body">
           {tab === "company" && <CompanyTab />}
           {tab === "defaults" && <DefaultsTab />}
-          {tab === "team" && <TeamTab />}
+          {tab === "team" && <TeamTab view="team" />}
+          {tab === "portal" && <TeamTab view="portal" />}
           {tab === "roles" && <RolesTab />}
           {tab === "email" && <EmailTab />}
           {tab === "comms" && <ShipmentCommsTab />}
@@ -348,10 +351,11 @@ function roleRank(p: Profile) {
 }
 /** The ExPac team's departments (0210), in the order Team shows them. */
 const DEPARTMENTS: { key: Department; label: string }[] = [
-  { key: "sales_ops", label: "Sales Ops" },
-  { key: "support", label: "Support" },
-  { key: "accounting", label: "Accounting" },
-  { key: "bdr", label: "BDRs" },
+  { key: "management", label: "Management" },
+  { key: "support", label: "Support Division" },
+  { key: "sales", label: "Sales Division" },
+  { key: "accounts", label: "Accounts Division" },
+  { key: "bdr", label: "BDR Division" },
 ];
 function roleLabel(p: Profile) {
   if (p.role === "admin") return "Admin User";
@@ -364,7 +368,11 @@ function roleLabel(p: Profile) {
   return "Restricted";
 }
 
-function TeamTab() {
+/** Settings › Team (view "team"): the ExPac team by department. Settings ›
+ *  Customers on Portal (view "portal"): every other login, i.e. sign-ups
+ *  waiting, customer-portal and partner-portal logins. Same table, roles,
+ *  access, rename and delete in both. */
+function TeamTab({ view }: { view: "team" | "portal" }) {
   const { data, isLoading, isError, error } = useProfiles();
   const myProfileQ = useMyProfile();
   const isAdmin = myProfileQ.data?.role === "admin";
@@ -376,17 +384,17 @@ function TeamTab() {
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
-  // The ExPac team (staff logins) grouped by department (0210); partner-
-  // and customer-portal logins (and sign-ups waiting) in their own section
-  // below, read-only here (managed on the partner / customer record), so a
-  // portal login can never be turned into staff from this list.
+  // Staff logins grouped by department (0210 / 0211). Portal logins are
+  // read-only here (managed on the partner / customer record), so a portal
+  // login can never be turned into staff; only a sign-up still waiting can.
   const rows = [...(data ?? [])].sort(
     (a, b) => roleRank(a) - roleRank(b) || (a.full_name ?? "").localeCompare(b.full_name ?? ""),
   );
-  if (rows.length === 0) return <EmptyState>No team members yet.</EmptyState>;
   const staff = rows.filter(isStaffLogin);
-  const portal = rows.filter((p) => !isStaffLogin(p));
   const unassigned = staff.filter((p) => !p.department || !DEPARTMENTS.some((d) => d.key === p.department));
+  const waiting = rows.filter(isWaitingSignup);
+  const partners = rows.filter((p) => !isStaffLogin(p) && (p.role === "partner" || !!p.partner_id));
+  const customers = rows.filter((p) => !isStaffLogin(p) && !isWaitingSignup(p) && !partners.includes(p));
 
   async function onRole(p: Profile, role: UserRole) {
     try {
@@ -433,6 +441,38 @@ function TeamTab() {
     }
   }
 
+  const group = (title: string, list: Profile[], note: string, empty: string) => (
+    <section className="team-group">
+      <h3 className="team-group-head">
+        {title} <span className="ws-count">{list.length}</span>
+      </h3>
+      {note && <p className="hint team-empty">{note}</p>}
+      {list.length ? teamTable(list, false) : <p className="hint team-empty">{empty}</p>}
+    </section>
+  );
+
+  if (view === "portal") {
+    return (
+      <>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Everyone who signs in to the Customer Portal or the Partner Portal. Their access is managed on the
+          customer / partner record; a portal login can never become staff from here.
+        </p>
+        {waiting.length > 0 &&
+          group(
+            "Sign-ups waiting for approval",
+            waiting,
+            isAdmin
+              ? "Approve a customer on Customers › Portal Access. A new ExPac team member also lands here first: pick Admin User or Standard User for them, and they move to Team."
+              : "",
+            "",
+          )}
+        {group("Customers on the portal", customers, "", "No customer portal logins yet.")}
+        {group("Partner portal logins", partners, "Agents, transporters and clearing agents.", "No partner portal logins yet.")}
+      </>
+    );
+  }
+
   return (
     <>
       <p className="muted" style={{ marginTop: 0 }}>
@@ -441,9 +481,10 @@ function TeamTab() {
       </p>
       <p className="muted">
         Nobody can sign up as staff. To add a team member, create their login in Supabase
-        (Authentication › Users › Add user); it shows under Portal logins as a sign-up waiting, pick Admin
-        User or Standard User for it, then its department.
+        (Authentication › Users › Add user); it shows under Customers on Portal as a sign-up waiting, pick
+        Admin User or Standard User for it, then its department here.
       </p>
+      {staff.length === 0 && <EmptyState>No team members yet.</EmptyState>}
       {DEPARTMENTS.map((d) => {
         const people = staff.filter((p) => p.department === d.key);
         return (
@@ -464,21 +505,12 @@ function TeamTab() {
           {teamTable(unassigned, true)}
         </section>
       )}
-      {portal.length > 0 && (
-        <details className="team-group team-portal">
-          <summary className="team-group-head">
-            Portal logins, not ExPac team <span className="ws-count">{portal.length}</span>
-            <span className="hint"> Partners, customers and sign-ups waiting for approval</span>
-          </summary>
-          {teamTable(portal, false)}
-        </details>
-      )}
     </>
   );
 
   function teamTable(list: Profile[], withDepartment: boolean) {
     return (
-      <div className="table-wrap team-wrap">
+      <div className={`table-wrap team-wrap${withDepartment ? "" : " team-wrap--portal"}`}>
         <table>
           <thead>
             {/* Fixed widths, so every department's table lines up. */}

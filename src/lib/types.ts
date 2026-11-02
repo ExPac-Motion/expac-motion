@@ -101,7 +101,7 @@ export interface Profile {
   created_at: string;
   email?: string | null;
 }
-export type Department = "sales_ops" | "support" | "accounting" | "bdr";
+export type Department = "management" | "support" | "sales" | "accounts" | "bdr";
 export type ProfilePatch = Partial<
   Pick<
     Profile,
