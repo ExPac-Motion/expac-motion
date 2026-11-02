@@ -103,8 +103,9 @@ export default function SystemHealthTab() {
       <h3 className="health-sub">Alert emails</h3>
       <p className="hint" style={{ marginTop: 0 }}>
         Sent through Resend directly from Supabase. They need the Resend API key stored once in the Supabase vault
-        (SQL editor): <code>select vault.create_secret('re_…', 'resend_api_key');</code> The address is
-        <code> private.follow_up_config.alert_email</code> (support@expac.co.za by default).
+        (SQL editor): <code>select vault.create_secret('re_…', 'resend_api_key');</code> They go to
+        <code> private.follow_up_config.alert_email</code> (support@expac.co.za by default), from
+        <code> alert_from</code> (alerts@send.expac.co.za, the domain verified in Resend).
       </p>
     </>
   );
