@@ -6682,6 +6682,61 @@ table.dt .task-title {
   overflow: visible;
   max-height: none;
 }
+/* Settings › Team (0210): the ExPac team by department, portal logins apart. */
+.team-group {
+  margin-top: 18px;
+}
+.team-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.team-group-head .hint {
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+.team-empty {
+  margin: 0 0 4px;
+}
+.team-group .team-wrap table {
+  table-layout: fixed;
+  width: 100%;
+}
+.team-group th.tm-name { width: 15%; }
+.team-group th.tm-email { width: 20%; }
+.team-group th.tm-dept { width: 13%; }
+.team-group th.tm-role { width: 15%; }
+.team-group th.tm-joined { width: 9%; }
+.team-portal th.tm-role { width: 26%; }
+.team-group th.tm-del { width: 84px; }
+.team-group .team-wrap td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-group .team-wrap select {
+  max-width: 100%;
+}
+details.team-portal {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+details.team-portal > summary {
+  cursor: pointer;
+  list-style: none;
+}
+details.team-portal > summary::-webkit-details-marker {
+  display: none;
+}
+details.team-portal > summary::before {
+  content: "▸";
+  color: var(--muted);
+}
+details.team-portal[open] > summary::before {
+  content: "▾";
+}
 .team-wrap .ui-pop-menu {
   width: auto;
   max-height: 70vh;

@@ -34,6 +34,7 @@ import {
 } from "../lib/mailTemplates";
 import type {
   CompanySettingsPatch,
+  Department,
   Profile,
   QuoteMode,
   ShipmentCommsConfig,
@@ -345,6 +346,13 @@ function roleRank(p: Profile) {
   if (isStaffLogin(p)) return p.role === "admin" ? 0 : p.role === "user" ? 1 : 2;
   return p.partner_id || p.role === "partner" ? 3 : 4;
 }
+/** The ExPac team's departments (0210), in the order Team shows them. */
+const DEPARTMENTS: { key: Department; label: string }[] = [
+  { key: "sales_ops", label: "Sales Ops" },
+  { key: "support", label: "Support" },
+  { key: "accounting", label: "Accounting" },
+  { key: "bdr", label: "BDRs" },
+];
 function roleLabel(p: Profile) {
   if (p.role === "admin") return "Admin User";
   if (p.role === "user") return "Standard User";
@@ -368,12 +376,17 @@ function TeamTab() {
 
   if (isLoading) return <Loading />;
   if (isError) return <ErrorNote error={error} />;
-  // Every login, each under its real role: staff first (their role can be
-  // changed here), then partner-portal and customer-portal logins, those
-  // are read-only here (managed on the partner / customer record), so a
+  // The ExPac team (staff logins) grouped by department (0210); partner-
+  // and customer-portal logins (and sign-ups waiting) in their own section
+  // below, read-only here (managed on the partner / customer record), so a
   // portal login can never be turned into staff from this list.
-  const rows = [...(data ?? [])].sort((a, b) => roleRank(a) - roleRank(b));
+  const rows = [...(data ?? [])].sort(
+    (a, b) => roleRank(a) - roleRank(b) || (a.full_name ?? "").localeCompare(b.full_name ?? ""),
+  );
   if (rows.length === 0) return <EmptyState>No team members yet.</EmptyState>;
+  const staff = rows.filter(isStaffLogin);
+  const portal = rows.filter((p) => !isStaffLogin(p));
+  const unassigned = staff.filter((p) => !p.department || !DEPARTMENTS.some((d) => d.key === p.department));
 
   async function onRole(p: Profile, role: UserRole) {
     try {
@@ -400,6 +413,15 @@ function TeamTab() {
     }
   }
 
+  async function onDepartment(p: Profile, department: Department | null) {
+    try {
+      await update.mutateAsync({ id: p.id, patch: { department } });
+      toast(`${p.full_name || "Member"} moved to ${DEPARTMENTS.find((d) => d.key === department)?.label ?? "Not assigned"}`);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Could not change the department, is migration 0210 applied?");
+    }
+  }
+
   async function onRename(p: Profile, full_name: string) {
     try {
       await update.mutateAsync({ id: p.id, patch: { full_name } });
@@ -414,29 +436,64 @@ function TeamTab() {
   return (
     <>
       <p className="muted" style={{ marginTop: 0 }}>
-        Every login and its role. Only Admin can change a staff role, Standard User is full Motion
-        access, Restricted blocks it entirely. Partner Portal and Customer Portal logins are managed on
-        the partner / customer record.
+        The ExPac team by department. Only Admin can change a role or department. Standard User is full
+        Motion access, Restricted blocks it entirely.
       </p>
       <p className="muted">
         Nobody can sign up as staff. To add a team member, create their login in Supabase
-        (Authentication › Users › Add user); it shows here as a customer sign-up, then pick Admin User or
-        Standard User for it.
+        (Authentication › Users › Add user); it shows under Portal logins as a sign-up waiting, pick Admin
+        User or Standard User for it, then its department.
       </p>
+      {DEPARTMENTS.map((d) => {
+        const people = staff.filter((p) => p.department === d.key);
+        return (
+          <section key={d.key} className="team-group">
+            <h3 className="team-group-head">
+              {d.label} <span className="ws-count">{people.length}</span>
+            </h3>
+            {people.length ? teamTable(people, true) : <p className="hint team-empty">No one in {d.label} yet.</p>}
+          </section>
+        );
+      })}
+      {unassigned.length > 0 && (
+        <section className="team-group">
+          <h3 className="team-group-head">
+            Not assigned to a department <span className="ws-count warn">{unassigned.length}</span>
+          </h3>
+          {isAdmin && <p className="hint team-empty">Pick each person's department in the Department column.</p>}
+          {teamTable(unassigned, true)}
+        </section>
+      )}
+      {portal.length > 0 && (
+        <details className="team-group team-portal">
+          <summary className="team-group-head">
+            Portal logins, not ExPac team <span className="ws-count">{portal.length}</span>
+            <span className="hint"> Partners, customers and sign-ups waiting for approval</span>
+          </summary>
+          {teamTable(portal, false)}
+        </details>
+      )}
+    </>
+  );
+
+  function teamTable(list: Profile[], withDepartment: boolean) {
+    return (
       <div className="table-wrap team-wrap">
         <table>
           <thead>
+            {/* Fixed widths, so every department's table lines up. */}
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
+              <th className="tm-name">Name</th>
+              <th className="tm-email">Email</th>
+              {withDepartment && <th className="tm-dept">Department</th>}
+              <th className="tm-role">Role</th>
               <th>Access</th>
-              <th>Joined</th>
-              {isAdmin && <th></th>}
+              <th className="tm-joined">Joined</th>
+              {isAdmin && <th className="tm-del"></th>}
             </tr>
           </thead>
           <tbody>
-            {rows.map((p) => (
+            {list.map((p) => (
               <tr key={p.id}>
                 <td>
                   {editingName === p.id ? (
@@ -459,6 +516,25 @@ function TeamTab() {
                   )}
                 </td>
                 <td className="muted">{p.email || "—"}</td>
+                {withDepartment && (
+                  <td>
+                    {isAdmin ? (
+                      <select
+                        value={p.department ?? ""}
+                        onChange={(e) => void onDepartment(p, (e.target.value || null) as Department | null)}
+                      >
+                        <option value="">Not assigned</option>
+                        {DEPARTMENTS.map((d) => (
+                          <option key={d.key} value={d.key}>
+                            {d.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="tag">{DEPARTMENTS.find((d) => d.key === p.department)?.label ?? "Not assigned"}</span>
+                    )}
+                  </td>
+                )}
                 <td>
                   {isAdmin && (isStaffLogin(p) || isWaitingSignup(p)) ? (
                     <select
@@ -500,8 +576,8 @@ function TeamTab() {
           </tbody>
         </table>
       </div>
-    </>
-  );
+    );
+  }
 }
 
 /** Settings > Roles & Permissions (0131): what each role may do. Admin User

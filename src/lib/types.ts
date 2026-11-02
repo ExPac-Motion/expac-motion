@@ -96,9 +96,12 @@ export interface Profile {
   sales_target: number;
   /** Monthly new-leads target for this rep. */
   leads_target: number;
+  /** Staff logins (0210): which ExPac team, Settings › Team groups by it. */
+  department?: Department | null;
   created_at: string;
   email?: string | null;
 }
+export type Department = "sales_ops" | "support" | "accounting" | "bdr";
 export type ProfilePatch = Partial<
   Pick<
     Profile,
@@ -109,6 +112,7 @@ export type ProfilePatch = Partial<
     | "sales_gp_target"
     | "sales_target"
     | "leads_target"
+    | "department"
   >
 >;
 
