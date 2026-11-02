@@ -9,6 +9,7 @@ import {
   emailProgressText,
   PROGRESS_STEPS,
   PUBLIC_APP_URL,
+  signatureBannerWidth,
 } from "./mailStyle";
 import type {
   Job,
@@ -438,6 +439,7 @@ export function shipmentEmailHtml(
   boldHeadings = false,
   entity?: { reference: string; track_key?: string },
   progress?: number,
+  progressWidth?: number,
 ): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -459,7 +461,7 @@ export function shipmentEmailHtml(
   // the <pre>: a table can't sit inside one).
   const inner =
     entity && progress != null
-      ? `${emailProgressHtml(progress, trackingUrl(entity))}\n  ${pre(body.replace(/^\n+/, ""))}`
+      ? `${emailProgressHtml(progress, trackingUrl(entity), progressWidth)}\n  ${pre(body.replace(/^\n+/, ""))}`
       : pre(body);
   return `<div style="font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};color:#2e2e2e;line-height:1.55;max-width:640px">
   ${inner}
@@ -532,7 +534,11 @@ export function buildShipmentEmail(
   const step = progressStep(job.shipment_status);
   const textWithProgress = `${emailProgressText(step)}\n\n${textWithLink.replace(/^\n+/, "")}`;
   return withSignature(
-    { subject, text: textWithProgress, html: shipmentEmailHtml(text, true, job, step) },
+    {
+      subject,
+      text: textWithProgress,
+      html: shipmentEmailHtml(text, true, job, step, signatureBannerWidth(signatureHtml)),
+    },
     signatureHtml,
   );
 }

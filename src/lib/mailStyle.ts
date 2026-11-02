@@ -44,58 +44,103 @@ export const PROGRESS_STEPS = ["Created", "Booked", "Collected", "Shipped", "In 
 
 const PROGRESS_TEAL = "#02858a"; // brand teal, darkened for white-on-teal contrast
 const PROGRESS_HALO = "#cceced";
-const PROGRESS_BAND = "#eef7f7";
 const PROGRESS_GREY = "#c7c7c2";
 const PROGRESS_MUTED = "#8a8a85";
 
+/** One milestone circle. Outlook for Windows (Word) ignores border-radius,
+ *  so it gets a VML oval in an Outlook-only block; every other client gets
+ *  a rounded div. `halo`: the current step's light ring. */
+function progressCircle(glyph: string, fill: string, stroke: string, color: string, halo: boolean): string {
+  const size = 28;
+  const outer = halo ? size + 8 : size;
+  const mso =
+    `<!--[if mso]><v:oval xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="true" ` +
+    `style="width:${outer}px;height:${outer}px;v-text-anchor:middle" fillcolor="${fill}" ` +
+    `strokecolor="${halo ? PROGRESS_HALO : stroke}" strokeweight="${halo ? 4 : 2}px">` +
+    `<v:textbox inset="0,0,0,0"><center style="color:${color};font-family:Arial,sans-serif;font-size:13px;` +
+    `font-weight:bold">${glyph}</center></v:textbox></v:oval><![endif]-->`;
+  const circle =
+    `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${fill};border:2px solid ${stroke};` +
+    `box-sizing:border-box;color:${color};font-family:${EMAIL_FONT_STACK};font-size:13px;font-weight:700;` +
+    `line-height:${size - 4}px;text-align:center">${glyph}</div>`;
+  // Every circle sits in the same 36px ring (halo colour or transparent),
+  // so the lines and labels line up across the steps.
+  const html = `<div style="width:${size}px;padding:4px;border-radius:50%;background:${halo ? PROGRESS_HALO : "transparent"};margin:0 auto">${circle}</div>`;
+  return `${mso}<!--[if !mso]><!-- -->${html}<!--<![endif]-->`;
+}
+
+/** A connector between circles: a solid teal bar (done) or a dotted grey
+ *  one (to come), as a 3px table cell, which Outlook draws reliably. */
+function progressLine(kind: "solid" | "dotted" | "none"): string {
+  if (kind === "none") return `<td style="padding:0"></td>`;
+  const look =
+    kind === "solid"
+      ? `bgcolor="${PROGRESS_TEAL}" style="height:3px;background:${PROGRESS_TEAL};`
+      : `style="height:0;border-top:3px dotted ${PROGRESS_GREY};`;
+  return (
+    `<td valign="middle" style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td ${look}font-size:1px;line-height:1px;mso-line-height-rule:exactly">&nbsp;</td></tr></table></td>`
+  );
+}
+
 /**
- * The shipment progress bar for customer mail: `current` is the index of
- * the step it's at (PROGRESS_STEPS.length = all done, delivered). Done
- * steps are teal with a ✓ joined by a solid line, the current one has a
- * light halo, the rest are grey numbers joined by a dotted line.
+ * The shipment progress bar, the top banner of customer status mail:
+ * `current` is the index of the step it's at (PROGRESS_STEPS.length = all
+ * done, delivered). Done steps are teal circles with a ✓ joined by a
+ * solid line, the current one has a light halo, the rest are white
+ * circles with a grey number joined by a dotted line. No background.
+ * `width` is the signature banner's width (signatureBannerWidth), so the
+ * two line up; Outlook ignores max-width, hence its fixed-width wrapper.
  *
- * Deliverability: tables + inline styles only, like emailButtonHtml; no
- * images, SVG, web fonts or scripts. Older Outlook desktop squares the
- * circles off (no border-radius), nothing else changes. The whole bar
- * links to `href` (the Live Tracking page, already in the mail).
+ * Deliverability: tables + inline styles, plus Outlook-only VML circles
+ * (the standard way to draw round shapes for Outlook); no images, SVG, web
+ * fonts or scripts. The labels link to the Live Tracking page.
  */
-export function emailProgressHtml(current: number, href: string): string {
+export function emailProgressHtml(current: number, href: string, width = 600): string {
   const n = PROGRESS_STEPS.length;
   const cells = PROGRESS_STEPS.map((label, i) => {
     const done = i < current;
     const now = i === current;
-    const line = (on: boolean, show: boolean) =>
-      show
-        ? `<td style="padding:0;vertical-align:middle"><div style="height:0;border-top:3px ${on ? `solid ${PROGRESS_TEAL}` : `dotted ${PROGRESS_GREY}`};font-size:0;line-height:0">&nbsp;</div></td>`
-        : `<td style="padding:0"></td>`;
-    const fill = done || now ? PROGRESS_TEAL : "#ffffff";
-    // Fixed 40px cell (circle + halo) so the lines can't squeeze the circle.
-    const circle =
-      `<td width="40" style="width:40px;min-width:40px;padding:0">` +
-      `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>` +
-      `<td style="padding:4px;border-radius:50%;background:${now ? PROGRESS_HALO : "transparent"}">` +
-      `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>` +
-      `<td align="center" valign="middle" width="26" height="26" style="width:26px;height:26px;min-width:26px;` +
-      `border-radius:50%;background:${fill};border:2px solid ${done || now ? PROGRESS_TEAL : PROGRESS_GREY};` +
-      `color:${done || now ? "#ffffff" : PROGRESS_MUTED};font-family:${EMAIL_FONT_STACK};font-size:13px;` +
-      `font-weight:700;line-height:26px;text-align:center;mso-line-height-rule:exactly">` +
-      `${done ? "&#10003;" : i + 1}</td></tr></table></td></tr></table></td>`;
+    const circle = progressCircle(
+      done ? "&#10003;" : String(i + 1),
+      done || now ? PROGRESS_TEAL : "#ffffff",
+      done || now ? PROGRESS_TEAL : PROGRESS_GREY,
+      done || now ? "#ffffff" : PROGRESS_MUTED,
+      now,
+    );
     return (
       `<td width="16.66%" align="center" valign="top" style="width:16.66%;padding:0">` +
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>` +
-      `${line(i <= current, i > 0)}${circle}${line(i < current, i < n - 1)}</tr></table>` +
-      `<div style="padding-top:6px;font-family:${EMAIL_FONT_STACK};font-size:12px;line-height:1.3;` +
-      `font-weight:${now ? 700 : 400};color:${done || now ? "#2e2e2e" : PROGRESS_MUTED}">${label}</div></td>`
+      progressLine(i === 0 ? "none" : i <= current ? "solid" : "dotted") +
+      `<td width="36" height="36" align="center" valign="middle" style="width:36px;height:36px;padding:0">${circle}</td>` +
+      progressLine(i === n - 1 ? "none" : i < current ? "solid" : "dotted") +
+      `</tr></table>` +
+      `<a href="${href}" style="display:block;padding-top:6px;text-decoration:none;font-family:${EMAIL_FONT_STACK};` +
+      `font-size:12px;line-height:1.3;font-weight:${now ? 700 : 400};color:${done || now ? "#2e2e2e" : PROGRESS_MUTED}">` +
+      `${label}</a></td>`
     );
   }).join("");
-  // A light teal band behind it, so it reads as the email's top banner.
   return (
-    `<a href="${href}" style="text-decoration:none;display:block">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PROGRESS_BAND}" ` +
-    `style="width:100%;max-width:640px;border-collapse:separate;background:${PROGRESS_BAND};border-radius:8px;margin:0 0 16px">` +
-    `<tr><td style="padding:14px 6px 10px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ` +
-    `style="width:100%;border-collapse:collapse"><tr>${cells}</tr></table></td></tr></table></a>`
+    `<!--[if mso]><table role="presentation" width="${width}" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ` +
+    `style="width:100%;max-width:${width}px;border-collapse:collapse;margin:0 0 16px"><tr>${cells}</tr></table>` +
+    `<!--[if mso]></td></tr></table><![endif]-->`
   );
+}
+
+/** The signature banner's width in px: the widest image (or fixed-width
+ *  table) in the saved signature, by its width attribute or inline width,
+ *  so the progress bar lines up with it. 600 when there's none. */
+export function signatureBannerWidth(signatureHtml?: string | null): number {
+  const html = signatureHtml ?? "";
+  const widths: number[] = [];
+  for (const tag of html.match(/<(img|table)\b[^>]*>/gi) ?? []) {
+    const attr = tag.match(/\swidth\s*=\s*["']?(\d+)(?:px)?["']?/i);
+    const css = tag.match(/style\s*=\s*["'][^"']*?(?:^|[;\s])(?:max-)?width\s*:\s*(\d+)px/i);
+    for (const m of [attr, css]) if (m) widths.push(Number(m[1]));
+  }
+  const fit = widths.filter((w) => w >= 300 && w <= 900);
+  return fit.length ? Math.max(...fit) : 600;
 }
 
 /** Plain-text twin of emailProgressHtml, for the mail's text part. */
