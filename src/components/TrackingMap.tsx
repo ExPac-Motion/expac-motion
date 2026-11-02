@@ -85,9 +85,11 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
         if (cancelled || !boxRef.current) return;
 
         map = L.map(boxRef.current, { scrollWheelZoom: false, attributionControl: true, worldCopyJump: true });
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        // Esri World Street Map: English labels everywhere (the standard OSM
+        // tiles name each country in its own script). Note the {y}/{x} order.
+        L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 18,
-          attribution: "&copy; OpenStreetMap contributors",
+          attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
         }).addTo(map);
 
         const bounds: [number, number][] = [];
