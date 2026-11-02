@@ -25,18 +25,29 @@ export const EMAIL_BODY_STYLE =
   `line-height:1.55;color:#2e2e2e`;
 
 /** A branded CTA button for outgoing mail, inline-styled since most mail
- *  clients strip external stylesheets. `color` defaults to the brand green. */
+ *  clients strip external stylesheets. `color` defaults to the brand green.
+ *  Outlook for Windows (Word) ignores padding and border-radius on links
+ *  (it showed as flat highlighted text), so it gets a VML rounded rectangle
+ *  in an Outlook-only block (the usual "bulletproof button"); every other
+ *  client gets the plain link. */
 export function emailButtonHtml(
   href: string,
   label: string,
   color = "#719d2f",
 ): string {
-  return (
+  // VML needs a fixed width: roughly the bold label plus the padding.
+  const width = Math.round(label.length * 8.6 + 44);
+  const mso =
+    `<!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" ` +
+    `href="${href}" style="height:40px;v-text-anchor:middle;width:${width}px" arcsize="15%" stroke="f" fillcolor="${color}">` +
+    `<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">${label}</center>` +
+    `</v:roundrect><![endif]-->`;
+  const link =
     `<a href="${href}" style="display:inline-block;background:${color};` +
     `color:#fff;font-family:${EMAIL_FONT_STACK};font-size:${EMAIL_FONT_SIZE};` +
     `font-weight:700;text-decoration:none;padding:10px 20px;border-radius:6px;` +
-    `margin:4px 12px 4px 0">${label}</a>`
-  );
+    `margin:4px 12px 4px 0">${label}</a>`;
+  return `${mso}<!--[if !mso]><!-- -->${link}<!--<![endif]-->`;
 }
 
 /** The six milestones the customer sees on the shipment progress bar. */
@@ -52,20 +63,24 @@ const PROGRESS_MUTED = "#8a8a85";
  *  a rounded div. `halo`: the current step's light ring. */
 function progressCircle(glyph: string, fill: string, stroke: string, color: string, halo: boolean): string {
   const size = 28;
-  const outer = halo ? size + 8 : size;
+  // Outlook: every oval the same size (no halo ring there, it made the
+  // current step's row taller and knocked its connector line out of line);
+  // the current step still stands out by its fill, number and bold label.
   const mso =
     `<!--[if mso]><v:oval xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="true" ` +
-    `style="width:${outer}px;height:${outer}px;v-text-anchor:middle" fillcolor="${fill}" ` +
-    `strokecolor="${halo ? PROGRESS_HALO : stroke}" strokeweight="${halo ? 4 : 2}px">` +
+    `style="width:${size}px;height:${size}px;v-text-anchor:middle" fillcolor="${fill}" ` +
+    `strokecolor="${stroke}" strokeweight="2px">` +
     `<v:textbox inset="0,0,0,0"><center style="color:${color};font-family:Arial,sans-serif;font-size:13px;` +
     `font-weight:bold">${glyph}</center></v:textbox></v:oval><![endif]-->`;
   const circle =
-    `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${fill};border:2px solid ${stroke};` +
-    `box-sizing:border-box;color:${color};font-family:${EMAIL_FONT_STACK};font-size:13px;font-weight:700;` +
-    `line-height:${size - 4}px;text-align:center">${glyph}</div>`;
-  // Every circle sits in the same 36px ring (halo colour or transparent),
-  // so the lines and labels line up across the steps.
-  const html = `<div style="width:${size}px;padding:4px;border-radius:50%;background:${halo ? PROGRESS_HALO : "transparent"};margin:0 auto">${circle}</div>`;
+    `<div style="display:inline-block;vertical-align:middle;width:${size}px;height:${size}px;border-radius:50%;` +
+    `background:${fill};border:2px solid ${stroke};box-sizing:border-box;color:${color};font-family:${EMAIL_FONT_STACK};` +
+    `font-size:13px;font-weight:700;line-height:${size - 4}px;text-align:center">${glyph}</div>`;
+  // Only the current step has the ring; the 36px-high cell around every
+  // circle keeps the lines level either way.
+  const html = halo
+    ? `<div style="display:inline-block;vertical-align:middle;padding:4px;border-radius:50%;background:${PROGRESS_HALO};line-height:0">${circle}</div>`
+    : circle;
   return `${mso}<!--[if !mso]><!-- -->${html}<!--<![endif]-->`;
 }
 
@@ -98,6 +113,16 @@ function progressLine(kind: "solid" | "dotted" | "none"): string {
  */
 export function emailProgressHtml(current: number, href: string, width = 600): string {
   const n = PROGRESS_STEPS.length;
+  // The first step sits flush left (in line with the text), the last flush
+  // right (in line with the banner's edge), the circles evenly spaced:
+  // middle cells are one gap wide, the two end cells half a gap + half a
+  // circle.
+  const slot = 36;
+  const dot = 28; // the circle itself; the end ones sit flush in their slot
+  const gap = (width - dot) / (n - 1);
+  const edgePx = Math.round(gap / 2 + dot / 2);
+  const midPx = Math.round(gap);
+  const pct = (px: number) => `${((px / width) * 100).toFixed(2)}%`;
   const cells = PROGRESS_STEPS.map((label, i) => {
     const done = i < current;
     const now = i === current;
@@ -108,14 +133,18 @@ export function emailProgressHtml(current: number, href: string, width = 600): s
       done || now ? "#ffffff" : PROGRESS_MUTED,
       now,
     );
+    const first = i === 0;
+    const last = i === n - 1;
+    const align = first ? "left" : last ? "right" : "center";
+    const w = first || last ? edgePx : midPx;
     return (
-      `<td width="16.66%" align="center" valign="top" style="width:16.66%;padding:0">` +
+      `<td width="${pct(w)}" align="${align}" valign="top" style="width:${pct(w)};padding:0">` +
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>` +
-      progressLine(i === 0 ? "none" : i <= current ? "solid" : "dotted") +
-      `<td width="36" height="36" align="center" valign="middle" style="width:36px;height:36px;padding:0">${circle}</td>` +
-      progressLine(i === n - 1 ? "none" : i < current ? "solid" : "dotted") +
+      (first ? "" : progressLine(i <= current ? "solid" : "dotted")) +
+      `<td width="${slot}" height="${slot}" align="${align}" valign="middle" style="width:${slot}px;height:${slot}px;padding:0;text-align:${align};line-height:0">${circle}</td>` +
+      (last ? "" : progressLine(i < current ? "solid" : "dotted")) +
       `</tr></table>` +
-      `<a href="${href}" style="display:block;padding-top:6px;text-decoration:none;font-family:${EMAIL_FONT_STACK};` +
+      `<a href="${href}" style="display:block;padding-top:6px;text-align:${align};text-decoration:none;font-family:${EMAIL_FONT_STACK};` +
       `font-size:12px;line-height:1.3;font-weight:${now ? 700 : 400};color:${done || now ? "#2e2e2e" : PROGRESS_MUTED}">` +
       `${label}</a></td>`
     );
