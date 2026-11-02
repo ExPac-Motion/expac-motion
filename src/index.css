@@ -5036,10 +5036,43 @@ select.badge-select.lost {
   background: #5b7a99;
   box-shadow: 0 0 0 3px rgba(91, 122, 153, 0.25);
 }
-.trk-pop-note {
-  margin-top: 4px;
-  font-size: 11px;
+/* Vessel name tag next to the badge, always shown. */
+.leaflet-tooltip.trk-vehicle-tip {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--night, #202426);
+  color: #fff;
+  font: 600 11px/1.3 var(--body, sans-serif);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.leaflet-tooltip.trk-vehicle-tip::before {
+  border-right-color: var(--night, #202426);
+}
+.leaflet-tooltip.trk-vehicle-tip.est {
+  background: #5b7a99;
+}
+.leaflet-tooltip.trk-vehicle-tip.est::before {
+  border-right-color: #5b7a99;
+}
+/* Vessel popup: name + voyage, then status / last update / speed / source. */
+.trk-pop-vessel {
+  font-size: 13px;
+}
+.trk-pop-voy {
+  margin-left: 4px;
   color: var(--muted, #6b7280);
+  font-weight: 600;
+}
+.trk-pop td:first-child {
+  color: var(--muted, #6b7280);
+}
+.trk-pop-state {
+  font-weight: 700;
+  color: var(--green-dark, #5e8a24);
+}
+.trk-pop-state.est {
+  color: #5b7a99;
 }
 /* Route map (ShipsGo-style): numbered stops, green once reached. */
 .trk-stop span {

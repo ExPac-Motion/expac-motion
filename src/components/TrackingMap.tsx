@@ -94,7 +94,7 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
         // tiles name each country in its own script). Note the {y}/{x} order.
         L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
           maxZoom: 18,
-          attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+          attribution: "Tiles &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
         }).addTo(map);
 
         const bounds: [number, number][] = [];
@@ -201,12 +201,39 @@ export default function TrackingMap({ route, mode, height = 320, path }: Props) 
           });
           const what = kind === "air" ? "flight" : kind === "road" ? "truck" : "vessel";
           const title = `${pos.estimated ? "Estimated" : "Live"} ${what} position`;
+          // The vessel / flight and voyage: the latest route event that names one.
+          const named = route.stops.flatMap((s) => s.events).filter((e) => (e.via ?? "").trim());
+          const via = named[named.length - 1];
+          const name = via?.via?.trim() || "";
+          const source = pos.estimated
+            ? "Estimated from the departure and ETA dates"
+            : pos.live
+              ? "AIS signal from the ship"
+              : path?.length
+                ? "Carrier tracking (ShipsGo)"
+                : "Last carrier event";
+          const rows = [
+            ["Status", `<span class="trk-pop-state ${state}">${esc(pos.estimated ? "Estimated" : "Live")}</span>`],
+            pos.seenAt ? ["Last update", esc(formatDateTime(pos.seenAt))] : null,
+            typeof pos.speedKn === "number" ? ["Speed", `${pos.speedKn.toFixed(1)} kn`] : null,
+            ["Source", esc(source)],
+          ].filter((r): r is string[] => !!r);
+          const popup =
+            `<div class="trk-pop-vessel"><b>${esc(name || title)}</b>` +
+            (via?.voyage ? ` <span class="trk-pop-voy">${esc(via.voyage)}</span>` : "") +
+            `</div><table class="trk-pop">${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table>`;
           const marker = L.marker([pos.lat, pos.lon], { icon, zIndexOffset: 200, title })
             .addTo(map)
-            .bindPopup(
-              `<b>${esc(title)}</b><br>${esc(pos.label)}` +
-                (pos.estimated ? `<div class="trk-pop-note">Worked out from the departure and ETA dates.</div>` : ""),
-            );
+            .bindPopup(popup, { minWidth: 200 })
+            // Always-on name tag next to the ship, so it reads without a click.
+            .bindTooltip(`${esc(name || title)} · ${pos.estimated ? "Estimated" : "Live"}`, {
+              permanent: true,
+              direction: "right",
+              offset: [20, 0],
+              className: `trk-vehicle-tip ${state}`,
+            });
+          // Details on hover as well as on click.
+          marker.on("mouseover", () => marker.openPopup());
           bounds.push([pos.lat, pos.lon]);
 
           // On-map call to action: jump to the vessel and open its details.

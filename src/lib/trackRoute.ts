@@ -47,7 +47,17 @@ export interface TrackRoute {
   moving: { leg: number; fraction: number } | null;
   /** Where the cargo is: on a stop, or estimated along the moving leg. */
   /** `live`: a real AIS fix (0205), kept over ShipsGo's own marker. */
-  position: { lat: number; lon: number; label: string; estimated: boolean; bearing: number; live?: boolean } | null;
+  /** `seenAt` / `speedKn`: when the live fix was taken and the ship's speed, for the map popup. */
+  position: {
+    lat: number;
+    lon: number;
+    label: string;
+    estimated: boolean;
+    bearing: number;
+    live?: boolean;
+    seenAt?: string | null;
+    speedKn?: number | null;
+  } | null;
 }
 
 const DEPARTURE = /^(DEP|DEPA|VD|VDL|DEPARTED|DEPARTURE)$/i;
@@ -264,6 +274,7 @@ export function aisRoute(t: {
   vessel_lat: number | null;
   vessel_lon: number | null;
   position_at: string | null;
+  speed_kn?: number | null;
 }): TrackRoute {
   const via = { via: t.vessel_name, voyage: t.voyage };
   const arrival: RouteEvent = {
@@ -296,6 +307,8 @@ export function aisRoute(t: {
       label: `${t.vessel_name ?? "Vessel"}, last AIS position${seen ? ` ${seen}` : ""}`,
       estimated: false,
       live: true,
+      seenAt: t.position_at,
+      speedKn: t.speed_kn ?? null,
       bearing: pod ? bearing(here, pod) : 90,
     };
   } else if (!t.pod_ata && !route.position && depAt) {
@@ -337,6 +350,7 @@ export function withLivePosition(
     pod_lat?: number | null;
     pod_lon?: number | null;
     vessel_name?: string | null;
+    speed_kn?: number | null;
   } | null | undefined,
 ): TrackRoute {
   if (!t || t.pod_ata || typeof t.ais_lat !== "number" || typeof t.ais_lon !== "number") return route;
@@ -350,6 +364,8 @@ export function withLivePosition(
       label: `${t.vessel_name ?? "Vessel"}, live AIS position${seen ? ` ${seen}` : ""}`,
       estimated: false,
       live: true,
+      seenAt: t.ais_at ?? null,
+      speedKn: t.speed_kn ?? null,
       bearing: pod ? bearing(here, pod) : 90,
     },
   };
