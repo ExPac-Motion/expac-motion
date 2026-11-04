@@ -3,7 +3,7 @@ import { previewActive, setPortalPreview } from "../../lib/db";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import { useMyJobs, useMyProfile } from "../../lib/hooks";
+import { useMyJobs, useMyProfile, useWmsLiveSync } from "../../lib/hooks";
 import type { Profile } from "../../lib/types";
 import { useUpdateCompany, type CompanyDetails, type PortalMe, usePortalMe, usePortalQuotes, useSetGreeting } from "../../lib/portal";
 import Modal from "../../components/Modal";
@@ -182,6 +182,9 @@ export default function PortalLayout() {
   const profileQ = useMyProfile();
   const meQ = usePortalMe();
   const permissions = profileQ.data?.portal_permissions;
+  // Warehouse pages follow ExPac's WMS changes live (0212); RLS limits the
+  // events to this customer's own rows.
+  useWmsLiveSync(!!user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [greetOpen, setGreetOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);

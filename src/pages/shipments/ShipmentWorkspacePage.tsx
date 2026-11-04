@@ -25,6 +25,7 @@ import { chargeTotals, fxOf, groupByCategory, packingRow, packingTotals, volumet
 import { OPTIONAL_STEP, stepLabel, timelineDb, todayIso, useJobTimeline, type TimelineStep } from "../../lib/timeline";
 import { isDelivered, isShipmentComplete, type Job, type OpsTask, type OpsTaskPatch, type ShipmentDocument } from "../../lib/types";
 import Modal from "../../components/Modal";
+import { HubsSection } from "../wms/ShipmentHubs";
 import {
   ConsolSection,
   CreateQuoteForJob,
@@ -535,6 +536,7 @@ function CargoTab({ job, quote, loading }: { job: Job; quote: QuoteData | null; 
       </div>
       <div className="panel ws-panel jv-extras">
         <PodSection job={job} />
+        <HubsSection job={job} />
         <ConsolSection job={job} />
         <HousesSection job={job} />
       </div>

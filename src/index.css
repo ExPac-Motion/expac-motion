@@ -8047,6 +8047,77 @@ td.vault-part-paid input {
   font-weight: 700;
 }
 
+/* Shipment › Hubs (Motion WMS sync, 0213) */
+.job-hubs {
+  margin-top: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.job-hubs-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.job-hubs .k {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.job-hub-role {
+  width: auto;
+  font-size: 0.8rem;
+}
+.job-hub-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.job-hub-n {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+}
+.job-hub-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.job-hub-facts {
+  font-size: 0.82rem;
+}
+.job-hub-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.job-hub-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .job-hub-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .job-hub-row .badge,
+  .job-hub-actions {
+    grid-column: 1;
+    justify-self: start;
+  }
+}
+
 /* ============ Customer Portal v2 (2026-10-05) — left sidebar shell, after
    ExPac's "Customer Portal" deck, on the brand palette ============ */
 .pt-shell {

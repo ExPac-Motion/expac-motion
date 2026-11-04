@@ -15,6 +15,7 @@ import {
   useWmsReceipts,
 } from "../../lib/wms";
 import { ReceiptEditModal } from "./WmsReceipts";
+import { WmsSyncPanel } from "./ShipmentHubs";
 import { Kpi, useWmsLookups } from "./shared";
 
 const AGE_BUCKETS: [string, number, number][] = [
@@ -119,6 +120,8 @@ export default function WmsDashboard() {
         <Kpi label="Open consolidations" value={String(d.openConsols)} />
         <Kpi label="Counts in progress" value={String(d.openCounts)} />
       </div>
+
+      <WmsSyncPanel />
 
       <div className="wms-dash-grid">
         <div className="panel">

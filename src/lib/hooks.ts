@@ -416,41 +416,68 @@ export function refreshShipmentData(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["nav_counts"] });
 }
 
-/** Live updates (0198, 0203): any change to shipments, quotes, the timeline,
- *  tasks, documents, history or the Inbox, by anyone, refreshes what's on screen. A
- *  burst of changes (one save touches several tables) refreshes once. */
-export function useLiveSync(enabled: boolean) {
+/** Which cached queries a change to each table refreshes. A key is a query-key
+ *  prefix joined with "/" ("wms" refreshes every ["wms", …] query). */
+type LiveKeys = Record<string, readonly string[]>;
+
+const SHIPMENT_LIVE_KEYS: LiveKeys = {
+  jobs: ["jobs", "job_timeline", "quotes", "nav_counts", "my_jobs"],
+  quotes: ["quotes", "jobs", "nav_counts", "my_quotes"],
+  quote_lines: ["quotes"],
+  packing_list_items: ["quotes"],
+  job_timeline_steps: ["job_timeline", "jobs", "my_timeline"],
+  job_events: ["jobs"],
+  ops_tasks: ["ops_tasks", "nav_counts"],
+  shipment_documents: ["shipment_documents", "my_documents"],
+  // Live Inbox (0203); the polls on the inbox queries stay as a fallback.
+  inbox_messages: ["inbox", "inbox_unread", "inbox_search", "inbox_sent"],
+  inbox_drafts: ["inbox_drafts"],
+  inbox_state: ["inbox_state"],
+};
+
+/** Live WMS (0212). The WMS screens and the portal's warehouse pages all read
+ *  ["wms", …] queries (RLS narrows them to the customer's own rows), and the
+ *  portal's receipt journey reads the client_wms_tracker view. */
+const WMS_ALL = ["wms", "portal/wms-tracker"] as const;
+const WMS_LIVE_KEYS: LiveKeys = {
+  wms_warehouses: ["wms"],
+  wms_locations: ["wms"],
+  wms_receipts: WMS_ALL,
+  wms_receipt_images: ["wms/images"],
+  wms_stock_moves: WMS_ALL,
+  wms_movements: ["wms"],
+  wms_releases: WMS_ALL,
+  wms_release_lines: WMS_ALL,
+  wms_release_requests: ["wms/release-requests"],
+  wms_preadvices: ["wms/preadvices"],
+  wms_consols: WMS_ALL,
+  wms_consol_houses: WMS_ALL,
+  wms_counts: ["wms/counts"],
+  wms_count_lines: ["wms/counts"],
+  wms_billing_runs: ["wms/billing"],
+  wms_service_requests: ["wms/services"],
+};
+
+/** Subscribes to Realtime changes on the given tables and refreshes the mapped
+ *  queries. A burst of changes (one save touches several tables) refreshes once. */
+function useRealtimeRefresh(name: string, keys: LiveKeys, enabled: boolean) {
   const qc = useQueryClient();
   useEffect(() => {
     if (!enabled) return;
     const pending = new Set<string>();
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const KEYS: Record<string, string[]> = {
-      jobs: ["jobs", "job_timeline", "quotes", "nav_counts", "my_jobs"],
-      quotes: ["quotes", "jobs", "nav_counts", "my_quotes"],
-      quote_lines: ["quotes"],
-      packing_list_items: ["quotes"],
-      job_timeline_steps: ["job_timeline", "jobs", "my_timeline"],
-      job_events: ["jobs"],
-      ops_tasks: ["ops_tasks", "nav_counts"],
-      shipment_documents: ["shipment_documents", "my_documents"],
-      // Live Inbox (0203); the polls on the inbox queries stay as a fallback.
-      inbox_messages: ["inbox", "inbox_unread", "inbox_search", "inbox_sent"],
-      inbox_drafts: ["inbox_drafts"],
-      inbox_state: ["inbox_state"],
-    };
     const bump = (table: string) => {
-      for (const k of KEYS[table] ?? []) pending.add(k);
+      for (const k of keys[table] ?? []) pending.add(k);
       if (timer) return;
       timer = setTimeout(() => {
         timer = null;
-        for (const k of pending) qc.invalidateQueries({ queryKey: [k] });
+        for (const k of pending) qc.invalidateQueries({ queryKey: k.split("/") });
         pending.clear();
       }, 400);
     };
     // Random channel name per mount (StrictMode double-mount, see useTrackingRealtime).
-    let channel = supabase.channel(`motion-live-${Math.random().toString(36).slice(2)}`);
-    for (const table of Object.keys(KEYS)) {
+    let channel = supabase.channel(`${name}-${Math.random().toString(36).slice(2)}`);
+    for (const table of Object.keys(keys)) {
       channel = channel.on("postgres_changes", { event: "*", schema: "public", table }, () => bump(table));
     }
     channel.subscribe();
@@ -458,7 +485,30 @@ export function useLiveSync(enabled: boolean) {
       if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, [enabled, qc]);
+  }, [name, keys, enabled, qc]);
+}
+
+/** Staff also follow shipment hubs (0213), and a status change moves the
+ *  hubs' sync check even when nothing is booked in or out. */
+const STAFF_LIVE_KEYS: LiveKeys = {
+  ...SHIPMENT_LIVE_KEYS,
+  ...WMS_LIVE_KEYS,
+  jobs: [...SHIPMENT_LIVE_KEYS.jobs, "wms/hub-sync"],
+  job_hubs: ["wms"],
+};
+
+/** Live updates (0198, 0203, 0212): any change to shipments, quotes, the
+ *  timeline, tasks, documents, history, the Inbox or the WMS, by anyone,
+ *  refreshes what's on screen. */
+export function useLiveSync(enabled: boolean) {
+  useRealtimeRefresh("motion-live", STAFF_LIVE_KEYS, enabled);
+}
+
+/** Customer portal: the warehouse pages, journey tracker and dashboard
+ *  follow WMS changes live (0212), e.g. a receipt checked or a release
+ *  request approved by ExPac shows without a reload. */
+export function useWmsLiveSync(enabled: boolean) {
+  useRealtimeRefresh("portal-wms-live", WMS_LIVE_KEYS, enabled);
 }
 
 /* ---------- Ops Control Tower: Tasks & Notes ---------- */

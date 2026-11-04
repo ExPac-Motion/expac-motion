@@ -35,6 +35,10 @@ export interface WmsWarehouse {
   handling_in_rate: number;
   handling_out_rate: number;
   notes: string | null;
+  /** Hub matching (0213): ISO countries ("CN") and / or UN/LOCODEs ("ZADUR")
+   *  matched against a shipment's origin or destination. */
+  match_codes?: string[];
+  match_side?: "origin" | "destination";
   created_at: string;
 }
 export type WmsWarehouseInput = Omit<WmsWarehouse, "id" | "created_at">;

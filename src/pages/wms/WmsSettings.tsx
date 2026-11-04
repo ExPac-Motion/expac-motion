@@ -70,6 +70,12 @@ export default function WmsSettings() {
     { key: "code", header: "Code", width: 90, render: (w) => <b>{w.code}</b>, sortValue: (w) => w.code },
     { key: "name", header: "Name", width: 220, render: (w) => w.name, sortValue: (w) => w.name },
     {
+      key: "match",
+      header: "Hub for",
+      width: 160,
+      render: (w) => (w.match_codes?.length ? `${w.match_side === "destination" ? "To" : "From"} ${w.match_codes.slice(0, 4).join(", ")}${w.match_codes.length > 4 ? " …" : ""}` : "—"),
+    },
+    {
       key: "bays",
       header: "Bays",
       width: 80,
@@ -151,6 +157,16 @@ export default function WmsSettings() {
       handling_in_rate: Number(s("handling_in_rate")) || 0,
       handling_out_rate: Number(s("handling_out_rate")) || 0,
       notes: s("notes") || null,
+      // Hub matching (0213); sent only once the columns exist (after 0213).
+      ...(wh?.match_codes !== undefined || s("match_codes")
+        ? {
+            match_codes: s("match_codes")
+              .toUpperCase()
+              .split(/[s,;]+/)
+              .filter((c) => /^[A-Z]{2}([A-Z0-9]{3})?$/.test(c)),
+            match_side: s("match_side") === "destination" ? ("destination" as const) : ("origin" as const),
+          }
+        : {}),
     };
     if (!values.code || !values.name) return error("Code and name are required");
     saveWh.mutate(
@@ -309,6 +325,20 @@ export default function WmsSettings() {
               <div className="field">
                 <label>Handling out per CBM (R)</label>
                 <input name="handling_out_rate" type="number" step="0.01" defaultValue={wh?.handling_out_rate ?? 0} />
+              </div>
+            </div>
+            <div className="grid2">
+              <div className="field">
+                <label>Hub for shipments by</label>
+                <select name="match_side" defaultValue={wh?.match_side ?? "origin"}>
+                  <option value="origin">Origin (overseas hub)</option>
+                  <option value="destination">Destination (import hub)</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Match codes</label>
+                <input name="match_codes" defaultValue={(wh?.match_codes ?? []).join(", ")} placeholder="CN or ZADUR, ZACPT" />
+                <span className="hint">Countries (CN, HK, GB) or ports (ZADUR). A port beats a country.</span>
               </div>
             </div>
             <div className="field">
