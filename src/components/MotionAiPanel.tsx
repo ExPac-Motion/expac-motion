@@ -1,7 +1,7 @@
 // Motion AI chat (stage 1): a top-bar button that opens a side panel.
 // Admin-only to start (permission "motion_ai", migration 0214).
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AI_TOOL_LABEL,
@@ -26,7 +26,7 @@ const STARTERS = [
   "Show overdue tasks",
 ];
 
-interface Turn {
+export interface Turn {
   key: string;
   role: "user" | "assistant";
   text: string;
@@ -79,10 +79,23 @@ export default function MotionAiButton() {
   );
 }
 
-function MotionAiPanel({ onClose }: { onClose: () => void }) {
+/** Where the main dark nav bar ends, so the panel opens under it. */
+function navBottom(): number {
+  const nav = document.querySelector(".topbar-nav");
+  return nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 0;
+}
+
+export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; initialTurns?: Turn[] }) {
   const qc = useQueryClient();
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const [turns, setTurns] = useState<Turn[]>(initialTurns ?? []);
+  const [top, setTop] = useState(navBottom);
+  useEffect(() => {
+    const onResize = () => setTop(navBottom());
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [tool, setTool] = useState<string | null>(null);
@@ -168,7 +181,12 @@ function MotionAiPanel({ onClose }: { onClose: () => void }) {
   const convs = convQ.data ?? [];
 
   return (
-    <aside className="mai-panel" role="dialog" aria-label="Motion AI">
+    <aside
+      className="mai-panel"
+      role="dialog"
+      aria-label="Motion AI"
+      style={{ "--mai-top": `${top}px` } as CSSProperties}
+    >
       <div className="mai-head">
         <span className="mai-title">{SPARK} Motion AI</span>
         <select

@@ -19,6 +19,7 @@ import QuotePrintPage from "./pages/QuotePrintPage";
 import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
 import TimelineDemoPage from "./pages/TimelineDemoPage";
 import InboxDemoPage from "./pages/InboxDemoPage";
+import MotionAiDemoPage from "./pages/MotionAiDemoPage";
 import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
 // Presentation screenshot mode (dev only). The flag is written out here, not
 // imported, so a production build folds it to false and drops the sample
@@ -254,6 +255,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/customer-messages" element={<CustomerMessagesDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/masters" element={<MastersDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/inbox" element={<InboxDemoPage />} />}
+          {import.meta.env.DEV && <Route path="/dev/motion-ai" element={<MotionAiDemoPage />} />}
           {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />
           )}

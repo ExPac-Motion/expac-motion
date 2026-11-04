@@ -12101,7 +12101,8 @@ label.ws-tile:hover {
 /* ---------- Motion AI chat panel (0214) ---------- */
 .mai-panel {
   position: fixed;
-  top: 0;
+  /* Opens under the main dark nav bar, never over it. */
+  top: var(--mai-top, 58px);
   right: 0;
   bottom: 0;
   z-index: 90;
@@ -12118,7 +12119,7 @@ label.ws-tile:hover {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: var(--night);
+  background: var(--blue-ink);
   color: #fff;
 }
 .mai-title {
@@ -12232,4 +12233,19 @@ label.ws-tile:hover {
   resize: none;
   font: inherit;
   font-size: 14px;
+  line-height: 1.4;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mai-input textarea::placeholder {
+  color: var(--muted);
+}
+.mai-input textarea:focus {
+  border-color: var(--blue-ink);
+  box-shadow: 0 0 0 3px var(--blue-tint);
 }
