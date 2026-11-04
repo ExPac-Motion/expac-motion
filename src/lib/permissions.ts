@@ -18,7 +18,8 @@ export type StaffPerm =
   | "rates"
   | "settings"
   | "crm"
-  | "delete";
+  | "delete"
+  | "motion_ai";
 export type PartnerPerm = "delete_sheets" | "edit_coverage" | "see_history";
 export type PermKey = StaffPerm | PartnerPerm;
 export type ClientPerm = "shipments" | "quotes" | "invoices" | "suppliers" | "rates" | "warehouse" | "messaging";
@@ -50,6 +51,11 @@ export const STAFF_PERMS: PermDef<StaffPerm>[] = [
     key: "delete",
     label: "Delete records",
     hint: "Quotes, shipments, customers, partners, leads, tasks and lists, locked in the database",
+  },
+  {
+    key: "motion_ai",
+    label: "Motion AI",
+    hint: "The Motion AI assistant (chat panel); it sees everything this login can see",
   },
 ];
 
@@ -92,6 +98,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     settings: true,
     crm: true,
     delete: false,
+    // Admin-only to start (2026-11-04); switch on per role or per login.
+    motion_ai: false,
   },
   partner: { delete_sheets: false, edit_coverage: false, see_history: false },
   client: { shipments: true, quotes: true, invoices: true, suppliers: true, rates: true, warehouse: true, messaging: true },

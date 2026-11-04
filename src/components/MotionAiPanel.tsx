@@ -1,0 +1,256 @@
+// Motion AI chat (stage 1): a top-bar button that opens a side panel.
+// Admin-only to start (permission "motion_ai", migration 0214).
+
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  AI_TOOL_LABEL,
+  archiveAiConversation,
+  listAiConversations,
+  listAiMessages,
+  sendAiMessage,
+  type AiChatMessage,
+} from "../lib/motionAi";
+
+const SPARK = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+    <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />
+  </svg>
+);
+
+const STARTERS = [
+  "Give me today's briefing",
+  "Which shipments arrive in the next 5 days?",
+  "Which quotes need a follow-up?",
+  "Show overdue tasks",
+];
+
+interface Turn {
+  key: string;
+  role: "user" | "assistant";
+  text: string;
+}
+
+/** **bold**, `- ` bullets, `# ` headings and line breaks; everything else is
+ *  plain text (no HTML from the model is ever rendered). */
+function renderInline(s: string): ReactNode[] {
+  return s.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? <b key={i}>{part.slice(2, -2)}</b> : <Fragment key={i}>{part}</Fragment>,
+  );
+}
+function RichText({ text }: { text: string }) {
+  const out: ReactNode[] = [];
+  let bullets: ReactNode[] = [];
+  const flush = () => {
+    if (bullets.length) out.push(<ul key={`ul${out.length}`}>{bullets}</ul>);
+    bullets = [];
+  };
+  text.split("\n").forEach((raw, i) => {
+    const line = raw.trimEnd();
+    const b = line.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)$/);
+    if (b) {
+      bullets.push(<li key={i}>{renderInline(b[1])}</li>);
+      return;
+    }
+    flush();
+    const h = line.match(/^#{1,4}\s+(.*)$/);
+    if (h) out.push(<p key={i} className="mai-h">{renderInline(h[1])}</p>);
+    else if (line.trim()) out.push(<p key={i}>{renderInline(line)}</p>);
+  });
+  flush();
+  return <>{out}</>;
+}
+
+export default function MotionAiButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        className={`icon-btn${open ? " active" : ""}`}
+        title="Motion AI"
+        aria-label="Motion AI"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {SPARK}
+      </button>
+      {open && <MotionAiPanel onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function MotionAiPanel({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tool, setTool] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const convQ = useQuery({ queryKey: ["ai_conversations"], queryFn: listAiConversations });
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [turns, tool]);
+  useEffect(() => {
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      abortRef.current?.abort();
+    };
+  }, [onClose]);
+
+  async function openConversation(id: string) {
+    if (busy) return;
+    setError(null);
+    if (!id) {
+      setConversationId(null);
+      setTurns([]);
+      return;
+    }
+    setConversationId(id);
+    try {
+      const rows: AiChatMessage[] = await listAiMessages(id);
+      setTurns(rows.map((m) => ({ key: m.id, role: m.role, text: m.text })));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function send(text: string) {
+    const message = text.trim();
+    if (!message || busy) return;
+    setError(null);
+    setDraft("");
+    setBusy(true);
+    const replyKey = `a${Date.now()}`;
+    setTurns((t) => [...t, { key: `u${Date.now()}`, role: "user", text: message }, { key: replyKey, role: "assistant", text: "" }]);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      await sendAiMessage(
+        { message, conversationId },
+        (e) => {
+          if (e.type === "conversation") setConversationId(e.id);
+          else if (e.type === "text") {
+            setTool(null);
+            setTurns((t) => t.map((x) => (x.key === replyKey ? { ...x, text: x.text + e.delta } : x)));
+          } else if (e.type === "tool") setTool(e.phase === "start" ? e.name : null);
+          else if (e.type === "error") setError(e.message);
+        },
+        ctrl.signal,
+      );
+    } catch (e) {
+      if (!ctrl.signal.aborted) setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+      setTool(null);
+      setTurns((t) => t.filter((x) => !(x.key === replyKey && !x.text)));
+      qc.invalidateQueries({ queryKey: ["ai_conversations"] });
+      inputRef.current?.focus();
+    }
+  }
+
+  async function archiveCurrent() {
+    if (!conversationId || busy) return;
+    await archiveAiConversation(conversationId);
+    setConversationId(null);
+    setTurns([]);
+    qc.invalidateQueries({ queryKey: ["ai_conversations"] });
+  }
+
+  const convs = convQ.data ?? [];
+
+  return (
+    <aside className="mai-panel" role="dialog" aria-label="Motion AI">
+      <div className="mai-head">
+        <span className="mai-title">{SPARK} Motion AI</span>
+        <select
+          className="mai-pick"
+          value={conversationId ?? ""}
+          onChange={(e) => openConversation(e.target.value)}
+          disabled={busy}
+          aria-label="Earlier chats"
+        >
+          <option value="">New chat</option>
+          {conversationId && !convs.some((c) => c.id === conversationId) && <option value={conversationId}>This chat</option>}
+          {convs.map((c) => (
+            <option key={c.id} value={c.id}>
+              {(c.title || "Chat").slice(0, 48)}
+            </option>
+          ))}
+        </select>
+        {conversationId && (
+          <button className="link-btn" onClick={archiveCurrent} disabled={busy} title="Remove this chat from the list">
+            Archive
+          </button>
+        )}
+        <button className="mai-close" onClick={onClose} aria-label="Close">
+          ×
+        </button>
+      </div>
+
+      <div className="mai-body">
+        {turns.length === 0 && (
+          <div className="mai-empty">
+            <p>Ask about shipments, quotes, customers, tasks or rates.</p>
+            <div className="mai-starters">
+              {STARTERS.map((s) => (
+                <button key={s} className="btn outline btn-sm" onClick={() => send(s)} disabled={busy}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {turns.map((t) => (
+          <div key={t.key} className={`mai-msg ${t.role}`}>
+            {t.role === "assistant" ? <RichText text={t.text} /> : t.text}
+          </div>
+        ))}
+        {busy && (
+          <div className="mai-working">{tool ? `${AI_TOOL_LABEL[tool] ?? "Looking it up"}…` : "Thinking…"}</div>
+        )}
+        {error && <div className="mai-error">{error}</div>}
+        <div ref={endRef} />
+      </div>
+
+      <form
+        className="mai-input"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send(draft);
+        }}
+      >
+        <textarea
+          ref={inputRef}
+          value={draft}
+          rows={2}
+          placeholder="Ask Motion AI…"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send(draft);
+            }
+          }}
+        />
+        {busy ? (
+          <button type="button" className="btn outline" onClick={() => abortRef.current?.abort()}>
+            Stop
+          </button>
+        ) : (
+          <button type="submit" className="btn" disabled={!draft.trim()}>
+            Send
+          </button>
+        )}
+      </form>
+    </aside>
+  );
+}

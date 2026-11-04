@@ -11,6 +11,7 @@ import { useCan, useInboxUnread, useLiveSync, useMyProfile, useNavCounts } from 
 import type { PermKey } from "../lib/permissions";
 import GlobalSearch from "./GlobalSearch";
 import NotificationsBell from "./NotificationsBell";
+import MotionAiButton from "./MotionAiPanel";
 
 interface SubLink {
   to: string;
@@ -320,6 +321,7 @@ export default function Layout() {
 
         <div className="topbar-utils">
           <GlobalSearch />
+          {can("motion_ai") && <MotionAiButton />}
           <NotificationsBell />
           {can("settings") && (
             <Link
