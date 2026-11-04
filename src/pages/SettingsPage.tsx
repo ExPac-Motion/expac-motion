@@ -60,6 +60,7 @@ import SageSettingsTab from "./SageSettingsTab";
 import OperationsSettingsTab from "./OperationsSettingsTab";
 import SystemHealthTab from "./SystemHealthTab";
 import MotionAiSettingsTab from "./MotionAiSettingsTab";
+import MotionAiKnowledgeTab from "./MotionAiKnowledgeTab";
 import AppearanceSettingsTab from "./AppearanceSettingsTab";
 
 type Tab =
@@ -77,7 +78,8 @@ type Tab =
   | "operations"
   | "sage"
   | "health"
-  | "motionai";
+  | "motionai"
+  | "aiknowledge";
 
 // The side menu, grouped (12 sections no longer fit one row of tabs). The
 // ?tab= keys stay as they were, so existing links (e.g. ?tab=health in the
@@ -116,6 +118,7 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
       { key: "sage", label: "Sage Accounting" },
       { key: "health", label: "System health" },
       { key: "motionai", label: "Motion AI" },
+      { key: "aiknowledge", label: "Motion AI knowledge" },
     ],
   },
 ];
@@ -125,7 +128,7 @@ export default function SettingsPage() {
   const can = useCan();
   const requestedTab = (params.get("tab") as Tab) || "company";
   // Motion AI settings only for logins with Motion AI access (0214).
-  const tab: Tab = requestedTab === "motionai" && !can("motion_ai") ? "company" : requestedTab;
+  const tab: Tab = (requestedTab === "motionai" || requestedTab === "aiknowledge") && !can("motion_ai") ? "company" : requestedTab;
 
   return (
     <>
@@ -135,7 +138,7 @@ export default function SettingsPage() {
           {GROUPS.map((g) => (
             <div key={g.title} className="set-nav-group">
               <div className="set-nav-title">{g.title}</div>
-              {g.tabs.filter((t) => t.key !== "motionai" || can("motion_ai")).map((t) => (
+              {g.tabs.filter((t) => (t.key !== "motionai" && t.key !== "aiknowledge") || can("motion_ai")).map((t) => (
                 <button
                   key={t.key}
                   type="button"
@@ -165,6 +168,7 @@ export default function SettingsPage() {
           {tab === "sage" && <SageSettingsTab />}
           {tab === "health" && <SystemHealthTab />}
           {tab === "motionai" && <MotionAiSettingsTab />}
+          {tab === "aiknowledge" && <MotionAiKnowledgeTab />}
         </div>
       </div>
     </>

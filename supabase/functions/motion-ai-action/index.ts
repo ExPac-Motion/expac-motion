@@ -11,6 +11,7 @@ import { audit, type Actor } from "../_shared/audit.ts";
 import { type ActionRow, executeAction, revertAction } from "../_shared/actions.ts";
 import { corsHeaders, json, serviceClient, userClient } from "../_shared/env.ts";
 import { actionTool } from "../_shared/tools/index.ts";
+import { recordFeedback } from "../_shared/learning.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -76,6 +77,16 @@ Deno.serve(async (req) => {
         input: { action_id: row.id },
         result: { status: "executed", result: res },
       });
+      // An email sent with a different subject than drafted counts as an edit.
+      const draftedSubject = typeof row.input.subject === "string" ? row.input.subject : null;
+      const sentSubject = typeof res.subject === "string" ? res.subject : null;
+      const changed = row.tool === "draft_email" && draftedSubject && sentSubject && draftedSubject !== sentSubject;
+      await recordFeedback(svc, {
+        row,
+        userId,
+        kind: changed ? "edit" : "approve",
+        edited: changed ? { ...row.input, subject: sentSubject } : null,
+      });
       return json({ action: upd });
     }
 
@@ -85,13 +96,18 @@ Deno.serve(async (req) => {
       }
       if (row.status !== "pending") return json({ error: `Already ${row.status}.` }, 409);
       let edited: Record<string, unknown> | null = null;
+      let newSummary = "";
       if (body.edited_input && typeof body.edited_input === "object") {
         // Only the tool's editable fields can change, each re-checked.
         const tool = actionTool(row.tool);
         if (!tool) return json({ error: "Unknown action." }, 400);
         const prepared = tool.applyEdit(row.input, body.edited_input as Record<string, unknown>);
-        edited = prepared.input;
-        await svc.from("ai_actions").update({ summary: prepared.summary }).eq("id", row.id);
+        // No real change = approved as is.
+        if (JSON.stringify(prepared.input) !== JSON.stringify(row.input)) {
+          edited = prepared.input;
+          newSummary = prepared.summary;
+          await svc.from("ai_actions").update({ summary: prepared.summary }).eq("id", row.id);
+        }
       }
       // Claim it first so a double click can't run it twice.
       const { data: claimed } = await svc
@@ -103,6 +119,9 @@ Deno.serve(async (req) => {
         .select("id");
       if (!claimed?.length) return json({ error: "Someone else is already deciding this one." }, 409);
       const done = await executeAction({ svc, db, actor, row, deciderId: userId, editedInput: edited });
+      if (done.status === "executed") {
+        await recordFeedback(svc, { row, userId, kind: edited ? "edit" : "approve", edited, newSummary });
+      }
       return json({ action: done });
     }
 
@@ -125,10 +144,12 @@ Deno.serve(async (req) => {
         input: { action_id: row.id },
         result: { status: "rejected", reason },
       });
+      await recordFeedback(svc, { row, userId, kind: "reject", note: reason || null });
       return json({ action: upd });
     }
 
     const undone = await revertAction({ svc, db, actor, row, userId });
+    await recordFeedback(svc, { row, userId, kind: "undo" });
     return json({ action: undone });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

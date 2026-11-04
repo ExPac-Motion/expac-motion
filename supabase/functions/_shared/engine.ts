@@ -12,6 +12,7 @@ import { audit, type Actor } from "./audit.ts";
 import { type Db, sastDate } from "./env.ts";
 import { toolsFor, type ToolContext } from "./tools/index.ts";
 import { type ActionRow, pendingDecisionsNote, proposeAction } from "./actions.ts";
+import { knowledgeBlock } from "./knowledge.ts";
 
 export interface AiSettings {
   enabled: boolean;
@@ -107,10 +108,19 @@ export async function runTurn(t: TurnInput): Promise<TurnResult> {
 
   // Today's date goes in the user turn, not the system prompt, so the
   // cached prefix (tools + system) stays byte-identical all day and longer.
-  // Approval cards decided since the last reply, so the bot knows.
-  const decided = await pendingDecisionsNote(t.svc, t.conversationId);
+  // Approval cards decided since the last reply, so the bot knows; and the
+  // company knowledge that matches this request (0219).
+  const [decided, knowledge] = await Promise.all([
+    pendingDecisionsNote(t.svc, t.conversationId),
+    knowledgeBlock(t.svc, t.bot.key, t.userText),
+  ]);
   const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
-    { type: "text", text: `[Today is ${sastDate(0)} (South Africa).]${decided ? `\n${decided}` : ""}\n\n${t.userText}` },
+    {
+      type: "text",
+      text:
+        `[Today is ${sastDate(0)} (South Africa).]${decided ? `\n${decided}` : ""}` +
+        `${knowledge ? `\n\n${knowledge}` : ""}\n\n${t.userText}`,
+    },
   ];
   messages.push({ role: "user", content: userContent });
   await save("user", userContent, t.userText);

@@ -12443,3 +12443,13 @@ label.ws-tile:hover {
   max-width: 520px;
   color: var(--muted);
 }
+.mai-rate {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.mai-rate input { flex: 1; font-size: 12px; }
+.mai-kb-form { margin-bottom: 14px; }
+.mai-kb-body { max-height: 160px; overflow-y: auto; }

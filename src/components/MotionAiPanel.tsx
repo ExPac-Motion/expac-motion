@@ -11,6 +11,7 @@ import {
   listAiActions,
   listAiMessages,
   sendAiMessage,
+  rateAiMessage,
   type AiAction,
 } from "../lib/motionAi";
 import MotionAiActionCard from "./MotionAiActionCard";
@@ -35,6 +36,8 @@ export interface Turn {
   text: string;
   action?: AiAction;
   at?: string;
+  /** A saved message (real id), so it can be rated. */
+  saved?: boolean;
 }
 
 /** **bold**, `- ` bullets, `# ` headings and line breaks; everything else is
@@ -134,15 +137,19 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
     }
     setConversationId(id);
     try {
-      const [rows, actions] = await Promise.all([listAiMessages(id), listAiActions({ conversationId: id })]);
-      const merged: Turn[] = [
-        ...rows.map((m) => ({ key: m.id, role: m.role, text: m.text, at: m.created_at })),
-        ...actions.map((a) => ({ key: a.id, role: "action" as const, text: "", action: a, at: a.created_at })),
-      ].sort((a, b) => (a.at ?? "").localeCompare(b.at ?? ""));
-      setTurns(merged);
+      setTurns(await loadTurns(id));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
+  }
+
+  /** The saved turns of a chat (real message ids, for thumbs up / down). */
+  async function loadTurns(id: string): Promise<Turn[]> {
+    const [rows, actions] = await Promise.all([listAiMessages(id), listAiActions({ conversationId: id })]);
+    return [
+      ...rows.map((m) => ({ key: m.id, role: m.role, text: m.text, at: m.created_at, saved: true })),
+      ...actions.map((a) => ({ key: a.id, role: "action" as const, text: "", action: a, at: a.created_at })),
+    ].sort((a, b) => (a.at ?? "").localeCompare(b.at ?? ""));
   }
 
   async function send(text: string) {
@@ -155,11 +162,15 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
     setTurns((t) => [...t, { key: `u${Date.now()}`, role: "user", text: message }, { key: replyKey, role: "assistant", text: "" }]);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let convId = conversationId;
     try {
       await sendAiMessage(
         { message, conversationId },
         (e) => {
-          if (e.type === "conversation") setConversationId(e.id);
+          if (e.type === "conversation") {
+            convId = e.id;
+            setConversationId(e.id);
+          }
           else if (e.type === "text") {
             setTool(null);
             setTurns((t) => t.map((x) => (x.key === replyKey ? { ...x, text: x.text + e.delta } : x)));
@@ -185,6 +196,12 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
       setTurns((t) => t.filter((x) => !(x.key === replyKey && !x.text)));
       qc.invalidateQueries({ queryKey: ["ai_conversations"] });
       inputRef.current?.focus();
+      // Swap in the saved turns, so the reply can be rated.
+      if (convId) {
+        loadTurns(convId)
+          .then((saved) => saved.length && setTurns(saved))
+          .catch(() => undefined);
+      }
     }
   }
 
@@ -276,6 +293,7 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
           ) : (
             <div key={t.key} className={`mai-msg ${t.role}`}>
               {t.role === "assistant" ? <RichText text={t.text} /> : t.text}
+              {t.role === "assistant" && t.saved && <RateAnswer messageId={t.key} />}
             </div>
           ),
         )}
@@ -317,5 +335,45 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
         )}
       </form>
     </aside>
+  );
+}
+
+/** Thumbs up / down on an answer (0219). A thumbs down with a note becomes
+ *  a learned correction, pending an admin's approval. */
+function RateAnswer({ messageId }: { messageId: string }) {
+  const [state, setState] = useState<"idle" | "down" | "sent">("idle");
+  const [note, setNote] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  async function rate(r: "thumbs_up" | "thumbs_down", n?: string) {
+    setErr(null);
+    try {
+      await rateAiMessage(messageId, r, n);
+      setState("sent");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+  if (state === "sent") return <div className="mai-rate muted">Thanks, noted.</div>;
+  return (
+    <div className="mai-rate">
+      {state === "idle" ? (
+        <>
+          <button className="link-btn" title="Good answer" onClick={() => rate("thumbs_up")}>
+            Helpful
+          </button>
+          <button className="link-btn" title="Not right" onClick={() => setState("down")}>
+            Not right
+          </button>
+        </>
+      ) : (
+        <>
+          <input type="text" placeholder="What should it have said?" value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
+          <button className="btn outline btn-sm" onClick={() => rate("thumbs_down", note)}>
+            Send
+          </button>
+        </>
+      )}
+      {err && <span className="mai-card-note bad">{err}</span>}
+    </div>
   );
 }

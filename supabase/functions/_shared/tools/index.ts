@@ -4,10 +4,11 @@ import { ACTION_TOOLS } from "./actions.ts";
 import { READ_TOOLS } from "./read.ts";
 import { findStatusUpdates } from "./status.ts";
 import { DRAFT_TOOLS } from "./drafts.ts";
+import { searchKnowledge } from "../knowledge.ts";
 import type { ActionTool, ToolDef } from "./types.ts";
 
 export const ALL_TOOLS: Record<string, ToolDef> = Object.fromEntries(
-  [...READ_TOOLS, findStatusUpdates, ...ACTION_TOOLS, ...DRAFT_TOOLS].map((t) => [t.name, t]),
+  [...READ_TOOLS, findStatusUpdates, searchKnowledge, ...ACTION_TOOLS, ...DRAFT_TOOLS].map((t) => [t.name, t]),
 );
 
 export function actionTool(name: string): ActionTool | null {

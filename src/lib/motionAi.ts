@@ -392,3 +392,76 @@ export async function getLatestBriefing(): Promise<{ conversation: AiConversatio
     .join("\n\n");
   return { conversation: conv as AiConversation, text };
 }
+
+/* ---------- Stage 5: knowledge base + feedback (0219) ---------- */
+
+export async function rateAiMessage(messageId: string, rating: "thumbs_up" | "thumbs_down", note?: string): Promise<void> {
+  const { error } = await supabase.rpc("ai_rate_message", { p_message_id: messageId, p_rating: rating, p_note: note ?? null });
+  if (error) throw error;
+}
+
+export type AiKnowledgeKind = "sop" | "pricing_rule" | "tone" | "example" | "correction";
+export interface AiKnowledge {
+  id: string;
+  scope: "all" | "ops" | "sales" | "support";
+  kind: AiKnowledgeKind;
+  title: string;
+  body: string;
+  tags: string[];
+  status: "active" | "pending" | "archived";
+  source: "manual" | "learned";
+  source_note: string | null;
+  source_action_id: string | null;
+  use_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export const AI_KNOWLEDGE_KIND_LABEL: Record<AiKnowledgeKind, string> = {
+  sop: "SOP",
+  pricing_rule: "Pricing rule",
+  tone: "Tone guide",
+  example: "Approved example",
+  correction: "Correction",
+};
+export async function listAiKnowledge(): Promise<AiKnowledge[]> {
+  const { data, error } = await supabase
+    .from("ai_knowledge")
+    .select("id,scope,kind,title,body,tags,status,source,source_note,source_action_id,use_count,last_used_at,created_at,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  return (data ?? []) as AiKnowledge[];
+}
+export async function saveAiKnowledge(
+  entry: Partial<AiKnowledge> & { title: string; body: string; kind: AiKnowledgeKind },
+): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id ?? null;
+  const row = {
+    scope: entry.scope ?? "all",
+    kind: entry.kind,
+    title: entry.title.trim(),
+    body: entry.body.trim(),
+    tags: entry.tags ?? [],
+    status: entry.status ?? "active",
+    updated_by: uid,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = entry.id
+    ? await supabase.from("ai_knowledge").update(row).eq("id", entry.id)
+    : await supabase.from("ai_knowledge").insert({ ...row, created_by: uid });
+  if (error) throw error;
+}
+export async function setAiKnowledgeStatus(id: string, status: AiKnowledge["status"]): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("ai_knowledge")
+    .update({ status, updated_by: auth.user?.id ?? null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+export async function deleteAiKnowledge(id: string): Promise<void> {
+  const { error } = await supabase.from("ai_knowledge").delete().eq("id", id);
+  if (error) throw error;
+}
