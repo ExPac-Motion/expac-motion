@@ -15,6 +15,7 @@ import {
   useDeleteLogin,
   useSetPortalPermissions,
   useUploadMailAsset,
+  useCan,
 } from "../lib/hooks";
 import { SHIPMENT_MERGE_CODES } from "../lib/mailMerge";
 import {
@@ -58,6 +59,7 @@ import {
 import SageSettingsTab from "./SageSettingsTab";
 import OperationsSettingsTab from "./OperationsSettingsTab";
 import SystemHealthTab from "./SystemHealthTab";
+import MotionAiSettingsTab from "./MotionAiSettingsTab";
 import AppearanceSettingsTab from "./AppearanceSettingsTab";
 
 type Tab =
@@ -74,7 +76,8 @@ type Tab =
   | "qreplies"
   | "operations"
   | "sage"
-  | "health";
+  | "health"
+  | "motionai";
 
 // The side menu, grouped (12 sections no longer fit one row of tabs). The
 // ?tab= keys stay as they were, so existing links (e.g. ?tab=health in the
@@ -112,13 +115,17 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
       { key: "operations", label: "Operations" },
       { key: "sage", label: "Sage Accounting" },
       { key: "health", label: "System health" },
+      { key: "motionai", label: "Motion AI" },
     ],
   },
 ];
 
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
-  const tab = (params.get("tab") as Tab) || "company";
+  const can = useCan();
+  const requestedTab = (params.get("tab") as Tab) || "company";
+  // Motion AI settings only for logins with Motion AI access (0214).
+  const tab: Tab = requestedTab === "motionai" && !can("motion_ai") ? "company" : requestedTab;
 
   return (
     <>
@@ -128,7 +135,7 @@ export default function SettingsPage() {
           {GROUPS.map((g) => (
             <div key={g.title} className="set-nav-group">
               <div className="set-nav-title">{g.title}</div>
-              {g.tabs.map((t) => (
+              {g.tabs.filter((t) => t.key !== "motionai" || can("motion_ai")).map((t) => (
                 <button
                   key={t.key}
                   type="button"
@@ -157,6 +164,7 @@ export default function SettingsPage() {
           {tab === "operations" && <OperationsSettingsTab />}
           {tab === "sage" && <SageSettingsTab />}
           {tab === "health" && <SystemHealthTab />}
+          {tab === "motionai" && <MotionAiSettingsTab />}
         </div>
       </div>
     </>

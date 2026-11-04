@@ -2,7 +2,7 @@
 // ctx.db, the caller's own Supabase client, so RLS decides what is visible.
 
 import { compact, sastDate } from "../env.ts";
-import type { ToolDef } from "./types.ts";
+import type { ReadTool } from "./types.ts";
 
 /** Shipment statuses from Arrived onwards (SHIPMENT_STATUSES in src/lib/types.ts). */
 const ARRIVED_OR_LATER = [
@@ -53,7 +53,7 @@ function notArrived(row: { shipment_status?: string | null }): boolean {
 
 // ---------- shipments ----------
 
-export const searchShipments: ToolDef = {
+export const searchShipments: ReadTool = {
   name: "search_shipments",
   kind: "read",
   description:
@@ -107,7 +107,7 @@ export const searchShipments: ToolDef = {
   },
 };
 
-export const getShipment: ToolDef = {
+export const getShipment: ReadTool = {
   name: "get_shipment",
   kind: "read",
   description:
@@ -171,7 +171,7 @@ export const getShipment: ToolDef = {
 
 // ---------- quotes ----------
 
-export const searchQuotes: ToolDef = {
+export const searchQuotes: ReadTool = {
   name: "search_quotes",
   kind: "read",
   description:
@@ -231,7 +231,7 @@ export const searchQuotes: ToolDef = {
   },
 };
 
-export const getQuote: ToolDef = {
+export const getQuote: ReadTool = {
   name: "get_quote",
   kind: "read",
   description: "Full detail of one quotation: parties, route, charge lines (buy, margin, sell), packing list, follow-up notes and the shipment it became.",
@@ -262,7 +262,7 @@ export const getQuote: ToolDef = {
 
 // ---------- customers, suppliers, CRM ----------
 
-export const searchClients: ToolDef = {
+export const searchClients: ReadTool = {
   name: "search_clients",
   kind: "read",
   description: "Search customers by company, contact person, email or phone.",
@@ -285,7 +285,7 @@ export const searchClients: ToolDef = {
   },
 };
 
-export const getClient: ToolDef = {
+export const getClient: ReadTool = {
   name: "get_client",
   kind: "read",
   description: "One customer's record with their recent shipments, open quotes and open tasks.",
@@ -330,7 +330,7 @@ const PARTNER_TABLES: Record<string, string> = {
   destination_agent: "destination_agents",
 };
 
-export const searchSuppliers: ToolDef = {
+export const searchSuppliers: ReadTool = {
   name: "search_suppliers",
   kind: "read",
   description:
@@ -363,7 +363,7 @@ export const searchSuppliers: ToolDef = {
   },
 };
 
-export const searchLeads: ToolDef = {
+export const searchLeads: ReadTool = {
   name: "search_leads",
   kind: "read",
   description: "Search Sales CRM leads (prospects not yet customers). Use created_within_days for new leads.",
@@ -396,7 +396,7 @@ export const searchLeads: ToolDef = {
   },
 };
 
-export const searchOpportunities: ToolDef = {
+export const searchOpportunities: ReadTool = {
   name: "search_opportunities",
   kind: "read",
   description:
@@ -429,7 +429,7 @@ export const searchOpportunities: ToolDef = {
 const TASK_COLS =
   "id,kind,title,body,status,priority,due_date,due_time,created_at,assigned_to,job:jobs(reference),quote:quotes(reference),client:clients(company)";
 
-export const listTasks: ToolDef = {
+export const listTasks: ReadTool = {
   name: "list_tasks",
   kind: "read",
   description: "Control Tower Tasks & Notes. filter: open, overdue, due_today, mine (assigned to or created by the user), recently_done.",
@@ -474,7 +474,7 @@ export const listTasks: ToolDef = {
 };
 
 /** The figures behind both get_alerts and build_briefing. */
-async function gatherAttention(ctx: Parameters<ToolDef["run"]>[0]) {
+async function gatherAttention(ctx: Parameters<ReadTool["run"]>[0]) {
   const today = sastDate(0);
   const in5 = sastDate(5);
   const in7 = sastDate(7);
@@ -512,7 +512,7 @@ async function gatherAttention(ctx: Parameters<ToolDef["run"]>[0]) {
   };
 }
 
-export const getAlerts: ToolDef = {
+export const getAlerts: ReadTool = {
   name: "get_alerts",
   kind: "read",
   description:
@@ -523,7 +523,7 @@ export const getAlerts: ToolDef = {
   },
 };
 
-export const buildBriefing: ToolDef = {
+export const buildBriefing: ReadTool = {
   name: "build_briefing",
   kind: "read",
   description:
@@ -557,7 +557,7 @@ export const buildBriefing: ToolDef = {
 
 // ---------- rates ----------
 
-export const lookupRates: ToolDef = {
+export const lookupRates: ReadTool = {
   name: "lookup_rates",
   kind: "read",
   description:
@@ -598,7 +598,7 @@ export const lookupRates: ToolDef = {
   },
 };
 
-export const READ_TOOLS: ToolDef[] = [
+export const READ_TOOLS: ReadTool[] = [
   searchShipments,
   getShipment,
   searchQuotes,

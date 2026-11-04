@@ -3,6 +3,7 @@
 //   {type:"conversation", id}  first, so the panel knows the chat id
 //   {type:"text", delta}       pieces of the answer as they are written
 //   {type:"tool", name, phase} the bot is looking something up
+//   {type:"action", action}    an approval card / suggestion / auto action
 //   {type:"done"} | {type:"error", message}
 //
 // Deployed with --no-verify-jwt because the login is checked here (so the
@@ -87,6 +88,7 @@ Deno.serve(async (req) => {
           userText: message,
           onText: (delta) => send({ type: "text", delta }),
           onTool: (name, phase) => send({ type: "tool", name, phase }),
+          onAction: (row) => send({ type: "action", action: row }),
         });
         send({ type: "done" });
       } catch (e) {

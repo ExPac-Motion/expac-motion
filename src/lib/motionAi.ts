@@ -67,12 +67,16 @@ export const AI_TOOL_LABEL: Record<string, string> = {
   get_alerts: "Checking Control Tower alerts",
   build_briefing: "Putting the briefing together",
   lookup_rates: "Checking the tariff sheet",
+  create_task: "Preparing a task",
+  create_note: "Preparing a note",
+  update_shipment_status: "Preparing a status update",
 };
 
 export type AiStreamEvent =
   | { type: "conversation"; id: string }
   | { type: "text"; delta: string }
   | { type: "tool"; name: string; phase: "start" | "done" | "error" }
+  | { type: "action"; action: AiAction }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -126,3 +130,195 @@ export async function sendAiMessage(
     }
   }
 }
+
+/* ---------- Stage 2: actions, autonomy levels, settings (0215) ---------- */
+
+export type AiLevel = "suggest" | "draft" | "auto";
+export type AiActionStatus = "suggested" | "pending" | "executed" | "rejected" | "undone" | "failed";
+
+export interface AiAction {
+  id: string;
+  created_at: string;
+  bot_key: string;
+  conversation_id: string | null;
+  tool: string;
+  summary: string;
+  input: Record<string, unknown>;
+  edited_input: Record<string, unknown> | null;
+  level: AiLevel;
+  status: AiActionStatus;
+  target_type: string | null;
+  target_id: string | null;
+  target_ref: string | null;
+  actor_type: "user" | "trigger" | "schedule" | "system";
+  requested_by: string | null;
+  trigger_key: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  reject_reason: string | null;
+  executed_at: string | null;
+  result: unknown;
+  undo: Record<string, unknown> | null;
+  undone_by: string | null;
+  undone_at: string | null;
+  error: string | null;
+}
+
+export const AI_ACTION_LABEL: Record<string, string> = {
+  create_task: "Create a task",
+  create_note: "Create a note",
+  update_shipment_status: "Update shipment status",
+  draft_quote: "Draft a quotation",
+  draft_email: "Email a customer or supplier",
+};
+
+export const AI_STATUS_LABEL: Record<AiActionStatus, string> = {
+  suggested: "Suggested",
+  pending: "Awaiting approval",
+  executed: "Done",
+  rejected: "Rejected",
+  undone: "Undone",
+  failed: "Failed",
+};
+
+export const AI_LEVEL_LABEL: Record<AiLevel, string> = {
+  suggest: "Suggest only",
+  draft: "Draft for approval",
+  auto: "Auto-execute",
+};
+
+export async function listAiActions(opts: { conversationId?: string; status?: string; limit?: number } = {}): Promise<AiAction[]> {
+  let q = supabase.from("ai_actions").select("*").order("created_at", { ascending: false }).limit(opts.limit ?? 200);
+  if (opts.conversationId) q = q.eq("conversation_id", opts.conversationId);
+  if (opts.status) q = q.eq("status", opts.status);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as AiAction[];
+}
+
+/** Approve (optionally with edits), reject (optional reason) or undo. */
+export async function decideAiAction(
+  actionId: string,
+  decision: "approve" | "reject" | "undo",
+  extra: { edited_input?: Record<string, unknown>; reason?: string } = {},
+): Promise<AiAction> {
+  const { data, error } = await supabase.functions.invoke("motion-ai-action", {
+    body: { action_id: actionId, decision, ...extra },
+  });
+  if (error) {
+    // The function's own message is in the response body.
+    let msg = error.message;
+    try {
+      const ctx = (error as { context?: Response }).context;
+      const j = ctx ? await ctx.json() : null;
+      if (j?.error) msg = j.error;
+    } catch {
+      /* keep the generic message */
+    }
+    throw new Error(msg);
+  }
+  return (data as { action: AiAction }).action;
+}
+
+export interface AiPolicy {
+  bot_key: string;
+  action: string;
+  label: string;
+  level: AiLevel;
+  locked: boolean;
+}
+export async function listAiPolicies(): Promise<AiPolicy[]> {
+  const { data, error } = await supabase.from("ai_action_policies").select("bot_key,action,label,level,locked").order("action");
+  if (error) throw error;
+  return (data ?? []) as AiPolicy[];
+}
+export async function setAiPolicyLevel(botKey: string, action: string, level: AiLevel): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("ai_action_policies")
+    .update({ level, updated_at: new Date().toISOString(), updated_by: auth.user?.id ?? null })
+    .eq("bot_key", botKey)
+    .eq("action", action);
+  if (error) throw error;
+}
+
+export interface AiScore {
+  bot_key: string;
+  action: string;
+  approved_as_is: number;
+  approved_edited: number;
+  rejected: number;
+  undone: number;
+  failed: number;
+  auto_done: number;
+  pending: number;
+  streak: number;
+}
+export async function listAiScorecard(): Promise<AiScore[]> {
+  const { data, error } = await supabase.from("ai_action_scorecard").select("*");
+  if (error) throw error;
+  return (data ?? []) as AiScore[];
+}
+
+export interface AiSettingsRow {
+  enabled: boolean;
+  models: Record<string, string>;
+  effort: "low" | "medium" | "high";
+  model_prices: Record<string, { in: number; out: number }>;
+  monthly_budget_usd: number;
+  briefing_time: string;
+  briefing_days: number[];
+  max_tool_steps: number;
+}
+export async function getAiSettings(): Promise<AiSettingsRow> {
+  const { data, error } = await supabase.from("ai_settings").select("*").eq("id", 1).single();
+  if (error) throw error;
+  return data as AiSettingsRow;
+}
+export async function saveAiSettings(patch: Partial<AiSettingsRow>): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("ai_settings")
+    .update({ ...patch, updated_at: new Date().toISOString(), updated_by: auth.user?.id ?? null })
+    .eq("id", 1);
+  if (error) throw error;
+}
+export async function getAiMonthSpend(): Promise<number> {
+  const { data, error } = await supabase.rpc("ai_month_spend");
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export interface AiBotRow {
+  key: string;
+  name: string;
+  system_prompt: string;
+  allowed_tools: string[];
+  enabled: boolean;
+}
+export async function listAiBots(): Promise<AiBotRow[]> {
+  const { data, error } = await supabase.from("ai_bots").select("key,name,system_prompt,allowed_tools,enabled").order("key");
+  if (error) throw error;
+  return (data ?? []) as AiBotRow[];
+}
+export async function saveAiBotPrompt(key: string, system_prompt: string): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("ai_bots")
+    .update({ system_prompt, updated_at: new Date().toISOString(), updated_by: auth.user?.id ?? null })
+    .eq("key", key);
+  if (error) throw error;
+}
+
+/** Models offered in Settings; any other model id can be typed in. */
+export const AI_MODEL_CHOICES = [
+  { id: "claude-opus-5-5", label: "Claude Opus 5.5 (most capable)" },
+  { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5 (balanced)" },
+  { id: "claude-haiku-5-5", label: "Claude Haiku 5.5 (fast, cheapest)" },
+];
+export const AI_TASK_LABEL: Record<string, string> = {
+  chat: "Chat panel",
+  briefing: "Daily briefing",
+  trigger: "Trigger checks",
+  deep: "Drafting quotes",
+};

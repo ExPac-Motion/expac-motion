@@ -11,6 +11,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.137.0";
 import { audit, type Actor } from "./audit.ts";
 import { type Db, sastDate } from "./env.ts";
 import { toolsFor, type ToolContext } from "./tools/index.ts";
+import { type ActionRow, pendingDecisionsNote, proposeAction } from "./actions.ts";
 
 export interface AiSettings {
   enabled: boolean;
@@ -70,6 +71,8 @@ export interface TurnInput {
   userText: string;
   onText?: (delta: string) => void;
   onTool?: (name: string, phase: "start" | "done" | "error") => void;
+  /** An action was suggested, carded for approval or done. */
+  onAction?: (row: ActionRow) => void;
 }
 
 export interface TurnResult {
@@ -104,8 +107,10 @@ export async function runTurn(t: TurnInput): Promise<TurnResult> {
 
   // Today's date goes in the user turn, not the system prompt, so the
   // cached prefix (tools + system) stays byte-identical all day and longer.
+  // Approval cards decided since the last reply, so the bot knows.
+  const decided = await pendingDecisionsNote(t.svc, t.conversationId);
   const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
-    { type: "text", text: `[Today is ${sastDate(0)} (South Africa).]\n\n${t.userText}` },
+    { type: "text", text: `[Today is ${sastDate(0)} (South Africa).]${decided ? `\n${decided}` : ""}\n\n${t.userText}` },
   ];
   messages.push({ role: "user", content: userContent });
   await save("user", userContent, t.userText);
@@ -209,6 +214,27 @@ export async function runTurn(t: TurnInput): Promise<TurnResult> {
         if (!tool) {
           t.onTool?.(call.name, "error");
           return { type: "tool_result", tool_use_id: call.id, is_error: true, content: `Tool ${call.name} is not available to this bot.` };
+        }
+        if (tool.kind === "action") {
+          try {
+            const { row, reply } = await proposeAction({ svc: t.svc, ctx, execDb: t.toolDb, actor: t.actor, tool, input });
+            t.onAction?.(row);
+            t.onTool?.(call.name, "done");
+            return { type: "tool_result", tool_use_id: call.id, content: reply };
+          } catch (e) {
+            const err = e instanceof Error ? e.message : String(e);
+            await audit(t.svc, t.actor, {
+              bot_key: t.bot.key,
+              conversation_id: t.conversationId,
+              event: "action",
+              tool: call.name,
+              input,
+              ok: false,
+              error: err,
+            });
+            t.onTool?.(call.name, "error");
+            return { type: "tool_result", tool_use_id: call.id, is_error: true, content: `Not recorded: ${err}` };
+          }
         }
         try {
           const out = await tool.run(ctx, input);

@@ -1,5 +1,6 @@
-// Motion AI chat (stage 1): a top-bar button that opens a side panel.
-// Admin-only to start (permission "motion_ai", migration 0214).
+// Motion AI chat: a top-bar button that opens a side panel (0214), with
+// approval cards for the bot's actions (0215). Admin-only to start
+// (permission "motion_ai").
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,10 +8,12 @@ import {
   AI_TOOL_LABEL,
   archiveAiConversation,
   listAiConversations,
+  listAiActions,
   listAiMessages,
   sendAiMessage,
-  type AiChatMessage,
+  type AiAction,
 } from "../lib/motionAi";
+import MotionAiActionCard from "./MotionAiActionCard";
 
 const SPARK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -28,8 +31,10 @@ const STARTERS = [
 
 export interface Turn {
   key: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "action";
   text: string;
+  action?: AiAction;
+  at?: string;
 }
 
 /** **bold**, `- ` bullets, `# ` headings and line breaks; everything else is
@@ -129,8 +134,12 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
     }
     setConversationId(id);
     try {
-      const rows: AiChatMessage[] = await listAiMessages(id);
-      setTurns(rows.map((m) => ({ key: m.id, role: m.role, text: m.text })));
+      const [rows, actions] = await Promise.all([listAiMessages(id), listAiActions({ conversationId: id })]);
+      const merged: Turn[] = [
+        ...rows.map((m) => ({ key: m.id, role: m.role, text: m.text, at: m.created_at })),
+        ...actions.map((a) => ({ key: a.id, role: "action" as const, text: "", action: a, at: a.created_at })),
+      ].sort((a, b) => (a.at ?? "").localeCompare(b.at ?? ""));
+      setTurns(merged);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -155,6 +164,15 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
             setTool(null);
             setTurns((t) => t.map((x) => (x.key === replyKey ? { ...x, text: x.text + e.delta } : x)));
           } else if (e.type === "tool") setTool(e.phase === "start" ? e.name : null);
+          else if (e.type === "action") {
+            // The card goes just above the bot's reply about it.
+            setTurns((t) => {
+              const i = t.findIndex((x) => x.key === replyKey);
+              const card: Turn = { key: e.action.id, role: "action", text: "", action: e.action };
+              return i < 0 ? [...t, card] : [...t.slice(0, i), card, ...t.slice(i)];
+            });
+            qc.invalidateQueries({ queryKey: ["ai_actions"] });
+          }
           else if (e.type === "error") setError(e.message);
         },
         ctrl.signal,
@@ -227,11 +245,22 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
             </div>
           </div>
         )}
-        {turns.map((t) => (
-          <div key={t.key} className={`mai-msg ${t.role}`}>
-            {t.role === "assistant" ? <RichText text={t.text} /> : t.text}
-          </div>
-        ))}
+        {turns.map((t) =>
+          t.role === "action" && t.action ? (
+            <MotionAiActionCard
+              key={t.key}
+              action={t.action}
+              onChange={(a) => {
+                setTurns((all) => all.map((x) => (x.key === t.key ? { ...x, action: a } : x)));
+                qc.invalidateQueries({ queryKey: ["ai_actions"] });
+              }}
+            />
+          ) : (
+            <div key={t.key} className={`mai-msg ${t.role}`}>
+              {t.role === "assistant" ? <RichText text={t.text} /> : t.text}
+            </div>
+          ),
+        )}
         {busy && (
           <div className="mai-working">{tool ? `${AI_TOOL_LABEL[tool] ?? "Looking it up"}…` : "Thinking…"}</div>
         )}

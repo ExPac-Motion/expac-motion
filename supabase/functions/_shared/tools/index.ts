@@ -1,11 +1,17 @@
 // Tool registry: every tool any bot can use, looked up by name.
 
+import { ACTION_TOOLS } from "./actions.ts";
 import { READ_TOOLS } from "./read.ts";
-import type { ToolDef } from "./types.ts";
+import type { ActionTool, ToolDef } from "./types.ts";
 
 export const ALL_TOOLS: Record<string, ToolDef> = Object.fromEntries(
-  READ_TOOLS.map((t) => [t.name, t]),
+  [...READ_TOOLS, ...ACTION_TOOLS].map((t) => [t.name, t]),
 );
+
+export function actionTool(name: string): ActionTool | null {
+  const t = ALL_TOOLS[name];
+  return t && t.kind === "action" ? t : null;
+}
 
 /** The bot's allowed tools, in a fixed order so the prompt cache holds. */
 export function toolsFor(allowed: string[]): ToolDef[] {
@@ -15,4 +21,4 @@ export function toolsFor(allowed: string[]): ToolDef[] {
     .filter((t): t is ToolDef => !!t);
 }
 
-export type { ToolContext, ToolDef } from "./types.ts";
+export type { ActionTool, ExecContext, ReadTool, ToolContext, ToolDef } from "./types.ts";

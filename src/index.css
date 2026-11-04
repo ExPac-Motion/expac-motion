@@ -12249,3 +12249,164 @@ label.ws-tile:hover {
   border-color: var(--blue-ink);
   box-shadow: 0 0 0 3px var(--blue-tint);
 }
+
+/* Motion AI action cards (0215) */
+.mai-card {
+  align-self: stretch;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue-ink);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mai-card.pending { border-left-color: var(--amber); }
+.mai-card.executed { border-left-color: var(--green); }
+.mai-card.rejected,
+.mai-card.failed { border-left-color: var(--orange); }
+.mai-card.undone,
+.mai-card.suggested { border-left-color: var(--muted); }
+.mai-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.mai-card-kind {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.mai-card-summary { font-weight: 700; }
+.mai-card-body,
+.mai-card-note {
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+.mai-card-note.bad { color: var(--orange-ink); }
+.mai-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--night-tint);
+  color: var(--ink);
+}
+.mai-pill.pending { background: var(--amber-tint); color: var(--amber-ink); }
+.mai-pill.executed { background: var(--green-tint); color: var(--green-dark); }
+.mai-pill.rejected,
+.mai-pill.failed { background: var(--orange-tint); color: var(--orange-ink); }
+.mai-card-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mai-card-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mai-card-edit textarea {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  resize: vertical;
+}
+.mai-card-row {
+  display: flex;
+  gap: 8px;
+}
+.mai-card-row label { flex: 1; }
+.mai-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Control Tower › Motion AI + Settings › Motion AI */
+.mai-ovr-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.mai-ovr-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mai-stat {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mai-stat b {
+  display: block;
+  font-size: 18px;
+  color: var(--ink);
+}
+.mai-ovr-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
+}
+.mai-ovr-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+.mai-set-section { margin-bottom: 26px; }
+.mai-set-section h3 { margin: 0 0 6px; }
+.mai-set-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.mai-set-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.mai-policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.mai-policy-table th,
+.mai-policy-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.mai-policy-table td.num,
+.mai-policy-table th.num { text-align: right; }
+.mai-ready {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+.mai-prompt {
+  width: 100%;
+  min-height: 260px;
+  font: 13px/1.5 ui-monospace, Consolas, monospace;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}

@@ -5,6 +5,7 @@ import {
   useJobTracking,
   useJobs,
   useOpsTasks,
+  useCan,
   useQuotes,
 } from "../lib/hooks";
 import { isTaskOverdue, todayIso } from "../lib/opsCalendar";
@@ -19,6 +20,9 @@ import LiveTracking from "./ops/LiveTracking";
 import PersonalVaultPage from "./ops/PersonalVaultPage";
 import DocumentVaultTab from "./ops/DocumentVaultTab";
 import WorldClock from "./ops/WorldClock";
+import MotionAiTab from "./ops/MotionAiTab";
+import { useQuery } from "@tanstack/react-query";
+import { listAiActions } from "../lib/motionAi";
 
 type Tab =
   | "tasks"
@@ -27,7 +31,8 @@ type Tab =
   | "tracking"
   | "vault"
   | "docvault"
-  | "worldclock";
+  | "worldclock"
+  | "motionai";
 
 interface Chip {
   label: string;
@@ -45,6 +50,14 @@ export default function OpsControlTowerPage() {
   const tab: Tab = requested === "vault" && !canVault ? "tasks" : requested;
   const focus = params.get("focus") || undefined;
 
+  const can = useCan();
+  const canAi = can("motion_ai");
+  const aiPendingQ = useQuery({
+    queryKey: ["ai_actions", "pending"],
+    queryFn: () => listAiActions({ status: "pending", limit: 100 }),
+    enabled: canAi,
+  });
+  const aiPending = canAi ? aiPendingQ.data?.length ?? 0 : 0;
   const jobsQ = useJobs();
   const quotesQ = useQuotes();
   const tasksQ = useOpsTasks();
@@ -104,6 +117,7 @@ export default function OpsControlTowerPage() {
     const awaiting = quotes.filter((q) => q.status === "sent").length;
 
     return [
+      { label: "Motion AI awaiting approval", n: aiPending, alert: true, go: () => setTab("motionai") },
       { label: "Tasks overdue", n: overdue, alert: true, go: () => setTab("tasks", { focus: "overdue" }) },
       { label: "Tasks due today", n: dueToday, go: () => setTab("tasks", { focus: "today" }) },
       {
@@ -121,7 +135,7 @@ export default function OpsControlTowerPage() {
       { label: "Quotes expiring ≤ 7 days", n: expiring, alert: true, go: () => navigate("/quotes") },
       { label: "Quotes awaiting approval", n: awaiting, go: () => navigate("/quotes?status=sent") },
     ].filter((c) => c.n > 0);
-  }, [jobs, quotes, tasks, trackings, navigate, setTab]);
+  }, [jobs, quotes, tasks, trackings, navigate, setTab, aiPending]);
 
   return (
     <>
@@ -149,6 +163,7 @@ export default function OpsControlTowerPage() {
       {tab === "vault" && canVault && <PersonalVaultPage />}
       {tab === "docvault" && <DocumentVaultTab />}
       {tab === "worldclock" && <WorldClock />}
+      {tab === "motionai" && canAi && <MotionAiTab />}
     </>
   );
 }

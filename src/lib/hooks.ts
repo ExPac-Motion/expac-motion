@@ -495,6 +495,9 @@ const STAFF_LIVE_KEYS: LiveKeys = {
   ...WMS_LIVE_KEYS,
   jobs: [...SHIPMENT_LIVE_KEYS.jobs, "wms/hub-sync"],
   job_hubs: ["wms"],
+  // Motion AI approval cards and autonomy levels (0215).
+  ai_actions: ["ai_actions", "ai_scorecard"],
+  ai_action_policies: ["ai_policies"],
 };
 
 /** Live updates (0198, 0203, 0212): any change to shipments, quotes, the

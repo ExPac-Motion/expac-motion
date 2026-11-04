@@ -42,6 +42,7 @@ const NAV: NavModule[] = [
       { to: "/ops?tab=tracking", label: "Live Tracking" },
       { to: "/ops?tab=docvault", label: "Document Vault" },
       { to: "/ops?tab=worldclock", label: "World Clock" },
+      { to: "/ops?tab=motionai", label: "Motion AI" },
     ],
   },
   {
@@ -193,6 +194,13 @@ export default function Layout() {
           : m,
       )
     : NAV;
+
+  // Control Tower › Motion AI (0215) only for logins with Motion AI access.
+  if (!can("motion_ai")) {
+    nav = nav.map((m) =>
+      m.to === "/ops" ? { ...m, children: m.children?.filter((c) => !c.to.includes("tab=motionai")) } : m,
+    );
+  }
 
   // Portal Access manages other logins' roles/permissions/passwords,
   // admin-only, same as the RPCs it calls (0091_role_model_v2.sql).
