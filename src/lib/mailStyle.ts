@@ -61,7 +61,8 @@ export function emailButtonHtml(
 export const PROGRESS_STEPS = ["Created", "Booked", "Collected", "Shipped", "In Transit", "Delivered"] as const;
 
 const PROGRESS_TEAL = "#02858a"; // brand teal, darkened for white-on-teal contrast
-const PROGRESS_HALO = "#cceced";
+const PROGRESS_AMBER = "#e9a91b"; // brand amber: the current (active) step's circle
+const PROGRESS_HALO = "#fcf1d6"; // amber tint ring around the current step
 const PROGRESS_GREY = "#c7c7c2";
 const PROGRESS_MUTED = "#8a8a85";
 
@@ -109,7 +110,7 @@ function progressLine(kind: "solid" | "dotted" | "none"): string {
  * The shipment progress bar, the top banner of customer status mail:
  * `current` is the index of the step it's at (PROGRESS_STEPS.length = all
  * done, delivered). Done steps are teal circles with a ✓ joined by a
- * solid line, the current one has a light halo, the rest are white
+ * solid line, the current one is amber with a light amber halo, the rest are white
  * circles with a grey number joined by a dotted line. No background.
  * `width` is the signature banner's width (signatureBannerWidth), so the
  * two line up; Outlook ignores max-width, hence its fixed-width wrapper.
@@ -137,8 +138,8 @@ export function emailProgressHtml(current: number, href: string, width = 600): s
     // still to come keep their number.
     const circle = progressCircle(
       done || now ? "&#10003;" : String(i + 1),
-      done || now ? PROGRESS_TEAL : "#ffffff",
-      done || now ? PROGRESS_TEAL : PROGRESS_GREY,
+      now ? PROGRESS_AMBER : done ? PROGRESS_TEAL : "#ffffff",
+      now ? PROGRESS_AMBER : done ? PROGRESS_TEAL : PROGRESS_GREY,
       done || now ? "#ffffff" : PROGRESS_MUTED,
       now,
     );

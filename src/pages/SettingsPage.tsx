@@ -58,10 +58,12 @@ import {
 import SageSettingsTab from "./SageSettingsTab";
 import OperationsSettingsTab from "./OperationsSettingsTab";
 import SystemHealthTab from "./SystemHealthTab";
+import AppearanceSettingsTab from "./AppearanceSettingsTab";
 
 type Tab =
   | "company"
   | "defaults"
+  | "appearance"
   | "team"
   | "portal"
   | "roles"
@@ -83,6 +85,7 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
     tabs: [
       { key: "company", label: "Company Details" },
       { key: "defaults", label: "Quote Defaults" },
+      { key: "appearance", label: "Appearance & Brand" },
     ],
   },
   {
@@ -142,6 +145,7 @@ export default function SettingsPage() {
         <div className="panel set-body">
           {tab === "company" && <CompanyTab />}
           {tab === "defaults" && <DefaultsTab />}
+          {tab === "appearance" && <AppearanceSettingsTab />}
           {tab === "team" && <TeamTab view="team" />}
           {tab === "portal" && <TeamTab view="portal" />}
           {tab === "roles" && <RolesTab />}
