@@ -498,6 +498,8 @@ const STAFF_LIVE_KEYS: LiveKeys = {
   // Motion AI approval cards and autonomy levels (0215).
   ai_actions: ["ai_actions", "ai_scorecard"],
   ai_action_policies: ["ai_policies"],
+  ai_events: ["ai_events"],
+  ai_triggers: ["ai_triggers"],
 };
 
 /** Live updates (0198, 0203, 0212): any change to shipments, quotes, the

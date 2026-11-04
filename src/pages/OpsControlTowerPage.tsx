@@ -22,7 +22,7 @@ import DocumentVaultTab from "./ops/DocumentVaultTab";
 import WorldClock from "./ops/WorldClock";
 import MotionAiTab from "./ops/MotionAiTab";
 import { useQuery } from "@tanstack/react-query";
-import { listAiActions } from "../lib/motionAi";
+import { listAiActions, listAiEvents } from "../lib/motionAi";
 
 type Tab =
   | "tasks"
@@ -58,6 +58,11 @@ export default function OpsControlTowerPage() {
     enabled: canAi,
   });
   const aiPending = canAi ? aiPendingQ.data?.length ?? 0 : 0;
+  const aiEventsQ = useQuery({ queryKey: ["ai_events"], queryFn: () => listAiEvents(40), enabled: canAi });
+  const dayAgo = Date.now() - 86_400_000;
+  const aiFailed = canAi
+    ? (aiEventsQ.data ?? []).filter((e) => e.status === "failed" && Date.parse(e.finished_at ?? e.created_at) > dayAgo).length
+    : 0;
   const jobsQ = useJobs();
   const quotesQ = useQuotes();
   const tasksQ = useOpsTasks();
@@ -118,6 +123,7 @@ export default function OpsControlTowerPage() {
 
     return [
       { label: "Motion AI awaiting approval", n: aiPending, alert: true, go: () => setTab("motionai") },
+      { label: "Motion AI errors (24 h)", n: aiFailed, alert: true, go: () => setTab("motionai") },
       { label: "Tasks overdue", n: overdue, alert: true, go: () => setTab("tasks", { focus: "overdue" }) },
       { label: "Tasks due today", n: dueToday, go: () => setTab("tasks", { focus: "today" }) },
       {
@@ -135,7 +141,7 @@ export default function OpsControlTowerPage() {
       { label: "Quotes expiring ≤ 7 days", n: expiring, alert: true, go: () => navigate("/quotes") },
       { label: "Quotes awaiting approval", n: awaiting, go: () => navigate("/quotes?status=sent") },
     ].filter((c) => c.n > 0);
-  }, [jobs, quotes, tasks, trackings, navigate, setTab, aiPending]);
+  }, [jobs, quotes, tasks, trackings, navigate, setTab, aiPending, aiFailed]);
 
   return (
     <>

@@ -44,7 +44,7 @@ function renderInline(s: string): ReactNode[] {
     part.startsWith("**") && part.endsWith("**") ? <b key={i}>{part.slice(2, -2)}</b> : <Fragment key={i}>{part}</Fragment>,
   );
 }
-function RichText({ text }: { text: string }) {
+export function RichText({ text }: { text: string }) {
   const out: ReactNode[] = [];
   let bullets: ReactNode[] = [];
   const flush = () => {
@@ -216,13 +216,31 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
         >
           <option value="">New chat</option>
           {conversationId && !convs.some((c) => c.id === conversationId) && <option value={conversationId}>This chat</option>}
-          {convs.map((c) => (
-            <option key={c.id} value={c.id}>
-              {(c.title || "Chat").slice(0, 48)}
-            </option>
-          ))}
+          {convs.some((c) => c.source === "chat") && (
+            <optgroup label="My chats">
+              {convs
+                .filter((c) => c.source === "chat")
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {(c.title || "Chat").slice(0, 48)}
+                  </option>
+                ))}
+            </optgroup>
+          )}
+          {convs.some((c) => c.source !== "chat") && (
+            <optgroup label="Briefings and automatic runs">
+              {convs
+                .filter((c) => c.source !== "chat")
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {(c.title || "Run").slice(0, 48)}
+                  </option>
+                ))}
+            </optgroup>
+          )}
         </select>
-        {conversationId && (
+        {conversationId && convs.find((c) => c.id === conversationId)?.source !== "schedule" &&
+          convs.find((c) => c.id === conversationId)?.source !== "trigger" && (
           <button className="link-btn" onClick={archiveCurrent} disabled={busy} title="Remove this chat from the list">
             Archive
           </button>

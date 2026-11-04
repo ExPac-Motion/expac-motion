@@ -27,10 +27,12 @@ export async function listAiConversations(): Promise<AiConversation[]> {
   const { data, error } = await supabase
     .from("ai_conversations")
     .select("id,bot_key,title,source,created_at,updated_at")
-    .eq("user_id", uid)
+    // Own chats, plus briefings and automatic runs (0218; RLS shows those
+    // to admins only).
+    .or(`user_id.eq.${uid},source.neq.chat`)
     .eq("archived", false)
     .order("updated_at", { ascending: false })
-    .limit(30);
+    .limit(40);
   if (error) throw error;
   return (data ?? []) as AiConversation[];
 }
@@ -325,3 +327,68 @@ export const AI_TASK_LABEL: Record<string, string> = {
   trigger: "Trigger checks",
   deep: "Drafting quotes",
 };
+
+/* ---------- Stage 4: triggers, events, briefings (0218) ---------- */
+
+export interface AiTrigger {
+  key: string;
+  label: string;
+  kind: "event" | "schedule";
+  enabled: boolean;
+  sort: number;
+  instruction: string;
+}
+export async function listAiTriggers(): Promise<AiTrigger[]> {
+  const { data, error } = await supabase.from("ai_triggers").select("key,label,kind,enabled,sort,instruction").order("sort");
+  if (error) throw error;
+  return (data ?? []) as AiTrigger[];
+}
+export async function setAiTriggerEnabled(key: string, enabled: boolean): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("ai_triggers")
+    .update({ enabled, updated_at: new Date().toISOString(), updated_by: auth.user?.id ?? null })
+    .eq("key", key);
+  if (error) throw error;
+}
+
+export interface AiEvent {
+  id: string;
+  created_at: string;
+  trigger_key: string;
+  payload: Record<string, unknown>;
+  status: "queued" | "running" | "done" | "failed" | "skipped";
+  attempts: number;
+  finished_at: string | null;
+  conversation_id: string | null;
+  summary: string | null;
+  error: string | null;
+}
+export async function listAiEvents(limit = 40): Promise<AiEvent[]> {
+  const { data, error } = await supabase
+    .from("ai_events")
+    .select("id,created_at,trigger_key,payload,status,attempts,finished_at,conversation_id,summary,error")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as AiEvent[];
+}
+
+/** The newest daily briefing: its conversation and the bot's text. */
+export async function getLatestBriefing(): Promise<{ conversation: AiConversation; text: string } | null> {
+  const { data: conv, error } = await supabase
+    .from("ai_conversations")
+    .select("id,bot_key,title,source,created_at,updated_at")
+    .eq("trigger_key", "daily_briefing")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!conv) return null;
+  const msgs = await listAiMessages(conv.id);
+  const text = msgs
+    .filter((m) => m.role === "assistant")
+    .map((m) => m.text)
+    .join("\n\n");
+  return { conversation: conv as AiConversation, text };
+}

@@ -12,9 +12,21 @@ import {
   AI_STATUS_LABEL,
   getAiMonthSpend,
   getAiSettings,
+  getLatestBriefing,
   listAiActions,
+  listAiEvents,
+  listAiTriggers,
   type AiActionStatus,
 } from "../../lib/motionAi";
+import { RichText } from "../../components/MotionAiPanel";
+
+const EVENT_STATUS: Record<string, string> = {
+  queued: "Waiting",
+  running: "Running",
+  done: "Done",
+  failed: "Failed",
+  skipped: "Skipped",
+};
 
 const FILTERS: { key: "" | AiActionStatus; label: string }[] = [
   { key: "pending", label: "Awaiting approval" },
@@ -33,6 +45,11 @@ export default function MotionAiTab() {
   const spendQ = useQuery({ queryKey: ["ai_month_spend"], queryFn: getAiMonthSpend });
   const settingsQ = useQuery({ queryKey: ["ai_settings"], queryFn: getAiSettings });
   const profilesQ = useProfiles();
+  const briefingQ = useQuery({ queryKey: ["ai_events", "briefing"], queryFn: getLatestBriefing });
+  const eventsQ = useQuery({ queryKey: ["ai_events"], queryFn: () => listAiEvents(40) });
+  const triggersQ = useQuery({ queryKey: ["ai_triggers"], queryFn: listAiTriggers });
+  const [briefingOpen, setBriefingOpen] = useState(true);
+  const triggerLabel = (k: string) => triggersQ.data?.find((t) => t.key === k)?.label ?? k;
 
   const names = useMemo(() => {
     const m = new Map<string, string>();
@@ -51,8 +68,26 @@ export default function MotionAiTab() {
   if (actionsQ.isLoading) return <Loading />;
   if (actionsQ.error) return <ErrorNote error={actionsQ.error} />;
 
+  const briefing = briefingQ.data;
+  const events = eventsQ.data ?? [];
+
   return (
     <div>
+      {briefing && briefing.text && (
+        <section className="mai-briefing">
+          <div className="mai-briefing-head">
+            <b>{briefing.conversation.title}</b>
+            <button className="link-btn" onClick={() => setBriefingOpen((o) => !o)}>
+              {briefingOpen ? "Hide" : "Show"}
+            </button>
+          </div>
+          {briefingOpen && (
+            <div className="mai-msg assistant mai-briefing-body">
+              <RichText text={briefing.text} />
+            </div>
+          )}
+        </section>
+      )}
       <div className="mai-ovr-head">
         <div className="mai-ovr-stats">
           <div className="mai-stat">
@@ -113,6 +148,38 @@ export default function MotionAiTab() {
             </div>
           ))}
         </div>
+      )}
+
+      <h3 className="mai-runs-title">Automatic runs</h3>
+      {events.length === 0 ? (
+        <p className="hint">No automatic runs yet. They start once migration 0218 is applied (new leads, enquiries, status changes, follow-ups, the daily briefing).</p>
+      ) : (
+        <table className="mai-policy-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Trigger</th>
+              <th>About</th>
+              <th>Status</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((e) => (
+              <tr key={e.id}>
+                <td>{formatDateTime(e.created_at)}</td>
+                <td>{triggerLabel(e.trigger_key)}</td>
+                <td>{String(e.payload?.reference ?? e.payload?.company ?? e.payload?.source ?? "")}</td>
+                <td>
+                  <span className={`mai-pill ${e.status === "done" ? "executed" : e.status === "failed" ? "failed" : e.status === "queued" || e.status === "running" ? "pending" : ""}`}>
+                    {EVENT_STATUS[e.status] ?? e.status}
+                  </span>
+                </td>
+                <td className="mai-run-outcome">{e.error ?? e.summary ?? ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

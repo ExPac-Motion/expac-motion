@@ -12421,3 +12421,25 @@ label.ws-tile:hover {
 .mai-card-mail p {
   margin: 0 0 6px;
 }
+
+/* Motion AI briefing + automatic runs (0218) */
+.mai-briefing {
+  margin-bottom: 16px;
+}
+.mai-briefing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.mai-briefing-body {
+  max-width: none;
+}
+.mai-runs-title {
+  margin: 26px 0 8px;
+}
+.mai-policy-table td.mai-run-outcome {
+  white-space: normal;
+  max-width: 520px;
+  color: var(--muted);
+}

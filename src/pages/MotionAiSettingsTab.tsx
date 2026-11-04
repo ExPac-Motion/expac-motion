@@ -16,6 +16,8 @@ import {
   listAiBots,
   listAiPolicies,
   listAiScorecard,
+  listAiTriggers,
+  setAiTriggerEnabled,
   saveAiBotPrompt,
   saveAiSettings,
   setAiPolicyLevel,
@@ -27,6 +29,16 @@ import {
 const READY_STREAK = 30;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const TRIGGER_WHEN: Record<string, string> = {
+  daily_briefing: "At the briefing time on the briefing days",
+  new_lead: "A lead is added",
+  new_enquiry: "A website form, website quote request or portal request comes in",
+  status_change: "A shipment turns Arrived, Customs, Detained, Released or Delivered",
+  quote_follow_up: "A sent quote has no answer after 3 days (weekly, working hours)",
+  eta_overdue: "ETA passed and not Arrived (daily, working hours)",
+  tasks_overdue: "Weekdays from 10:00, when tasks are overdue",
+};
+
 export default function MotionAiSettingsTab() {
   const qc = useQueryClient();
   const isAdmin = useMyProfile().data?.role === "admin";
@@ -35,6 +47,7 @@ export default function MotionAiSettingsTab() {
   const scoreQ = useQuery({ queryKey: ["ai_scorecard"], queryFn: listAiScorecard });
   const spendQ = useQuery({ queryKey: ["ai_month_spend"], queryFn: getAiMonthSpend });
   const botsQ = useQuery({ queryKey: ["ai_bots"], queryFn: listAiBots });
+  const triggersQ = useQuery({ queryKey: ["ai_triggers"], queryFn: listAiTriggers });
 
   const [form, setForm] = useState<AiSettingsRow | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -179,6 +192,47 @@ export default function MotionAiSettingsTab() {
               Save settings
             </button>
           </p>
+        )}
+      </section>
+
+      <section className="mai-set-section">
+        <h3>Triggers and schedules</h3>
+        <p className="muted">
+          What makes Motion AI run on its own. Each run's result is an approval card or a short report in the Motion AI
+          panel and Control Tower › Motion AI. Switch any of them off here.
+        </p>
+        {triggersQ.error ? (
+          <ErrorNote error={new Error(`Triggers need migration 0218: ${triggersQ.error.message}`)} />
+        ) : (
+          <table className="mai-policy-table">
+            <thead>
+              <tr>
+                <th>Trigger</th>
+                <th>When</th>
+                <th>On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(triggersQ.data ?? []).map((t) => (
+                <tr key={t.key}>
+                  <td title={t.instruction}>{t.label}</td>
+                  <td className="muted">{TRIGGER_WHEN[t.key] ?? (t.kind === "schedule" ? "On a schedule" : "When it happens")}</td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={t.enabled}
+                      disabled={!isAdmin}
+                      onChange={(e) =>
+                        run(() => setAiTriggerEnabled(t.key, e.target.checked), `${t.label}: ${e.target.checked ? "on" : "off"}.`, [
+                          "ai_triggers",
+                        ])
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
 
