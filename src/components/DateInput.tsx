@@ -20,6 +20,17 @@ function dmyToIso(text: string): string | null {
   return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
+/** Inside an iframe (the website's lane pages embed the quote form from
+ *  another origin) Chrome refuses showPicker(), so there the native date
+ *  input sits invisibly over the calendar icon and takes the click itself. */
+const IN_FRAME = (() => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true; // cross-origin parent: reading window.top can throw
+  }
+})();
+
 /**
  * Date field that always shows and accepts dd/mm/yyyy, whatever the
  * browser's locale (a native <input type="date"> follows the OS format, so
@@ -83,7 +94,7 @@ export default function DateInput({
   }
 
   return (
-    <span className="date-input">
+    <span className={IN_FRAME ? "date-input date-input--framed" : "date-input"}>
       <input
         type="text"
         inputMode="numeric"
@@ -120,6 +131,7 @@ export default function DateInput({
         className="date-input-native"
         tabIndex={-1}
         aria-hidden="true"
+        disabled={disabled}
         value={iso}
         onChange={(e) => commit(e.target.value)}
       />

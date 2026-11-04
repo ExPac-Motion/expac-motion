@@ -1106,6 +1106,34 @@ table.dt th.dt-sortable {
   opacity: 0;
   pointer-events: none;
 }
+/* Embedded in another site's iframe: showPicker() is blocked there, so the
+   (invisible) native date input covers the calendar icon and its own picker
+   button fills it; the user's click opens the browser's calendar directly. */
+.date-input--framed .date-input-btn {
+  pointer-events: none;
+}
+.date-input--framed .date-input-native {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 30px !important;
+  height: 100% !important;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.date-input--framed .date-input-native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.date-input--framed .date-input-native:disabled {
+  pointer-events: none;
+}
 /* Task window footer: Doing / Done when that is the current status. */
 .btn.status-on.is-doing {
   background: var(--teal);
