@@ -37,6 +37,9 @@ export default function QuickMailModal({
   merge,
   quote,
   onClose,
+  initialSubject,
+  initialBody,
+  onSent,
 }: {
   to: string | null | undefined;
   company: string;
@@ -46,14 +49,19 @@ export default function QuickMailModal({
   /** When set, offers "Attach quotation", the customer quotation PDF. */
   quote?: { id: string; reference: string };
   onClose: () => void;
+  /** Pre-filled draft (Motion AI email cards, 0217); the signature follows it. */
+  initialSubject?: string;
+  initialBody?: string;
+  /** Called after a successful send, before the modal closes. */
+  onSent?: (info: { id: string; to: string; subject: string }) => void;
 }) {
   const { data: templates } = useMailTemplates();
   const { data: settings } = useCompanySettings();
   const uploadAsset = useUploadMailAsset();
   const { toast, error: toastError } = useToast();
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(initialSubject ?? "");
   const [cc, setCc] = useState("");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialBody ?? "");
   const [attachQuote, setAttachQuote] = useState(false);
   const [files, setFiles] = useState<ShipmentAttachmentPick[]>([]);
   const [phase, setPhase] = useState<"idle" | "pdf" | "sending">("idle");
@@ -71,7 +79,7 @@ export default function QuickMailModal({
   useEffect(() => {
     if (seeded.current || !settings) return;
     seeded.current = true;
-    setBody((b) => (b.trim() ? b : sig ? `<br>${sig}` : b));
+    setBody((b) => (b.trim() ? (initialBody && sig && b === initialBody ? `${b}<br>${sig}` : b) : sig ? `<br>${sig}` : b));
   }, [settings, sig]);
 
   const mergeCtx: MergeContext = {
@@ -111,11 +119,12 @@ export default function QuickMailModal({
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
       const html = linkifyHtml(resolveMergeFields(body, mergeCtx));
-      await sendMail({
+      const finalSubject = resolveMergeFields(subject.trim(), mergeCtx);
+      const sent = await sendMail({
         to: [to],
         cc: ccList.length ? ccList : undefined,
         bcc: SUPPORT_BCC,
-        subject: resolveMergeFields(subject.trim(), mergeCtx),
+        subject: finalSubject,
         html,
         text: htmlToText(html),
         attachments: attachments.length ? attachments : undefined,
@@ -123,6 +132,7 @@ export default function QuickMailModal({
         replyTo: settings?.mail_reply_to || undefined,
       });
       toast("Email sent");
+      onSent?.({ id: sent.id, to, subject: finalSubject });
       onClose();
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not send");

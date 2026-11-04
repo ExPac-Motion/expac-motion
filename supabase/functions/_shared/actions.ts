@@ -45,6 +45,12 @@ function toolReply(row: ActionRow): string {
     case "suggested":
       return `NOT DONE. This action is set to "Suggest only". Describe it to the user so they can do it themselves: ${row.summary}`;
     case "pending":
+      if (row.tool === "draft_email") {
+        return `WAITING FOR A PERSON TO SEND. An email card was created (${row.summary}). Nothing has been sent; tell the user to check it and press "Approve & send".`;
+      }
+      if (row.tool === "draft_quote") {
+        return `WAITING FOR APPROVAL. A quote card was created (${row.summary}). Nothing is saved yet; on Approve the app prices it from the tariff sheet and saves it as a New Lead quote for review.`;
+      }
       return `WAITING FOR APPROVAL. An approval card was created (${row.summary}). Nothing has changed yet; tell the user it needs their Approve.`;
     case "executed":
       return `DONE automatically (autonomy level Auto): ${row.summary}. Result: ${JSON.stringify(row.result)}`;
@@ -67,7 +73,10 @@ export interface ProposeInput {
 
 export async function proposeAction(p: ProposeInput): Promise<{ row: ActionRow; reply: string }> {
   const prepared = await p.tool.prepare(p.ctx, p.input);
-  const level = await levelFor(p.svc, p.ctx.botKey, p.tool.name);
+  let level = await levelFor(p.svc, p.ctx.botKey, p.tool.name);
+  // Finished in the app by a person (quote pricing, sending mail): an
+  // approval card even when the level says Auto.
+  if (p.tool.runsIn === "browser" && level === "auto") level = "draft";
   const { data, error } = await p.svc
     .from("ai_actions")
     .insert({

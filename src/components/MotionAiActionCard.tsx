@@ -3,7 +3,10 @@
 // chat panel and the Control Tower › Motion AI tab.
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DateInput from "./DateInput";
+import QuickMailModal from "./QuickMailModal";
+import { buildAndSaveAiQuote, type AiQuoteInput } from "../lib/aiQuote";
 import { formatDateTime } from "../lib/format";
 import { AI_ACTION_LABEL, AI_STATUS_LABEL, decideAiAction, type AiAction } from "../lib/motionAi";
 import { SHIPMENT_STATUSES } from "../lib/types";
@@ -28,7 +31,29 @@ export default function MotionAiActionCard({
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [reason, setReason] = useState("");
 
-  async function decide(decision: "approve" | "reject" | "undo", extra = {}) {
+  const navigate = useNavigate();
+  const [mailOpen, setMailOpen] = useState(false);
+  const isQuote = action.tool === "draft_quote";
+  const isEmail = action.tool === "draft_email";
+  const result = (action.result ?? {}) as Record<string, unknown>;
+
+  /** Quote drafts are priced and saved here, with the Quote Builder's own
+   *  Load rates code, then reported back. */
+  async function approveQuote() {
+    setBusy(true);
+    setError(null);
+    try {
+      const saved = await buildAndSaveAiQuote(shown as unknown as AiQuoteInput);
+      const a = await decideAiAction(action.id, "complete", { result: saved });
+      onChange?.(a);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function decide(decision: "approve" | "reject" | "undo" | "complete", extra = {}) {
     setBusy(true);
     setError(null);
     try {
@@ -62,6 +87,24 @@ export default function MotionAiActionCard({
       </div>
       <div className="mai-card-summary">{action.summary}</div>
       {isTask && str(shown.body) && mode === "view" && <div className="mai-card-body">{str(shown.body)}</div>}
+      {isEmail && action.status === "pending" && (
+        // Server-escaped paragraphs (drafts.ts toHtml), no other markup.
+        <div className="mai-card-mail" dangerouslySetInnerHTML={{ __html: str(shown.body_html) }} />
+      )}
+      {isEmail && action.status === "pending" && !str(shown.to) && (
+        <div className="mai-card-note bad">No email address on file: add one on the record first.</div>
+      )}
+      {isQuote && action.status === "executed" && str(result.quote_id) && (
+        <div className="mai-card-actions">
+          <button className="btn outline btn-sm" onClick={() => navigate(`/quotes/${str(result.quote_id)}/view`)}>
+            Open {str(result.reference)}
+          </button>
+          <span className="mai-card-note">{Number(result.lines) || 0} priced lines, saved as New Lead</span>
+        </div>
+      )}
+      {isEmail && action.status === "executed" && (
+        <div className="mai-card-note">Sent to {str(result.to)} {formatDateTime(action.executed_at)}</div>
+      )}
       {action.status === "rejected" && action.reject_reason && (
         <div className="mai-card-note">Reason: {action.reject_reason}</div>
       )}
@@ -134,9 +177,19 @@ export default function MotionAiActionCard({
         <div className="mai-card-actions">
           {mode === "view" && (
             <>
-              <button className="btn btn-sm" disabled={busy} onClick={() => decide("approve")}>
-                Approve
-              </button>
+              {isQuote ? (
+                <button className="btn btn-sm" disabled={busy} onClick={approveQuote}>
+                  {busy ? "Pricing…" : "Approve & save draft"}
+                </button>
+              ) : isEmail ? (
+                <button className="btn btn-sm" disabled={busy || !str(shown.to)} onClick={() => setMailOpen(true)}>
+                  Approve & send
+                </button>
+              ) : (
+                <button className="btn btn-sm" disabled={busy} onClick={() => decide("approve")}>
+                  Approve
+                </button>
+              )}
               {canEdit && (
                 <button className="btn outline btn-sm" disabled={busy} onClick={startEdit}>
                   Edit
@@ -168,6 +221,18 @@ export default function MotionAiActionCard({
             </>
           )}
         </div>
+      )}
+      {mailOpen && (
+        <QuickMailModal
+          to={str(shown.to)}
+          company={str(shown.company_label)}
+          name={str(shown.contact_label) || null}
+          quote={str(shown.quote_id) && str(shown.reference) ? { id: str(shown.quote_id), reference: str(shown.reference) } : undefined}
+          initialSubject={str(shown.subject)}
+          initialBody={str(shown.body_html)}
+          onSent={(info) => void decide("complete", { result: { message_id: info.id, to: info.to, subject: info.subject } })}
+          onClose={() => setMailOpen(false)}
+        />
       )}
       {action.status === "executed" && action.undo && (
         <div className="mai-card-actions">

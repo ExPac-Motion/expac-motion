@@ -66,6 +66,16 @@ export default function MotionAiDemoPage() {
           { key: "3", role: "user", text: "Yes, task for Thandi due Friday. And AIR100388 has arrived." },
           { key: "4", role: "action", text: "", action: demoAction("create_task", "pending", 'New task: "Appoint a clearing agent", on SEA104477, due 06/11/2026, for Thandi', { title: "Appoint a clearing agent", due_date: "2026-11-06", priority: "high" }) },
           { key: "5", role: "action", text: "", action: demoAction("update_shipment_status", "executed", 'Set AIR100388 from "Departed" to "Arrived"', { status: "Arrived" }) },
+          { key: "5a", role: "action", text: "", action: demoAction("draft_quote", "pending", "Draft Sea Freight (LCL) quote for Acme Imports, Shanghai to Durban, 12 pcs 840 kg, Gold rates (China to South Africa)", {}) },
+          {
+            key: "5b",
+            role: "action",
+            text: "",
+            action: demoAction("draft_email", "pending", 'Email to Bright Foods (ops@brightfoods.co.za): "AIR100388 has arrived in Johannesburg"', {
+              to: "ops@brightfoods.co.za",
+              body_html: "<p>Good day Thandeka,</p><p>Good news: your shipment AIR100388 arrived at OR Tambo today, 04/11/2026. Customs clearance is under way and we will confirm the delivery date shortly.</p><p>Kind regards</p>",
+            }),
+          },
           {
             key: "6",
             role: "assistant",

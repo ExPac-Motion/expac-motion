@@ -67,6 +67,9 @@ export const AI_TOOL_LABEL: Record<string, string> = {
   get_alerts: "Checking Control Tower alerts",
   build_briefing: "Putting the briefing together",
   lookup_rates: "Checking the tariff sheet",
+  find_status_updates: "Finding shipments that need a status update",
+  draft_quote: "Preparing a quote draft",
+  draft_email: "Drafting an email",
   create_task: "Preparing a task",
   create_note: "Preparing a note",
   update_shipment_status: "Preparing a status update",
@@ -199,8 +202,8 @@ export async function listAiActions(opts: { conversationId?: string; status?: st
 /** Approve (optionally with edits), reject (optional reason) or undo. */
 export async function decideAiAction(
   actionId: string,
-  decision: "approve" | "reject" | "undo",
-  extra: { edited_input?: Record<string, unknown>; reason?: string } = {},
+  decision: "approve" | "reject" | "undo" | "complete",
+  extra: { edited_input?: Record<string, unknown>; reason?: string; result?: Record<string, unknown> } = {},
 ): Promise<AiAction> {
   const { data, error } = await supabase.functions.invoke("motion-ai-action", {
     body: { action_id: actionId, decision, ...extra },

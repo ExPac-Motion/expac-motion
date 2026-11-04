@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   const { data: allowed } = await db.rpc("can_use_motion_ai");
   if (allowed !== true) return json({ error: "Your login does not have Motion AI access." }, 403);
 
-  let body: { action_id?: unknown; decision?: unknown; edited_input?: unknown; reason?: unknown };
+  let body: { action_id?: unknown; decision?: unknown; edited_input?: unknown; reason?: unknown; result?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
   }
   const id = typeof body.action_id === "string" ? body.action_id : "";
   const decision = body.decision;
-  if (!id || !["approve", "reject", "undo"].includes(String(decision))) {
-    return json({ error: "Give action_id and decision approve / reject / undo." }, 400);
+  if (!id || !["approve", "reject", "undo", "complete"].includes(String(decision))) {
+    return json({ error: "Give action_id and decision approve / reject / undo / complete." }, 400);
   }
 
   const svc = serviceClient();
@@ -45,7 +45,44 @@ Deno.serve(async (req) => {
   const actor: Actor = { type: "user", id: userId };
 
   try {
+    // Quote drafts and emails are finished in the app (priced / sent there);
+    // it reports the result here.
+    if (decision === "complete") {
+      const tool = actionTool(row.tool);
+      if (!tool || tool.runsIn !== "browser") return json({ error: "This action is approved on the server." }, 400);
+      if (row.status !== "pending") return json({ error: `Already ${row.status}.` }, 409);
+      const res = (body as { result?: Record<string, unknown> }).result ?? {};
+      let undo: Record<string, unknown> | null = null;
+      if (row.tool === "draft_quote") {
+        const qid = String(res.quote_id ?? "");
+        const { data: q } = await db.from("quotes").select("id,reference,ai_draft").eq("id", qid).maybeSingle();
+        if (!q?.ai_draft) return json({ error: "That quote wasn't found as an AI draft." }, 400);
+        undo = { quote_id: q.id, reference: q.reference };
+      }
+      const now = new Date().toISOString();
+      const { data: upd, error: e3 } = await svc
+        .from("ai_actions")
+        .update({ status: "executed", result: res, undo, executed_at: now, decided_by: userId, decided_at: now })
+        .eq("id", row.id)
+        .eq("status", "pending")
+        .select("*")
+        .single();
+      if (e3 || !upd) return json({ error: "Could not record it." }, 409);
+      await audit(svc, actor, {
+        bot_key: row.bot_key,
+        conversation_id: row.conversation_id,
+        event: "action",
+        tool: row.tool,
+        input: { action_id: row.id },
+        result: { status: "executed", result: res },
+      });
+      return json({ action: upd });
+    }
+
     if (decision === "approve") {
+      if (actionTool(row.tool)?.runsIn === "browser") {
+        return json({ error: "Approve this one in the Motion AI panel; it finishes in the app." }, 400);
+      }
       if (row.status !== "pending") return json({ error: `Already ${row.status}.` }, 409);
       let edited: Record<string, unknown> | null = null;
       if (body.edited_input && typeof body.edited_input === "object") {

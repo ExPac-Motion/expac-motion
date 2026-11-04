@@ -53,6 +53,10 @@ export interface ExecContext {
  *  and its autonomy level decides suggest / draft / auto. */
 export interface ActionTool extends ToolBase {
   kind: "action";
+  /** "browser": finished in the app by a person (quote pricing, sending
+   *  mail), which then reports back with decision "complete". Such actions
+   *  are never auto-executed on the server. */
+  runsIn?: "browser";
   /** Validates and resolves references (as the requester). Throws a plain
    *  message the bot can relay when something doesn't add up. */
   prepare(ctx: ToolContext, input: Record<string, unknown>): Promise<PreparedAction>;
