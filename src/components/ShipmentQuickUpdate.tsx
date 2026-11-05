@@ -8,7 +8,7 @@ import { useUpdateJob } from "../lib/hooks";
 import type { Job, JobPatch } from "../lib/types";
 import { notifyText, OPTIONAL_STEP, stepLabel, timelineDb, todayIso, useJobTimeline } from "../lib/timeline";
 
-type FieldKey = "awb_mbl" | "container_no" | "container_type" | "vessel_name" | "shipping_line" | "carrier_name";
+type FieldKey = "awb_mbl" | "container_no" | "container_type" | "vessel_name" | "voyage_no" | "shipping_line" | "carrier_name";
 
 /** Transport details for this mode, in the order ops fill them in. */
 function transportFields(mode: string): { key: FieldKey; label: string; placeholder?: string }[] {
@@ -26,6 +26,7 @@ function transportFields(mode: string): { key: FieldKey; label: string; placehol
       { key: "container_type", label: "Container Type", placeholder: "e.g. 1x 20GP, 2x 40HC" },
       { key: "shipping_line", label: "Shipping Line" },
       { key: "vessel_name", label: "Vessel" },
+      { key: "voyage_no", label: "Voyage No" },
     ];
   }
   return [
