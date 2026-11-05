@@ -92,16 +92,19 @@ function progressCircle(glyph: string, fill: string, stroke: string, color: stri
   return `${mso}<!--[if !mso]><!-- -->${html}<!--<![endif]-->`;
 }
 
-/** A connector between circles: a solid teal bar (done) or a dotted grey
- *  one (to come), as a 3px table cell, which Outlook draws reliably. */
-function progressLine(kind: "solid" | "dotted" | "none"): string {
-  if (kind === "none") return `<td style="padding:0"></td>`;
+/** A connector between two circles: a solid teal bar (done) or a dotted
+ *  grey one (to come), as a 3px table cell, which Outlook draws reliably.
+ *  One cell spans the whole way from circle to circle, so there is no
+ *  seam where two half-lines meet (Outlook's percentage rounding left a
+ *  visible gap there). */
+function progressLine(kind: "solid" | "dotted", widthPct: string): string {
   const look =
     kind === "solid"
       ? `bgcolor="${PROGRESS_TEAL}" style="height:3px;background:${PROGRESS_TEAL};`
       : `style="height:0;border-top:3px dotted ${PROGRESS_GREY};`;
   return (
-    `<td valign="middle" style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<td width="${widthPct}" valign="middle" style="width:${widthPct};padding:0">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
     `<tr><td ${look}font-size:1px;line-height:1px;mso-line-height-rule:exactly">&nbsp;</td></tr></table></td>`
   );
 }
@@ -115,23 +118,22 @@ function progressLine(kind: "solid" | "dotted" | "none"): string {
  * `width` is the signature banner's width (signatureBannerWidth), so the
  * two line up; Outlook ignores max-width, hence its fixed-width wrapper.
  *
+ * Two rows: circles and connectors (circle, line, circle, line ...), then
+ * the labels, the first flush left, the last flush right, the rest
+ * centred under their circle.
+ *
  * Deliverability: tables + inline styles, plus Outlook-only VML circles
  * (the standard way to draw round shapes for Outlook); no images, SVG, web
  * fonts or scripts. The labels link to the Live Tracking page.
  */
 export function emailProgressHtml(current: number, href: string, width = 600): string {
   const n = PROGRESS_STEPS.length;
-  // The first step sits flush left (in line with the text), the last flush
-  // right (in line with the banner's edge), the circles evenly spaced:
-  // middle cells are one gap wide, the two end cells half a gap + half a
-  // circle.
-  const slot = 36;
-  const dot = 28; // the circle itself; the end ones sit flush in their slot
-  const gap = (width - dot) / (n - 1);
-  const edgePx = Math.round(gap / 2 + dot / 2);
-  const midPx = Math.round(gap);
+  const slot = 36; // row height, keeps the lines level with or without the halo
+  const dot = 28; // the circle; its cell grows to fit the halo where there is one
   const pct = (px: number) => `${((px / width) * 100).toFixed(2)}%`;
-  const cells = PROGRESS_STEPS.map((label, i) => {
+  const linePct = pct((width - n * dot) / (n - 1));
+
+  const track = PROGRESS_STEPS.map((_, i) => {
     const done = i < current;
     const now = i === current;
     // Every milestone reached (the current one too) gets a ✓; the ones
@@ -143,31 +145,46 @@ export function emailProgressHtml(current: number, href: string, width = 600): s
       done || now ? "#ffffff" : PROGRESS_MUTED,
       now,
     );
+    return (
+      `<td width="${dot}" height="${slot}" align="center" valign="middle" ` +
+      `style="width:${dot}px;height:${slot}px;padding:0;text-align:center;line-height:0;white-space:nowrap">${circle}</td>` +
+      (i < n - 1 ? progressLine(i < current ? "solid" : "dotted", linePct) : "")
+    );
+  }).join("");
+
+  // Label cells: the circles are evenly spaced, so the middle cells are
+  // one gap wide and the two end cells half a gap + half a circle.
+  const gap = (width - dot) / (n - 1);
+  const edge = pct(gap / 2 + dot / 2);
+  const mid = pct(gap);
+  const labels = PROGRESS_STEPS.map((label, i) => {
+    const done = i < current;
+    const now = i === current;
     const first = i === 0;
     const last = i === n - 1;
     const align = first ? "left" : last ? "right" : "center";
-    const w = first || last ? edgePx : midPx;
+    const w = first || last ? edge : mid;
     return (
-      `<td width="${pct(w)}" align="${align}" valign="top" style="width:${pct(w)};padding:0">` +
-      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>` +
-      (first ? "" : progressLine(i <= current ? "solid" : "dotted")) +
-      `<td width="${slot}" height="${slot}" align="${align}" valign="middle" style="width:${slot}px;height:${slot}px;padding:0;text-align:${align};line-height:0">${circle}</td>` +
-      (last ? "" : progressLine(i < current ? "solid" : "dotted")) +
-      `</tr></table>` +
+      `<td width="${w}" align="${align}" valign="top" style="width:${w};padding:0">` +
       `<a href="${href}" style="display:block;padding-top:6px;text-align:${align};text-decoration:none;font-family:${EMAIL_FONT_STACK};` +
       `font-size:12px;line-height:1.3;font-weight:${now ? 700 : 400};color:${done || now ? "#2e2e2e" : PROGRESS_MUTED}">` +
       `${label}</a></td>`
     );
   }).join("");
+
   // The same space above and below (to the customer's name, to Shipment
   // Status), as cell padding: Outlook ignores margins on tables.
   const space = 16;
+  const row = (cells: string) =>
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">` +
+    `<tr>${cells}</tr></table>`;
   return (
     `<!--[if mso]><table role="presentation" width="${width}" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ` +
     `style="width:100%;max-width:${width}px;border-collapse:collapse"><tr><td style="padding:${space}px 0">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">` +
-    `<tr>${cells}</tr></table></td></tr></table>` +
+    row(track) +
+    row(labels) +
+    `</td></tr></table>` +
     `<!--[if mso]></td></tr></table><![endif]-->`
   );
 }
