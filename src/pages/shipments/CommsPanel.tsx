@@ -5,7 +5,11 @@ import MergeCodeMenu from "../../components/MergeCodeMenu";
 import { useToast } from "../../components/Toast";
 import {
   useAddNote,
+  useAgents,
+  useClearingAgents,
   useClientContacts,
+  useQuote,
+  useTransporters,
   useCompanySettings,
   useMessages,
   useSendMessage,
@@ -62,6 +66,29 @@ export default function CommsPanel({
 
   const contactsQ = useClientContacts(job.client_id ?? undefined);
 
+  // The agent, clearing agent and transporter on the shipment's quotation
+  // (internal only), offered as one-click recipients under the ExPac picks.
+  // Not in the partner dialog, which is already addressed to one partner.
+  const quoteQ = useQuote(to ? undefined : (job.quote_id ?? undefined));
+  const agentsQ = useAgents();
+  const clearingQ = useClearingAgents();
+  const transportersQ = useTransporters();
+  const partners = useMemo<(Recipient & { company: string })[]>(() => {
+    const qt = quoteQ.data;
+    if (to || !qt) return [];
+    const pick = (label: string, id: string | null | undefined, list?: { id: string; company: string | null; email: string | null }[]) => {
+      const p = id ? (list ?? []).find((c) => c.id === id) : undefined;
+      return p ? [{ label, company: p.company ?? "", email: (p.email ?? "").trim() }] : [];
+    };
+    return [
+      ...pick("Agent", qt.agent_id, agentsQ.data),
+      ...pick("Clearing Agent", qt.clearing_agent_id, clearingQ.data),
+      ...pick("Transporter", qt.transporter_id, transportersQ.data),
+    ];
+  }, [to, quoteQ.data, agentsQ.data, clearingQ.data, transportersQ.data]);
+  // Partners added as recipients (by email), shown in the list with a tick.
+  const [partnerOn, setPartnerOn] = useState<string[]>([]);
+
   // Attach document (shared picker): this shipment's generated documents,
   // its Document Vault uploads, the linked quotation, or files from the
   // computer -- each goes out as an attachment on the next email.
@@ -92,8 +119,21 @@ export default function CommsPanel({
       );
     }
     add("Shipper", job.supplier?.email);
+    for (const p of partners)
+      if (partnerOn.includes(p.email)) add(`${p.label} · ${p.company}`, p.email);
     return out;
-  }, [to, job.client?.email, job.supplier?.email, contactsQ.data]);
+  }, [to, job.client?.email, job.supplier?.email, contactsQ.data, partners, partnerOn]);
+
+  function togglePartner(email: string) {
+    const on = partnerOn.includes(email);
+    setPartnerOn((prev) => (on ? prev.filter((e) => e !== email) : [...prev, email]));
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (on) next.delete(email);
+      else next.add(email);
+      return next;
+    });
+  }
 
   const customerEmails = useMemo(
     () => recipients.filter((r) => r.label.startsWith("Customer")).map((r) => r.email),
@@ -248,6 +288,33 @@ export default function CommsPanel({
               placeholder="extra@address.com, …"
             />
             <ExpacCcPicks value={ccText} onChange={setCcText} />
+            {partners.length > 0 && (
+              <div className="inbox-dept-picks">
+                <span className="muted">Partners:</span>
+                {partners.map((p) => {
+                  const on = partnerOn.includes(p.email);
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      className={`inbox-dept${on ? " on" : ""}`}
+                      disabled={!p.email}
+                      onClick={() => togglePartner(p.email)}
+                      title={
+                        !p.email
+                          ? `No email on ${p.company}'s record`
+                          : on
+                            ? `Remove ${p.company} (${p.email})`
+                            : `Send to ${p.company} (${p.email}), untick the customer to email only them`
+                      }
+                    >
+                      {on ? "✓ " : "+ "}
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div className="comms-actions" style={{ marginBottom: 6 }}>
             <button
