@@ -12461,3 +12461,114 @@ body:has(.jobs-panel) .topbar-lead .search-box {
   min-width: 0;
   flex: none;
 }
+
+/* Import Pre-Alert (Document Vault): Customs Bill of Entry Instructions
+   grid + clearing instruction, in the document's own type scale. New pa-*
+   classes only, the shared .qs-* print styles stay as they are. */
+.pa-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.pa-grid th,
+.pa-grid td {
+  border: 1px solid #cfcfcf;
+  padding: 4px 6px;
+  vertical-align: top;
+  text-align: left;
+}
+.pa-grid th {
+  font-weight: 400;
+  color: var(--muted);
+  height: 26px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 11px;
+  white-space: normal;
+  background: none;
+}
+.pa-hint {
+  font-size: 9px;
+  font-style: italic;
+  margin-top: 2px;
+}
+.pa-sub {
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+.pa-grid td.pa-cell {
+  padding: 0;
+}
+.pa-cols {
+  display: flex;
+}
+.pa-cols > div {
+  flex: 1 1 0;
+  padding: 4px 6px;
+  min-width: 0;
+}
+.pa-cols > div + div {
+  border-left: 1px solid #cfcfcf;
+}
+.pa-kv {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.pa-kv2 {
+  grid-template-columns: 1fr 1fr;
+}
+.pa-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+}
+.pa-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+}
+.pa-x {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #888;
+  flex: none;
+}
+.pa-notes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #cfcfcf;
+  border-top: 0;
+  font-size: 11px;
+}
+.pa-notes > div {
+  padding: 4px 6px;
+}
+.pa-notes > div + div {
+  border-left: 1px solid #cfcfcf;
+}
+.pa-notes-body {
+  min-height: 52px;
+  white-space: pre-line;
+}
+.pa-declare {
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 2px 0 4px;
+}
+.qs-sig-field .pa-sigv {
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 14px;
+  margin: -12px 0 2px;
+}

@@ -12,6 +12,9 @@ export interface DocumentTypeDef {
   showNotes?: boolean;
   /** Heading for that free-text section. Defaults to `title` when unset. */
   notesLabel?: string;
+  /** A document with its own sections after Shipment Information instead
+   *  of the standard notes / remarks / Received By blocks. */
+  layout?: "pre-alert";
 }
 
 export const DOCUMENT_TYPES_LIST: DocumentTypeDef[] = [
@@ -27,6 +30,9 @@ export const DOCUMENT_TYPES_LIST: DocumentTypeDef[] = [
   { slug: "authorization-letter", title: "Authorization Letter", showNotes: true },
   { slug: "arrival-notification", title: "Arrival Notification" },
   { slug: "booking-confirmation", title: "Booking Confirmation" },
+  // For the clearing agent: the shipment in transit to them + their clearing
+  // instruction (Customs Bill of Entry Instructions and declaration).
+  { slug: "import-pre-alert", title: "Import Pre-Alert", layout: "pre-alert" },
 ];
 
 export function docTypeBySlug(slug: string | undefined): DocumentTypeDef | undefined {

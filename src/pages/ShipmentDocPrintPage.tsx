@@ -1,6 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  useClients,
   useCompanySettings,
+  useMyProfile,
   useDocumentTypes,
   useJobTracking,
   useJobs,
@@ -11,6 +13,7 @@ import { COMPANY } from "../lib/company";
 import { useCustomerConsignees } from "../lib/customers";
 import { shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
+import { PreAlertDetails, PreAlertInstructions, type PreAlertData } from "./shipments/PreAlertSections";
 
 function n2(v: number | string | null | undefined): string {
   return (Number(v) || 0).toLocaleString("en-ZA", {
@@ -42,6 +45,10 @@ export default function ShipmentDocPrintPage() {
   const pack = packingTotals(packingRows, vFactor);
   // Titles as edited in Document Vault › Document titles (0140).
   const def = useDocumentTypes().find((d) => d.slug === doc);
+  const preAlert = def?.layout === "pre-alert";
+  // Import Pre-Alert only: the importer's customs code / VAT and who signs it.
+  const clientsQ = useClients();
+  const meQ = useMyProfile();
 
   const company = settings
     ? {
@@ -62,6 +69,17 @@ export default function ShipmentDocPrintPage() {
   )?.full_name;
   const tracking = trackingQ.data?.find((t) => t.job_id === job.id);
   const rows = shipmentInfoRows(job, quoteQ.data, preparedBy, tracking);
+  const pa: PreAlertData | null = preAlert
+    ? {
+        job,
+        importer: clientsQ.data?.find((c) => c.id === job.client_id) ?? null,
+        clearingAgent: quoteQ.data?.clearing_agent?.company ?? null,
+        packages: pack.qty || pack.pcs,
+        massKg: pack.totalActual,
+        signatory: meQ.data ?? null,
+        specialInstructions: job.ops_remarks,
+      }
+    : null;
 
   return (
     <div className="qs-wrap">
@@ -79,7 +97,8 @@ export default function ShipmentDocPrintPage() {
         // Everything this sheet shows has loaded -- the Shipment Comms
         // "Attach document" PDF capture waits for this before rendering.
         data-ready={
-          settings && !quoteQ.isLoading && !profilesQ.isLoading && !trackingQ.isLoading
+          settings && !quoteQ.isLoading && !profilesQ.isLoading && !trackingQ.isLoading &&
+          (!preAlert || (!clientsQ.isLoading && !meQ.isLoading))
             ? "1"
             : undefined
         }
@@ -130,6 +149,8 @@ export default function ShipmentDocPrintPage() {
             </div>
           ))}
         </div>
+
+        {pa && <PreAlertDetails {...pa} />}
 
         {def.showNotes && (
           <>
@@ -219,34 +240,40 @@ export default function ShipmentDocPrintPage() {
           <p className="hint">No packing list on record for this shipment.</p>
         )}
 
-        <div className="qs-bar">Expac Remarks</div>
-        <p style={{ fontSize: 11, margin: 0, whiteSpace: "pre-line" }}>
-          {job.ops_remarks || "—"}
-        </p>
+        {pa ? (
+          <PreAlertInstructions {...pa} />
+        ) : (
+          <>
+            <div className="qs-bar">Expac Remarks</div>
+            <p style={{ fontSize: 11, margin: 0, whiteSpace: "pre-line" }}>
+              {job.ops_remarks || "—"}
+            </p>
 
-        <div className="qs-bar">Received By</div>
-        <div className="qs-sig">
-          <div className="qs-sig-field">
-            <label>Received By</label>
-            <div className="line" />
-          </div>
-          <div className="qs-sig-field">
-            <label>Name &amp; Last Name</label>
-            <div className="line" />
-          </div>
-          <div className="qs-sig-field">
-            <label>Signature</label>
-            <div className="line" />
-          </div>
-          <div className="qs-sig-field">
-            <label>Date</label>
-            <div className="line" />
-          </div>
-          <div className="qs-sig-field wide">
-            <label>Customer Remarks</label>
-            <div className="line tall" />
-          </div>
-        </div>
+            <div className="qs-bar">Received By</div>
+            <div className="qs-sig">
+              <div className="qs-sig-field">
+                <label>Received By</label>
+                <div className="line" />
+              </div>
+              <div className="qs-sig-field">
+                <label>Name &amp; Last Name</label>
+                <div className="line" />
+              </div>
+              <div className="qs-sig-field">
+                <label>Signature</label>
+                <div className="line" />
+              </div>
+              <div className="qs-sig-field">
+                <label>Date</label>
+                <div className="line" />
+              </div>
+              <div className="qs-sig-field wide">
+                <label>Customer Remarks</label>
+                <div className="line tall" />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
