@@ -75,9 +75,9 @@ export function PreAlertInstructions({ job, clearingAgent, signatory }: PreAlert
       <p className="pa-declare">
         I, <b>{name || "______________________"}</b>, request Clearing Agent{" "}
         <b>{clearingAgent || "______________________"}</b> to clear and deliver these goods (shipment{" "}
-        <b>{job.reference}</b>) under the abovementioned conditions. I further declare that no other clearing
+        <b>{job.reference}</b>) under the abovementioned conditions. I further declare that no other import pre-alert
         instruction has been given to any other person or clearing agent to effect clearance on my behalf. The
-        signature below certifies that the signatory is an employee duly authorised to issue this clearing
+        signature below certifies that the signatory is an employee duly authorized to issue this import pre-alert
         instruction on behalf of the importer / exporter.
       </p>
       <div className="qs-sig">
