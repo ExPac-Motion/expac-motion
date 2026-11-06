@@ -1054,8 +1054,51 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
 
       <PageTools
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search shipment no., customer, shipper, PO…"
+          />
+        }
         filters={
           <>
+          <select
+            value={statusPick}
+            onChange={(e) => setStatusPick(e.target.value)}
+            aria-label="Filter by status"
+            title="Show only shipments with this status"
+            className={statusPick ? "status-pick-on" : undefined}
+            style={{ width: "auto" }}
+          >
+            <option value="">All statuses ({stageRows.filter((x) => matchesModeTab(x.mode, modeTab)).length})</option>
+            {statusOpts.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label} ({tabRows.filter(o.test).length})
+              </option>
+            ))}
+            {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}
+          </select>
+          <select
+            value={partnerPick}
+            onChange={(e) => setPartnerPick(e.target.value)}
+            aria-label="Filter by agent, clearing agent, destination agent or transporter"
+            title="Show only the shipments of one agent, clearing agent, destination agent or transporter"
+            className={partnerPick ? "status-pick-on" : undefined}
+            style={{ width: 125 }}
+          >
+            <option value="">All partners</option>
+            {partnerPick && !pickName && <option value={partnerPick}>Selected partner</option>}
+            {partnerOpts.map((g) => (
+              <optgroup key={g.kind} label={PARTNER_LABEL[g.kind]}>
+                {g.items.map((p) => (
+                  <option key={p.id} value={`${g.kind}:${p.id}`}>
+                    {p.name} ({p.n})
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
           {recordFilter && (
             <span className="topbar-filter">
               Filtered to{" "}
@@ -1085,49 +1128,6 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         }
         onToolsSlot={setToolsSlot}
       >
-        <div className="jobs-filters">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search shipment no., customer, shipper, PO…"
-        />
-          <select
-            value={statusPick}
-            onChange={(e) => setStatusPick(e.target.value)}
-            aria-label="Filter by status"
-            title="Show only shipments with this status"
-            className={statusPick ? "status-pick-on" : undefined}
-            style={{ width: "auto" }}
-          >
-            <option value="">All statuses ({stageRows.filter((x) => matchesModeTab(x.mode, modeTab)).length})</option>
-            {statusOpts.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label} ({tabRows.filter(o.test).length})
-              </option>
-            ))}
-            {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}
-          </select>
-          <select
-            value={partnerPick}
-            onChange={(e) => setPartnerPick(e.target.value)}
-            aria-label="Filter by agent, clearing agent, destination agent or transporter"
-            title="Show only the shipments of one agent, clearing agent, destination agent or transporter"
-            className={partnerPick ? "status-pick-on" : undefined}
-            style={{ width: "auto", maxWidth: 180 }}
-          >
-            <option value="">All partners</option>
-            {partnerPick && !pickName && <option value={partnerPick}>Selected partner</option>}
-            {partnerOpts.map((g) => (
-              <optgroup key={g.kind} label={PARTNER_LABEL[g.kind]}>
-                {g.items.map((p) => (
-                  <option key={p.id} value={`${g.kind}:${p.id}`}>
-                    {p.name} ({p.n})
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </div>
         {mode === "active" && (
           <button
             className={`btn ${recordFilter === "atrisk" ? "at-risk-on" : "outline warn"}`}
