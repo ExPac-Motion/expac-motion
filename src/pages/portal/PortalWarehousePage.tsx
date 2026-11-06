@@ -81,7 +81,7 @@ export default function PortalWarehousePage() {
       sortValue: (r) => daysBetween(r.received_at, new Date()),
     },
     { key: "cond", header: "Condition", width: 120, render: (r) => CONDITION_LABEL[r.condition] },
-    { key: "status", header: "Status", width: 120, render: (r) => <ReceiptStatusBadge status={r.status} /> },
+    { key: "status", header: "Status", width: 170, render: (r) => <ReceiptStatusBadge status={r.status} warehouse={whName(r.warehouse_id)} /> },
   ];
   const sum = (r: WmsRelease, k: "pieces" | "gross_kg" | "volume_cbm") => r.lines.reduce((s, l) => s + l[k], 0);
   const releaseCols: DataColumn<WmsRelease>[] = [
@@ -232,7 +232,7 @@ function PortalReceiptModal({ receipt: r, warehouse, onClose }: { receipt: WmsRe
       wide
       headerActions={
         <>
-          <ReceiptStatusBadge status={r.status} />
+          <ReceiptStatusBadge status={r.status} warehouse={warehouse} />
           <button className="btn outline btn-sm" onClick={() => navigate(`/wms/print/receipt/${r.id}`)}>
             Print receipt
           </button>

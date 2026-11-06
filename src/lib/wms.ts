@@ -371,7 +371,7 @@ export const CONDITION_LABEL: Record<ReceiptCondition, string> = {
   repacked: "Repacked",
 };
 export const RECEIPT_STATUS_LABEL: Record<ReceiptStatus, string> = {
-  in_store: "In store",
+  in_store: "In warehouse",
   part_released: "Part released",
   released: "Released",
 };

@@ -170,7 +170,7 @@ export default function WmsReceipts() {
       render: (r) => (r.status === "released" ? "—" : daysBetween(r.received_at, new Date())),
       sortValue: (r) => daysBetween(r.received_at, new Date()),
     },
-    { key: "status", header: "Status", width: 120, render: (r) => <ReceiptStatusBadge status={r.status} /> },
+    { key: "status", header: "Status", width: 170, render: (r) => <ReceiptStatusBadge status={r.status} warehouse={lk.whCode(r.warehouse_id)} /> },
   ];
 
   const bulkFields: BulkField[] = [
@@ -206,7 +206,7 @@ export default function WmsReceipts() {
           <>
             <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)} style={{ width: "auto" }}>
               <option value="stock">In stock</option>
-              <option value="in_store">In store (untouched)</option>
+              <option value="in_store">In warehouse (untouched)</option>
               <option value="part_released">Part released</option>
               <option value="released">Released</option>
               <option value="all">All receipts</option>
@@ -376,7 +376,7 @@ export function ReceiptViewModal({
       wide
       headerActions={
         <>
-          <ReceiptStatusBadge status={r.status} />
+          <ReceiptStatusBadge status={r.status} warehouse={lk.whCode(r.warehouse_id)} />
           <button
             className={`btn btn-sm${r.checked_at ? " outline" : ""}`}
             onClick={toggleChecked}

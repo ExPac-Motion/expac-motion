@@ -133,7 +133,7 @@ function NewCountModal({ onClose, onStarted }: { onClose: () => void; onStarted:
       </div>
       <div className="field">
         <label>Notes</label>
-        <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. monthly count, Zone A" />
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. monthly count, DDP Zone" />
       </div>
       <div className="modal-foot-row">
         <button type="button" className="btn outline" onClick={onClose}>

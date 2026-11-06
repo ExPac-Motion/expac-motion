@@ -51,9 +51,16 @@ export function useWmsLookups() {
   }, [clientsQ.data, suppliersQ.data, jobsQ.data, profilesQ.data, whQ.data, locQ.data, whQ.isLoading, locQ.isLoading, clientsQ.isLoading]);
 }
 
-export function ReceiptStatusBadge({ status }: { status: ReceiptStatus }) {
+/** Receipt status; while goods are still held, says which warehouse. */
+export function ReceiptStatusBadge({ status, warehouse }: { status: ReceiptStatus; warehouse?: string | null }) {
   const cls = status === "released" ? "completed" : status === "part_released" ? "sent" : "open";
-  return <span className={`badge ${cls}`}>{RECEIPT_STATUS_LABEL[status]}</span>;
+  const where = status !== "released" && warehouse && warehouse !== "—" ? `, ${warehouse}` : "";
+  return (
+    <span className={`badge ${cls}`} style={{ whiteSpace: "nowrap" }}>
+      {RECEIPT_STATUS_LABEL[status]}
+      {where}
+    </span>
+  );
 }
 
 /** Bays of one warehouse grouped by zone, as <option>s / <optgroup>s. */
@@ -82,7 +89,7 @@ export function LocationOptions({
             </option>
           ));
         return z ? (
-          <optgroup key={z} label={`Zone ${z}`}>
+          <optgroup key={z} label={z}>
             {opts}
           </optgroup>
         ) : (

@@ -48,6 +48,9 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
   const delLoc = useWmsMutation(wmsDb.deleteLocation);
   const renameZone = useWmsMutation(wmsDb.renameZone);
   const [editZone, setEditZone] = useState<ZoneRow | "new" | null>(null);
+  // Settings › Motion WMS: the grid's Save Grid / Table settings sit in the toolbar row.
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
+  const portal = embedded ? toolsSlot : undefined;
 
   // CBM on hand per bay, for the utilisation column.
   const cbmByLoc = new Map<string, number>();
@@ -207,7 +210,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const s = (k: string) => String(f.get(k) ?? "").trim();
-    const to = s("zone").toUpperCase() || null;
+    const to = s("zone") || null;
     if (editZone && editZone !== "new") {
       if ((editZone.zone ?? null) === to) return setEditZone(null);
       renameZone.mutate(
@@ -293,7 +296,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
     const s = (k: string) => String(f.get(k) ?? "").trim();
     const values = {
       warehouse_id: s("warehouse_id"),
-      zone: s("zone").toUpperCase() || null,
+      zone: s("zone") || null,
       code: s("code").toUpperCase(),
       name: s("name") || null,
       kind: s("kind") as LocationKind,
@@ -332,13 +335,13 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
     lk.warehouses.length === 0 ? (
       <EmptyState>No warehouses yet.</EmptyState>
     ) : (
-      <DataTable tableKey="wms-warehouses" className="table--compact" columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
+      <DataTable tableKey="wms-warehouses" className="table--compact" toolsPortal={portal} columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
     );
   const locTable =
     locRows.length === 0 ? (
       <EmptyState>No bays yet, add the zones and bays goods are stored in.</EmptyState>
     ) : (
-      <DataTable tableKey="wms-locations" className="table--compact" columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
+      <DataTable tableKey="wms-locations" className="table--compact" toolsPortal={portal} columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
     );
   const noWh = lk.warehouses.length === 0;
 
@@ -352,7 +355,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
           <>
             <div className="field">
               <label>Zone</label>
-              <input name="zone" defaultValue={editZone.zone ?? ""} placeholder="A" autoFocus />
+              <input name="zone" defaultValue={editZone.zone ?? ""} placeholder="DDP Zone" autoFocus />
               <span className="hint">
                 Renames the zone on its {editZone.bays.length} bay{editZone.bays.length === 1 ? "" : "s"} /
                 area{editZone.bays.length === 1 ? "" : "s"}. Leave blank to take them out of a zone.
@@ -374,7 +377,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
               </div>
               <div className="field">
                 <label>Zone</label>
-                <input name="zone" placeholder="A" autoFocus />
+                <input name="zone" placeholder="DDP Zone" autoFocus />
               </div>
             </div>
             <h4 className="wms-subhead">First bay / area</h4>
@@ -531,7 +534,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
             <div className="grid2">
               <div className="field">
                 <label>Zone</label>
-                <input name="zone" list="wms-zones" defaultValue={loc?.zone ?? ""} placeholder="A" />
+                <input name="zone" list="wms-zones" defaultValue={loc?.zone ?? ""} placeholder="DDP Zone" />
                 <datalist id="wms-zones">
                   {zones.map((z) => (
                     <option key={z} value={z} />
@@ -587,7 +590,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
   if (embedded) {
     const copy: Record<WmsSettingsView, string> = {
       warehouses: "Each warehouse carries its storage billing rates and the shipments it is the hub for.",
-      zones: "Zones group the bays and areas inside a warehouse. Rename a zone here and every bay in it follows.",
+      zones: "Zones split a warehouse by terms (e.g. DDP Zone, EXW Zone, FOB Zone) and group its bays and areas. Rename a zone here and every bay in it follows.",
       bays: "Where stock sits: Warehouse › Zone › Bay / area. Bonded, cold, DG, quarantine, yard and dock areas are bays of that type.",
     };
     const v = view ?? "warehouses";
@@ -599,6 +602,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
         <div className="ops-ws-tools">
           {v !== "warehouses" && whPick}
           <span className="grow" />
+          <div className="dt-tools-slot" ref={setToolsSlot} />
           {v === "warehouses" && (
             <button className="btn" onClick={() => setEditWh("new")}>
               + Add warehouse
@@ -623,7 +627,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
           zoneRows.length === 0 ? (
             <EmptyState>No zones yet, add one with its first bay.</EmptyState>
           ) : (
-            <DataTable tableKey="wms-zones" className="table--compact" columns={zoneCols} rows={zoneRows} rowKey={(z) => z.key} onRowClick={(z) => setEditZone(z)} />
+            <DataTable tableKey="wms-zones" className="table--compact" toolsPortal={portal} columns={zoneCols} rows={zoneRows} rowKey={(z) => z.key} onRowClick={(z) => setEditZone(z)} />
           )
         ) : (
           locTable
@@ -661,7 +665,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
         ) : lk.warehouses.length === 0 ? (
           <EmptyState>No warehouses yet.</EmptyState>
         ) : (
-          <DataTable tableKey="wms-warehouses" className="table--compact" columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
+          <DataTable tableKey="wms-warehouses" className="table--compact" toolsPortal={portal} columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
         )}
       </div>
 
@@ -683,7 +687,7 @@ export default function WmsSettings({ view, embedded = false }: { view?: WmsSett
         {locRows.length === 0 ? (
           <EmptyState>No bays yet, add the zones and bays goods are stored in.</EmptyState>
         ) : (
-          <DataTable tableKey="wms-locations" className="table--compact" columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
+          <DataTable tableKey="wms-locations" className="table--compact" toolsPortal={portal} columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
         )}
       </div>
 

@@ -388,7 +388,7 @@ export function SkusTab({ clientId }: { clientId: string }) {
             <tr>
               <th>SKU</th>
               <th>Description</th>
-              <th>In store</th>
+              <th>In warehouse</th>
               <th>Received</th>
               <th>Receipts</th>
               <th>Last received</th>
