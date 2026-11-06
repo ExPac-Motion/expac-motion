@@ -75,7 +75,7 @@ export default function WmsReports() {
           rows.push([lk.clientName(r.client_id), r.receipt_no, formatDate(r.received_at), lk.whCode(r.warehouse_id), lk.locName(loc || null), r.description ?? "", pcs, sh.pallets.toFixed(1), sh.kg.toFixed(2), sh.cbm.toFixed(3)]);
         }
         rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || String(a[1]).localeCompare(String(b[1])));
-        return { head: ["Customer", "Receipt", "Received", "Warehouse", "Zone / bay", "Description", "Pieces", "Pallets", "Kg", "CBM"], rows, numeric: [6, 7, 8, 9] };
+        return { head: ["Customer", "Receipt", "Received", "Warehouse", "Location", "Description", "Pieces", "Pallets", "Kg", "CBM"], rows, numeric: [6, 7, 8, 9] };
       }
       case "ageing": {
         const rows = receipts

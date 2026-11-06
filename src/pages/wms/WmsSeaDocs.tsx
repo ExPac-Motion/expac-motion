@@ -326,7 +326,7 @@ export function LoadPlanSheet({ consol: c }: { consol: WmsConsol }) {
             <th>Receipt</th>
             <th>Customer</th>
             <th>Description</th>
-            <th>Zone / Bay</th>
+            <th>Location</th>
             <th>Pieces</th>
             <th>KG</th>
             <th>CBM</th>

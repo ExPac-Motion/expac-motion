@@ -46,7 +46,10 @@ export type WmsWarehouseInput = Omit<WmsWarehouse, "id" | "created_at">;
 export interface WmsLocation {
   id: string;
   warehouse_id: string;
-  /** Zone within the warehouse (e.g. "A", "Bonded", "Mezzanine"). */
+  /** Commodity hub within the warehouse (e.g. "General Cargo Hub"), 0220.
+   *  Undefined until migration 0220 is applied. */
+  hub?: string | null;
+  /** Zone within the hub (e.g. "DDP Zone"). */
   zone: string | null;
   code: string;
   name: string | null;
@@ -459,10 +462,17 @@ export const wmsDb = {
   async deleteLocation(id: string) {
     unwrap(await supabase.from("wms_locations").delete().eq("id", id));
   },
-  /** Rename a zone (zones live on the bays): every bay in it moves to `to`. */
-  async renameZone(v: { warehouse_id: string; from: string | null; to: string | null }) {
-    const q = supabase.from("wms_locations").update({ zone: v.to }).eq("warehouse_id", v.warehouse_id);
+  /** Rename a zone (zones live on the bays): every bay in it moves to `to`.
+   *  `hub` (when set) limits it to the zone inside that hub. */
+  async renameZone(v: { warehouse_id: string; hub?: string | null; from: string | null; to: string | null }) {
+    let q = supabase.from("wms_locations").update({ zone: v.to }).eq("warehouse_id", v.warehouse_id);
+    if (v.hub !== undefined) q = v.hub ? q.eq("hub", v.hub) : q.is("hub", null);
     unwrap(await (v.from ? q.eq("zone", v.from) : q.is("zone", null)));
+  },
+  /** Rename a hub (0220): every bay in it moves to `to`. */
+  async renameHub(v: { warehouse_id: string; from: string | null; to: string | null }) {
+    const q = supabase.from("wms_locations").update({ hub: v.to }).eq("warehouse_id", v.warehouse_id);
+    unwrap(await (v.from ? q.eq("hub", v.from) : q.is("hub", null)));
   },
   async receipts(): Promise<WmsReceipt[]> {
     const rows = unwrap(
@@ -918,10 +928,10 @@ export function downloadCsv(filename: string, header: string[], rows: (string | 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** "A / B03", zone then bay code; "Unassigned" when there's no location. */
-export function locationLabel(loc: Pick<WmsLocation, "zone" | "code"> | null | undefined): string {
+/** "General Cargo Hub / DDP Zone / B03": hub, zone, bay code; "Unassigned" when there's no location. */
+export function locationLabel(loc: (Pick<WmsLocation, "zone" | "code"> & { hub?: string | null }) | null | undefined): string {
   if (!loc) return "Unassigned";
-  return loc.zone ? `${loc.zone} / ${loc.code}` : loc.code;
+  return [loc.hub, loc.zone, loc.code].filter(Boolean).join(" / ");
 }
 
 export async function bulkUpdateReceipts(ids: string[], patch: Record<string, unknown>) {

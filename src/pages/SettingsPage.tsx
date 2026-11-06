@@ -82,6 +82,7 @@ type Tab =
   | "motionai"
   | "aiknowledge"
   | "wmswarehouses"
+  | "wmshubs"
   | "wmszones"
   | "wmsbays";
 
@@ -129,12 +130,13 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
     title: "Motion WMS",
     tabs: [
       { key: "wmswarehouses", label: "Warehouses" },
+      { key: "wmshubs", label: "Hubs" },
       { key: "wmszones", label: "Zones" },
       { key: "wmsbays", label: "Bays & Areas" },
     ],
   },
 ];
-const WMS_TABS: Tab[] = ["wmswarehouses", "wmszones", "wmsbays"];
+const WMS_TABS: Tab[] = ["wmswarehouses", "wmshubs", "wmszones", "wmsbays"];
 
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
@@ -186,6 +188,7 @@ export default function SettingsPage() {
           {tab === "motionai" && <MotionAiSettingsTab />}
           {tab === "aiknowledge" && <MotionAiKnowledgeTab />}
           {tab === "wmswarehouses" && <WmsSettings embedded view="warehouses" />}
+          {tab === "wmshubs" && <WmsSettings embedded view="hubs" />}
           {tab === "wmszones" && <WmsSettings embedded view="zones" />}
           {tab === "wmsbays" && <WmsSettings embedded view="bays" />}
         </div>

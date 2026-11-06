@@ -147,7 +147,7 @@ export default function WmsInventory() {
       ),
     },
     { key: "wh", header: "Warehouse", width: 90, render: (s) => lk.whCode(s.receipt.warehouse_id) },
-    { key: "bay", header: "Zone / bay", width: 120, render: (s) => lk.locName(s.location_id), sortValue: (s) => lk.locName(s.location_id) },
+    { key: "bay", header: "Location", width: 120, render: (s) => lk.locName(s.location_id), sortValue: (s) => lk.locName(s.location_id) },
     { key: "rec", header: "Receipt", width: 100, render: (s) => <b>{s.receipt.receipt_no}</b>, sortValue: (s) => s.receipt.receipt_no },
     { key: "client", header: "Customer", width: 180, render: (s) => lk.clientName(s.receipt.client_id), sortValue: (s) => lk.clientName(s.receipt.client_id) },
     { key: "job", header: "Shipment", width: 100, render: (s) => lk.jobRef(s.receipt.job_id) },
@@ -200,7 +200,7 @@ export default function WmsInventory() {
     if (view === "bay")
       downloadCsv(
         `inventory-${d}.csv`,
-        ["Warehouse", "Zone / bay", "Receipt", "Customer", "Shipment", "Description", "Pieces", "Pallets", "Kg", "CBM", "Received", "Days"],
+        ["Warehouse", "Location", "Receipt", "Customer", "Shipment", "Description", "Pieces", "Pallets", "Kg", "CBM", "Received", "Days"],
         visibleStock.map((s) => [
           lk.whCode(s.receipt.warehouse_id),
           lk.locName(s.location_id),

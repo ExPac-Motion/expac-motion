@@ -91,7 +91,7 @@ export default function WmsMovements() {
         ) : movementsQ.isError ? (
           <ErrorNote error={movementsQ.error} />
         ) : filtered.length === 0 ? (
-          <EmptyState>No movements yet. + Move stock moves pieces from one zone / bay to another.</EmptyState>
+          <EmptyState>No movements yet. + Move stock moves pieces from one location to another.</EmptyState>
         ) : (
           <DataTable
             tableKey="wms-movements"

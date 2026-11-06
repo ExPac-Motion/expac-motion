@@ -75,7 +75,7 @@ export default function WmsPrintPage() {
             ["Receipt No", r.receipt_no],
             ["Date Received", formatDateTime(r.received_at)],
             ["Warehouse", lk.warehouse(r.warehouse_id)?.name ?? "—"],
-            ["Zone / Bay", lk.locName(r.location_id)],
+            ["Location", lk.locName(r.location_id)],
             ["Customer", lk.clientName(r.client_id)],
             ["Shipment Reference", lk.jobRef(r.job_id)],
             ["Customer Reference", r.customer_reference || "—"],
@@ -271,14 +271,14 @@ export default function WmsPrintPage() {
             ["Count No", cnt.count_no],
             ["Started", formatDateTime(cnt.created_at)],
             ["Warehouse", lk.warehouse(cnt.warehouse_id)?.name ?? "—"],
-            ["Zone / Bay", cnt.location_id ? lk.locName(cnt.location_id) : "Whole warehouse"],
+            ["Location", cnt.location_id ? lk.locName(cnt.location_id) : "Whole warehouse"],
           ]}
         />
         <div className="qs-bar">Count Lines</div>
         <table className="qs-pk wms-doc-table">
           <thead>
             <tr>
-              <th>Zone / Bay</th>
+              <th>Location</th>
               <th>Receipt</th>
               <th>Customer</th>
               <th>Description</th>

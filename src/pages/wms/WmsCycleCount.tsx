@@ -50,7 +50,7 @@ export default function WmsCycleCount() {
     { key: "no", header: "Count No", width: 100, render: (c) => <b>{c.count_no}</b>, sortValue: (c) => c.count_no },
     { key: "date", header: "Started", width: 100, render: (c) => formatDate(c.created_at), sortValue: (c) => c.created_at },
     { key: "wh", header: "Warehouse", width: 90, render: (c) => lk.whCode(c.warehouse_id) },
-    { key: "bay", header: "Zone / bay", width: 130, render: (c) => (c.location_id ? lk.locName(c.location_id) : "Whole warehouse") },
+    { key: "bay", header: "Location", width: 130, render: (c) => (c.location_id ? lk.locName(c.location_id) : "Whole warehouse") },
     { key: "lines", header: "Lines", width: 70, render: (c) => c.lines.length },
     { key: "done", header: "Counted", width: 80, render: (c) => c.lines.filter((l) => l.counted != null).length },
     {
@@ -124,7 +124,7 @@ function NewCountModal({ onClose, onStarted }: { onClose: () => void; onStarted:
           </select>
         </div>
         <div className="field">
-          <label>Zone / bay</label>
+          <label>Location</label>
           <select value={loc} onChange={(e) => setLoc(e.target.value)}>
             <option value="">Whole warehouse</option>
             <LocationOptions locations={lk.locations} warehouseId={wh} />
@@ -213,7 +213,7 @@ export function CountSheetModal({ count, onClose, page }: { count: WmsCount; onC
         <table className="table--compact wms-mini">
           <thead>
             <tr>
-              <th>Zone / bay</th>
+              <th>Location</th>
               <th>Receipt</th>
               <th>Customer</th>
               <th>Description</th>

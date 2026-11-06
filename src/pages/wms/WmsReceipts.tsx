@@ -134,7 +134,7 @@ export default function WmsReceipts() {
     { key: "client", header: "Customer", width: 180, render: (r) => lk.clientName(r.client_id), sortValue: (r) => lk.clientName(r.client_id) },
     { key: "job", header: "Shipment", width: 110, render: (r) => lk.jobRef(r.job_id), sortValue: (r) => lk.jobRef(r.job_id) },
     { key: "wh", header: "Warehouse", width: 90, render: (r) => lk.whCode(r.warehouse_id) },
-    { key: "bay", header: "Zone / bay", width: 120, render: (r) => baysOf(r.id) || "—" },
+    { key: "bay", header: "Location", width: 120, render: (r) => baysOf(r.id) || "—" },
     { key: "desc", header: "Description", width: 200, render: (r) => r.description || "—" },
     { key: "skus", header: "SKUs", width: 70, render: (r) => r.packages.filter((p) => p.sku).length || "—", defaultHidden: true },
     { key: "ref", header: "Inbound ref", width: 120, render: (r) => r.inbound_ref || "—", defaultHidden: true },
@@ -432,7 +432,7 @@ export function ReceiptViewModal({
           <tr>
             <th>Date</th>
             <th>What</th>
-            <th>Zone / bay</th>
+            <th>Location</th>
             <th>Pieces</th>
           </tr>
         </thead>
@@ -653,7 +653,7 @@ export function ReceiptEditModal({
             </select>
           </div>
           <div className="field">
-            <label>Zone / bay</label>
+            <label>Location</label>
             <select
               value={f.location_id ?? ""}
               disabled={locked}

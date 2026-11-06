@@ -380,7 +380,7 @@ function NewReleaseModal({
               <th>Receipt</th>
               <th>Customer</th>
               <th>Description</th>
-              <th>Zone / bay</th>
+              <th>Location</th>
               <th>On hand</th>
               <th style={{ width: 90 }}>Release</th>
             </tr>

@@ -63,7 +63,7 @@ export function ReceiptStatusBadge({ status, warehouse }: { status: ReceiptStatu
   );
 }
 
-/** Bays of one warehouse grouped by zone, as <option>s / <optgroup>s. */
+/** Bays of one warehouse grouped by hub and zone, as <option>s / <optgroup>s. */
 export function LocationOptions({
   locations,
   warehouseId,
@@ -76,15 +76,16 @@ export function LocationOptions({
   const list = locations.filter(
     (l) => l.warehouse_id === warehouseId && (includeInactive || l.active),
   );
-  const zones = [...new Set(list.map((l) => l.zone ?? ""))].sort();
+  const group = (l: WmsLocation) => [l.hub, l.zone].filter(Boolean).join(" › ");
+  const zones = [...new Set(list.map(group))].sort();
   return (
     <>
       {zones.map((z) => {
         const opts = list
-          .filter((l) => (l.zone ?? "") === z)
+          .filter((l) => group(l) === z)
           .map((l) => (
             <option key={l.id} value={l.id}>
-              {locationLabel(l)}
+              {z ? l.code : locationLabel(l)}
               {l.name ? `, ${l.name}` : ""}
             </option>
           ));
