@@ -1054,15 +1054,43 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
 
       <PageTools
-        search={
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search shipment no., customer, shipper, PO…"
-          />
-        }
         filters={
           <>
+          {recordFilter && (
+            <span className="topbar-filter">
+              Filtered to{" "}
+              <strong>
+                {recordFilter === "nostatus"
+                  ? "shipments without status"
+                  : recordFilter === "uninvoiced"
+                    ? "shipments not yet invoiced"
+                    : recordFilter === "atrisk"
+                      ? "at-risk shipments (ETA ≤5 days, work outstanding)"
+                      : recordFilter === "seanotrack"
+                        ? "sea shipments not tracking yet (no container / BL, no vessel MMSI)"
+                        : "shipments without a tracking no."}
+              </strong>{" "}
+              ·{" "}
+              <button className="link-btn" onClick={() => setRecordFilter(null)}>
+                clear
+              </button>
+            </span>
+          )}
+          </>
+        }
+        count={
+          isLoading
+            ? undefined
+            : `${copy.sub(rows.length).split(" · ")[0]}${modeTab !== "All" ? ` · ${modeLabel}` : ""}`
+        }
+        onToolsSlot={setToolsSlot}
+      >
+        <div className="jobs-filters">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search shipment no., customer, shipper, PO…"
+        />
           <select
             value={statusPick}
             onChange={(e) => setStatusPick(e.target.value)}
@@ -1099,35 +1127,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               </optgroup>
             ))}
           </select>
-          {recordFilter && (
-            <span className="topbar-filter">
-              Filtered to{" "}
-              <strong>
-                {recordFilter === "nostatus"
-                  ? "shipments without status"
-                  : recordFilter === "uninvoiced"
-                    ? "shipments not yet invoiced"
-                    : recordFilter === "atrisk"
-                      ? "at-risk shipments (ETA ≤5 days, work outstanding)"
-                      : recordFilter === "seanotrack"
-                        ? "sea shipments not tracking yet (no container / BL, no vessel MMSI)"
-                        : "shipments without a tracking no."}
-              </strong>{" "}
-              ·{" "}
-              <button className="link-btn" onClick={() => setRecordFilter(null)}>
-                clear
-              </button>
-            </span>
-          )}
-          </>
-        }
-        count={
-          isLoading
-            ? undefined
-            : `${copy.sub(rows.length).split(" · ")[0]}${modeTab !== "All" ? ` · ${modeLabel}` : ""}`
-        }
-        onToolsSlot={setToolsSlot}
-      >
+        </div>
         {mode === "active" && (
           <button
             className={`btn ${recordFilter === "atrisk" ? "at-risk-on" : "outline warn"}`}
