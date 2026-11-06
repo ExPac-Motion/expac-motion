@@ -46,6 +46,11 @@ import {
   useUploadShipmentDocument,
   useCan,
   useDocumentTypes,
+  useQuotes,
+  useAgents,
+  useClearingAgents,
+  useDestinationAgents,
+  useTransporters,
 } from "../lib/hooks";
 import ConsolidateModal from "./wms/ConsolidateModal";
 import PodModal from "../components/PodModal";
@@ -63,6 +68,7 @@ import { DOCUMENT_TYPES_LIST, carrierLabel } from "../lib/docTemplates";
 import { formatDate, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import { isTracked } from "../lib/tracking";
+import { downloadXlsx } from "../lib/xlsx";
 import {
   DELIVERED_STATUS,
   isShipmentComplete,
@@ -232,6 +238,15 @@ const COPY: Record<
  * row's Shipment Status to / from "Delivered" moves it between the two views
  * on the next refetch.
  */
+type PartnerKey = "agent" | "clearing_agent" | "destination_agent" | "transporter";
+const PARTNER_LABEL: Record<PartnerKey, string> = {
+  agent: "Agent",
+  clearing_agent: "Clearing Agent",
+  destination_agent: "Destination Agent",
+  transporter: "Transporter",
+};
+const PARTNER_KEYS = Object.keys(PARTNER_LABEL) as PartnerKey[];
+
 export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -365,6 +380,51 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   type RecordFilter = "nostatus" | "notracking" | "atrisk" | "uninvoiced" | "seanotrack";
   const recordFilter = (params.get("f") as RecordFilter | null) || null;
   const setRecordFilter = (v: RecordFilter | null) => setParam("f", v ?? "");
+
+  // Partners and master numbers live on the shipment's quotation (internal
+  // only, never shown to the customer). Partner filter in the address
+  // (?partner=clearing_agent:<id>) so Back keeps it.
+  const quotesQ = useQuotes();
+  const agentsQ = useAgents();
+  const clearingQ = useClearingAgents();
+  const destAgentsQ = useDestinationAgents();
+  const transportersQ = useTransporters();
+  const quoteById = useMemo(() => new Map((quotesQ.data ?? []).map((x) => [x.id, x])), [quotesQ.data]);
+  const partnerNames = useMemo(() => {
+    const byId = (l?: { id: string; company: string | null }[]) => new Map((l ?? []).map((c) => [c.id, c.company ?? ""]));
+    return {
+      agent: byId(agentsQ.data),
+      clearing_agent: byId(clearingQ.data),
+      destination_agent: byId(destAgentsQ.data),
+      transporter: byId(transportersQ.data),
+    } satisfies Record<PartnerKey, Map<string, string>>;
+  }, [agentsQ.data, clearingQ.data, destAgentsQ.data, transportersQ.data]);
+  function partnerId(j: Job, k: PartnerKey): string | null {
+    const qt = j.quote_id ? quoteById.get(j.quote_id) : undefined;
+    if (!qt) return null;
+    return k === "agent"
+      ? qt.agent_id
+      : k === "clearing_agent"
+        ? qt.clearing_agent_id
+        : k === "destination_agent"
+          ? (qt.destination_agent_id ?? null)
+          : qt.transporter_id;
+  }
+  function partnerName(j: Job, k: PartnerKey): string {
+    const id = partnerId(j, k);
+    return id ? (partnerNames[k].get(id) ?? "") : "";
+  }
+  /** MBL (sea) / MAWB (air): the quotation's master number, else the
+   *  shipment's AWB/MBL field for that mode. */
+  function masterNo(j: Job, kind: "mbl" | "mawb"): string {
+    const qt = j.quote_id ? quoteById.get(j.quote_id) : undefined;
+    const air = (j.mode ?? "").startsWith("Air") || (j.mode ?? "").startsWith("Courier");
+    if (kind === "mbl") return (qt?.mbl_no || "").trim() || ((j.mode ?? "").startsWith("Sea") ? (j.awb_mbl ?? "").trim() : "");
+    return (qt?.mawb_no || "").trim() || (air ? (j.awb_mbl ?? "").trim() : "");
+  }
+  const partnerPick = params.get("partner") ?? "";
+  const setPartnerPick = (v: string) => setParam("partner", v);
+  const [pickKind, pickId] = partnerPick.split(":") as [PartnerKey | "", string | undefined];
 
   function openComms(j: Job, remarks = "") {
     setCommsJob(j);
@@ -506,7 +566,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           j.notes,
         ].some((v) => v && String(v).toLowerCase().includes(q)),
     );
-  const rows =
+  const recordRows =
     recordFilter === "nostatus"
       ? modeRows.filter((j) => !j.shipment_status || j.shipment_status === "Booked")
       : recordFilter === "notracking"
@@ -518,6 +578,93 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           : recordFilter === "seanotrack"
           ? modeRows.filter(seaNotTracked)
           : modeRows;
+  const rows =
+    pickKind && pickId && PARTNER_KEYS.includes(pickKind)
+      ? recordRows.filter((j) => partnerId(j, pickKind) === pickId)
+      : recordRows;
+  // Partner dropdown: every partner on a shipment in this view (before the
+  // partner filter), grouped by role, with its count.
+  const partnerOpts = PARTNER_KEYS.map((k) => {
+    const counts = new Map<string, number>();
+    for (const j of recordRows) {
+      const id = partnerId(j, k);
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return {
+      kind: k,
+      items: [...counts.entries()]
+        .map(([id, n]) => ({ id, n, name: partnerNames[k].get(id) || "(unnamed)" }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }).filter((g) => g.items.length > 0);
+  const pickName = pickKind && pickId && PARTNER_KEYS.includes(pickKind) ? partnerNames[pickKind].get(pickId) : "";
+
+  function exportRows() {
+    const header = [
+      "Shipment",
+      "Created On",
+      "Customer",
+      "Shipper",
+      "Reference",
+      "Mode",
+      "Status",
+      "POL",
+      "POD",
+      "ETD",
+      "ETA",
+      "PDD",
+      "Shipping Line",
+      "Airline",
+      "Vessel",
+      "Voyage No",
+      "Container No",
+      "Container Type",
+      "MBL No",
+      "MAWB No",
+      "AWB/MBL No",
+      "Agent",
+      "Clearing Agent",
+      "Destination Agent",
+      "Transporter",
+      "Invoiced",
+      "Invoice No",
+      "Notes",
+    ];
+    const body = rows.map((j) => [
+      j.reference,
+      formatDate(j.created_at),
+      j.client?.company ?? "",
+      j.supplier?.company ?? "",
+      j.po_no ?? "",
+      j.mode,
+      j.shipment_status ? stepLabel(j.shipment_status, j.mode) : "",
+      codeOf(j.origin),
+      codeOf(j.destination),
+      j.etd ? formatDate(j.etd) : "",
+      j.eta ? formatDate(j.eta) : "",
+      j.provisional_delivery_date ? formatDate(j.provisional_delivery_date) : "",
+      j.shipping_line ?? "",
+      j.carrier_name ?? "",
+      j.vessel_name ?? "",
+      j.voyage_no ?? "",
+      j.container_no ?? "",
+      j.container_type ?? "",
+      masterNo(j, "mbl"),
+      masterNo(j, "mawb"),
+      j.awb_mbl ?? "",
+      partnerName(j, "agent"),
+      partnerName(j, "clearing_agent"),
+      partnerName(j, "destination_agent"),
+      partnerName(j, "transporter"),
+      j.invoiced_at ? formatDate(j.invoiced_at) : "",
+      j.invoice_no ?? "",
+      j.notes ?? "",
+    ]);
+    const who = pickName ? `-${pickName.replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "")}` : "";
+    const day = formatDate(new Date().toISOString()).replace(/\//g, "-");
+    downloadXlsx(`${mode === "completed" ? "completed" : "active"}-shipments${who}-${day}.xlsx`, copy.title, header, body);
+    toast(`Exported ${rows.length} shipment${rows.length === 1 ? "" : "s"}`);
+  }
   // Sea shipments neither live tracking method can follow yet: no real
   // container / BL for ShipsGo and no vessel MMSI for AIS (0204, 0205).
   function seaNotTracked(j: Job) {
@@ -758,6 +905,40 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         render: (j) => j.carrier_name || "—",
       },
       {
+        key: "vessel_name",
+        header: "Vessel",
+        width: 160,
+        defaultHidden: true,
+        sortValue: (j) => (j.vessel_name ?? "").toLowerCase(),
+        render: (j) => j.vessel_name || "—",
+      },
+      {
+        key: "mbl_no",
+        header: "MBL No",
+        width: 150,
+        defaultHidden: true,
+        sortValue: (j) => masterNo(j, "mbl"),
+        render: (j) => masterNo(j, "mbl") || "—",
+      },
+      {
+        key: "mawb_no",
+        header: "MAWB No",
+        width: 150,
+        defaultHidden: true,
+        sortValue: (j) => masterNo(j, "mawb"),
+        render: (j) => masterNo(j, "mawb") || "—",
+      },
+      ...PARTNER_KEYS.map(
+        (k): DataColumn<Job> => ({
+          key: `partner_${k}`,
+          header: PARTNER_LABEL[k],
+          width: 180,
+          defaultHidden: true,
+          sortValue: (j) => partnerName(j, k).toLowerCase(),
+          render: (j) => partnerName(j, k) || "—",
+        }),
+      ),
+      {
         key: "etd",
         header: "ETD",
         width: 120,
@@ -864,7 +1045,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, mode, modeTab, unreadJobIds, openTaskJobIds, mailedToday, sentTodayQ.isLoading],
+    [sel, mode, modeTab, unreadJobIds, openTaskJobIds, mailedToday, sentTodayQ.isLoading, quoteById, partnerNames],
   );
 
   return (
@@ -897,6 +1078,26 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               </option>
             ))}
             {mode !== "completed" && <option value="__none">No status ({statusCounts.get("__none") ?? 0})</option>}
+          </select>
+          <select
+            value={partnerPick}
+            onChange={(e) => setPartnerPick(e.target.value)}
+            aria-label="Filter by agent, clearing agent, destination agent or transporter"
+            title="Show only the shipments of one agent, clearing agent, destination agent or transporter"
+            className={partnerPick ? "status-pick-on" : undefined}
+            style={{ width: "auto", maxWidth: 180 }}
+          >
+            <option value="">All partners</option>
+            {partnerPick && !pickName && <option value={partnerPick}>Selected partner</option>}
+            {partnerOpts.map((g) => (
+              <optgroup key={g.kind} label={PARTNER_LABEL[g.kind]}>
+                {g.items.map((p) => (
+                  <option key={p.id} value={`${g.kind}:${p.id}`}>
+                    {p.name} ({p.n})
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
           {recordFilter && (
             <span className="topbar-filter">
@@ -959,6 +1160,14 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         >
           Bulk Edit{sel.count ? ` (${sel.count})` : ""}
         </button>
+        <button
+          className="btn outline"
+          onClick={exportRows}
+          disabled={isLoading || rows.length === 0}
+          title="Download the shipments listed (with the filters applied) as an Excel file"
+        >
+          Export
+        </button>
         {canWms && mode === "active" && (
           <button
             className="btn outline"
@@ -986,6 +1195,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               ? `No shipments match "${search.trim()}".`
               : statusPick
               ? `No shipments with status ${statusPick === "__none" ? "not set" : `"${pickOpt?.label ?? statusPick}"`} in this view.`
+              : partnerPick
+              ? `No shipments for ${pickName || "that partner"} in this view.`
               : recordFilter
               ? "Nothing matches that filter, every shipment in this view has one."
               : modeTab !== "All" && stageRows.length > 0

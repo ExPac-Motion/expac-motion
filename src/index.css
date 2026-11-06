@@ -12453,3 +12453,9 @@ label.ws-tile:hover {
 .mai-rate input { flex: 1; font-size: 12px; }
 .mai-kb-form { margin-bottom: 14px; }
 .mai-kb-body { max-height: 160px; overflow-y: auto; }
+
+/* Active / Completed Shipments: a narrower search box makes room for the
+   partner filter and Export in the header band. */
+body:has(.jobs-panel) .topbar-lead .search-box {
+  width: 220px;
+}
