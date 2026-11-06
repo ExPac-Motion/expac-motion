@@ -62,6 +62,7 @@ import SystemHealthTab from "./SystemHealthTab";
 import MotionAiSettingsTab from "./MotionAiSettingsTab";
 import MotionAiKnowledgeTab from "./MotionAiKnowledgeTab";
 import AppearanceSettingsTab from "./AppearanceSettingsTab";
+import WmsSettings from "./wms/WmsSettings";
 
 type Tab =
   | "company"
@@ -79,7 +80,10 @@ type Tab =
   | "sage"
   | "health"
   | "motionai"
-  | "aiknowledge";
+  | "aiknowledge"
+  | "wmswarehouses"
+  | "wmszones"
+  | "wmsbays";
 
 // The side menu, grouped (12 sections no longer fit one row of tabs). The
 // ?tab= keys stay as they were, so existing links (e.g. ?tab=health in the
@@ -121,21 +125,33 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
       { key: "aiknowledge", label: "Motion AI knowledge" },
     ],
   },
+  {
+    title: "Motion WMS",
+    tabs: [
+      { key: "wmswarehouses", label: "Warehouses" },
+      { key: "wmszones", label: "Zones" },
+      { key: "wmsbays", label: "Bays & Areas" },
+    ],
+  },
 ];
+const WMS_TABS: Tab[] = ["wmswarehouses", "wmszones", "wmsbays"];
 
 export default function SettingsPage() {
   const [params, setParams] = useSearchParams();
   const can = useCan();
   const requestedTab = (params.get("tab") as Tab) || "company";
   // Motion AI settings only for logins with Motion AI access (0214).
-  const tab: Tab = (requestedTab === "motionai" || requestedTab === "aiknowledge") && !can("motion_ai") ? "company" : requestedTab;
+  const blocked =
+    ((requestedTab === "motionai" || requestedTab === "aiknowledge") && !can("motion_ai")) ||
+    (WMS_TABS.includes(requestedTab) && !can("warehouse"));
+  const tab: Tab = blocked ? "company" : requestedTab;
 
   return (
     <>
       <PageHeader eyebrow="Configuration" title="Settings" />
       <div className="set-layout">
         <nav className="set-nav panel" aria-label="Settings sections">
-          {GROUPS.map((g) => (
+          {GROUPS.filter((g) => g.title !== "Motion WMS" || can("warehouse")).map((g) => (
             <div key={g.title} className="set-nav-group">
               <div className="set-nav-title">{g.title}</div>
               {g.tabs.filter((t) => (t.key !== "motionai" && t.key !== "aiknowledge") || can("motion_ai")).map((t) => (
@@ -169,6 +185,9 @@ export default function SettingsPage() {
           {tab === "health" && <SystemHealthTab />}
           {tab === "motionai" && <MotionAiSettingsTab />}
           {tab === "aiknowledge" && <MotionAiKnowledgeTab />}
+          {tab === "wmswarehouses" && <WmsSettings embedded view="warehouses" />}
+          {tab === "wmszones" && <WmsSettings embedded view="zones" />}
+          {tab === "wmsbays" && <WmsSettings embedded view="bays" />}
         </div>
       </div>
     </>

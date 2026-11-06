@@ -459,6 +459,11 @@ export const wmsDb = {
   async deleteLocation(id: string) {
     unwrap(await supabase.from("wms_locations").delete().eq("id", id));
   },
+  /** Rename a zone (zones live on the bays): every bay in it moves to `to`. */
+  async renameZone(v: { warehouse_id: string; from: string | null; to: string | null }) {
+    const q = supabase.from("wms_locations").update({ zone: v.to }).eq("warehouse_id", v.warehouse_id);
+    unwrap(await (v.from ? q.eq("zone", v.from) : q.is("zone", null)));
+  },
   async receipts(): Promise<WmsReceipt[]> {
     const rows = unwrap(
       await supabase

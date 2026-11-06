@@ -24,8 +24,13 @@ import {
 } from "../../lib/wms";
 import { useWmsLookups } from "./shared";
 
-/** WMS > Settings: warehouses (with storage billing rates) and their zones / bays. */
-export default function WmsSettings() {
+type ZoneRow = { key: string; warehouse_id: string; zone: string | null; bays: WmsLocation[] };
+export type WmsSettingsView = "warehouses" | "zones" | "bays";
+
+/** WMS > Settings: warehouses (with storage billing rates) and their zones / bays.
+ *  Also Settings › Motion WMS, one `view` at a time (`embedded`: buttons sit
+ *  in the section, not in the page header band). */
+export default function WmsSettings({ view, embedded = false }: { view?: WmsSettingsView; embedded?: boolean } = {}) {
   const lk = useWmsLookups();
   const { toast, error } = useToast();
   const receiptsQ = useWmsReceipts();
@@ -41,6 +46,8 @@ export default function WmsSettings() {
     wmsDb.saveLocation(v.id, v.values),
   );
   const delLoc = useWmsMutation(wmsDb.deleteLocation);
+  const renameZone = useWmsMutation(wmsDb.renameZone);
+  const [editZone, setEditZone] = useState<ZoneRow | "new" | null>(null);
 
   // CBM on hand per bay, for the utilisation column.
   const cbmByLoc = new Map<string, number>();
@@ -140,6 +147,105 @@ export default function WmsSettings() {
     { key: "active", header: "Status", width: 90, render: (l) => (l.active ? "Active" : "Inactive") },
   ];
 
+  // Zones: grouped from the bays (a zone is the `zone` on its bays).
+  const zoneMap = new Map<string, ZoneRow>();
+  for (const l of lk.locations) {
+    if (whFilter && l.warehouse_id !== whFilter) continue;
+    const k = `${l.warehouse_id}|${l.zone ?? ""}`;
+    const z = zoneMap.get(k) ?? { key: k, warehouse_id: l.warehouse_id, zone: l.zone, bays: [] };
+    z.bays.push(l);
+    zoneMap.set(k, z);
+  }
+  const zoneRows = [...zoneMap.values()].sort(
+    (a, b) => lk.whCode(a.warehouse_id).localeCompare(lk.whCode(b.warehouse_id)) || (a.zone ?? "~").localeCompare(b.zone ?? "~"),
+  );
+  const zoneCols: DataColumn<ZoneRow>[] = [
+    {
+      key: "actions",
+      header: <RowActionsHead />,
+      fixed: true,
+      width: 96,
+      render: (z) => <RowActions onEdit={() => setEditZone(z)} />,
+    },
+    { key: "wh", header: "Warehouse", width: 110, render: (z) => lk.whCode(z.warehouse_id), sortValue: (z) => lk.whCode(z.warehouse_id) },
+    { key: "zone", header: "Zone", width: 110, render: (z) => (z.zone ? <b>{z.zone}</b> : <span className="muted">No zone</span>), sortValue: (z) => z.zone ?? "" },
+    { key: "bays", header: "Bays / areas", width: 110, render: (z) => z.bays.length, sortValue: (z) => z.bays.length },
+    {
+      key: "codes",
+      header: "Codes",
+      width: 260,
+      render: (z) => {
+        const c = z.bays.map((b) => b.code).sort();
+        return c.slice(0, 8).join(", ") + (c.length > 8 ? " …" : "");
+      },
+    },
+    {
+      key: "cap",
+      header: "Capacity (CBM)",
+      width: 130,
+      render: (z) => {
+        const cap = z.bays.reduce((n, b) => n + Number(b.capacity_cbm ?? 0), 0);
+        return cap ? qty(cap) : "—";
+      },
+    },
+    {
+      key: "used",
+      header: "In use",
+      width: 150,
+      render: (z) => {
+        const used = z.bays.reduce((n, b) => n + (cbmByLoc.get(b.id) ?? 0), 0);
+        const cap = z.bays.reduce((n, b) => n + Number(b.capacity_cbm ?? 0), 0);
+        if (!cap) return used ? `${qty(used)} CBM` : "—";
+        const pct = Math.round((used / cap) * 100);
+        return <span className={pct >= 90 ? "wms-warn" : undefined}>{qty(used)} CBM ({pct}%)</span>;
+      },
+    },
+    { key: "active", header: "Active bays", width: 110, render: (z) => `${z.bays.filter((b) => b.active).length} of ${z.bays.length}` },
+  ];
+
+  function submitZone(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const s = (k: string) => String(f.get(k) ?? "").trim();
+    const to = s("zone").toUpperCase() || null;
+    if (editZone && editZone !== "new") {
+      if ((editZone.zone ?? null) === to) return setEditZone(null);
+      renameZone.mutate(
+        { warehouse_id: editZone.warehouse_id, from: editZone.zone, to },
+        {
+          onSuccess: () => {
+            toast(`Zone saved, ${editZone.bays.length} bay${editZone.bays.length === 1 ? "" : "s"} updated`);
+            setEditZone(null);
+          },
+          onError: (e) => error(e.message),
+        },
+      );
+      return;
+    }
+    // A new zone starts with its first bay / area.
+    const values = {
+      warehouse_id: s("warehouse_id"),
+      zone: to,
+      code: s("code").toUpperCase(),
+      name: s("name") || null,
+      kind: s("kind") as LocationKind,
+      capacity_cbm: s("capacity_cbm") === "" ? null : Number(s("capacity_cbm")),
+      active: true,
+      notes: null,
+    };
+    if (!values.warehouse_id || !to || !values.code) return error("Warehouse, zone and first bay code are required");
+    saveLoc.mutate(
+      { values },
+      {
+        onSuccess: () => {
+          toast("Zone added");
+          setEditZone(null);
+        },
+        onError: (e) => error(e.message),
+      },
+    );
+  }
+
   function submitWh(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -162,7 +268,7 @@ export default function WmsSettings() {
         ? {
             match_codes: s("match_codes")
               .toUpperCase()
-              .split(/[s,;]+/)
+              .split(/[\s,;]+/)
               .filter((c) => /^[A-Z]{2}([A-Z0-9]{3})?$/.test(c)),
             match_side: s("match_side") === "destination" ? ("destination" as const) : ("origin" as const),
           }
@@ -212,59 +318,108 @@ export default function WmsSettings() {
   const loc = editLoc && editLoc !== "new" ? editLoc : null;
   const zones = [...new Set(lk.locations.map((l) => l.zone).filter(Boolean))] as string[];
 
-  return (
-    <>
-      <PageTools
-        hint="Warehouses carry their storage billing rates; each warehouse is split into zones and bays / areas."
-        primary={
-          <button className="btn" onClick={() => setEditLoc("new")} disabled={lk.warehouses.length === 0}>
-            + Add bay
+  const whPick = (
+    <select value={whFilter} onChange={(e) => setWhFilter(e.target.value)} style={{ width: "auto" }}>
+      <option value="">All warehouses</option>
+      {lk.warehouses.map((w) => (
+        <option key={w.id} value={w.id}>
+          {w.code}, {w.name}
+        </option>
+      ))}
+    </select>
+  );
+  const whTable =
+    lk.warehouses.length === 0 ? (
+      <EmptyState>No warehouses yet.</EmptyState>
+    ) : (
+      <DataTable tableKey="wms-warehouses" className="table--compact" columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
+    );
+  const locTable =
+    locRows.length === 0 ? (
+      <EmptyState>No bays yet, add the zones and bays goods are stored in.</EmptyState>
+    ) : (
+      <DataTable tableKey="wms-locations" className="table--compact" columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
+    );
+  const noWh = lk.warehouses.length === 0;
+
+  const zoneModal = editZone !== null && (
+    <Modal
+      title={editZone !== "new" ? `Edit zone ${editZone.zone ?? "(no zone)"}, ${lk.whCode(editZone.warehouse_id)}` : "Add zone"}
+      onClose={() => setEditZone(null)}
+    >
+      <form onSubmit={submitZone}>
+        {editZone !== "new" ? (
+          <>
+            <div className="field">
+              <label>Zone</label>
+              <input name="zone" defaultValue={editZone.zone ?? ""} placeholder="A" autoFocus />
+              <span className="hint">
+                Renames the zone on its {editZone.bays.length} bay{editZone.bays.length === 1 ? "" : "s"} /
+                area{editZone.bays.length === 1 ? "" : "s"}. Leave blank to take them out of a zone.
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid2">
+              <div className="field">
+                <label>Warehouse</label>
+                <select name="warehouse_id" defaultValue={whFilter || lk.warehouses[0]?.id}>
+                  {lk.warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.code}, {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Zone</label>
+                <input name="zone" placeholder="A" autoFocus />
+              </div>
+            </div>
+            <h4 className="wms-subhead">First bay / area</h4>
+            <div className="grid2">
+              <div className="field">
+                <label>Bay / area code</label>
+                <input name="code" placeholder="B01" />
+              </div>
+              <div className="field">
+                <label>Type</label>
+                <select name="kind" defaultValue="bay">
+                  {Object.entries(LOCATION_KIND_LABEL).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid2">
+              <div className="field">
+                <label>Description</label>
+                <input name="name" placeholder="Racking row 1, ground level" />
+              </div>
+              <div className="field">
+                <label>Capacity (CBM)</label>
+                <input name="capacity_cbm" type="number" step="0.001" />
+              </div>
+            </div>
+          </>
+        )}
+        <div className="modal-foot-row">
+          <button type="button" className="btn outline" onClick={() => setEditZone(null)}>
+            Cancel
           </button>
-        }
-      >
-        <button className="btn outline" onClick={() => setEditWh("new")}>
-          + Add warehouse
-        </button>
-      </PageTools>
-
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Warehouses</h2>
-            <p>Storage is billed per {`CBM (W/M), pallet or kg`} per day / week / month after the free days.</p>
-          </div>
+          <button className="btn" disabled={renameZone.isPending || saveLoc.isPending}>
+            {renameZone.isPending || saveLoc.isPending ? "Saving…" : "Save"}
+          </button>
         </div>
-        {lk.loading ? (
-          <Loading />
-        ) : lk.warehouses.length === 0 ? (
-          <EmptyState>No warehouses yet.</EmptyState>
-        ) : (
-          <DataTable tableKey="wms-warehouses" className="table--compact" columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
-        )}
-      </div>
+      </form>
+    </Modal>
+  );
 
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Zones &amp; bays</h2>
-            <p>Where stock sits: Warehouse › Zone › Bay / area.</p>
-          </div>
-          <select value={whFilter} onChange={(e) => setWhFilter(e.target.value)} style={{ width: "auto" }}>
-            <option value="">All warehouses</option>
-            {lk.warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.code}, {w.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        {locRows.length === 0 ? (
-          <EmptyState>No bays yet, add the zones and bays goods are stored in.</EmptyState>
-        ) : (
-          <DataTable tableKey="wms-locations" className="table--compact" columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
-        )}
-      </div>
-
+  const modals = () => (
+    <>
       {editWh !== null && (
         <Modal title={wh ? `Edit warehouse ${wh.code}` : "Add warehouse"} onClose={() => setEditWh(null)} wide>
           <form onSubmit={submitWh}>
@@ -426,6 +581,113 @@ export default function WmsSettings() {
           </form>
         </Modal>
       )}
+    </>
+  );
+
+  if (embedded) {
+    const copy: Record<WmsSettingsView, string> = {
+      warehouses: "Each warehouse carries its storage billing rates and the shipments it is the hub for.",
+      zones: "Zones group the bays and areas inside a warehouse. Rename a zone here and every bay in it follows.",
+      bays: "Where stock sits: Warehouse › Zone › Bay / area. Bonded, cold, DG, quarantine, yard and dock areas are bays of that type.",
+    };
+    const v = view ?? "warehouses";
+    return (
+      <div className="ops-ws">
+        <p className="muted" style={{ marginTop: 0 }}>
+          {copy[v]}
+        </p>
+        <div className="ops-ws-tools">
+          {v !== "warehouses" && whPick}
+          <span className="grow" />
+          {v === "warehouses" && (
+            <button className="btn" onClick={() => setEditWh("new")}>
+              + Add warehouse
+            </button>
+          )}
+          {v === "zones" && (
+            <button className="btn" onClick={() => setEditZone("new")} disabled={noWh}>
+              + Add zone
+            </button>
+          )}
+          {v === "bays" && (
+            <button className="btn" onClick={() => setEditLoc("new")} disabled={noWh}>
+              + Add bay / area
+            </button>
+          )}
+        </div>
+        {lk.loading ? (
+          <Loading />
+        ) : v === "warehouses" ? (
+          whTable
+        ) : v === "zones" ? (
+          zoneRows.length === 0 ? (
+            <EmptyState>No zones yet, add one with its first bay.</EmptyState>
+          ) : (
+            <DataTable tableKey="wms-zones" className="table--compact" columns={zoneCols} rows={zoneRows} rowKey={(z) => z.key} onRowClick={(z) => setEditZone(z)} />
+          )
+        ) : (
+          locTable
+        )}
+        {modals()}
+        {zoneModal}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <PageTools
+        hint="Warehouses carry their storage billing rates; each warehouse is split into zones and bays / areas."
+        primary={
+          <button className="btn" onClick={() => setEditLoc("new")} disabled={lk.warehouses.length === 0}>
+            + Add bay
+          </button>
+        }
+      >
+        <button className="btn outline" onClick={() => setEditWh("new")}>
+          + Add warehouse
+        </button>
+      </PageTools>
+
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Warehouses</h2>
+            <p>Storage is billed per {`CBM (W/M), pallet or kg`} per day / week / month after the free days.</p>
+          </div>
+        </div>
+        {lk.loading ? (
+          <Loading />
+        ) : lk.warehouses.length === 0 ? (
+          <EmptyState>No warehouses yet.</EmptyState>
+        ) : (
+          <DataTable tableKey="wms-warehouses" className="table--compact" columns={whCols} rows={lk.warehouses} rowKey={(w) => w.id} onRowClick={(w) => setEditWh(w)} />
+        )}
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Zones &amp; bays</h2>
+            <p>Where stock sits: Warehouse › Zone › Bay / area.</p>
+          </div>
+          <select value={whFilter} onChange={(e) => setWhFilter(e.target.value)} style={{ width: "auto" }}>
+            <option value="">All warehouses</option>
+            {lk.warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.code}, {w.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {locRows.length === 0 ? (
+          <EmptyState>No bays yet, add the zones and bays goods are stored in.</EmptyState>
+        ) : (
+          <DataTable tableKey="wms-locations" className="table--compact" columns={locCols} rows={locRows} rowKey={(l) => l.id} onRowClick={(l) => setEditLoc(l)} />
+        )}
+      </div>
+
+      {modals()}
     </>
   );
 }
