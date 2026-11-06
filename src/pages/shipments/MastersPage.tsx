@@ -30,6 +30,8 @@ import {
   type BoardShipJob,
 } from "../../lib/houses";
 import { useConvertSupplierHouses, useSetClearance, useSetMaster } from "../../lib/masters";
+import { useJobs } from "../../lib/hooks";
+import { MasterConsolLink } from "./MasterLink";
 import { statusLabel } from "../../lib/steps";
 
 const isAir = (mode: string) => mode.startsWith("Air") || mode.startsWith("Courier");
@@ -428,8 +430,10 @@ function MasterTools({ job, legacy }: { job: MasterJob; legacy: HouseView[] }) {
   const convert = useConvertSupplierHouses();
   const clearance = useSetClearance();
   const basis = "clearance_basis" in job ? job.clearance_basis : undefined;
+  const full = useJobs().data?.find((j) => j.id === job.id);
   return (
     <>
+      {full && <MasterConsolLink job={full} />}
       {basis !== undefined && (
         <select
           className="ms-clear-pick"

@@ -601,6 +601,11 @@ export const wmsDb = {
         ),
       );
     }
+    // A master's consol (0225): put back any of its house shipments the form dropped.
+    if (values.job_id) {
+      const { error } = await supabase.rpc("wms_consol_resync", { p_consol: cid });
+      if (error && !/wms_consol_resync/.test(error.message)) throw new Error(error.message);
+    }
     return cid;
   },
   /** Appends houses to an existing consolidation (Active Shipments › Consolidate). */

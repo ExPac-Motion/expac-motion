@@ -675,7 +675,7 @@ export function ConsolEditModal({
       )}
       <div className="grid2">
         <div className="field">
-          <label>Shipment (master job, optional)</label>
+          <label>Master shipment (optional, its houses join this consol)</label>
           <select value={f.job_id ?? ""} onChange={(e) => set("job_id", orNull(e.target.value))}>
             <option value="">—</option>
             {lk.jobs.map((j) => (

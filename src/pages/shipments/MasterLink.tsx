@@ -6,7 +6,12 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
-import { useJobs } from "../../lib/hooks";
+import { useCan, useJobs } from "../../lib/hooks";
+import { portCode } from "../../lib/format";
+import { supabase } from "../../lib/supabase";
+import { useWmsConsols, useWmsMutation } from "../../lib/wms";
+import { blankConsol } from "../wms/WmsConsols";
+import { consolModeFor } from "../wms/houseFromShipment";
 import { KIND_LABEL, canConsol, kindOf, sameFamily, useSetClearance, useSetKind, useSetMaster } from "../../lib/masters";
 import type { Job } from "../../lib/types";
 
@@ -228,6 +233,7 @@ export function MasterSection({ job }: { job: Job }) {
           <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)} disabled={others.length === 0} title={others.length ? undefined : "No other open direct shipment for this customer"}>
             + Add houses
           </button>
+          <MasterConsolLink job={job} />
           {job.clearance_basis !== undefined && (
             <select
               className="ms-clear-pick"
@@ -365,5 +371,72 @@ function PickModal({ job, kind, options, onClose }: { job: Job; kind: "direct" |
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** A master's Motion WMS consolidation (0225): open it, or create it from the
+ *  master (its MBL / MAWB, carrier, vessel / flight, ports, dates); the
+ *  database puts the master's house shipments on it and keeps both in step. */
+export function MasterConsolLink({ job }: { job: Pick<Job, "id" | "reference" | "mode" | "awb_mbl" | "origin" | "destination" | "carrier_name" | "shipping_line" | "vessel_name" | "voyage_no" | "etd" | "eta"> }) {
+  const can = useCan();
+  const navigate = useNavigate();
+  const { error } = useToast();
+  const consolsQ = useWmsConsols();
+  const create = useWmsMutation(async () => {
+    const mode = consolModeFor(job.mode);
+    if (!mode) throw new Error("Only air and sea shipments go on a warehouse consol");
+    const air = mode === "air";
+    const base = blankConsol(mode);
+    const { data, error: e } = await supabase
+      .from("wms_consols")
+      .insert({
+        ...base,
+        job_id: job.id,
+        master_no: job.awb_mbl || null,
+        carrier: job.carrier_name || job.shipping_line || null,
+        ...(air
+          ? { origin: portCode(job.origin) || null, destination: portCode(job.destination) || base.destination, flight_date: job.etd || null }
+          : {
+              port_of_loading: portCode(job.origin) || null,
+              port_of_discharge: portCode(job.destination) || base.port_of_discharge,
+              vessel: job.vessel_name || null,
+              voyage_no: job.voyage_no || null,
+              etd: job.etd || null,
+            }),
+        eta: job.eta || null,
+      })
+      .select("id")
+      .single();
+    if (e) throw new Error(e.message);
+    return (data as { id: string }).id;
+  });
+  if (!can("warehouse") || !consolModeFor(job.mode)) return null;
+  const linked = (consolsQ.data ?? []).filter((c) => c.job_id === job.id);
+  if (linked.length) {
+    return (
+      <>
+        {linked.map((c) => (
+          <button key={c.id} type="button" className="link-btn" onClick={() => navigate(`/wms/consols/${c.id}`)} title="The master's warehouse consolidation (MAWB / MBL, house bills, manifest)">
+            Warehouse consol {c.consol_no} ({c.houses.length} house{c.houses.length === 1 ? "" : "s"}, {c.status})
+          </button>
+        ))}
+      </>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="btn outline btn-sm"
+      disabled={create.isPending || consolsQ.isLoading}
+      title="Create the Motion WMS consolidation for this master: its houses go on it, and the MBL / MAWB, vessel and dates stay in step"
+      onClick={() =>
+        create.mutate(undefined, {
+          onSuccess: (id) => navigate(`/wms/consols/${id}`),
+          onError: (e) => error(e.message),
+        })
+      }
+    >
+      {create.isPending ? "Creating…" : "Create warehouse consol"}
+    </button>
   );
 }
