@@ -280,6 +280,7 @@ export default function MastersPage() {
 function UnassignedReceipts({ receipts, views, reference }: { receipts: BoardReceipt[]; views: HouseView[]; reference: string }) {
   const { toast, error } = useToast();
   const assign = useAssignReceiptHouse();
+  const totalPcs = views.reduce((n, v) => n + (Number(v.h.pieces) || 0), 0);
   return (
     <div className="ms-unassigned">
       <b>
@@ -288,18 +289,36 @@ function UnassignedReceipts({ receipts, views, reference }: { receipts: BoardRec
       {receipts.map((r) => (
         <span key={r.id} className="ms-unassigned-item">
           {r.receipt_no} · {f0(Number(r.pieces))} pcs · {f2(Number(r.gross_kg))} kg · {f3(Number(r.volume_cbm))} CBM
+          {views.length > 1 && Number(r.pieces) > 0 && Number(r.pieces) >= totalPcs && (
+            <span className="hint"> (the whole shipment, every house's cargo)</span>
+          )}
           <select
             value=""
-            onChange={(e) =>
-              e.target.value &&
+            onChange={(e) => {
+              const v = views.find((x) => x.h.id === e.target.value);
+              if (!v) return;
+              // A receipt holding more than this house declared (e.g. one receipt for
+              // the whole master) would move other houses' cargo onto it: ask first.
+              const pcs = Number(r.pieces);
+              const housePcs = Number(v.h.pieces) || 0;
+              if (
+                housePcs > 0 &&
+                pcs > housePcs &&
+                !confirm(
+                  `${r.receipt_no} holds ${f0(pcs)} pcs, but ${v.h.house_no} declared ${f0(housePcs)} pcs` +
+                    (views.length > 1 && pcs >= totalPcs ? " (it looks like every house's cargo on one receipt)" : "") +
+                    `.\n\nPut all ${f0(pcs)} pcs on ${v.h.house_no}? Otherwise book in a receipt per house.`,
+                )
+              )
+                return;
               assign.mutate(
-                { receiptId: r.id, houseId: e.target.value },
+                { receiptId: r.id, houseId: v.h.id },
                 {
-                  onSuccess: () => toast(`${r.receipt_no} put on ${views.find((v) => v.h.id === e.target.value)?.h.house_no ?? "the house"}`),
+                  onSuccess: () => toast(`${r.receipt_no} put on ${v.h.house_no}`),
                   onError: (er) => error(er.message),
                 },
-              )
-            }
+              );
+            }}
           >
             <option value="">Assign to house…</option>
             {views.map((v) => (
@@ -386,7 +405,7 @@ function HouseRow({ v, types, onAsk }: { v: HouseView; types: string[]; onAsk: (
         <b>{h.house_no}</b>
         {h.carrier_house_no && <div className="hint">{h.carrier_house_no}</div>}
       </td>
-      <td>{h.supplier?.company ?? <span className="hint">Not set</span>}</td>
+      <td className="ms-supplier">{h.supplier?.company ?? <span className="hint">Not set</span>}</td>
       <td>
         <CargoFigures pieces={Number(h.pieces)} kg={Number(h.gross_kg)} cbm={Number(h.volume_cbm)} />
       </td>

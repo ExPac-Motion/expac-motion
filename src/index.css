@@ -12476,3 +12476,9 @@ body:has(.jobs-panel) .topbar-lead .search-box {
   min-height: 14px;
   margin: -12px 0 2px;
 }
+/* Masters board: long supplier names wrap inside their column instead of
+   running into Declared cargo (tables are no-wrap by default). */
+.ms-houses td.ms-supplier {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
