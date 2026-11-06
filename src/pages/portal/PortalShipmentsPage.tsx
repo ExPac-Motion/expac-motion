@@ -133,11 +133,11 @@ export default function PortalShipmentsPage() {
       header: "Shipment",
       width: 130,
       render: (j) => (
-        <button type="button" className="ref-link pt-ref-btn" onClick={() => navigate(`/portal/shipments/${j.id}`)}>
-          {j.reference}
+        <button type="button" className="ref-link pt-ref-btn" onClick={() => navigate(`/portal/shipments/${j.id}`)} title={j.house_no ? `House of a consolidation, shipment ${j.reference}` : undefined}>
+          {j.house_no || j.reference}
         </button>
       ),
-      sortValue: (j) => j.reference,
+      sortValue: (j) => j.house_no || j.reference,
     },
     { key: "shipper", header: "Shipper", width: 180, render: (j) => j.supplier_company || "—", sortValue: (j) => j.supplier_company ?? "" },
     { key: "reference", header: "REF", width: 120, render: (j) => j.po_no || "—", sortValue: (j) => j.po_no ?? "" },

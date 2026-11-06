@@ -29,7 +29,7 @@ import {
   type BoardReceipt,
   type BoardShipJob,
 } from "../../lib/houses";
-import { useSetMaster } from "../../lib/masters";
+import { useConvertSupplierHouses, useSetClearance, useSetMaster } from "../../lib/masters";
 import { statusLabel } from "../../lib/steps";
 
 const isAir = (mode: string) => mode.startsWith("Air") || mode.startsWith("Courier");
@@ -102,7 +102,8 @@ export default function MastersPage({ view = "masters" }: { view?: "masters" | "
     for (const h of d.houses) if (h.job) byJob.set(h.job.id, [...(byJob.get(h.job.id) ?? []), h]);
     const masterJobs = new Map<string, MasterJob>();
     for (const hs of byJob.values()) masterJobs.set(hs[0].job!.id, hs[0].job!);
-    for (const j of ships) if (j.shipment_kind === "master" && !j.master_job_id && !masterJobs.has(j.id)) masterJobs.set(j.id, j);
+    // The shipment row (0223) carries more (clearance basis) than the house join.
+    for (const j of ships) if (j.shipment_kind === "master" && !j.master_job_id) masterJobs.set(j.id, j);
 
     return [...masterJobs.values()].map((job) => {
       const houses = byJob.get(job.id) ?? [];
@@ -310,6 +311,7 @@ export default function MastersPage({ view = "masters" }: { view?: "masters" | "
                   {job.eta ? ` · ETA ${formatDate(job.eta)}` : ""}
                 </span>
                 <span className="ms-status">{statusLabel(job.shipment_status, job.mode) || job.milestone}</span>
+                <MasterTools job={job} legacy={views} />
                 {views.length > 0 && (
                   <>
                     <a className="link-btn" href={`/jobs/${job.id}/houses/print/house`} target="_blank" rel="noopener">
@@ -418,6 +420,64 @@ export default function MastersPage({ view = "masters" }: { view?: "masters" | "
 }
 
 type MasterJob = NonNullable<BoardHouse["job"]> | BoardShipJob;
+
+/** On a master's card: the clearance basis (0224) and, while it still has
+ *  supplier houses (0164), turning them into house shipments. */
+function MasterTools({ job, legacy }: { job: MasterJob; legacy: HouseView[] }) {
+  const { toast, error } = useToast();
+  const convert = useConvertSupplierHouses();
+  const clearance = useSetClearance();
+  const basis = "clearance_basis" in job ? job.clearance_basis : undefined;
+  return (
+    <>
+      {basis !== undefined && (
+        <select
+          className="ms-clear-pick"
+          value={basis ?? ""}
+          title="Cleared once for the whole consol, or each house on its own documents"
+          disabled={clearance.isPending}
+          onChange={(e) =>
+            clearance.mutate(
+              { jobId: job.id, basis: (e.target.value || null) as "master" | "house" | null },
+              { onSuccess: () => toast("Clearance saved"), onError: (er) => error(er.message) },
+            )
+          }
+        >
+          <option value="">Clearance: not set</option>
+          <option value="master">Cleared per master</option>
+          <option value="house">Cleared per house</option>
+        </select>
+      )}
+      {legacy.length > 0 && (
+        <button
+          type="button"
+          className="btn outline btn-sm"
+          disabled={convert.isPending}
+          title="Each supplier house becomes a house shipment on this master (HBL / HAWB number), with its receipts and documents"
+          onClick={() => {
+            if (
+              !confirm(
+                `Turn ${legacy.length} supplier house${legacy.length === 1 ? "" : "s"} of ${job.reference} into house shipments?\n\n` +
+                  "Each gets its own shipment (a copy of the master's quotation with the house's supplier, cargo and value, no charges: the master is billed), " +
+                  "a house number from the master, and its warehouse receipts and documents. Cargo ready / bill issued / loaded dates go into the shipment's notes.",
+              )
+            )
+              return;
+            convert.mutate(
+              { houses: legacy.map((v) => v.h), master: { id: job.id, quote_id: job.quote_id } },
+              {
+                onSuccess: () => toast(`${legacy.length} house shipment${legacy.length === 1 ? "" : "s"} created on ${job.reference}`),
+                onError: (er) => error(`Stopped: ${er.message}`),
+              },
+            );
+          }}
+        >
+          {convert.isPending ? "Converting…" : "Convert to house shipments"}
+        </button>
+      )}
+    </>
+  );
+}
 
 /** A house shipment's row on its master's card. */
 function ShipHouseRow({ v, types }: { v: ShipView; types: string[] }) {

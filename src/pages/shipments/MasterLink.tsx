@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import { useToast } from "../../components/Toast";
 import { useJobs } from "../../lib/hooks";
-import { KIND_LABEL, canConsol, kindOf, sameFamily, useSetKind, useSetMaster } from "../../lib/masters";
+import { KIND_LABEL, canConsol, kindOf, sameFamily, useSetClearance, useSetKind, useSetMaster } from "../../lib/masters";
 import type { Job } from "../../lib/types";
 
 /** Tick shipments of one customer, pick the master (an existing one, or one
@@ -174,6 +174,7 @@ export function MasterSection({ job }: { job: Job }) {
   const allQ = useJobs();
   const setMasterM = useSetMaster();
   const setKindM = useSetKind();
+  const clearance = useSetClearance();
   const [adding, setAdding] = useState(false);
   if (!canConsol(job.mode) || job.shipment_kind === undefined) return null;
   const kind = kindOf(job);
@@ -227,6 +228,24 @@ export function MasterSection({ job }: { job: Job }) {
           <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)} disabled={others.length === 0} title={others.length ? undefined : "No other open direct shipment for this customer"}>
             + Add houses
           </button>
+          {job.clearance_basis !== undefined && (
+            <select
+              className="ms-clear-pick"
+              value={job.clearance_basis ?? ""}
+              disabled={clearance.isPending}
+              title="Cleared once for the whole consol, or each house on its own documents"
+              onChange={(e) =>
+                clearance.mutate(
+                  { jobId: job.id, basis: (e.target.value || null) as "master" | "house" | null },
+                  { onSuccess: () => toast("Clearance saved"), onError: (er) => error(er.message) },
+                )
+              }
+            >
+              <option value="">Clearance: not set</option>
+              <option value="master">Cleared per master</option>
+              <option value="house">Cleared per house</option>
+            </select>
+          )}
           {houses.length === 0 && (
             <button
               type="button"

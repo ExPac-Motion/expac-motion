@@ -174,6 +174,8 @@ export interface BoardShipJob {
   house_no: string | null;
   house_position: number | null;
   ops_completed_at: string | null;
+  /** 0224; undefined before it. */
+  clearance_basis?: "master" | "house" | null;
   client: { id: string; company: string; email: string | null } | null;
   supplier: { id: string; company: string; email: string | null; contact: string | null } | null;
 }
@@ -224,12 +226,11 @@ export function useMastersBoard() {
           .order("position")) as never,
       );
       // Master and house shipments (0223); before 0223 the columns are missing.
-      const shipRes = await supabase
-        .from("jobs")
-        .select(
-          "id, reference, mode, milestone, shipment_status, etd, eta, awb_mbl, container_no, quote_id, client_id, po_no, shipment_kind, master_job_id, house_no, house_position, ops_completed_at, client:clients(id, company, email), supplier:suppliers(id, company, email, contact)",
-        )
-        .in("shipment_kind", ["master", "house"]);
+      const shipCols =
+        "id, reference, mode, milestone, shipment_status, etd, eta, awb_mbl, container_no, quote_id, client_id, po_no, shipment_kind, master_job_id, house_no, house_position, ops_completed_at, client:clients(id, company, email), supplier:suppliers(id, company, email, contact)";
+      let shipRes = await supabase.from("jobs").select(`${shipCols}, clearance_basis`).in("shipment_kind", ["master", "house"]);
+      // Before 0224 there is no clearance_basis column.
+      if (shipRes.error) shipRes = (await supabase.from("jobs").select(shipCols).in("shipment_kind", ["master", "house"])) as typeof shipRes;
       const ships = (shipRes.error ? [] : (shipRes.data ?? [])) as unknown as BoardShipJob[];
       const houseShipIds = ships.filter((j) => j.master_job_id).map((j) => j.id);
       const ids = houses.map((h) => h.id);

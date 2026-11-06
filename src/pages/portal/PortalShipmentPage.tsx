@@ -223,7 +223,7 @@ export default function PortalShipmentPage() {
     <>
       <PageHeader
         eyebrow="My Shipments"
-        title={job.reference}
+        title={job.house_no || job.reference}
         actions={
           <>
             <button className="btn outline" onClick={() => navigate(-1)}>
@@ -291,6 +291,7 @@ export default function PortalShipmentPage() {
       {/* Details */}
       <div className="sp-cards">
         <Card title="Shipment">
+          {job.house_no && <Row label="House No" value={job.house_no} />}
           <Row label="Shipment No" value={job.reference} />
           <Row label="Your reference" value={job.po_no || quote?.customer_reference} />
           <Row label={carrierLabel(job.mode)} value={tracking?.carrier || job.carrier_name || job.shipping_line} />

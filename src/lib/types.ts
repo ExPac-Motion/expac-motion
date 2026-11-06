@@ -310,6 +310,12 @@ export interface ClientJobEvent {
 
 export interface ClientJob {
   id: string;
+  /** Masters & houses (0223 / 0224): a house shows its house number
+   *  (HBL161005-1), a master lists its houses. */
+  shipment_kind?: ShipmentKind;
+  master_job_id?: string | null;
+  house_no?: string | null;
+  clearance_basis?: "master" | "house" | null;
   /** The quotation it was booked from (0159). */
   quote_id?: string | null;
   /** The customer's own reference / PO (0143). */
@@ -1499,6 +1505,8 @@ export interface Job {
   shipment_kind?: ShipmentKind;
   /** A house's master shipment. */
   master_job_id?: string | null;
+  /** On a master (0224): cleared once for the consol, or per house. */
+  clearance_basis?: "master" | "house" | null;
   /** A house's number from its master: HBL161005-1 (sea) / HAWB161005-1 (air). */
   house_no?: string | null;
   house_position?: number | null;
