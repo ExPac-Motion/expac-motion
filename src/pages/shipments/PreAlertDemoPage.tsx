@@ -36,7 +36,6 @@ export default function PreAlertDemoPage() {
     packages: 12,
     massKg: 482.5,
     signatory: { full_name: "Oliver Collins", department: "support" },
-    specialInstructions: job.ops_remarks,
   };
   const rows = shipmentInfoRows(job, { mbl_no: "MEDUSZ123456", hbl_no: "EXP-HBL-0049", voyage_no: "FA542A", incoterms: "FOB", commodity: "Trampolines" } as never, "Oliver Collins");
   return (

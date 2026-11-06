@@ -1,8 +1,7 @@
 // Import Pre-Alert (Document Vault): what goes to the clearing agent about a
 // shipment in transit to them, and their clearing instruction. Rendered by
 // ShipmentDocPrintPage after Shipment Information + Packing List, in the
-// same letterhead / green-bar style as every other document. The Customs
-// Bill of Entry boxes print blank, to be completed like the paper form.
+// same letterhead / green-bar style as every other document.
 
 import { formatDate, portCode } from "../../lib/format";
 import { LOCODES } from "../../lib/locodes";
@@ -23,7 +22,6 @@ export interface PreAlertData {
   packages: number;
   massKg: number;
   signatory?: { full_name: string | null; department?: Department | null } | null;
-  specialInstructions?: string | null;
 }
 
 /** "ZADUR" -> "Durban": the customs office is the port of discharge's place. */
@@ -64,112 +62,16 @@ export function PreAlertDetails({ job, importer, packages, massKg }: PreAlertDat
   );
 }
 
-export function PreAlertInstructions({ job, clearingAgent, signatory, specialInstructions }: PreAlertData) {
+export function PreAlertInstructions({ job, clearingAgent, signatory }: PreAlertData) {
   const name = (signatory?.full_name ?? "").trim();
   const [first, ...rest] = name.split(/\s+/);
   const surname = rest.join(" ");
   const capacity = signatory?.department ? DEPARTMENT_LABEL[signatory.department] : "";
   const today = formatDate(new Date().toISOString());
-  const box = <span className="pa-x" />;
 
   return (
     <>
-      <div className="qs-bar">Customs Bill of Entry Instructions</div>
-      <table className="pa-grid">
-        <colgroup>
-          <col style={{ width: "19%" }} />
-          <col />
-        </colgroup>
-        <tbody>
-          <tr>
-            <th>01. Customs Procedure</th>
-            <td />
-          </tr>
-          <tr>
-            <th>02. Tariff codes and/or Procedure measure</th>
-            <td />
-          </tr>
-          <tr>
-            <th>03. Import / Export Permit No.</th>
-            <td />
-          </tr>
-          <tr>
-            <th>04. Invoice Number/s</th>
-            <td />
-          </tr>
-          <tr>
-            <th>05. Mark ups</th>
-            <td />
-          </tr>
-          <tr>
-            <th>06. Tariff</th>
-            <td className="pa-cell">
-              <div className="pa-cols">
-              <div>
-                <div className="pa-sub">A. Published Determination</div>
-                <div className="pa-kv">
-                  <span>TDN No.</span>
-                </div>
-              </div>
-              <div>
-                <div className="pa-sub">B. Unpublished Determination</div>
-                <div className="pa-kv pa-kv2">
-                  <span>Ref. No.</span>
-                  <span>Date</span>
-                  <span>Place of Issue</span>
-                  <span>T/Hdg</span>
-                </div>
-              </div>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <th>
-              07. Customs Valuation
-              <div className="pa-hint">Mark your selection with an X</div>
-            </th>
-            <td className="pa-cell">
-              <div className="pa-cols pa-cols-3">
-              <div>
-                <div className="pa-sub">Valuation Code</div>
-                {["Related", "Not Related", "Exempt"].map((l) => (
-                  <div key={l} className="pa-opt">
-                    {box}
-                    {l}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div className="pa-sub">Valuation Method</div>
-                <div className="pa-methods">
-                  {[1, 2, 3, 4, 5, 6].map((m) => (
-                    <div key={m} className="pa-opt">
-                      {box}
-                      {m}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="pa-sub">VDN Number</div>
-              </div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div className="pa-notes">
-        <div>
-          <div className="pa-sub">Documents Enclosed by Importer</div>
-          <div className="pa-notes-body" />
-        </div>
-        <div>
-          <div className="pa-sub">Special Instructions</div>
-          <div className="pa-notes-body">{specialInstructions?.trim() || ""}</div>
-        </div>
-      </div>
-
-      <div className="qs-bar">Clearing Instruction</div>
+      <div className="qs-bar">Import Pre-Alert Instruction</div>
       <p className="pa-declare">
         I, <b>{name || "______________________"}</b>, request Clearing Agent{" "}
         <b>{clearingAgent || "______________________"}</b> to clear and deliver these goods (shipment{" "}

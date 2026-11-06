@@ -77,7 +77,6 @@ export default function ShipmentDocPrintPage() {
         packages: pack.qty || pack.pcs,
         massKg: pack.totalActual,
         signatory: meQ.data ?? null,
-        specialInstructions: job.ops_remarks,
       }
     : null;
 
