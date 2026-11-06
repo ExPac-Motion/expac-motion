@@ -12485,6 +12485,9 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 /* Masters (0224): clearance basis picker on a master. */
 .ms-clear-pick {
   width: auto;
-  font-size: 0.8rem;
-  padding: 3px 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  height: 32px;
+  padding: 0 30px 0 12px;
+  line-height: 1.2;
 }
