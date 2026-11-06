@@ -255,6 +255,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/sage-customer" element={<SageCustomerDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/customer-messages" element={<CustomerMessagesDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/masters" element={<MastersDemo />} />}
+          {import.meta.env.DEV && <Route path="/dev/houses" element={<MastersDemo view="houses" />} />}
           {import.meta.env.DEV && <Route path="/dev/inbox" element={<InboxDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/motion-ai" element={<MotionAiDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/pre-alert" element={<PreAlertDemoPage />} />}
@@ -380,6 +381,7 @@ function AppRoutes() {
             <Route path="jobs/:id/houses/print/:doc" element={<NeedsAnyPerm perms={["shipments", "warehouse"]}><HousePrintPage /></NeedsAnyPerm>} />
             <Route path="jobs/:id" element={<NeedsPerm perm="shipments"><ShipmentWorkspacePage /></NeedsPerm>} />
             <Route path="jobs/masters" element={<NeedsAnyPerm perms={["shipments", "warehouse"]}><MastersPage /></NeedsAnyPerm>} />
+            <Route path="jobs/houses" element={<NeedsAnyPerm perms={["shipments", "warehouse"]}><MastersPage view="houses" /></NeedsAnyPerm>} />
             <Route path="clients" element={<NeedsPerm perm="customers"><ClientsPage /></NeedsPerm>} />
             <Route path="clients/:id" element={<NeedsPerm perm="customers"><CustomerRecordPage /></NeedsPerm>} />
             <Route path="crm" element={<CrmPage />} />

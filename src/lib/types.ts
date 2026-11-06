@@ -1440,6 +1440,8 @@ export interface ImportDutyDraft {
   lines: ImportDutyLine[];
 }
 
+export type ShipmentKind = "direct" | "master" | "house";
+
 export interface Job {
   id: string;
   quote_id: string | null;
@@ -1492,6 +1494,14 @@ export interface Job {
   etd: string | null;
   eta: string | null;
   created_at: string;
+  /** 0223: Direct (default), Master (the shipment houses sit on, billed to the
+   *  customer) or House (a full shipment under a master). Undefined before 0223. */
+  shipment_kind?: ShipmentKind;
+  /** A house's master shipment. */
+  master_job_id?: string | null;
+  /** A house's number from its master: HBL161005-1 (sea) / HAWB161005-1 (air). */
+  house_no?: string | null;
+  house_position?: number | null;
   client?:
     | (Pick<Client, "id" | "company"> & {
         email?: string | null;

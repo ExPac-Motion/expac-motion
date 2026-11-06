@@ -53,6 +53,8 @@ import {
   useTransporters,
 } from "../lib/hooks";
 import ConsolidateModal from "./wms/ConsolidateModal";
+import { AddToMasterModal } from "./shipments/MasterLink";
+import { KIND_LABEL, kindOf } from "../lib/masters";
 import PodModal from "../components/PodModal";
 import ShipmentQuickUpdate from "../components/ShipmentQuickUpdate";
 import { notifyText, stepLabel, timelineDb, timelineSteps } from "../lib/timeline";
@@ -328,6 +330,9 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
   const [taskingJob, setTaskingJob] = useState<Job | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [consolidating, setConsolidating] = useState<Job[] | null>(null);
+  // Consolidate: houses on a master shipment of one customer (0223); the WMS
+  // co-load (several customers on one MBL) is one click away inside it.
+  const [mastering, setMastering] = useState<Job[] | null>(null);
   // Proof of delivery (0151): asked for when a shipment is set to Delivered.
   const [podJob, setPodJob] = useState<Job | null>(null);
   // Status picked in the grid, waiting for its date (StatusDateModal).
@@ -831,6 +836,35 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         render: (j) => j.mode,
       },
       {
+        key: "kind",
+        header: "Type",
+        width: 150,
+        cellClass: "nowrap",
+        sortValue: (j) => `${kindOf(j)} ${j.house_no ?? ""}`,
+        render: (j) => {
+          const k = kindOf(j);
+          if (k === "house") {
+            const m = (jobs ?? []).find((x) => x.id === j.master_job_id);
+            return (
+              <span title={m ? `House on master ${m.reference}` : "House"}>
+                {j.house_no ?? "House"}
+                {m ? <span className="hint"> on {m.reference}</span> : null}
+              </span>
+            );
+          }
+          if (k === "master") {
+            const n = (jobs ?? []).filter((x) => x.master_job_id === j.id).length;
+            return (
+              <span>
+                <b>Master</b>
+                {n ? <span className="hint"> {n} house{n === 1 ? "" : "s"}</span> : null}
+              </span>
+            );
+          }
+          return <span className="hint">{KIND_LABEL[k]}</span>;
+        },
+      },
+      {
         key: "shipment_status",
         header: mode === "completed" ? "Shipment Status" : "Status",
         width: 170,
@@ -1168,15 +1202,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         >
           Export
         </button>
-        {canWms && mode === "active" && (
+        {mode === "active" && (
           <button
             className="btn outline"
-            onClick={() => setConsolidating((jobs ?? []).filter((j) => sel.isSelected(j.id)))}
+            onClick={() => setMastering((jobs ?? []).filter((j) => sel.isSelected(j.id)))}
             disabled={sel.count === 0}
             title={
               sel.count === 0
-                ? "Tick air or sea shipments to put them as houses (HAWB / HBL) on a master (MAWB / MBL)"
-                : "Put the ticked shipments on a master (MAWB / MBL)"
+                ? "Tick shipments of one customer to make them houses (HBL / HAWB) on a master shipment"
+                : "Make the ticked shipments houses on a master shipment"
             }
           >
             Consolidate{sel.count ? ` (${sel.count})` : ""}
@@ -1260,6 +1294,23 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
           status={statusJob.status}
           onClose={() => setStatusJob(null)}
           onSave={(input) => saveStatus(statusJob.job, statusJob.status, input)}
+        />
+      )}
+      {mastering && (
+        <AddToMasterModal
+          jobs={mastering}
+          onClose={() => {
+            setMastering(null);
+            sel.clear();
+          }}
+          onWmsConsol={
+            canWms
+              ? () => {
+                  setConsolidating(mastering);
+                  setMastering(null);
+                }
+              : undefined
+          }
         />
       )}
       {consolidating && (
@@ -1383,7 +1434,7 @@ export function ConsolSection({ job }: { job: Job }) {
   );
   return (
     <div className="job-consol">
-      <span className="k">Master / consolidation</span>
+      <span className="k">Warehouse co-load</span>
       {on.length ? (
         on.map(({ c, h, i }) => (
           <button
@@ -1398,9 +1449,9 @@ export function ConsolSection({ job }: { job: Job }) {
         ))
       ) : (
         <>
-          <span className="hint">Ships on its own house document</span>
-          <button type="button" className="btn outline btn-sm" onClick={() => setAdding(true)}>
-            Add to a master ({masterLabel(mode)})
+          <span className="hint">Not on a warehouse co-load</span>
+          <button type="button" className="link-btn" onClick={() => setAdding(true)} title="Several customers on one MBL / MAWB, in Motion WMS">
+            Add to a co-load
           </button>
         </>
       )}

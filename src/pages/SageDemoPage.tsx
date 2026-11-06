@@ -154,12 +154,18 @@ export function SageDemoSeed({ children }: { children: ReactNode }) {
           { ...base, id: "mh1", position: 1, house_no: "SEA160984-1", supplier_id: "s1", supplier: { id: "s1", company: "Brilliant Rays Wheels Trading Co. Ltd", email: "steven@brilliantrays.cn", contact: "Steven" }, pieces: 4, gross_kg: 180, volume_cbm: 0.6, carrier_house_no: "NGB2410331", cargo_ready_date: day(-2) },
           { ...base, id: "mh2", position: 2, house_no: "SEA160984-2", supplier_id: "s2", supplier: { id: "s2", company: "Shenzhen Grepow Battery Co Ltd", email: null, contact: null }, pieces: 2, gross_kg: 95, volume_cbm: 0.4, carrier_house_no: null, status: "Received", received_note: "Shenzhen Warehouse" },
         ],
-        receipts: [{ id: "r1", receipt_no: "WR000214", house_id: "mh1", job_id: "job-m", pieces: 4, gross_kg: 182, volume_cbm: 0.62, received_at: ago(60 * 24) }, { id: "r2", receipt_no: "WR000219", house_id: null, job_id: "job-m", pieces: 2, gross_kg: 95, volume_cbm: 0.4, received_at: ago(60 * 5) }],
+        receipts: [{ id: "r9", receipt_no: "WR000301", house_id: null, job_id: "job-h1", pieces: 3, gross_kg: 121.5, volume_cbm: 0.76, received_at: ago(60 * 3) }, { id: "r1", receipt_no: "WR000214", house_id: "mh1", job_id: "job-m", pieces: 4, gross_kg: 182, volume_cbm: 0.62, received_at: ago(60 * 24) }, { id: "r2", receipt_no: "WR000219", house_id: null, job_id: "job-m", pieces: 2, gross_kg: 95, volume_cbm: 0.4, received_at: ago(60 * 5) }],
         docs: [
           { id: "x1", house_id: "mh1", doc_type: "Commercial Invoice" },
           { id: "x2", house_id: "mh1", doc_type: "Packing List" },
         ],
-        quoted: [{ quote_id: "q-m", position: 0, length_cm: 100, width_cm: 100, height_cm: 100, actual_kg: 275, qty_ctns: 1, cbm: 1 }],
+        quoted: [{ quote_id: "q-m", position: 0, length_cm: 100, width_cm: 100, height_cm: 100, actual_kg: 275, qty_ctns: 1, cbm: 1 }, { quote_id: "q-h1", position: 0, length_cm: 100, width_cm: 50, height_cm: 50, actual_kg: 40, qty_ctns: 3, cbm: null }, { quote_id: "q-h2", position: 0, length_cm: 80, width_cm: 60, height_cm: 50, actual_kg: 25, qty_ctns: 2, cbm: null }],
+        ships: [
+          { id: "job-x", reference: "SEA161005", mode: "Sea Freight (LCL)", milestone: "Booked", shipment_status: "Received", etd: day(6), eta: day(34), awb_mbl: "MEDUNB998877", container_no: null, client_id: CLIENT, po_no: null, ops_completed_at: null, client: { id: CLIENT, company: "Connell Investment Holdings", email: "gilbert@connell.co.za" }, quote_id: "q-x", shipment_kind: "master", master_job_id: null, house_no: null, house_position: null, supplier: null },
+          { id: "job-h1", reference: "SEA161007", mode: "Sea Freight (LCL)", milestone: "Booked", shipment_status: "Received", etd: day(6), eta: day(34), awb_mbl: "MEDUNB998877", container_no: null, client_id: CLIENT, po_no: null, ops_completed_at: null, client: { id: CLIENT, company: "Connell Investment Holdings", email: "gilbert@connell.co.za" }, quote_id: "q-h1", shipment_kind: "house", master_job_id: "job-x", house_no: "HBL161005-1", house_position: 1, supplier: { id: "s3", company: "Jiangxi Boska Trading Co., Ltd", email: null, contact: null } },
+          { id: "job-h2", reference: "SEA161009", mode: "Sea Freight (LCL)", milestone: "Booked", shipment_status: "Received", etd: day(6), eta: day(34), awb_mbl: "MEDUNB998877", container_no: null, client_id: CLIENT, po_no: null, ops_completed_at: null, client: { id: CLIENT, company: "Connell Investment Holdings", email: "gilbert@connell.co.za" }, quote_id: "q-h2", shipment_kind: "house", master_job_id: "job-x", house_no: "HBL161005-2", house_position: 2, supplier: { id: "s4", company: "Chongqin GAO Import And Export Trading Co., Ltd", email: null, contact: null } },
+        ],
+        shipDocs: [{ id: "sd1", job_id: "job-h1", doc_type: "Commercial Invoice" }],
       });
     }
     seed(["my_job_houses", "job-2"], [
@@ -209,11 +215,11 @@ export function CustomerMessagesDemo() {
   );
 }
 
-export function MastersDemo() {
+export function MastersDemo({ view }: { view?: "masters" | "houses" } = {}) {
   return (
     <div className="main">
       <SageDemoSeed>
-        <MastersPage />
+        <MastersPage view={view} />
       </SageDemoSeed>
     </div>
   );

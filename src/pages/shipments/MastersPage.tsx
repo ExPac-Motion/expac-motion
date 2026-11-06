@@ -1,8 +1,8 @@
-// Shipments › Masters & Houses (0164 / 0165): every master shipment with
-// its houses (one per supplier): cargo received at the warehouse against
-// what was declared, documents per house, the house steps (cargo ready,
-// house bill issued, loaded) and Request documents. Used by ops and the
-// warehouse. WMS consols (co-loads across customers) stay under Warehouse.
+// Shipments › Masters and Houses (0164 / 0165 / 0223): two tabs on one page.
+// Masters: every master shipment with its houses, house shipments (0223,
+// HBL161005-1) and supplier houses (0164), cargo received against declared,
+// documents, and the master total the customer is billed on. Houses: every
+// house in one list, with a master picker. WMS co-loads stay under Warehouse.
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DateInput from "../../components/DateInput";
@@ -27,7 +27,9 @@ import {
   type BoardDoc,
   type BoardHouse,
   type BoardReceipt,
+  type BoardShipJob,
 } from "../../lib/houses";
+import { useSetMaster } from "../../lib/masters";
 import { statusLabel } from "../../lib/steps";
 
 const isAir = (mode: string) => mode.startsWith("Air") || mode.startsWith("Courier");
@@ -60,7 +62,22 @@ interface HouseView {
   received: boolean;
 }
 
-export default function MastersPage() {
+/** A house shipment (0223) under a master: a full shipment of its own. */
+interface ShipView {
+  j: BoardShipJob;
+  receipts: BoardReceipt[];
+  recv: { pieces: number; kg: number; cbm: number };
+  declared: { pieces: number; kg: number; cbm: number };
+  have: string[];
+  missing: string[];
+  received: boolean;
+}
+
+type Tot = { pieces: number; kg: number; cbm: number };
+const ZERO: Tot = { pieces: 0, kg: 0, cbm: 0 };
+const addTot = (a: Tot, b: Tot): Tot => ({ pieces: a.pieces + b.pieces, kg: a.kg + b.kg, cbm: a.cbm + b.cbm });
+
+export default function MastersPage({ view = "masters" }: { view?: "masters" | "houses" }) {
   const boardQ = useMastersBoard();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -71,17 +88,28 @@ export default function MastersPage() {
   const masters = useMemo(() => {
     const d = boardQ.data;
     if (!d) return [];
+    const ships = d.ships ?? [];
+    const shipDocs = d.shipDocs ?? [];
+    const sumReceipts = (rs: BoardReceipt[]): Tot =>
+      rs.reduce((t, r) => ({ pieces: t.pieces + Number(r.pieces || 0), kg: t.kg + Number(r.gross_kg || 0), cbm: t.cbm + Number(r.volume_cbm || 0) }), ZERO);
+    const quotedOf = (quoteId: string | null, jobMode: string) => {
+      const items = quoteId ? d.quoted.filter((q) => q.quote_id === quoteId) : [];
+      return items.length ? packingTotals(items as never, volumetricFactor(jobMode)) : null;
+    };
+
+    // Master shipments: those with supplier houses (0164) and those marked Master (0223).
     const byJob = new Map<string, BoardHouse[]>();
     for (const h of d.houses) if (h.job) byJob.set(h.job.id, [...(byJob.get(h.job.id) ?? []), h]);
-    return [...byJob.values()].map((houses) => {
-      const job = houses[0].job!;
+    const masterJobs = new Map<string, MasterJob>();
+    for (const hs of byJob.values()) masterJobs.set(hs[0].job!.id, hs[0].job!);
+    for (const j of ships) if (j.shipment_kind === "master" && !j.master_job_id && !masterJobs.has(j.id)) masterJobs.set(j.id, j);
+
+    return [...masterJobs.values()].map((job) => {
+      const houses = byJob.get(job.id) ?? [];
       const types = docTypes(job.mode);
       const views: HouseView[] = houses.map((h) => {
         const receipts = d.receipts.filter((r) => r.house_id === h.id);
-        const recv = receipts.reduce(
-          (t, r) => ({ pieces: t.pieces + Number(r.pieces || 0), kg: t.kg + Number(r.gross_kg || 0), cbm: t.cbm + Number(r.volume_cbm || 0) }),
-          { pieces: 0, kg: 0, cbm: 0 },
-        );
+        const recv = sumReceipts(receipts);
         const docs: BoardDoc[] = d.docs.filter((x) => x.house_id === h.id);
         const have = types.filter((t) => docs.some((x) => x.doc_type === t));
         const missing = types.filter((t) => !have.includes(t));
@@ -97,36 +125,76 @@ export default function MastersPage() {
           received: receipts.length > 0 || isReceivedStatus(status),
         };
       });
-      const items = d.quoted.filter((q) => q.quote_id === job.quote_id);
-      const quoted = items.length ? packingTotals(items as never, volumetricFactor(job.mode)) : null;
-      const declared = views.reduce(
-        (t, v) => ({ pieces: t.pieces + Number(v.h.pieces || 0), kg: t.kg + Number(v.h.gross_kg || 0), cbm: t.cbm + Number(v.h.volume_cbm || 0) }),
-        { pieces: 0, kg: 0, cbm: 0 },
-      );
-      const unassigned = d.receipts.filter((r) => r.job_id === job.id && !r.house_id);
-      return { job, views, quoted, declared, unassigned };
+      const shipViews: ShipView[] = ships
+        .filter((j) => j.master_job_id === job.id)
+        .sort((a, b) => (a.house_position ?? 0) - (b.house_position ?? 0))
+        .map((j) => {
+          const receipts = d.receipts.filter((r) => r.job_id === j.id);
+          const q = quotedOf(j.quote_id, j.mode);
+          const docs = shipDocs.filter((x) => x.job_id === j.id);
+          const have = types.filter((t) => docs.some((x) => x.doc_type === t));
+          return {
+            j,
+            receipts,
+            recv: sumReceipts(receipts),
+            declared: q ? { pieces: q.qty, kg: q.totalActual, cbm: q.totalCbm } : ZERO,
+            have,
+            missing: types.filter((t) => !have.includes(t)),
+            received: receipts.length > 0,
+          };
+        });
+      const quoted = quotedOf(job.quote_id, job.mode);
+      const declared = [
+        ...views.map((v) => ({ pieces: Number(v.h.pieces || 0), kg: Number(v.h.gross_kg || 0), cbm: Number(v.h.volume_cbm || 0) })),
+        ...shipViews.map((v) => v.declared),
+      ].reduce(addTot, ZERO);
+      // What the customer is billed on: received figures once checked in, declared before.
+      const billed = [
+        ...views.map((v) => (v.receipts.length ? v.recv : { pieces: Number(v.h.pieces || 0), kg: Number(v.h.gross_kg || 0), cbm: Number(v.h.volume_cbm || 0) })),
+        ...shipViews.map((v) => (v.receipts.length ? v.recv : v.declared)),
+      ].reduce(addTot, ZERO);
+      const allChecked = views.every((v) => v.receipts.length > 0) && shipViews.every((v) => v.receipts.length > 0);
+      const unassigned = views.length ? d.receipts.filter((r) => r.job_id === job.id && !r.house_id) : [];
+      return { job, views, shipViews, quoted, declared, billed, allChecked, unassigned };
     });
   }, [boardQ.data]);
 
   const n = search.trim().toLowerCase();
-  const shown = masters.filter(({ job, views }) => {
+  const shown = masters.filter(({ job, views, shipViews }) => {
     const delivered = job.milestone === "Delivered";
+    const all = [...views.map((v) => ({ received: v.received, missing: v.missing.length, loaded: !!v.h.loaded_at })), ...shipViews.map((v) => ({ received: v.received, missing: v.missing.length, loaded: false }))];
     if (filter !== "all" && delivered) return false;
     if (mode === "air" && !isAir(job.mode)) return false;
     if (mode === "sea" && isAir(job.mode)) return false;
-    if (filter === "cargo" && !views.some((v) => !v.received)) return false;
-    if (filter === "docs" && !views.some((v) => v.missing.length > 0)) return false;
-    if (filter === "ready" && !views.every((v) => v.received && v.missing.length === 0 && !v.h.loaded_at)) return false;
+    if (filter === "cargo" && !all.some((v) => !v.received)) return false;
+    if (filter === "docs" && !all.some((v) => v.missing > 0)) return false;
+    if (filter === "ready" && !(all.length > 0 && all.every((v) => v.received && v.missing === 0 && !v.loaded))) return false;
     if (!n) return true;
-    return [job.reference, job.client?.company, job.awb_mbl, job.container_no, ...views.flatMap((v) => [v.h.house_no, v.h.supplier?.company, v.h.carrier_house_no])]
+    return [
+      job.reference,
+      job.client?.company,
+      job.awb_mbl,
+      job.container_no,
+      ...views.flatMap((v) => [v.h.house_no, v.h.supplier?.company, v.h.carrier_house_no]),
+      ...shipViews.flatMap((v) => [v.j.house_no, v.j.reference, v.j.supplier?.company, v.j.po_no]),
+    ]
       .join(" ")
       .toLowerCase()
       .includes(n);
   });
 
+  // Houses tab: every house, supplier houses (0164) and house shipments (0223).
+  const houseRows = shown.flatMap((m) => [
+    ...m.shipViews.map((v) => ({ key: v.j.id, master: m.job, ship: v as ShipView | null, legacy: null as HouseView | null })),
+    ...m.views.map((v) => ({ key: v.h.id, master: m.job, ship: null as ShipView | null, legacy: v as HouseView | null })),
+  ]);
+  const mastersOf = (clientId: string | null, jobMode: string) =>
+    masters.filter((m) => m.job.client_id === clientId && isAir(m.job.mode) === isAir(jobMode)).map((m) => m.job);
+
+  const houseCount = houseRows.length;
   return (
     <>
-      <PageHeader eyebrow="Shipments" title="Masters & Houses" />
+      <PageHeader eyebrow="Shipments" title={view === "houses" ? "Houses" : "Masters"} />
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search shipment, house, customer, supplier, MBL…" />}
         filters={
@@ -147,8 +215,18 @@ export default function MastersPage() {
             </div>
           </>
         }
-        count={boardQ.isLoading ? undefined : `${shown.length} master${shown.length === 1 ? "" : "s"}`}
-        hint="Master shipments split into houses, one per supplier (add houses on the shipment's View). Warehouse consols (co-loads) stay under Warehouse."
+        count={
+          boardQ.isLoading
+            ? undefined
+            : view === "houses"
+              ? `${houseCount} house${houseCount === 1 ? "" : "s"}`
+              : `${shown.length} master${shown.length === 1 ? "" : "s"}`
+        }
+        hint={
+          view === "houses"
+            ? "Every house: a shipment under a master (HBL / HAWB + master number), or a supplier house of a master. Change a house's master here."
+            : "Master shipments and their houses. The customer is billed on the master: its houses' cargo, received figures once checked in. Make houses on Active Shipments › Consolidate or on the shipment."
+        }
       />
 
       {boardQ.isLoading ? (
@@ -159,19 +237,60 @@ export default function MastersPage() {
         <div className="panel">
           <ErrorNote error={boardQ.error} />
         </div>
+      ) : view === "houses" ? (
+        <div className="panel">
+          {houseRows.length === 0 ? (
+            <EmptyState>{masters.length === 0 ? "No houses yet. Tick shipments of one customer on Active Shipments and use Consolidate." : "No houses match."}</EmptyState>
+          ) : (
+            <div className="table-wrap">
+              <table className="ms-houses ms-houses-all">
+                <colgroup>
+                  <col style={{ width: 150 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 200 }} />
+                  <col style={{ width: 220 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 150 }} />
+                  <col style={{ width: 150 }} />
+                  <col style={{ width: 230 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>House No</th>
+                    <th>Master</th>
+                    <th>Customer</th>
+                    <th>Supplier</th>
+                    <th>Declared cargo</th>
+                    <th>Received</th>
+                    <th>Documents</th>
+                    <th>Status</th>
+                    <th>Change master</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {houseRows.map((r) => (
+                    <AllHousesRow key={r.key} master={r.master} ship={r.ship} legacy={r.legacy} masters={mastersOf(r.master.client_id, r.master.mode)} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       ) : shown.length === 0 ? (
         <div className="panel">
           <EmptyState>
             {masters.length === 0
-              ? "No master shipments yet. Open a shipment's View and use + Add house to split it by supplier."
+              ? "No master shipments yet. Tick shipments of one customer on Active Shipments and use Consolidate, or Make master on a shipment."
               : "No masters match."}
           </EmptyState>
         </div>
       ) : (
-        shown.map(({ job, views, quoted, declared, unassigned }) => {
+        shown.map(({ job, views, shipViews, quoted, declared, billed, allChecked, unassigned }) => {
           const types = docTypes(job.mode);
-          const received = views.filter((v) => v.received).length;
-          const docsHave = views.reduce((s, v) => s + v.have.length, 0);
+          const total = views.length + shipViews.length;
+          const received = views.filter((v) => v.received).length + shipViews.filter((v) => v.received).length;
+          const docsHave = views.reduce((s, v) => s + v.have.length, 0) + shipViews.reduce((s, v) => s + v.have.length, 0);
           const issued = views.filter((v) => v.h.hbl_issued_at).length;
           const loaded = views.filter((v) => v.h.loaded_at).length;
           const qCbm = quoted?.totalCbm ?? 0;
@@ -191,88 +310,235 @@ export default function MastersPage() {
                   {job.eta ? ` · ETA ${formatDate(job.eta)}` : ""}
                 </span>
                 <span className="ms-status">{statusLabel(job.shipment_status, job.mode) || job.milestone}</span>
-                <a className="link-btn" href={`/jobs/${job.id}/houses/print/house`} target="_blank" rel="noopener">
-                  Print all {billOf(job.mode)}s
-                </a>
-                <a className="link-btn" href={`/jobs/${job.id}/houses/print/manifest`} target="_blank" rel="noopener">
-                  Manifest
-                </a>
+                {views.length > 0 && (
+                  <>
+                    <a className="link-btn" href={`/jobs/${job.id}/houses/print/house`} target="_blank" rel="noopener">
+                      Print all {billOf(job.mode)}s
+                    </a>
+                    <a className="link-btn" href={`/jobs/${job.id}/houses/print/manifest`} target="_blank" rel="noopener">
+                      Manifest
+                    </a>
+                  </>
+                )}
               </div>
               <div className="ms-rollup">
                 <span>
-                  <b>{views.length}</b> houses
+                  <b>{total}</b> house{total === 1 ? "" : "s"}
                 </span>
-                <span className={received < views.length ? "warn" : "ok"}>
+                <span className={received < total ? "warn" : "ok"}>
                   <b>
-                    {received}/{views.length}
+                    {received}/{total}
                   </b>{" "}
                   cargo received
                 </span>
-                <span className={docsHave < views.length * types.length ? "warn" : "ok"}>
+                <span className={docsHave < total * types.length ? "warn" : "ok"}>
                   <b>
-                    {docsHave}/{views.length * types.length}
+                    {docsHave}/{total * types.length}
                   </b>{" "}
                   documents
                 </span>
-                <span>
-                  <b>
-                    {issued}/{views.length}
-                  </b>{" "}
-                  {billOf(job.mode)} issued
-                </span>
-                <span>
-                  <b>
-                    {loaded}/{views.length}
-                  </b>{" "}
-                  loaded
-                </span>
+                {views.length > 0 && (
+                  <>
+                    <span>
+                      <b>
+                        {issued}/{views.length}
+                      </b>{" "}
+                      {billOf(job.mode)} issued
+                    </span>
+                    <span>
+                      <b>
+                        {loaded}/{views.length}
+                      </b>{" "}
+                      loaded
+                    </span>
+                  </>
+                )}
                 <span className={`ms-tot${quoted && (off(declared.cbm, qCbm) || off(declared.kg, qKg)) ? " warn" : ""}`}>
                   Declared {f0(declared.pieces)} pcs · {f2(declared.kg)} kg · {f3(declared.cbm)} CBM
                   {quoted ? ` (quoted ${f2(qKg)} kg · ${f3(qCbm)} CBM)` : ""}
+                  <br />
+                  <b>
+                    Master {f0(billed.pieces)} pcs · {f2(billed.kg)} kg · {f3(billed.cbm)} CBM
+                  </b>{" "}
+                  <span className="hint">{allChecked ? "(all received)" : "(received where checked in, else declared)"}</span>
                 </span>
               </div>
               {unassigned.length > 0 && <UnassignedReceipts receipts={unassigned} views={views} reference={job.reference} />}
-              <div className="table-wrap">
-                <table className="ms-houses">
-                  <colgroup>
-                    <col style={{ width: 120 }} />
-                    <col style={{ width: 230 }} />
-                    <col style={{ width: 150 }} />
-                    <col style={{ width: 190 }} />
-                    <col style={{ width: 150 }} />
-                    <col style={{ width: 126 }} />
-                    <col style={{ width: 126 }} />
-                    <col style={{ width: 126 }} />
-                    <col style={{ width: 160 }} />
-                    <col style={{ width: 205 }} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th>House No</th>
-                      <th>Supplier</th>
-                      <th>Declared cargo</th>
-                      <th>Received at</th>
-                      <th>Documents</th>
-                      <th>Cargo ready</th>
-                      <th>{billOf(job.mode)} issued</th>
-                      <th>Loaded</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {views.map((v) => (
-                      <HouseRow key={v.h.id} v={v} types={types} onAsk={() => setAsking(v)} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {total === 0 ? (
+                <p className="hint" style={{ padding: "6px 2px" }}>
+                  No houses yet: tick shipments of {job.client?.company ?? "this customer"} on Active Shipments and use Consolidate, or + Add houses on the shipment.
+                </p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="ms-houses">
+                    <colgroup>
+                      <col style={{ width: 120 }} />
+                      <col style={{ width: 230 }} />
+                      <col style={{ width: 150 }} />
+                      <col style={{ width: 190 }} />
+                      <col style={{ width: 150 }} />
+                      <col style={{ width: 126 }} />
+                      <col style={{ width: 126 }} />
+                      <col style={{ width: 126 }} />
+                      <col style={{ width: 160 }} />
+                      <col style={{ width: 205 }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>House No</th>
+                        <th>Supplier</th>
+                        <th>Declared cargo</th>
+                        <th>Received at</th>
+                        <th>Documents</th>
+                        <th>Cargo ready</th>
+                        <th>{billOf(job.mode)} issued</th>
+                        <th>Loaded</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shipViews.map((v) => (
+                        <ShipHouseRow key={v.j.id} v={v} types={types} />
+                      ))}
+                      {views.map((v) => (
+                        <HouseRow key={v.h.id} v={v} types={types} onAsk={() => setAsking(v)} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           );
         })
       )}
       {asking && <RequestDocsModal v={asking} onClose={() => setAsking(null)} />}
     </>
+  );
+}
+
+type MasterJob = NonNullable<BoardHouse["job"]> | BoardShipJob;
+
+/** A house shipment's row on its master's card. */
+function ShipHouseRow({ v, types }: { v: ShipView; types: string[] }) {
+  const { j, receipts, recv, declared, have } = v;
+  const diff = receipts.length > 0 && declared.pieces > 0 && (recv.pieces !== declared.pieces || off(recv.kg, declared.kg) || off(recv.cbm, declared.cbm));
+  return (
+    <tr>
+      <td className="nowrap">
+        <b>{j.house_no ?? j.reference}</b>
+        <div className="hint">{j.reference}</div>
+      </td>
+      <td className="ms-supplier">{j.supplier?.company ?? <span className="hint">Not set</span>}</td>
+      <td>{declared.pieces || declared.kg ? <CargoFigures pieces={declared.pieces} kg={declared.kg} cbm={declared.cbm} /> : <span className="hint">No packing list</span>}</td>
+      <td className={diff ? "ms-diff" : undefined}>
+        {receipts.length > 0 ? (
+          <>
+            <CargoFigures pieces={recv.pieces} kg={recv.kg} cbm={recv.cbm} />
+            <div className="hint">{receipts.map((r) => r.receipt_no).join(", ")}</div>
+          </>
+        ) : (
+          <span className="hint">Not received</span>
+        )}
+      </td>
+      <td className="nowrap">
+        {types.map((t) => (
+          <span key={t} className={`ms-doc${have.includes(t) ? " on" : ""}`} title={`${t}: ${have.includes(t) ? "on file" : "missing"}`}>
+            {have.includes(t) ? "✓" : "·"} {SHORT[t] ?? t}
+          </span>
+        ))}
+      </td>
+      <td colSpan={3} className="hint">
+        House shipment: dates and documents on its own shipment
+      </td>
+      <td className="nowrap">{statusLabel(j.shipment_status, j.mode) || j.milestone}</td>
+      <td className="nowrap">
+        <a className="btn outline btn-sm" href={`/jobs/${j.id}`}>
+          Open shipment
+        </a>
+      </td>
+    </tr>
+  );
+}
+
+/** Houses tab: one row per house, and (house shipments) a master picker. */
+function AllHousesRow({ master, ship, legacy, masters }: { master: MasterJob; ship: ShipView | null; legacy: HouseView | null; masters: MasterJob[] }) {
+  const { toast, error } = useToast();
+  const run = useSetMaster();
+  const houseNo = ship ? (ship.j.house_no ?? ship.j.reference) : legacy!.h.house_no;
+  const supplier = ship ? ship.j.supplier?.company : legacy!.h.supplier?.company;
+  const declared = ship ? ship.declared : { pieces: Number(legacy!.h.pieces || 0), kg: Number(legacy!.h.gross_kg || 0), cbm: Number(legacy!.h.volume_cbm || 0) };
+  const receipts = ship ? ship.receipts : legacy!.receipts;
+  const recv = ship ? ship.recv : legacy!.recv;
+  const have = ship ? ship.have : legacy!.have;
+  const types = docTypes(master.mode);
+  return (
+    <tr>
+      <td className="nowrap">
+        {ship ? (
+          <a href={`/jobs/${ship.j.id}`}>
+            <b>{houseNo}</b>
+          </a>
+        ) : (
+          <b>{houseNo}</b>
+        )}
+        <div className="hint">{ship ? ship.j.reference : "Supplier house"}</div>
+      </td>
+      <td className="nowrap">
+        <a href={`/jobs/${master.id}`}>{master.reference}</a>
+      </td>
+      <td className="ms-supplier">{master.client?.company ?? "—"}</td>
+      <td className="ms-supplier">{supplier ?? <span className="hint">Not set</span>}</td>
+      <td>{declared.pieces || declared.kg ? <CargoFigures pieces={declared.pieces} kg={declared.kg} cbm={declared.cbm} /> : <span className="hint">—</span>}</td>
+      <td>{receipts.length ? <CargoFigures pieces={recv.pieces} kg={recv.kg} cbm={recv.cbm} /> : <span className="hint">Not received</span>}</td>
+      <td className="nowrap">
+        {types.map((t) => (
+          <span key={t} className={`ms-doc${have.includes(t) ? " on" : ""}`} title={`${t}: ${have.includes(t) ? "on file" : "missing"}`}>
+            {have.includes(t) ? "✓" : "·"} {SHORT[t] ?? t}
+          </span>
+        ))}
+      </td>
+      <td className="nowrap">{ship ? statusLabel(ship.j.shipment_status, ship.j.mode) || ship.j.milestone : legacy!.status}</td>
+      <td className="nowrap">
+        {ship ? (
+          <span style={{ display: "inline-flex", gap: 6 }}>
+            <select
+              value={master.id}
+              style={{ width: 130 }}
+              disabled={run.isPending}
+              onChange={(e) =>
+                run.mutate(
+                  { jobIds: [ship.j.id], masterId: e.target.value },
+                  { onSuccess: () => toast(`${ship.j.reference} moved, new house number given`), onError: (er) => error(er.message) },
+                )
+              }
+              title="Move this house to another master of the same customer"
+            >
+              {masters.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.reference}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn outline btn-sm"
+              disabled={run.isPending}
+              onClick={() =>
+                run.mutate(
+                  { jobIds: [ship.j.id], masterId: null },
+                  { onSuccess: () => toast(`${ship.j.reference} is a direct shipment again`), onError: (er) => error(er.message) },
+                )
+              }
+            >
+              Take off
+            </button>
+          </span>
+        ) : (
+          <span className="hint">Part of {master.reference}</span>
+        )}
+      </td>
+    </tr>
   );
 }
 

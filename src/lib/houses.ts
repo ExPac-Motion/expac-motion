@@ -155,6 +155,34 @@ export interface BoardHouse extends JobHouse {
     client: { id: string; company: string; email: string | null } | null;
   } | null;
 }
+/** A master or house shipment (0223) on the board. */
+export interface BoardShipJob {
+  id: string;
+  reference: string;
+  mode: string;
+  milestone: string;
+  shipment_status: string | null;
+  etd: string | null;
+  eta: string | null;
+  awb_mbl: string | null;
+  container_no: string | null;
+  quote_id: string | null;
+  client_id: string | null;
+  po_no: string | null;
+  shipment_kind: "direct" | "master" | "house";
+  master_job_id: string | null;
+  house_no: string | null;
+  house_position: number | null;
+  ops_completed_at: string | null;
+  client: { id: string; company: string; email: string | null } | null;
+  supplier: { id: string; company: string; email: string | null; contact: string | null } | null;
+}
+export interface BoardShipDoc {
+  id: string;
+  job_id: string;
+  doc_type: string | null;
+}
+
 export interface BoardReceipt {
   id: string;
   receipt_no: string;
@@ -195,10 +223,21 @@ export function useMastersBoard() {
           )
           .order("position")) as never,
       );
+      // Master and house shipments (0223); before 0223 the columns are missing.
+      const shipRes = await supabase
+        .from("jobs")
+        .select(
+          "id, reference, mode, milestone, shipment_status, etd, eta, awb_mbl, container_no, quote_id, client_id, po_no, shipment_kind, master_job_id, house_no, house_position, ops_completed_at, client:clients(id, company, email), supplier:suppliers(id, company, email, contact)",
+        )
+        .in("shipment_kind", ["master", "house"]);
+      const ships = (shipRes.error ? [] : (shipRes.data ?? [])) as unknown as BoardShipJob[];
+      const houseShipIds = ships.filter((j) => j.master_job_id).map((j) => j.id);
       const ids = houses.map((h) => h.id);
-      const jobIds = [...new Set(houses.map((h) => h.job_id))];
-      const quoteIds = [...new Set(houses.map((h) => h.job?.quote_id).filter(Boolean))] as string[];
-      const [receipts, docs, quoted] = await Promise.all([
+      const jobIds = [...new Set([...houses.map((h) => h.job_id), ...ships.map((j) => j.id)])];
+      const quoteIds = [
+        ...new Set([...houses.map((h) => h.job?.quote_id), ...ships.map((j) => j.quote_id)].filter(Boolean)),
+      ] as string[];
+      const [receipts, docs, quoted, shipDocs] = await Promise.all([
         // Every receipt on these shipments: on a house, or not on one yet.
         jobIds.length
           ? unwrap<BoardReceipt[]>(
@@ -219,8 +258,11 @@ export function useMastersBoard() {
                 .in("quote_id", quoteIds),
             )
           : [],
+        houseShipIds.length
+          ? unwrap<BoardShipDoc[]>(await supabase.from("shipment_documents").select("id, job_id, doc_type").in("job_id", houseShipIds))
+          : [],
       ]);
-      return { houses, receipts, docs, quoted };
+      return { houses, receipts, docs, quoted, ships, shipDocs };
     },
   });
 }

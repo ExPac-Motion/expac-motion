@@ -1,3 +1,4 @@
+import { MasterSection } from "./MasterLink";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ShipmentTimeline from "../../components/ShipmentTimeline";
@@ -537,6 +538,7 @@ function CargoTab({ job, quote, loading }: { job: Job; quote: QuoteData | null; 
       <div className="panel ws-panel jv-extras">
         <PodSection job={job} />
         <HubsSection job={job} />
+        <MasterSection job={job} />
         <ConsolSection job={job} />
         <HousesSection job={job} />
       </div>
