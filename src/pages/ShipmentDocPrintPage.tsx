@@ -113,7 +113,9 @@ export default function ShipmentDocPrintPage() {
           />
           <div className="qs-companyhead-text">
             <div className="name">
-              {def.title.toUpperCase()} - {company.headerName}
+              {def.title.toUpperCase()}
+              <br />
+              {company.headerName}
             </div>
             <div className="lines">{company.headerLine1}</div>
             <div className="lines">

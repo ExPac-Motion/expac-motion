@@ -44,7 +44,11 @@ export default function PreAlertDemoPage() {
         <div className="qs-companyhead">
           <img className="logo" src={COMPANY.logoPrint} alt="ExPac" />
           <div className="qs-companyhead-text">
-            <div className="name">IMPORT PRE-ALERT - {COMPANY.headerName}</div>
+            <div className="name">
+              IMPORT PRE-ALERT
+              <br />
+              {COMPANY.headerName}
+            </div>
             <div className="lines">{COMPANY.headerLine1}</div>
             <div className="lines">
               {COMPANY.headerEmail}&nbsp; &middot; &nbsp;{COMPANY.headerLine2}

@@ -169,7 +169,11 @@ export function QuoteSheet({ data }: { data: QuoteSheetData }) {
           }}
         />
         <div className="qs-companyhead-text">
-          <div className="name">QUOTATION - {company.headerName}</div>
+          <div className="name">
+            QUOTATION
+            <br />
+            {company.headerName}
+          </div>
           <div className="lines">{company.headerLine1}</div>
           <div className="lines">
             {company.headerEmail}&nbsp; &middot; &nbsp;{company.headerLine2}

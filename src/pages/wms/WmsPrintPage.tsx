@@ -366,7 +366,9 @@ export function LetterSheet({ title, children }: { title: string; children: Reac
         />
         <div className="qs-companyhead-text">
           <div className="name">
-            {title.toUpperCase()} - {company.headerName}
+            {title.toUpperCase()}
+            <br />
+            {company.headerName}
           </div>
           <div className="lines">{company.headerLine1}</div>
           <div className="lines">
