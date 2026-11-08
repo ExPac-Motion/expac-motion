@@ -11,13 +11,10 @@ import {
 import { isTaskOverdue, todayIso } from "../lib/opsCalendar";
 import { isTracked, trackingTone } from "../lib/tracking";
 import { isShipmentComplete } from "../lib/types";
-import { useAuth } from "../auth/AuthProvider";
-import { isVaultOwner } from "../lib/flags";
 import TasksNotes from "./ops/TasksNotes";
 import NotificationsTab from "./ops/NotificationsTab";
 import CalendarBoard from "./ops/CalendarBoard";
 import LiveTracking from "./ops/LiveTracking";
-import PersonalVaultPage from "./ops/PersonalVaultPage";
 import DocumentVaultTab from "./ops/DocumentVaultTab";
 import WorldClock from "./ops/WorldClock";
 import MotionAiTab from "./ops/MotionAiTab";
@@ -29,7 +26,6 @@ type Tab =
   | "notifications"
   | "calendar"
   | "tracking"
-  | "vault"
   | "docvault"
   | "worldclock"
   | "motionai";
@@ -43,11 +39,11 @@ interface Chip {
 
 export default function OpsControlTowerPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
-  const canVault = isVaultOwner(user?.email);
-  const requested = (params.get("tab") as Tab) || "tasks";
-  const tab: Tab = requested === "vault" && !canVault ? "tasks" : requested;
+  const requested = params.get("tab") || "tasks";
+  // ?tab=vault was the Personal Vault, moved out to connell.co.za: old
+  // bookmarks land on Tasks instead of an empty page.
+  const tab = (requested === "vault" ? "tasks" : requested) as Tab;
   const focus = params.get("focus") || undefined;
 
   const can = useCan();
@@ -147,7 +143,7 @@ export default function OpsControlTowerPage() {
     <>
       <PageHeader eyebrow="Command centre" title="Control Tower" />
 
-      {tab !== "vault" && tab !== "docvault" && tab !== "worldclock" && chips.length > 0 && (
+      {tab !== "docvault" && tab !== "worldclock" && chips.length > 0 && (
         <div className="ct-band">
           {chips.map((c) => (
             <button
@@ -166,7 +162,6 @@ export default function OpsControlTowerPage() {
       {tab === "notifications" && <NotificationsTab />}
       {tab === "calendar" && <CalendarBoard />}
       {tab === "tracking" && <LiveTracking />}
-      {tab === "vault" && canVault && <PersonalVaultPage />}
       {tab === "docvault" && <DocumentVaultTab />}
       {tab === "worldclock" && <WorldClock />}
       {tab === "motionai" && canAi && <MotionAiTab />}

@@ -42,13 +42,7 @@ import type {
   WebFormPatch,
   ShipmentDocument,
   Supplier,
-  VaultBudgetDraft,
-  VaultBudgetEntry,
-  VaultBudgetScope,
   PartnerKind,
-  VaultNote,
-  VaultNoteDraft,
-  VaultTodo,
   UiTableLayout,
 } from "./types";
 import { fetchRoutePath, fetchTracking, trackableRef, trackingEventRowsFrom, trackingRowFrom } from "./tracking";
@@ -1911,114 +1905,6 @@ export function useSetJobMilestone() {
     mutationFn: (input: { jobId: string; milestone: Milestone; note?: string }) =>
       db.setJobMilestone(input.jobId, input.milestone, input.note),
     onSuccess: () => refreshShipmentData(qc),
-  });
-}
-
-/* ---------- Personal Vault (Control Tower) ---------- */
-
-export function useVaultBudget() {
-  return useQuery({ queryKey: ["vault_budget"], queryFn: db.listVaultBudget });
-}
-export function useSaveVaultBudgetEntry() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: {
-      id?: string;
-      values: VaultBudgetDraft & { scope?: VaultBudgetEntry["scope"] };
-    }) => db.saveVaultBudgetEntry(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_budget"] }),
-  });
-}
-export function useDeleteVaultBudgetEntry() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: db.deleteVaultBudgetEntry,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_budget"] }),
-  });
-}
-
-export function useVaultTodos() {
-  return useQuery({ queryKey: ["vault_todos"], queryFn: db.listVaultTodos });
-}
-export function useAddVaultTodo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: {
-      title: string;
-      forecasted: number;
-      transferred_to: string;
-      scope: VaultBudgetScope;
-    }) => db.addVaultTodo(input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["vault_todos"] });
-      qc.invalidateQueries({ queryKey: ["vault_budget"] });
-    },
-  });
-}
-export function useUpdateVaultTodo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: {
-      id: string;
-      patch: Partial<
-        Pick<
-          VaultTodo,
-          "title" | "forecasted" | "transferred_to" | "done" | "sort_order"
-        >
-      >;
-    }) => db.updateVaultTodo(input.id, input.patch),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["vault_todos"] });
-      qc.invalidateQueries({ queryKey: ["vault_budget"] });
-    },
-  });
-}
-export function useDeleteVaultTodo() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: db.deleteVaultTodo,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["vault_todos"] });
-      qc.invalidateQueries({ queryKey: ["vault_budget"] });
-    },
-  });
-}
-
-export function useVaultNotes() {
-  return useQuery({ queryKey: ["vault_notes"], queryFn: db.listVaultNotes });
-}
-export function useSaveVaultNote() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: {
-      id?: string;
-      values: Partial<VaultNoteDraft> & { title?: string; scope?: VaultBudgetScope };
-    }) => db.saveVaultNote(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
-  });
-}
-export function useDeleteVaultNote() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: db.deleteVaultNote,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
-  });
-}
-export function useUpdateVaultNotesBulk() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: {
-      ids: string[];
-      patch: Partial<Pick<VaultNote, "status" | "priority" | "due_date">>;
-    }) => db.updateVaultNotesBulk(input.ids, input.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
-  });
-}
-export function useDeleteVaultNotesBulk() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: db.deleteVaultNotesBulk,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault_notes"] }),
   });
 }
 

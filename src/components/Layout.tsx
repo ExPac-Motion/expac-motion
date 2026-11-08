@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { alertsOn, notifyNewMail } from "../lib/inboxAlerts";
 import { useAuth } from "../auth/AuthProvider";
-import { isVaultOwner } from "../lib/flags";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewActive, setPortalPreview } from "../lib/db";
 import { formatDateTime } from "../lib/format";
@@ -182,20 +181,7 @@ export default function Layout() {
     user?.email ||
     "";
 
-  // The Personal Vault tab is only wired into Control Tower for its owner.
-  let nav: NavModule[] = isVaultOwner(user?.email)
-    ? NAV.map((m) =>
-        m.to === "/ops"
-          ? {
-              ...m,
-              children: [
-                ...(m.children ?? []),
-                { to: "/ops?tab=vault", label: "Personal Vault" },
-              ],
-            }
-          : m,
-      )
-    : NAV;
+  let nav: NavModule[] = NAV;
 
   // Control Tower › Motion AI (0215) only for logins with Motion AI access.
   if (!can("motion_ai")) {
