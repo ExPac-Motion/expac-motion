@@ -13,7 +13,7 @@ import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, SearchInput } fr
 import { useToast } from "../../components/Toast";
 import { Kpi } from "../wms/shared";
 import { useClearingAgents, useCompanySettings, useCustomsFiles, useShipmentDocumentsForJobs, useUpdateCompanySettings } from "../../lib/hooks";
-import { CUSTOMS_STAGES, WITH_AGENT, checklist, daysBetween, fmtDays, stageShort } from "../../lib/customs";
+import { CUSTOMS_STAGES, WITH_AGENT, anfWaiting, checklist, daysBetween, fmtDays, stageShort } from "../../lib/customs";
 import { formatDate } from "../../lib/format";
 import { shipmentStatusSlug, type CustomsFile, type CustomsStage, type ShipmentDocument } from "../../lib/types";
 import CustomsFileModal from "./CustomsFileModal";
@@ -58,11 +58,6 @@ function inView(f: CustomsFile, v: View): boolean {
     case "cleared":
       return f.stage === "cleared";
   }
-}
-
-/** The carrier's ANF is in but the file hasn't gone to the agent yet. */
-export function anfWaiting(f: CustomsFile): boolean {
-  return !!f.anf_at && (f.stage === "docs_pending" || f.stage === "ready");
 }
 
 function ClearanceBoard() {

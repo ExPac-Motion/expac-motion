@@ -19,11 +19,11 @@ import {
   useUploadShipmentDocument,
 } from "../../lib/hooks";
 import { getShipmentDocumentUrl } from "../../lib/db";
-import { CUSTOMS_STAGES, WITH_AGENT, checklist, daysBetween, fmtDays, requiredDocType, stageLabel } from "../../lib/customs";
+import { CUSTOMS_STAGES, WITH_AGENT, anfWaiting, checklist, daysBetween, fmtDays, requiredDocType, stageLabel } from "../../lib/customs";
 import { formatDate, formatDateTime } from "../../lib/format";
 import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
 import { DOCUMENT_TYPES, type CustomsFile, type CustomsStage, type ShipmentDocument } from "../../lib/types";
-import { CustomsStagePill, anfWaiting } from "./CustomsPage";
+import { CustomsStagePill } from "./CustomsPage";
 
 const esc = (s: string | null | undefined) =>
   (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

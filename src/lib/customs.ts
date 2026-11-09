@@ -69,3 +69,8 @@ export function fmtDays(d: number | null): string {
   if (d < 1) return `${Math.max(1, Math.round(d * 24))} h`;
   return d < 10 ? `${d.toFixed(1)} d` : `${Math.round(d)} d`;
 }
+
+/** The carrier's ANF is in but the file hasn't gone to the agent yet (0231). */
+export function anfWaiting(f: CustomsFile): boolean {
+  return !!f.anf_at && (f.stage === "docs_pending" || f.stage === "ready");
+}
