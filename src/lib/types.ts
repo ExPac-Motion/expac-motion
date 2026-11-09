@@ -2139,6 +2139,8 @@ export interface MailboxFolder {
   delim: string | null;
   role: "inbox" | "sent" | "archive" | "trash" | "junk" | "drafts" | null;
   hidden: boolean;
+  /** Hidden from Your folders by you (0228); still synced. */
+  hidden_by_user?: boolean;
   messages: number | null;
   backlog: number;
   synced_at: string | null;

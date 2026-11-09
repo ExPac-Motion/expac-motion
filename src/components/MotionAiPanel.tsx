@@ -72,6 +72,17 @@ export function RichText({ text }: { text: string }) {
 
 export default function MotionAiButton() {
   const [open, setOpen] = useState(false);
+  // "Ask Motion AI" elsewhere (e.g. an Inbox email) opens the panel with a question started.
+  const [ask, setAsk] = useState<{ text: string; n: number } | null>(null);
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const text = (e as CustomEvent<{ text?: string }>).detail?.text ?? "";
+      setAsk((a) => ({ text, n: (a?.n ?? 0) + 1 }));
+      setOpen(true);
+    };
+    window.addEventListener("motion-ai:ask", onAsk);
+    return () => window.removeEventListener("motion-ai:ask", onAsk);
+  }, []);
   return (
     <>
       <button
@@ -82,7 +93,7 @@ export default function MotionAiButton() {
       >
         {SPARK}
       </button>
-      {open && <MotionAiPanel onClose={() => setOpen(false)} />}
+      {open && <MotionAiPanel onClose={() => setOpen(false)} ask={ask} />}
     </>
   );
 }
@@ -93,7 +104,16 @@ function navBottom(): number {
   return nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 0;
 }
 
-export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; initialTurns?: Turn[] }) {
+export function MotionAiPanel({
+  onClose,
+  initialTurns,
+  ask,
+}: {
+  onClose: () => void;
+  initialTurns?: Turn[];
+  /** A question started elsewhere: put in the box (not sent), ready to finish. */
+  ask?: { text: string; n: number } | null;
+}) {
   const qc = useQueryClient();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>(initialTurns ?? []);
@@ -104,7 +124,21 @@ export function MotionAiPanel({ onClose, initialTurns }: { onClose: () => void; 
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(ask?.text ?? "");
+  // A new "Ask Motion AI" while the panel is open: the question goes in the box.
+  const askN = ask?.n;
+  useEffect(() => {
+    if (!askN || !ask) return;
+    setDraft(ask.text);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+      el.scrollTop = el.scrollHeight;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askN]);
   const [busy, setBusy] = useState(false);
   const [tool, setTool] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

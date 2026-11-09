@@ -15,6 +15,7 @@ import type {
   InboxMessage,
   InboxMessagePatch,
   Mailbox,
+  MailboxFolder,
   MailboxPatch,
   RateTierId,
   MailCampaignPatch,
@@ -1993,6 +1994,19 @@ export function useUpdateMailbox() {
       qc.invalidateQueries({ queryKey: ["my_mailbox"] });
       qc.invalidateQueries({ queryKey: ["inbox_state"] });
     },
+  });
+}
+export function useSetFolderHidden() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { mailboxId: string; path: string; hidden: boolean }) =>
+      db.setFolderHidden(input.mailboxId, input.path, input.hidden),
+    onMutate: ({ mailboxId, path, hidden }) => {
+      qc.setQueryData<MailboxFolder[]>(["mailbox_folders", mailboxId], (rows) =>
+        rows?.map((f) => (f.path === path ? { ...f, hidden_by_user: hidden } : f)),
+      );
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["mailbox_folders"] }),
   });
 }
 export function useCreateMailFolder() {

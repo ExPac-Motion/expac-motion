@@ -44,6 +44,9 @@ import {
   useUpdateMailbox,
   useConnectMailbox,
   useCreateMailFolder,
+  useSetFolderHidden,
+  useCan,
+  useQuotes,
 } from "../../lib/hooks";
 import {
   deleteInboxDraft,
@@ -75,6 +78,7 @@ import type {
   MailboxFolder,
   SentMail,
 } from "../../lib/types";
+import { isShipmentComplete } from "../../lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 /** "f:<path>" is one of your own folders on the mail server (0227). */
@@ -248,10 +252,22 @@ export default function InboxTab() {
       !path ? null : path.toUpperCase() === "INBOX" ? "inbox" : path.startsWith("\\") ? path.slice(1) : map.get(path) ?? null;
   }, [foldersQ.data]);
   /** Your own folders on the mail server, not the Inbox, Sent, Archive, Trash or Junk. */
-  const myFolders = useMemo(
+  const ownFolders = useMemo(
     () => (foldersQ.data ?? []).filter((f) => !f.role && !f.hidden && f.path.toUpperCase() !== "INBOX"),
     [foldersQ.data],
   );
+  /** …less the ones you've hidden in Motion (0228). */
+  const myFolders = useMemo(() => ownFolders.filter((f) => !f.hidden_by_user), [ownFolders]);
+  const setHidden = useSetFolderHidden();
+  // Your folders folds open / closed (remembered), and can be edited to hide some.
+  const [foldersOpen, setFoldersOpen] = useState(() => {
+    try {
+      return localStorage.getItem("inbox.foldersOpen") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const [editFolders, setEditFolders] = useState(false);
   /** Filed in one of your own folders (so not in the Inbox). */
   const inOwnFolder = (m: InboxMessage) =>
     !!m.folder && !m.folder.startsWith("\\") && m.folder.toUpperCase() !== "INBOX" && !roleOf(m.folder) && !!foldersQ.data;
@@ -713,41 +729,92 @@ export default function InboxTab() {
               </button>
             );
           })}
-          {myFolders.length > 0 && (
-            <>
-              <div className="inbox-nav-head">Your folders</div>
-              {myFolders.map((f) => {
-                const key = `f:${f.path}` as Folder;
-                const n = folderCount(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`inbox-nav-item${folder === key ? " on" : ""}`}
-                    style={{ paddingLeft: 12 + folderDepth(f) * 14 }}
-                    title={f.backlog ? `${f.path}: ${f.backlog} older emails still coming in` : f.path}
-                    onClick={() => {
-                      setFolder(key);
-                      setChecked(new Set());
-                    }}
-                  >
-                    <span className="inbox-dot cat-folder" />
-                    {f.name}
-                    {n > 0 && <span className="inbox-count">{n}</span>}
-                  </button>
-                );
-              })}
-            </>
-          )}
           {mailbox && foldersQ.isSuccess && (
-            <button
-              type="button"
-              className="inbox-nav-item muted"
-              onClick={() => setNewFolder(true)}
-              title="Create a folder in your mailbox (Outlook shows it too)"
-            >
-              + New folder
-            </button>
+            <>
+              <div className="inbox-nav-fold">
+                <button
+                  type="button"
+                  className="inbox-nav-head"
+                  aria-expanded={foldersOpen}
+                  onClick={() => {
+                    const v = !foldersOpen;
+                    setFoldersOpen(v);
+                    if (!v) setEditFolders(false);
+                    try {
+                      localStorage.setItem("inbox.foldersOpen", v ? "1" : "0");
+                    } catch {
+                      /* private mode */
+                    }
+                  }}
+                >
+                  {foldersOpen ? "▾" : "▸"} Your folders
+                  {!foldersOpen && myFolders.length > 0 && <span className="muted"> ({myFolders.length})</span>}
+                </button>
+                {foldersOpen && ownFolders.length > 0 && (
+                  <button
+                    type="button"
+                    className="link-btn inbox-nav-edit"
+                    onClick={() => setEditFolders((v) => !v)}
+                    title="Show or hide your folders here"
+                  >
+                    {editFolders ? "Done" : "Edit"}
+                  </button>
+                )}
+              </div>
+              {foldersOpen &&
+                (editFolders
+                  ? ownFolders.map((f) => (
+                      <label key={f.path} className="inbox-nav-item inbox-nav-check" style={{ paddingLeft: 12 + folderDepth(f) * 14 }}>
+                        <input
+                          type="checkbox"
+                          checked={!f.hidden_by_user}
+                          onChange={(e) => {
+                            const hidden = !e.target.checked;
+                            if (hidden && folder === `f:${f.path}`) setFolder("all");
+                            setHidden.mutate(
+                              { mailboxId: f.mailbox_id, path: f.path, hidden },
+                              { onError: (err) => error(err instanceof Error ? err.message : "Could not change the folder") },
+                            );
+                          }}
+                        />
+                        {f.name}
+                      </label>
+                    ))
+                  : myFolders.map((f) => {
+                      const key = `f:${f.path}` as Folder;
+                      const n = folderCount(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`inbox-nav-item${folder === key ? " on" : ""}`}
+                          style={{ paddingLeft: 12 + folderDepth(f) * 14 }}
+                          title={f.backlog ? `${f.path}: ${f.backlog} older emails still coming in` : f.path}
+                          onClick={() => {
+                            setFolder(key);
+                            setChecked(new Set());
+                          }}
+                        >
+                          <span className="inbox-dot cat-folder" />
+                          {f.name}
+                          {n > 0 && <span className="inbox-count">{n}</span>}
+                        </button>
+                      );
+                    }))}
+              {foldersOpen && editFolders && (
+                <p className="hint inbox-nav-hint">Hidden folders stay in Outlook and keep syncing; tick to show again.</p>
+              )}
+              {foldersOpen && !editFolders && (
+                <button
+                  type="button"
+                  className="inbox-nav-item muted"
+                  onClick={() => setNewFolder(true)}
+                  title="Create a folder in your mailbox (Outlook shows it too)"
+                >
+                  + New folder
+                </button>
+              )}
+            </>
           )}
           <div className="inbox-nav-head">Views</div>
           {VIEWS.map((v) => {
@@ -1061,6 +1128,7 @@ export default function InboxTab() {
               }}
               onReply={(parsed, replyAll) => startReply(open, parsed, replyAll)}
               onForward={(parsed) => setCompose({ forward: open, parsed })}
+              onTask={() => setTasking(open)}
               composer={
                 compose && inlineReply && compose.replyTo?.id === open.id ? (
                   <ComposeModal
@@ -1606,72 +1674,34 @@ function SentReader({ mail }: { mail: SentMail }) {
   );
 }
 
-function Reader({
-  msg,
-  thread,
-  jobs,
-  replyDraft,
-  lastOut,
-  organise,
-  onOpen,
-  onReply,
-  onForward,
-  composer,
-}: {
-  msg: InboxMessage;
-  /** The reply being written to this email, shown under the actions. */
-  composer?: ReactNode;
-  lastOut: LastOut;
-  /** A reply to this email already started (Drafts). */
-  replyDraft?: InboxDraft;
-  thread: InboxMessage[];
-  jobs: Job[];
-  /** Archive / Delete / Flag / Snooze (0182); absent until it's run. */
-  organise?: OrganiseActions;
-  /** Open another email of the conversation. */
-  onOpen: (id: string) => void;
-  onReply: (parsed: Parsed | undefined, replyAll: boolean) => void;
-  onForward: (parsed: Parsed | undefined) => void;
-}) {
-  const update = useUpdateInboxMessage();
-  const saveLead = useSaveLead();
-  // The conversation sits folded under the email; open / folded is remembered.
-  const [convoOpen, setConvoOpen] = useState(() => {
-    try {
-      return localStorage.getItem("inbox.convoOpen") === "1";
-    } catch {
-      return false;
-    }
-  });
-  function toggleConvo() {
-    setConvoOpen((v) => {
-      try {
-        localStorage.setItem("inbox.convoOpen", v ? "0" : "1");
-      } catch {
-        /* private mode */
-      }
-      return !v;
-    });
-  }
-  const latestOther = thread.reduce<InboxMessage | null>((m, t) => (!m || t.sent_at > m.sent_at ? t : m), null);
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-  const { toast, error } = useToast();
-  const parsedQ = useQuery({
-    queryKey: ["inbox_raw", msg.raw_path],
-    queryFn: () => parseRaw(msg.raw_path as string),
-    enabled: !!msg.raw_path,
+/** A message's raw source, parsed once and shared (reader, conversation, shortcuts). */
+function useParsed(m: InboxMessage) {
+  return useQuery({
+    queryKey: ["inbox_raw", m.raw_path],
+    queryFn: () => parseRaw(m.raw_path as string),
+    enabled: !!m.raw_path,
     staleTime: Infinity,
   });
+}
+
+/** Who wrote a message, as the conversation shows it. */
+function senderLabel(m: InboxMessage): string {
+  if (m.direction === "out") return m.from_name && !/^expac$/i.test(m.from_name) ? `${m.from_name} (ExPac)` : "ExPac";
+  return m.from_name || m.from_email || "(unknown sender)";
+}
+
+/** One email's body: HTML (sized to fit, remote images held for unknown
+ *  senders), else its text; then its attachments. */
+function MessageBody({ msg }: { msg: InboxMessage }) {
+  const update = useUpdateInboxMessage();
+  const parsedQ = useParsed(msg);
   const parsed = parsedQ.data;
-  // Remote images: shown for known senders; held back on Unknown / Spam mail
-  // (tracking pixels, spam) until "Show images".
   const [showImages, setShowImages] = useState(false);
-  const [addingAs, setAddingAs] = useState(false);
+  const frame = useRef<HTMLIFrameElement>(null);
 
   // First open: keep a snippet + text so search and shipment linking can use it.
   useEffect(() => {
-    if (!parsed || msg.snippet) return;
+    if (!parsed || msg.snippet || msg.direction !== "in") return;
     const text = (parsed.text ?? (parsed.html ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
     if (!text) return;
     update.mutate({ id: msg.id, patch: { snippet: text.slice(0, 180), body_text: text.slice(0, 20000) } });
@@ -1683,277 +1713,17 @@ function Reader({
   const html = rawBody && holdImages ? holdRemoteImages(rawBody) : rawBody;
   const imagesHeld = !!rawBody && holdImages && /<img\b[^>]*\ssrc=("|')https?:/i.test(rawBody);
   const text = parsed?.text ?? msg.body_text;
-  const c = cat(msg);
 
-  async function patch(p: Parameters<typeof update.mutateAsync>[0]["patch"], done: string) {
-    try {
-      await update.mutateAsync({ id: msg.id, patch: p });
-      toast(done);
-    } catch (e) {
-      error(e instanceof Error ? e.message : "Could not save");
-    }
-  }
-  /** The sender as a new lead (Other / Unknown). Returns the lead's id. */
-  async function createLeadFromSender(): Promise<{ id: string; company: string }> {
-    const email = msg.from_email ?? "";
-    const domain = email.split("@")[1] ?? "";
-    const company = msg.from_name && !msg.from_name.includes("@") ? msg.from_name : domain || email;
-    const lead = await saveLead.mutateAsync({
-      patch: { company, contact: msg.from_name || null, email, source: "Email" },
-    });
-    return { id: lead.id, company };
-  }
-  async function makeLead() {
-    try {
-      const { company } = await createLeadFromSender();
-      qc.invalidateQueries({ queryKey: ["inbox"] });
-      toast(`${company} added as a lead`);
-    } catch (e) {
-      error(e instanceof Error ? e.message : "Could not create the lead");
-    }
-  }
-  /** The Quote Builder, started on the customer / lead this email is from
-   *  (an unknown sender becomes a lead first). */
-  async function createQuotation() {
-    try {
-      let leadId = msg.record_kind === "lead" ? msg.record_id : null;
-      const clientId = msg.record_kind === "client" ? msg.record_id : null;
-      if (!leadId && !clientId) leadId = (await createLeadFromSender()).id;
-      navigate("/quotes/new", { state: { prefill: clientId ? { clientId } : { leadId } } });
-    } catch (e) {
-      error(e instanceof Error ? e.message : "Could not start the quotation");
-    }
+  /** The email's own height, so the conversation reads as one page. */
+  function fit() {
+    const f = frame.current;
+    const doc = f?.contentDocument;
+    if (!f || !doc?.documentElement) return;
+    f.style.height = `${Math.max(80, doc.documentElement.scrollHeight + 2)}px`;
   }
 
   return (
-    <div className="inbox-read">
-      {/* Frozen while the email scrolls: subject, sender, tags and the actions. */}
-      <div className="inbox-read-top">
-        <div className="inbox-read-head">
-          <h3>{msg.subject || "(no subject)"}</h3>
-          <div className="inbox-read-from">
-            <strong>
-              {msg.direction === "out"
-                ? `ExPac (sent from ${msg.mailbox?.endsWith(":sent") ? "Outlook" : "Motion"})`
-                : msg.from_name || msg.from_email}
-            </strong>
-            {msg.direction === "in" && msg.from_name && <span className="muted"> &lt;{msg.from_email}&gt;</span>}
-            <span className="muted"> · {formatDateTime(msg.sent_at)}</span>
-          </div>
-          <div className="muted" style={{ fontSize: "0.78rem" }}>
-            To: {msg.to_emails.join(", ") || "—"}
-            {msg.cc_emails.length > 0 && ` · Cc: ${msg.cc_emails.join(", ")}`}
-          </div>
-          <div className="inbox-read-tags">
-            <span className={`inbox-chip cat-${c}`}>
-              {CATEGORY_LABEL[c]}
-              {msg.record_name ? `: ${msg.record_name}` : ""}
-            </span>
-            {msg.record_kind && msg.record_id && (
-              <button
-                type="button"
-                className="btn ghost small"
-                onClick={() =>
-                  navigate(`${RECORD_ROUTE[msg.record_kind as string]}/${msg.record_id}?tab=mail`)
-                }
-              >
-                Open record ›
-              </button>
-            )}
-            {msg.is_bulk && <span className="inbox-chip">Bulk / automated</span>}
-          </div>
-        </div>
-
-        {organise && msg.direction === "in" && (
-          <div className="inbox-organise">
-            {msg.deleted_at ? (
-              <>
-                <span className="muted">In Trash.</span>
-                <button type="button" className="btn small" onClick={() => organise.restore([msg.id])}>
-                  Restore
-                </button>
-              </>
-            ) : (
-              <>
-                {msg.archived_at ? (
-                  <button type="button" className="btn small outline" onClick={() => organise.unarchive([msg.id])}>
-                    Move to inbox
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn small outline"
-                    onClick={() => organise.archive([msg.id])}
-                    title="Out of the inbox; still found by search, and under Archive"
-                  >
-                    Archive
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn small outline warn"
-                  onClick={() => organise.remove([msg.id])}
-                  title="Move to Trash (you can restore it from there)"
-                >
-                  Delete
-                </button>
-                <button
-                  type="button"
-                  className={`btn small outline${msg.flagged ? " inbox-flagged" : ""}`}
-                  onClick={() => organise.flag([msg.id], !msg.flagged)}
-                >
-                  {msg.flagged ? "⚑ Flagged" : "⚐ Flag"}
-                </button>
-                {isSnoozed(msg) ? (
-                  <>
-                    <span className="muted">Snoozed until {formatDateTime(msg.snoozed_until as string)}</span>
-                    <button type="button" className="btn small outline" onClick={() => organise.snooze([msg.id], null)}>
-                      Unsnooze
-                    </button>
-                  </>
-                ) : (
-                  <SnoozeMenu onPick={(d) => organise.snooze([msg.id], d)} />
-                )}
-                {organise.move && !!organise.folders?.length && (
-                  <MoveMenu
-                    folders={organise.folders}
-                    current={msg.folder}
-                    onPick={(path, label) => organise.move?.([msg.id], path, label)}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        <div className="inbox-actions">
-          {msg.direction === "in" && (
-            <button
-              type="button"
-              className="btn small"
-              onClick={() => onReply(parsed, false)}
-              disabled={!!msg.raw_path && parsedQ.isLoading}
-              title={replyDraft ? `Carry on with the reply you started (saved ${formatDateTime(replyDraft.updated_at)})` : undefined}
-            >
-              {replyDraft ? "Continue draft" : "Reply"}
-            </button>
-          )}
-          {msg.direction === "in" && !replyDraft && msg.to_emails.length + msg.cc_emails.length > 1 && (
-            <button
-              type="button"
-              className="btn small outline"
-              onClick={() => onReply(parsed, true)}
-              disabled={!!msg.raw_path && parsedQ.isLoading}
-              title="Reply to the sender and everyone else on this email"
-            >
-              Reply all
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn small outline"
-            onClick={() => onForward(parsed)}
-            disabled={!!msg.raw_path && parsedQ.isLoading}
-            title="Forward this email, with its attachments"
-          >
-            Forward
-          </button>
-          {msg.direction === "in" &&
-            (needsReply(msg, lastOut) ? (
-              <button
-                type="button"
-                className="btn small outline"
-                onClick={() => patch({ done_at: new Date().toISOString() }, "Marked as no reply needed")}
-              >
-                No reply needed
-              </button>
-            ) : !msg.replied_at && !msg.answered && !(msg.thread_key && (lastOut.get(msg.thread_key) ?? "") > msg.sent_at) ? (
-              <button type="button" className="btn small outline" onClick={() => patch({ done_at: null }, "Back on Needs reply")}>
-                Needs reply
-              </button>
-            ) : null)}
-          {msg.direction === "in" && !isUnread(msg) && (
-            <button
-              type="button"
-              className="btn small outline"
-              onClick={() => patch({ read_at: null, marked_unread: true }, "Marked unread")}
-            >
-              Mark unread
-            </button>
-          )}
-          {msg.direction === "in" &&
-            (msg.spam ? (
-              <button type="button" className="btn small outline" onClick={() => patch({ spam: false }, "Moved to the inbox")}>
-                Not spam
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn small outline warn"
-                onClick={() => patch({ spam: true }, "Moved to Spam")}
-              >
-                Spam
-              </button>
-            ))}
-          {c === "unknown" && msg.direction === "in" && msg.from_email && (
-            <button
-              type="button"
-              className="btn small outline"
-              onClick={() => setAddingAs(true)}
-              title="Add the sender as a shipper, agent, transporter, clearing or destination agent"
-            >
-              + Add as…
-            </button>
-          )}
-          {c === "unknown" && msg.direction === "in" && msg.from_email && (
-            <button type="button" className="btn small outline" onClick={makeLead} disabled={saveLead.isPending}>
-              + Make a lead
-            </button>
-          )}
-          {msg.direction === "in" && msg.from_email && (c === "unknown" || c === "lead" || c === "customer") && (
-            <button
-              type="button"
-              className="btn small outline"
-              onClick={createQuotation}
-              disabled={saveLead.isPending}
-              title={
-                c === "unknown"
-                  ? "Makes the sender a lead, then opens the Quote Builder for them"
-                  : "Opens the Quote Builder for this customer / lead"
-              }
-            >
-              Create quotation
-            </button>
-          )}
-          <select
-            className="inbox-job"
-            value={msg.job_id ?? ""}
-            onChange={(e) =>
-              patch(
-                // A hand-picked (or cleared) link is never overwritten by auto-linking.
-                { job_id: e.target.value || null, job_linked_by: "manual" },
-                e.target.value ? "Linked to the shipment" : "Unlinked from the shipment",
-              )
-            }
-            title="Shipment this email belongs to"
-          >
-            <option value="">Not linked to a shipment</option>
-            {jobs.map((j) => (
-              <option key={j.id} value={j.id}>
-                {jobLabel(j)}
-              </option>
-            ))}
-          </select>
-          {msg.job_id && (
-            <button type="button" className="btn ghost small" onClick={() => navigate(`/jobs/${msg.job_id}?comms=1`)}>
-              Open shipment ›
-            </button>
-          )}
-        </div>
-      </div>
-
-      {composer}
-
+    <div className="inbox-msg-body">
       {imagesHeld && (
         <div className="inbox-images-bar">
           Images from this unknown sender are hidden.
@@ -1962,28 +1732,29 @@ function Reader({
           </button>
         </div>
       )}
-      {addingAs && (
-        <AddPartnerModal msg={msg} text={parsed?.text ?? msg.body_text ?? ""} onClose={() => setAddingAs(false)} />
+      {parsedQ.isLoading ? (
+        <Loading />
+      ) : parsedQ.isError ? (
+        <ErrorNote error={parsedQ.error} />
+      ) : html ? (
+        <iframe
+          ref={frame}
+          title="Message"
+          className="inbox-frame fit"
+          // No scripts ever run; same-origin only lets Motion measure the email to size it.
+          sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+          srcDoc={`<base target="_blank"><style>html,body{overflow:hidden}body{font-family:Aptos,Calibri,"Segoe UI",sans-serif;font-size:14px;color:#2e2e2e;margin:4px 2px;word-wrap:break-word}img{max-width:100%;height:auto}</style>${html}`}
+          onLoad={() => {
+            fit();
+            const doc = frame.current?.contentDocument;
+            doc?.querySelectorAll("img").forEach((img) => img.addEventListener("load", fit));
+          }}
+        />
+      ) : text ? (
+        <pre className="inbox-text">{text}</pre>
+      ) : (
+        <p className="muted">{msg.raw_path ? "This message has no text." : "The message body wasn't stored (too large)."}</p>
       )}
-      <div className="inbox-body">
-        {parsedQ.isLoading ? (
-          <Loading />
-        ) : parsedQ.isError ? (
-          <ErrorNote error={parsedQ.error} />
-        ) : html ? (
-          <iframe
-            title="Message"
-            className="inbox-frame"
-            sandbox="allow-popups allow-popups-to-escape-sandbox"
-            srcDoc={`<base target="_blank"><style>body{font-family:Aptos,Calibri,"Segoe UI",sans-serif;font-size:14px;color:#2e2e2e;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style>${html}`}
-          />
-        ) : text ? (
-          <pre className="inbox-text">{text}</pre>
-        ) : (
-          <p className="muted">{msg.raw_path ? "This message has no text." : "The message body wasn't stored (too large)."}</p>
-        )}
-      </div>
-
       {parsed && parsed.attachments.filter((a) => !a.inline).length > 0 && (
         <div className="inbox-attachments">
           {parsed.attachments
@@ -1996,52 +1767,584 @@ function Reader({
             ))}
         </div>
       )}
+    </div>
+  );
+}
 
-      {thread.length > 0 && (
-        // The rest of the conversation, under the email being read: one line
-        // until opened (remembered), then oldest first; click one to read it.
-        <div className={`inbox-convo${convoOpen ? " open" : ""}`}>
-          <button type="button" className="inbox-convo-head" onClick={toggleConvo} aria-expanded={convoOpen}>
-            <span>
-              {convoOpen ? "▾" : "▸"} Conversation · {thread.length + 1} emails
+/** One email in the conversation: a line until opened, then the whole email. */
+function ConvoCard({
+  msg,
+  current,
+  open,
+  onToggle,
+  onSelect,
+}: {
+  msg: InboxMessage;
+  current?: boolean;
+  open: boolean;
+  onToggle?: () => void;
+  onSelect?: () => void;
+}) {
+  const show = current || open;
+  const name = senderLabel(msg);
+  return (
+    <div className={`inbox-card${current ? " current" : ""}${msg.direction === "out" ? " ours" : ""}${show ? " open" : ""}`}>
+      <button
+        type="button"
+        className="inbox-card-head"
+        onClick={current ? undefined : onToggle}
+        disabled={current}
+        aria-expanded={show}
+      >
+        <span className="inbox-avatar" aria-hidden>
+          {name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1).toUpperCase() || "?"}
+        </span>
+        <span className="inbox-card-who">
+          <strong>{name}</strong>
+          {msg.direction === "in" && msg.from_name && msg.from_email && <span className="muted"> &lt;{msg.from_email}&gt;</span>}
+          {show ? (
+            <span className="inbox-card-to muted">
+              To: {msg.to_emails.join(", ") || "—"}
+              {msg.cc_emails.length > 0 && ` · Cc: ${msg.cc_emails.join(", ")}`}
             </span>
-            {latestOther && (
-              <span className="inbox-convo-last">
-                last from{" "}
-                {latestOther.direction === "out" ? "ExPac" : latestOther.from_name || latestOther.from_email} ·{" "}
-                {formatDateTime(latestOther.sent_at)}
-              </span>
-            )}
+          ) : (
+            <span className="inbox-card-snippet muted">{msg.snippet || msg.subject}</span>
+          )}
+        </span>
+        <span className="inbox-card-date muted">
+          {msg.has_attachments && "📎 "}
+          {formatDateTime(msg.sent_at)}
+          {msg.deleted_at && <span className="inbox-chip">In Trash</span>}
+        </span>
+      </button>
+      {show && <MessageBody msg={msg} />}
+      {open && !current && onSelect && (
+        <div className="inbox-card-foot">
+          <button type="button" className="link-btn" onClick={onSelect}>
+            Reply to / work on this email ›
           </button>
-          {convoOpen &&
-            [...thread, msg]
-              .sort((a, b) => a.sent_at.localeCompare(b.sent_at))
-              .map((t) =>
-                t.id === msg.id ? (
-                  <div key={t.id} className="inbox-convo-item on">
-                    <strong>{t.direction === "out" ? "ExPac" : t.from_name || t.from_email}</strong>
-                    <span className="muted"> · {formatDateTime(t.sent_at)} · reading now</span>
-                  </div>
-                ) : (
-                  <button key={t.id} type="button" className="inbox-convo-item" onClick={() => onOpen(t.id)}>
-                    <span>
-                      <strong>
-                        {t.direction === "out"
-                          ? `ExPac${t.mailbox?.endsWith(":sent") ? " (Outlook)" : ""}`
-                          : t.from_name || t.from_email}
-                      </strong>
-                      <span className="muted"> · {formatDateTime(t.sent_at)}</span>
-                      {t.deleted_at && <span className="inbox-chip">In Trash</span>}
-                    </span>
-                    <span className="muted inbox-convo-snippet">{t.snippet || t.subject}</span>
-                  </button>
-                ),
-              )}
         </div>
       )}
     </div>
   );
 }
+
+/** A small menu under a button; closes on a pick or a click elsewhere. */
+function MenuButton({ label, title, children }: { label: ReactNode; title?: string; children: (close: () => void) => ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  return (
+    <div className="inbox-menu" ref={box}>
+      <button type="button" className="btn small outline" title={title} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {label}
+      </button>
+      {open && <div className="inbox-menu-pop">{children(() => setOpen(false))}</div>}
+    </div>
+  );
+}
+
+/** The open email, as a conversation: one action bar; the thread oldest
+ *  first with this email open and the reply under it; who the sender is
+ *  (their shipments, quotes, what to do next) alongside. */
+function Reader({
+  msg,
+  thread,
+  jobs,
+  replyDraft,
+  lastOut,
+  organise,
+  onOpen,
+  onReply,
+  onForward,
+  onTask,
+  composer,
+}: {
+  msg: InboxMessage;
+  /** The reply being written to this email, shown under it. */
+  composer?: ReactNode;
+  lastOut: LastOut;
+  /** A reply to this email already started (Drafts). */
+  replyDraft?: InboxDraft;
+  thread: InboxMessage[];
+  jobs: Job[];
+  /** Archive / Delete / Flag / Snooze (0182); absent until it's run. */
+  organise?: OrganiseActions;
+  /** Open another email of the conversation. */
+  onOpen: (id: string) => void;
+  onReply: (parsed: Parsed | undefined, replyAll: boolean) => void;
+  onForward: (parsed: Parsed | undefined) => void;
+  /** Create a task from this email. */
+  onTask: () => void;
+}) {
+  const update = useUpdateInboxMessage();
+  const { toast, error } = useToast();
+  const parsedQ = useParsed(msg);
+  const parsed = parsedQ.data;
+  const busy = !!msg.raw_path && parsedQ.isLoading;
+  const [addingAs, setAddingAs] = useState(false);
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+
+  // Wide enough: the sender panel sits alongside; else above the conversation.
+  const root = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(true);
+  useEffect(() => {
+    const el = root.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([e]) => setWide(e.contentRect.width >= 760));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const [side, setSide] = useState(() => {
+    try {
+      return localStorage.getItem("inbox.side") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  // Narrow: folded until asked for, so the email comes first.
+  const [sideNarrow, setSideNarrow] = useState(false);
+  const showSide = wide ? side : sideNarrow;
+  function toggleSide() {
+    if (!wide) return setSideNarrow((v) => !v);
+    setSide((v) => {
+      try {
+        localStorage.setItem("inbox.side", v ? "0" : "1");
+      } catch {
+        /* private mode */
+      }
+      return !v;
+    });
+  }
+
+  async function patch(p: InboxMessagePatch, done: string) {
+    try {
+      await update.mutateAsync({ id: msg.id, patch: p });
+      toast(done);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not save");
+    }
+  }
+
+  const incoming = msg.direction === "in";
+  const replied = !!msg.replied_at || msg.answered || !!(msg.thread_key && (lastOut.get(msg.thread_key) ?? "") > msg.sent_at);
+  const needs = needsReply(msg, lastOut);
+  const convo = [...thread, msg].sort((a, b) => a.sent_at.localeCompare(b.sent_at));
+  const panel = (
+    <SenderPanel
+      msg={msg}
+      jobs={jobs}
+      text={parsed?.text ?? msg.body_text ?? ""}
+      needs={needs}
+      replied={replied}
+      patch={patch}
+      onTask={onTask}
+      onAddAs={() => setAddingAs(true)}
+    />
+  );
+
+  return (
+    <div ref={root} className={`inbox-read v2${wide && showSide ? " with-side" : ""}`}>
+      <div className="inbox-read-main">
+        {/* Frozen while the conversation scrolls: subject and the actions. */}
+        <div className="inbox-read-top">
+          <div className="inbox-read-subject">
+            <h3>{msg.subject || "(no subject)"}</h3>
+            {convo.length > 1 && <span className="inbox-chip">{convo.length} emails</span>}
+            <button type="button" className="btn ghost small inbox-side-toggle" onClick={toggleSide} title="Sender, shipments and quotes">
+              {showSide ? "Hide details" : "Details"}
+            </button>
+          </div>
+          <div className="inbox-bar">
+            {incoming && (
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => onReply(parsed, false)}
+                disabled={busy}
+                title={replyDraft ? `Carry on with the reply you started (saved ${formatDateTime(replyDraft.updated_at)})` : "Reply (r)"}
+              >
+                {replyDraft ? "Continue draft" : "Reply"}
+              </button>
+            )}
+            {incoming && !replyDraft && msg.to_emails.length + msg.cc_emails.length > 1 && (
+              <button type="button" className="btn small outline" onClick={() => onReply(parsed, true)} disabled={busy} title="Reply all (a)">
+                Reply all
+              </button>
+            )}
+            <button type="button" className="btn small outline" onClick={() => onForward(parsed)} disabled={busy} title="Forward, with its attachments (f)">
+              Forward
+            </button>
+            {incoming && organise && (
+              <>
+                <span className="inbox-bar-gap" />
+                {msg.deleted_at ? (
+                  <button type="button" className="btn small outline" onClick={() => organise.restore([msg.id])}>
+                    Restore
+                  </button>
+                ) : (
+                  <>
+                    {msg.archived_at ? (
+                      <button type="button" className="btn small outline" onClick={() => organise.unarchive([msg.id])} title="Back to the Inbox (e)">
+                        Move to inbox
+                      </button>
+                    ) : (
+                      <button type="button" className="btn small outline" onClick={() => organise.archive([msg.id])} title="Archive (e)">
+                        Archive
+                      </button>
+                    )}
+                    <button type="button" className="btn small outline warn" onClick={() => organise.remove([msg.id])} title="Move to Trash (Delete)">
+                      Delete
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className={`btn small outline inbox-flag-btn${msg.flagged ? " inbox-flagged" : ""}`}
+                  onClick={() => organise.flag([msg.id], !msg.flagged)}
+                  title={msg.flagged ? "Remove the flag (s)" : "Flag (s)"}
+                  aria-label={msg.flagged ? "Remove the flag" : "Flag"}
+                >
+                  {msg.flagged ? "⚑" : "⚐"}
+                </button>
+              </>
+            )}
+            {incoming && (
+              <MenuButton label="More ▾" title="Unread, snooze, move, spam, reply status">
+                {(close) => (
+                  <>
+                    {isUnread(msg) ? (
+                      <button type="button" onClick={() => (close(), patch({ read_at: new Date().toISOString(), marked_unread: false }, "Marked read"))}>
+                        Mark read
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => (close(), patch({ read_at: null, marked_unread: true }, "Marked unread"))}>
+                        Mark unread
+                      </button>
+                    )}
+                    {needs ? (
+                      <button type="button" onClick={() => (close(), patch({ done_at: new Date().toISOString() }, "Marked as no reply needed"))}>
+                        No reply needed
+                      </button>
+                    ) : !replied ? (
+                      <button type="button" onClick={() => (close(), patch({ done_at: null }, "Back on Needs reply"))}>
+                        Needs reply
+                      </button>
+                    ) : null}
+                    {msg.spam ? (
+                      <button type="button" onClick={() => (close(), patch({ spam: false }, "Moved to the inbox"))}>
+                        Not spam
+                      </button>
+                    ) : (
+                      <button type="button" className="warn" onClick={() => (close(), patch({ spam: true }, "Moved to Spam"))}>
+                        Spam
+                      </button>
+                    )}
+                    {organise && !msg.deleted_at && (
+                      <div className="inbox-menu-row">
+                        {isSnoozed(msg) ? (
+                          <button type="button" onClick={() => (close(), organise.snooze([msg.id], null))}>
+                            Unsnooze
+                          </button>
+                        ) : (
+                          <SnoozeMenu onPick={(d) => (close(), organise.snooze([msg.id], d))} />
+                        )}
+                      </div>
+                    )}
+                    {organise?.move && !!organise.folders?.length && !msg.deleted_at && (
+                      <div className="inbox-menu-row">
+                        <MoveMenu
+                          folders={organise.folders}
+                          current={msg.folder}
+                          onPick={(path, label) => (close(), organise.move?.([msg.id], path, label))}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </MenuButton>
+            )}
+          </div>
+          {(isSnoozed(msg) || msg.deleted_at) && (
+            <div className="inbox-bar-note muted">
+              {msg.deleted_at ? "In Trash." : `Snoozed until ${formatDateTime(msg.snoozed_until as string)}.`}
+            </div>
+          )}
+        </div>
+
+        {!wide && showSide && <div className="inbox-side stacked">{panel}</div>}
+
+        <div className="inbox-convo2">
+          {convo.map((t) =>
+            t.id === msg.id ? (
+              <div key={t.id}>
+                <ConvoCard msg={t} current open />
+                {composer}
+              </div>
+            ) : (
+              <ConvoCard
+                key={t.id}
+                msg={t}
+                open={openIds.has(t.id)}
+                onToggle={() =>
+                  setOpenIds((s) => {
+                    const n = new Set(s);
+                    if (n.has(t.id)) n.delete(t.id);
+                    else n.add(t.id);
+                    return n;
+                  })
+                }
+                onSelect={() => onOpen(t.id)}
+              />
+            ),
+          )}
+        </div>
+      </div>
+      {wide && showSide && <aside className="inbox-side">{panel}</aside>}
+      {addingAs && <AddPartnerModal msg={msg} text={parsed?.text ?? msg.body_text ?? ""} onClose={() => setAddingAs(false)} />}
+    </div>
+  );
+}
+
+/** Beside the email: who the sender is in Motion, the shipment it's on,
+ *  their open shipments and quotes, and what to do next. */
+function SenderPanel({
+  msg,
+  jobs,
+  text,
+  needs,
+  replied,
+  patch,
+  onTask,
+  onAddAs,
+}: {
+  msg: InboxMessage;
+  jobs: Job[];
+  /** The email's text (for Motion AI). */
+  text: string;
+  needs: boolean;
+  replied: boolean;
+  patch: (p: InboxMessagePatch, done: string) => Promise<void>;
+  onTask: () => void;
+  onAddAs: () => void;
+}) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const can = useCan();
+  const saveLead = useSaveLead();
+  const quotesQ = useQuotes();
+  const { toast, error } = useToast();
+  const c = cat(msg);
+  const rid = msg.record_id;
+  const kind = msg.record_kind;
+  const incoming = msg.direction === "in";
+  const who = incoming ? msg.from_name || msg.from_email : msg.to_emails[0];
+
+  const theirJobs = rid
+    ? jobs
+        .filter((j) => !isShipmentComplete(j) && (kind === "client" ? j.client_id === rid : kind === "supplier" ? j.supplier_id === rid : false))
+        .slice(0, 6)
+    : [];
+  const theirQuotes = rid
+    ? (quotesQ.data ?? [])
+        .filter((q) => (kind === "client" && q.client_id === rid) || (kind === "lead" && q.lead_id === rid))
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, 5)
+    : [];
+  const linked = msg.job_id ? jobs.find((j) => j.id === msg.job_id) : undefined;
+
+  /** The sender as a new lead (Other / Unknown). */
+  async function createLeadFromSender(): Promise<{ id: string; company: string }> {
+    const email = msg.from_email ?? "";
+    const domain = email.split("@")[1] ?? "";
+    const company = msg.from_name && !msg.from_name.includes("@") ? msg.from_name : domain || email;
+    const lead = await saveLead.mutateAsync({ patch: { company, contact: msg.from_name || null, email, source: "Email" } });
+    return { id: lead.id, company };
+  }
+  async function makeLead() {
+    try {
+      const { company } = await createLeadFromSender();
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      toast(`${company} added as a lead`);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not create the lead");
+    }
+  }
+  /** The Quote Builder on this customer / lead (an unknown sender becomes a lead first). */
+  async function createQuotation() {
+    try {
+      let leadId = kind === "lead" ? rid : null;
+      const clientId = kind === "client" ? rid : null;
+      if (!leadId && !clientId) leadId = (await createLeadFromSender()).id;
+      navigate("/quotes/new", { state: { prefill: clientId ? { clientId } : { leadId } } });
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not start the quotation");
+    }
+  }
+  /** Motion AI's panel, opened with this email ready to ask about. */
+  function askAi() {
+    const head = `About this email from ${who ?? "someone"}${msg.from_email && incoming ? ` <${msg.from_email}>` : ""}, "${msg.subject || "(no subject)"}" (${formatDateTime(msg.sent_at)}):`;
+    const body = text.replace(/\s+\n/g, "\n").trim().slice(0, 3000);
+    window.dispatchEvent(new CustomEvent("motion-ai:ask", { detail: { text: `${head}\n\n${body}\n\n` } }));
+  }
+
+  return (
+    <div className="inbox-side-in">
+      <section>
+        <h4>{incoming ? "From" : "To"}</h4>
+        <div className="inbox-side-who">
+          <strong>{who || "—"}</strong>
+          {incoming && msg.from_name && <div className="muted inbox-side-email">{msg.from_email}</div>}
+        </div>
+        <div className="inbox-side-tags">
+          <span className={`inbox-chip cat-${c}`}>
+            {CATEGORY_LABEL[c]}
+            {msg.record_name ? `: ${msg.record_name}` : ""}
+          </span>
+          {msg.is_bulk && <span className="inbox-chip">Bulk / automated</span>}
+        </div>
+        {kind && rid ? (
+          <button type="button" className="link-btn" onClick={() => navigate(`${RECORD_ROUTE[kind]}/${rid}?tab=mail`)}>
+            Open {CATEGORY_LABEL[c].toLowerCase()} record ›
+          </button>
+        ) : (
+          c === "unknown" &&
+          incoming &&
+          msg.from_email && (
+            <div className="inbox-side-actions">
+              <button type="button" className="btn small outline" onClick={makeLead} disabled={saveLead.isPending}>
+                + Make a lead
+              </button>
+              <button type="button" className="btn small outline" onClick={onAddAs} title="Add as a shipper, agent, transporter, clearing or destination agent">
+                + Add as…
+              </button>
+            </div>
+          )
+        )}
+      </section>
+
+      <section>
+        <h4>Shipment</h4>
+        <select
+          className="inbox-job"
+          value={msg.job_id ?? ""}
+          onChange={(e) =>
+            patch(
+              // A hand-picked (or cleared) link is never overwritten by auto-linking.
+              { job_id: e.target.value || null, job_linked_by: "manual" },
+              e.target.value ? "Linked to the shipment" : "Unlinked from the shipment",
+            )
+          }
+          title="Shipment this email belongs to"
+        >
+          <option value="">Not linked to a shipment</option>
+          {jobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {jobLabel(j)}
+            </option>
+          ))}
+        </select>
+        {linked && (
+          <button type="button" className="link-btn" onClick={() => navigate(`/jobs/${linked.id}?comms=1`)}>
+            Open {linked.reference} ›
+          </button>
+        )}
+      </section>
+
+      {theirJobs.length > 0 && (
+        <section>
+          <h4>Their open shipments</h4>
+          <ul className="inbox-side-list">
+            {theirJobs.map((j) => (
+              <li key={j.id}>
+                <button type="button" className="link-btn" onClick={() => navigate(`/jobs/${j.id}`)} title="Open the shipment">
+                  {j.reference}
+                </button>
+                <span className="muted"> {j.shipment_status || j.milestone}</span>
+                {j.id === msg.job_id ? (
+                  <span className="inbox-chip job">Linked</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => patch({ job_id: j.id, job_linked_by: "manual" }, `Linked to ${j.reference}`)}
+                    title="Link this email to the shipment"
+                  >
+                    Link
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {theirQuotes.length > 0 && (
+        <section>
+          <h4>Their quotes</h4>
+          <ul className="inbox-side-list">
+            {theirQuotes.map((q) => (
+              <li key={q.id}>
+                <button type="button" className="link-btn" onClick={() => navigate(`/quotes/${q.id}/view`)}>
+                  {q.reference}
+                </button>
+                <span className="muted"> {QUOTE_STATUS_LABEL[q.status] ?? q.status}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {incoming && (
+        <section>
+          <h4>Reply</h4>
+          <p className="inbox-side-status">
+            {replied ? "Replied" : needs ? <span className="inbox-chip needs">Needs reply</span> : msg.done_at ? "No reply needed" : "No reply expected"}
+          </p>
+        </section>
+      )}
+
+      <section>
+        <h4>Next</h4>
+        <div className="inbox-side-actions">
+          {incoming && msg.from_email && (c === "unknown" || c === "lead" || c === "customer") && (
+            <button type="button" className="btn small outline" onClick={createQuotation} disabled={saveLead.isPending}>
+              Create quotation
+            </button>
+          )}
+          <button type="button" className="btn small outline" onClick={onTask}>
+            Create task
+          </button>
+          {can("motion_ai") && (
+            <button type="button" className="btn small outline" onClick={askAi} title="Open Motion AI with this email, then ask your question">
+              ✦ Ask Motion AI
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+const QUOTE_STATUS_LABEL: Record<string, string> = {
+  open: "New lead",
+  sent: "Quote sent",
+  accepted: "Accepted",
+  completed: "Completed",
+  lost: "Not proceeding",
+};
 
 type PartnerType = "supplier" | "agent" | "transporter" | "clearing_agent" | "destination_agent";
 const PARTNER_TYPES: { key: PartnerType; label: string }[] = [

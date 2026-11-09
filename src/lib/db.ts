@@ -2800,6 +2800,10 @@ export async function listMailboxFolders(mailboxId: string): Promise<MailboxFold
     await supabase.from("mailbox_folders").select("*").eq("mailbox_id", mailboxId).order("path"),
   );
 }
+/** Hide or show one of your folders in Motion (0228); it keeps syncing. */
+export async function setFolderHidden(mailboxId: string, path: string, hidden: boolean): Promise<void> {
+  unwrap(await supabase.from("mailbox_folders").update({ hidden_by_user: hidden }).eq("mailbox_id", mailboxId).eq("path", path));
+}
 export async function updateMailbox(id: string, patch: MailboxPatch): Promise<void> {
   unwrap(await supabase.from("mailboxes").update(patch).eq("id", id));
 }
