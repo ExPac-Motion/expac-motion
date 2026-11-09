@@ -12,13 +12,14 @@ import { useSearchParams } from "react-router-dom";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { Kpi } from "../wms/shared";
-import { useClearingAgents, useCompanySettings, useCustomsFiles, useShipmentDocumentsForJobs, useUpdateCompanySettings } from "../../lib/hooks";
+import { useClearingAgents, useCompanySettings, useCustomsAgentStats, useCustomsFiles, useShipmentDocumentsForJobs, useUpdateCompanySettings } from "../../lib/hooks";
+import type { CustomsAgentStat } from "../../lib/customs";
 import { CUSTOMS_STAGES, WITH_AGENT, anfWaiting, checklist, daysBetween, fmtDays, stageShort } from "../../lib/customs";
 import { formatDate } from "../../lib/format";
 import { shipmentStatusSlug, type CustomsFile, type CustomsStage, type ShipmentDocument } from "../../lib/types";
 import CustomsFileModal from "./CustomsFileModal";
 
-type View = "open" | "anf" | "docs_pending" | "ready" | "with_agent" | "query" | "cleared";
+type View = "open" | "anf" | "docs_pending" | "ready" | "with_agent" | "query" | "release" | "cleared";
 const VIEWS: { key: View; label: string }[] = [
   { key: "open", label: "All open" },
   { key: "anf", label: "ANF in, not handed over" },
@@ -26,16 +27,21 @@ const VIEWS: { key: View; label: string }[] = [
   { key: "ready", label: "Ready to hand over" },
   { key: "with_agent", label: "With agent" },
   { key: "query", label: "Queries" },
+  { key: "release", label: "Release to send" },
   { key: "cleared", label: "Cleared" },
 ];
 
 export default function CustomsPage() {
   const [params] = useSearchParams();
-  const tab = params.get("tab") === "settings" ? "settings" : "board";
+  const asked = params.get("tab");
+  const tab = asked === "settings" || asked === "agents" ? asked : "board";
   return (
     <>
-      <PageHeader eyebrow="Customs" title={tab === "settings" ? "Customs Settings" : "Clearance Board"} />
-      {tab === "settings" ? <CustomsSettings /> : <ClearanceBoard />}
+      <PageHeader
+        eyebrow="Customs"
+        title={tab === "settings" ? "Customs Settings" : tab === "agents" ? "Clearing Agent Performance" : "Clearance Board"}
+      />
+      {tab === "settings" ? <CustomsSettings /> : tab === "agents" ? <AgentPerformance /> : <ClearanceBoard />}
     </>
   );
 }
@@ -55,6 +61,8 @@ function inView(f: CustomsFile, v: View): boolean {
       return open && WITH_AGENT.includes(f.stage);
     case "query":
       return open && f.stage === "query";
+    case "release":
+      return f.stage === "cleared" && !f.release_sent_at && (daysBetween(f.cleared_at) ?? 99) <= 30;
     case "cleared":
       return f.stage === "cleared";
   }
@@ -147,6 +155,7 @@ function ClearanceBoard() {
         <Kpi label="Ready to hand over" value={String(counts.ready)} tone={counts.ready ? "teal" : undefined} />
         <Kpi label="With agent" value={String(counts.with_agent)} sub={kpi.overdue ? `${kpi.overdue} over 3 days` : undefined} />
         <Kpi label="Queries" value={String(counts.query)} tone={counts.query ? "orange" : undefined} />
+        <Kpi label="Release to send" value={String(counts.release)} tone={counts.release ? "amber" : undefined} />
         <Kpi label="Cleared this month" value={String(kpi.thisMonth)} />
         <Kpi label="Handover to cleared" value={fmtDays(kpi.avg)} sub="average, last 60 days" />
       </div>
@@ -250,6 +259,101 @@ function ClearanceBoard() {
       </div>
 
       {open && <CustomsFileModal file={open} onClose={() => setOpenId(null)} />}
+    </>
+  );
+}
+
+/** Per clearing agent: handover -> lodged / cleared, queries, open now (0232). */
+function AgentPerformance() {
+  const [days, setDays] = useState(90);
+  const statsQ = useCustomsAgentStats(days);
+  const agentsQ = useClearingAgents();
+  const names = new Map((agentsQ.data ?? []).map((a) => [a.id, a.company]));
+  const rows = useMemo(() => {
+    const by = new Map<string, CustomsAgentStat[]>();
+    for (const r of statsQ.data ?? []) {
+      const k = r.clearing_agent_id ?? "none";
+      by.set(k, [...(by.get(k) ?? []), r]);
+    }
+    const avg = (xs: (number | null)[]) => {
+      const v = xs.filter((x): x is number => x != null);
+      return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null;
+    };
+    return [...by.entries()]
+      .map(([id, rs]) => {
+        const cleared = rs.filter((r) => r.cleared_at);
+        return {
+          id,
+          name: id === "none" ? "No agent" : (names.get(id) ?? "Unknown agent"),
+          files: rs.length,
+          cleared: cleared.length,
+          open: rs.filter((r) => !r.closed_at && r.stage !== "cleared").length,
+          late: rs.filter((r) => !r.closed_at && r.stage !== "cleared" && (daysBetween(r.handed_over_at) ?? 0) > 3).length,
+          toLodged: avg(rs.map((r) => (r.lodged_at ? daysBetween(r.handed_over_at, r.lodged_at) : null))),
+          toCleared: avg(cleared.map((r) => daysBetween(r.handed_over_at, r.cleared_at))),
+          queryRate: rs.length ? rs.filter((r) => r.queries > 0).length / rs.length : 0,
+          queries: rs.reduce((s, r) => s + r.queries, 0),
+        };
+      })
+      .sort((a, b) => b.files - a.files);
+  }, [statsQ.data, names]);
+  if (statsQ.isLoading) return <Loading />;
+  if (statsQ.error) return <ErrorNote error={statsQ.error} />;
+  return (
+    <>
+      <PageTools
+        filters={
+          <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Period">
+            <option value={30}>Last 30 days</option>
+            <option value={90}>Last 90 days</option>
+            <option value={180}>Last 6 months</option>
+            <option value={365}>Last 12 months</option>
+          </select>
+        }
+      />
+      <div className="panel">
+        {rows.length === 0 ? (
+          <EmptyState>No files handed over to a clearing agent in this period yet.</EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="customs-table">
+              <thead>
+                <tr>
+                  <th>Clearing agent</th>
+                  <th>Files handed over</th>
+                  <th>Cleared</th>
+                  <th>Open now</th>
+                  <th>Over 3 days</th>
+                  <th>Handover to entry lodged</th>
+                  <th>Handover to cleared</th>
+                  <th>Files with a query</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <strong>{r.name}</strong>
+                    </td>
+                    <td>{r.files}</td>
+                    <td>{r.cleared}</td>
+                    <td>{r.open}</td>
+                    <td className={r.late ? "customs-late" : undefined}>{r.late}</td>
+                    <td>{fmtDays(r.toLodged)}</td>
+                    <td>
+                      <strong>{fmtDays(r.toCleared)}</strong>
+                    </td>
+                    <td>
+                      {Math.round(r.queryRate * 100)}%<span className="hint"> ({r.queries} queries)</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <p className="hint">Times are averages, counted from the moment the file was handed over to the agent.</p>
     </>
   );
 }

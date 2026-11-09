@@ -18,7 +18,11 @@ import {
   useUpdateJob,
   useUploadShipmentDocument,
 } from "../../lib/hooks";
-import { getShipmentDocumentUrl } from "../../lib/db";
+import { extractCustomsDocuments, getJobTransporter, getShipmentDocumentUrl } from "../../lib/db";
+import { useQuery } from "@tanstack/react-query";
+import CustomsDataPanel from "./CustomsDataPanel";
+import { extractionCsvRows } from "../../lib/customs";
+import { toCsv } from "../../lib/zip";
 import { CUSTOMS_STAGES, WITH_AGENT, anfWaiting, checklist, daysBetween, fmtDays, requiredDocType, stageLabel } from "../../lib/customs";
 import { formatDate, formatDateTime } from "../../lib/format";
 import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
@@ -52,6 +56,25 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploadType, setUploadType] = useState<string>("");
   const closed = !!file.closed_at;
+  const [reading, setReading] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+  const transporterQ = useQuery({
+    queryKey: ["customs", "transporter", file.job_id],
+    queryFn: () => getJobTransporter(file.job_id),
+    enabled: file.stage === "cleared",
+  });
+  async function readDocuments() {
+    setReading(true);
+    try {
+      const ext = await extractCustomsDocuments(file.id);
+      await update.mutateAsync({ id: file.id, patch: { extraction: ext } });
+      toast(ext.warnings?.length ? "Documents read: check the warnings" : "Documents read: check the data");
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Motion AI couldn't read the documents");
+    } finally {
+      setReading(false);
+    }
+  }
 
   async function save(patch: Parameters<typeof update.mutateAsync>[0]["patch"], done?: string) {
     try {
@@ -118,6 +141,11 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
   // Handover email: the shipment details and the documents, attached.
   const attachDocs = list.flatMap((i) => i.docs);
   const initialFiles: ShipmentAttachmentPick[] = attachDocs.map((d) => ({ key: `file-${d.id}`, label: d.name, kind: "file", doc: d }));
+  const ext = file.extraction ?? null;
+  if (ext && job) {
+    const csv = new File([toCsv(extractionCsvRows(job.reference, ext))], `${job.reference} customs data.csv`, { type: "text/csv" });
+    initialFiles.push({ key: "customs-data-csv", label: csv.name, kind: "local", file: csv });
+  }
   const subject = `Customs clearing instruction – ${job?.reference ?? ""}${job?.client?.company ? ` – ${job.client.company}` : ""}`;
   const row = (k: string, v: string | null | undefined) =>
     v ? `<tr><td style="padding:3px 12px 3px 0;color:#666">${esc(k)}</td><td style="padding:3px 0"><b>${esc(v)}</b></td></tr>` : "";
@@ -136,6 +164,16 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
     row("ETA", job?.eta ? formatDate(job.eta) : null) +
     row("Customer PO", job?.po_no) +
     `</table>` +
+    (ext
+      ? `<p>Invoice data (also attached as CSV, HS codes to confirm):</p><table style="border-collapse:collapse;font-size:14px">` +
+        row("Invoice", [ext.invoice_no, ext.invoice_date].filter(Boolean).join(", ")) +
+        row("Value", ext.invoice_total != null ? `${ext.currency ?? ""} ${ext.invoice_total.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`.trim() : null) +
+        row("Incoterm", ext.incoterm) +
+        row("Packages", ext.packages != null ? `${ext.packages} ${ext.package_type ?? ""}`.trim() : null) +
+        row("Gross / net kg", ext.gross_kg != null || ext.net_kg != null ? `${ext.gross_kg ?? "—"} / ${ext.net_kg ?? "—"}` : null) +
+        row("Origin", ext.country_of_origin) +
+        `</table>`
+      : "") +
     `<p>Documents attached:</p><ul>${list.map((i) => `<li>${esc(i.label)}${i.docs.length ? "" : " – <i>to follow</i>"}</li>`).join("")}</ul>` +
     `<p>Please confirm receipt, and send us the entry number once lodged and the release note once cleared, quoting our reference ${esc(job?.reference)}.</p>` +
     `<p>Thank you</p>`;
@@ -426,7 +464,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
                 <li key={e.id}>
                   <span className="hint">{formatDateTime(e.at)}</span>{" "}
                   <span>
-                    {e.kind === "stage" && e.stage ? stageLabel(e.stage) : e.kind === "opened" ? "File opened" : e.kind === "closed" ? "File closed" : e.kind === "reopened" ? "File reopened" : e.kind === "agent" ? "Clearing agent" : e.kind === "handover" ? "Handed over" : e.kind === "anf" ? "ANF" : "Note"}
+                    {e.kind === "stage" && e.stage ? stageLabel(e.stage) : e.kind === "opened" ? "File opened" : e.kind === "closed" ? "File closed" : e.kind === "reopened" ? "File reopened" : e.kind === "agent" ? "Clearing agent" : e.kind === "handover" ? "Handed over" : e.kind === "anf" ? "ANF" : e.kind === "extract" ? "Customs data" : e.kind === "release" ? "Release" : e.kind === "docs" ? "Documents" : "Note"}
                     {e.note && e.kind !== "stage" ? `: ${e.note}` : ""}
                   </span>{" "}
                   {e.by && <span className="hint">– {people.get(e.by) ?? "Someone"}</span>}
@@ -435,7 +473,130 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
             </ul>
           </section>
         </div>
+
+        <section className="customs-wide">
+          <div className="customs-wide-head">
+            <h4>Customs data (Motion AI)</h4>
+            {!closed && (
+              <button type="button" className="btn small outline" onClick={() => void readDocuments()} disabled={reading || docs.length === 0}>
+                {reading ? "Reading the documents…" : file.extraction ? "✦ Read again" : "✦ Read the documents"}
+              </button>
+            )}
+          </div>
+          {file.extraction ? (
+            <>
+              <p className="hint">
+                Saved {file.extracted_at ? formatDateTime(file.extracted_at) : ""}. It goes with the handover (as a CSV) and shows on the
+                agent's Broker Desk.
+              </p>
+              <CustomsDataPanel
+                key={file.extracted_at ?? "x"}
+                reference={job?.reference ?? "customs"}
+                value={file.extraction}
+                editable={!closed}
+                saving={update.isPending}
+                onSave={(v) => void save({ extraction: v }, "Customs data saved")}
+              />
+            </>
+          ) : (
+            <p className="hint">
+              Motion AI reads the commercial invoice, packing list and B/L or AWB, and fills in the values, weights, packages and each
+              line with a suggested HS code, so the clearing agent doesn't retype them. Takes about half a minute.
+            </p>
+          )}
+        </section>
+
+        {file.stage === "cleared" && (
+          <section className="customs-wide">
+            <h4>After clearance</h4>
+            <ul className="customs-check">
+              <li className={file.release_sent_at ? "ok" : "missing"}>
+                <span className="customs-check-mark">{file.release_sent_at ? "✓" : "1"}</span>
+                <span className="customs-check-label">
+                  Release note to the transporter
+                  {file.release_sent_at && (
+                    <span className="hint">
+                      Sent {formatDateTime(file.release_sent_at)}
+                      {file.release_sent_to ? ` to ${file.release_sent_to}` : ""}
+                    </span>
+                  )}
+                  {!file.release_sent_at && transporterQ.data === null && <span className="hint">No transporter on the shipment's quote.</span>}
+                </span>
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() => setReleasing(true)}
+                  title={transporterQ.data?.email ? `To ${transporterQ.data.email}` : "Choose who to send it to"}
+                >
+                  {file.release_sent_at ? "Send again" : "Send release"}
+                </button>
+              </li>
+              <li className={file.delivery_note_at ? "ok" : "missing"}>
+                <span className="customs-check-mark">{file.delivery_note_at ? "✓" : "2"}</span>
+                <span className="customs-check-label">
+                  Delivery note
+                  {file.delivery_note_at && <span className="hint">Issued {formatDateTime(file.delivery_note_at)}</span>}
+                </span>
+                {job && (
+                  <button
+                    type="button"
+                    className="btn small outline"
+                    onClick={() => {
+                      window.open(`/jobs/${job.id}/documents/delivery-note/print`, "_blank", "noopener");
+                      if (!file.delivery_note_at) void save({ delivery_note_at: new Date().toISOString() });
+                    }}
+                  >
+                    {file.delivery_note_at ? "Open again" : "Issue delivery note"}
+                  </button>
+                )}
+              </li>
+              <li className={job?.shipment_status && ["Released", "On-Delivery", "Delivered"].includes(job.shipment_status) ? "ok" : "missing"}>
+                <span className="customs-check-mark">
+                  {job?.shipment_status && ["Released", "On-Delivery", "Delivered"].includes(job.shipment_status) ? "✓" : "3"}
+                </span>
+                <span className="customs-check-label">
+                  Customer portal and tracking
+                  <span className="hint">Shipment status: {job?.shipment_status ?? "—"}</span>
+                </span>
+                {job && !["Released", "On-Delivery", "Delivered"].includes(job.shipment_status ?? "") && (
+                  <button type="button" className="btn small outline" onClick={() => void updateJob.mutateAsync({ id: job.id, patch: { shipment_status: "Released" } })}>
+                    Set to Released
+                  </button>
+                )}
+              </li>
+            </ul>
+          </section>
+        )}
       </div>
+
+      {releasing && (
+        <QuickMailModal
+          to={transporterQ.data?.email ?? ""}
+          company={transporterQ.data?.company ?? "Transporter"}
+          name={transporterQ.data?.contact}
+          job={job ? { id: job.id, reference: job.reference } : null}
+          initialSubject={`Customs release – ${job?.reference ?? ""}${job?.client?.company ? ` – ${job.client.company}` : ""}`}
+          initialBody={
+            `<p>Good day${transporterQ.data?.contact ? ` ${esc(transporterQ.data.contact.split(" ")[0])}` : ""},</p>` +
+            `<p>The shipment below is customs cleared. The release note is attached; please arrange collection and delivery.</p>` +
+            `<table style="border-collapse:collapse;font-size:14px">` +
+            row("Our reference", job?.reference) +
+            row("Consignee", job?.client?.company) +
+            row(job?.mode?.startsWith("Air") ? "AWB" : "B/L", job?.awb_mbl) +
+            row("Container", job?.container_no) +
+            row("Entry no.", file.entry_no) +
+            `</table><p>Thank you</p>`
+          }
+          initialFiles={docs
+            .filter((d) => /release/i.test(d.doc_type ?? ""))
+            .map((d) => ({ key: `file-${d.id}`, label: d.name, kind: "file" as const, doc: d }))}
+          onClose={() => setReleasing(false)}
+          onSent={async (info) => {
+            await save({ release_sent_at: new Date().toISOString(), release_sent_to: info.to });
+            toast("Release sent to the transporter");
+          }}
+        />
+      )}
 
       {handover && agent?.email && (
         <QuickMailModal

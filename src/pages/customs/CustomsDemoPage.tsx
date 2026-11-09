@@ -62,9 +62,9 @@ const J5 = job("j5", "SEA329004", "Sea Freight (FCL)", "Released", "Jetda Import
 const FILES = [
   file("f1", J1, "docs_pending", AGENTS[0], { anf_at: ago(5), anf_source: "Email: noreply@emirates.com – Arrival Notice AWB 618-59678135" }),
   file("f2", J2, "ready", AGENTS[1], { anf_at: ago(20), anf_source: "Document: ANF MSC.pdf" }),
-  file("f3", J3, "lodged", AGENTS[1], { handed_over_at: ago(80), lodged_at: ago(40), entry_no: "MRN 26ZA0001234", handover_to: "entries@portside.co.za" }),
+  file("f3", J3, "lodged", AGENTS[1], { handed_over_at: ago(80), lodged_at: ago(40), entry_no: "MRN 26ZA0001234", handover_to: "entries@portside.co.za", extraction: { invoice_no: "INV-77", invoice_date: "2026-10-02", supplier: "Delta Exports", buyer: "Delta Express SA", currency: "USD", incoterm: "CIF Durban", invoice_total: 8400, freight: 600, insurance: 40, packages: 12, package_type: "cartons", gross_kg: 410, net_kg: 380, cbm: 1.8, country_of_origin: "India", transport_doc_no: "MEDU1234567", vessel_or_flight: "MSC Aurora", container_nos: [], lines: [{ description: "Cotton shirts", hs_code: "6205.20.00", qty: 400, unit: "pcs", unit_price: 21, value: 8400, origin: "India", net_kg: 380 }], warnings: [], sources: ["CI.pdf", "PL.pdf"] }, extracted_at: ago(30) }),
   file("f4", J4, "query", AGENTS[0], { handed_over_at: ago(30), query_at: ago(6), query_note: "Commercial invoice value doesn't match the packing list", handover_to: "docs@swiftclearing.co.za" }),
-  file("f5", J5, "cleared", AGENTS[0], { handed_over_at: ago(200), lodged_at: ago(170), cleared_at: ago(150), closed_at: ago(140), entry_no: "MRN 26ZA0000988" }),
+  file("f5", J5, "cleared", AGENTS[0], { handed_over_at: ago(200), lodged_at: ago(170), cleared_at: ago(150), closed_at: null, entry_no: "MRN 26ZA0000988" }),
 ];
 const doc = (id: string, job_id: string, name: string, doc_type: string) => ({
   id, job_id, name, doc_type, storage_path: "x", kind: "upload", visible_to_client: false, size_bytes: 120_000, created_by: null, created_at: ago(20),
@@ -89,6 +89,14 @@ export default function CustomsDemoPage() {
     };
     seed(["customs", "files"], FILES);
     seed(["clearing_agents"], AGENTS);
+    seed(["customs", "agent_stats", 90], [
+      { file_id: "s1", clearing_agent_id: "ca1", stage: "cleared", handed_over_at: ago(400), lodged_at: ago(380), cleared_at: ago(330), closed_at: ago(320), queries: 0 },
+      { file_id: "s2", clearing_agent_id: "ca1", stage: "cleared", handed_over_at: ago(300), lodged_at: ago(250), cleared_at: ago(200), closed_at: ago(190), queries: 1 },
+      { file_id: "f4", clearing_agent_id: "ca1", stage: "query", handed_over_at: ago(30), lodged_at: null, cleared_at: null, closed_at: null, queries: 1 },
+      { file_id: "f3", clearing_agent_id: "ca2", stage: "lodged", handed_over_at: ago(80), lodged_at: ago(40), cleared_at: null, closed_at: null, queries: 0 },
+      { file_id: "s3", clearing_agent_id: "ca2", stage: "cleared", handed_over_at: ago(500), lodged_at: ago(470), cleared_at: ago(380), closed_at: ago(370), queries: 2 },
+    ]);
+    seed(["customs", "transporter", "j5"], { id: "t1", company: "Fast Trucks", email: "ops@fasttrucks.co.za", contact: "Sipho Dlamini" });
     seed(["company_settings"], { id: 1, customs_default_agent_id: "ca1" });
     seed(["profiles"], [{ id: "u1", full_name: "Oliver" }]);
     seed(["shipment_documents", "byJobs", ["j1", "j2", "j3", "j4"]], DOCS);

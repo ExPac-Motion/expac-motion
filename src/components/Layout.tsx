@@ -92,6 +92,7 @@ const NAV: NavModule[] = [
     label: "Customs",
     children: [
       { to: "/customs", label: "Clearance Board" },
+      { to: "/customs?tab=agents", label: "Agent Performance" },
       { to: "/import-vat-duty", label: "Customs Charges" },
       { to: "/customs?tab=settings", label: "Settings" },
     ],

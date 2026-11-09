@@ -74,3 +74,132 @@ export function fmtDays(d: number | null): string {
 export function anfWaiting(f: CustomsFile): boolean {
   return !!f.anf_at && (f.stage === "docs_pending" || f.stage === "ready");
 }
+
+/* ---------- Motion AI: data read from the documents (0232) ---------- */
+
+export interface CustomsLine {
+  description: string;
+  hs_code: string | null;
+  qty: number | null;
+  unit: string | null;
+  unit_price: number | null;
+  value: number | null;
+  origin: string | null;
+  net_kg: number | null;
+}
+export interface CustomsExtraction {
+  invoice_no: string | null;
+  invoice_date: string | null;
+  supplier: string | null;
+  buyer: string | null;
+  currency: string | null;
+  incoterm: string | null;
+  invoice_total: number | null;
+  freight: number | null;
+  insurance: number | null;
+  packages: number | null;
+  package_type: string | null;
+  gross_kg: number | null;
+  net_kg: number | null;
+  cbm: number | null;
+  country_of_origin: string | null;
+  transport_doc_no: string | null;
+  vessel_or_flight: string | null;
+  container_nos: string[];
+  lines: CustomsLine[];
+  warnings: string[];
+  /** The documents it was read from. */
+  sources?: string[];
+}
+
+export const EXTRACTION_FIELDS: { key: keyof CustomsExtraction; label: string; num?: boolean }[] = [
+  { key: "invoice_no", label: "Invoice no." },
+  { key: "invoice_date", label: "Invoice date" },
+  { key: "supplier", label: "Supplier / exporter" },
+  { key: "buyer", label: "Buyer / importer" },
+  { key: "currency", label: "Currency" },
+  { key: "incoterm", label: "Incoterm" },
+  { key: "invoice_total", label: "Invoice total", num: true },
+  { key: "freight", label: "Freight", num: true },
+  { key: "insurance", label: "Insurance", num: true },
+  { key: "packages", label: "Packages", num: true },
+  { key: "package_type", label: "Package type" },
+  { key: "gross_kg", label: "Gross kg", num: true },
+  { key: "net_kg", label: "Net kg", num: true },
+  { key: "cbm", label: "CBM", num: true },
+  { key: "country_of_origin", label: "Country of origin" },
+  { key: "transport_doc_no", label: "B/L or AWB no." },
+  { key: "vessel_or_flight", label: "Vessel / flight" },
+];
+
+/** CSV of a customs file's data: the header facts, then one row per line. */
+export function extractionCsvRows(ref: string, ext: CustomsExtraction): (string | number | null)[][] {
+  const rows: (string | number | null)[][] = [["Shipment", ref]];
+  for (const f of EXTRACTION_FIELDS) rows.push([f.label, (ext[f.key] as string | number | null) ?? null]);
+  rows.push(["Containers", (ext.container_nos ?? []).join(" ")]);
+  rows.push([]);
+  rows.push(["Line", "Description", "HS code (suggested)", "Qty", "Unit", "Unit price", "Value", "Origin", "Net kg"]);
+  (ext.lines ?? []).forEach((l, i) =>
+    rows.push([i + 1, l.description, l.hs_code, l.qty, l.unit, l.unit_price, l.value, l.origin, l.net_kg]),
+  );
+  return rows;
+}
+
+/* ---------- Broker Desk (0232) ---------- */
+
+export interface BrokerDocument {
+  id: string;
+  name: string;
+  doc_type: string | null;
+  storage_path: string;
+  size_bytes: number | null;
+  created_at: string;
+  from_broker: boolean;
+}
+export interface BrokerFile {
+  id: string;
+  stage: CustomsStage;
+  entry_no: string | null;
+  query_note: string | null;
+  handed_over_at: string | null;
+  lodged_at: string | null;
+  query_at: string | null;
+  cleared_at: string | null;
+  closed_at: string | null;
+  anf_at: string | null;
+  extraction: CustomsExtraction | null;
+  reference: string;
+  mode: string | null;
+  shipment_status: string | null;
+  awb_mbl: string | null;
+  container_no: string | null;
+  vessel_name: string | null;
+  carrier_name: string | null;
+  eta: string | null;
+  etd: string | null;
+  origin: string | null;
+  destination: string | null;
+  po_no: string | null;
+  importer: {
+    company: string | null;
+    vat_no: string | null;
+    import_code: string | null;
+    address: string | null;
+    contact: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  documents: BrokerDocument[];
+  events: { at: string; kind: string; stage: CustomsStage | null; note: string | null; mine: boolean }[];
+}
+
+export interface CustomsAgentStat {
+  file_id: string;
+  clearing_agent_id: string | null;
+  stage: CustomsStage;
+  handed_over_at: string;
+  lodged_at: string | null;
+  cleared_at: string | null;
+  closed_at: string | null;
+  queries: number;
+}

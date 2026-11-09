@@ -436,6 +436,8 @@ export const DOCUMENT_TYPES = [
   "Customs Release Note",
   "Certificate of Origin",
   "Arrival Notification (ANF)",
+  "Customs Entry",
+  "Duty / VAT Invoice",
   "Other",
 ] as const;
 
@@ -463,6 +465,14 @@ export interface CustomsFile {
   /** Carrier arrival notification received (0231), and where it was seen. */
   anf_at?: string | null;
   anf_source?: string | null;
+  /** Motion AI's data from the documents, as checked by ExPac (0232). */
+  extraction?: import("./customs").CustomsExtraction | null;
+  extracted_at?: string | null;
+  extracted_by?: string | null;
+  /** After clearance (0232): release note sent to the transporter, delivery note issued. */
+  release_sent_at?: string | null;
+  release_sent_to?: string | null;
+  delivery_note_at?: string | null;
   created_at: string;
   updated_at: string;
   job?: {
@@ -491,7 +501,7 @@ export interface CustomsEvent {
   file_id: string;
   at: string;
   by: string | null;
-  kind: "opened" | "stage" | "handover" | "note" | "agent" | "docs" | "closed" | "reopened" | "anf";
+  kind: "opened" | "stage" | "handover" | "note" | "agent" | "docs" | "closed" | "reopened" | "anf" | "extract" | "release";
   stage: CustomsStage | null;
   note: string | null;
 }

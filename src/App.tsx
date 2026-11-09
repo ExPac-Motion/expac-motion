@@ -56,6 +56,7 @@ import PortalLayout from "./pages/portal/PortalLayout";
 import WmsPage from "./pages/WmsPage";
 import CustomsPage from "./pages/customs/CustomsPage";
 import CustomsDemoPage from "./pages/customs/CustomsDemoPage";
+import BrokerDemoPage from "./pages/partner/BrokerDemoPage";
 import CustomerRecordPage from "./pages/clients/CustomerRecordPage";
 import WmsPrintPage from "./pages/wms/WmsPrintPage";
 import WmsPrintDemoPage from "./pages/wms/WmsPrintDemoPage";
@@ -260,6 +261,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/houses" element={<MastersDemo view="houses" />} />}
           {import.meta.env.DEV && <Route path="/dev/inbox" element={<InboxDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/customs" element={<CustomsDemoPage />} />}
+          {import.meta.env.DEV && <Route path="/dev/broker" element={<BrokerDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/motion-ai" element={<MotionAiDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/pre-alert" element={<PreAlertDemoPage />} />}
           {import.meta.env.DEV && (

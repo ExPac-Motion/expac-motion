@@ -101,6 +101,7 @@ import type {
   CustomsEvent,
   CustomsFile,
 } from "./types";
+import type { BrokerFile, CustomsAgentStat, CustomsExtraction } from "./customs";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
   if (error) {
@@ -2356,7 +2357,7 @@ export async function listCustomsFiles(): Promise<CustomsFile[]> {
 
 export async function updateCustomsFile(
   id: string,
-  patch: Partial<Pick<CustomsFile, "clearing_agent_id" | "stage" | "required_docs" | "entry_no" | "query_note" | "notes" | "handover_to" | "anf_at" | "anf_source">>,
+  patch: Partial<Pick<CustomsFile, "clearing_agent_id" | "stage" | "required_docs" | "entry_no" | "query_note" | "notes" | "handover_to" | "anf_at" | "anf_source" | "extraction" | "release_sent_at" | "release_sent_to" | "delivery_note_at">>,
 ): Promise<void> {
   unwrap(await supabase.from("customs_files").update(patch).eq("id", id));
 }
@@ -2365,6 +2366,69 @@ export async function listCustomsEvents(fileId: string): Promise<CustomsEvent[]>
   return unwrap<CustomsEvent[]>(
     await supabase.from("customs_events").select("*").eq("file_id", fileId).order("at", { ascending: false }),
   );
+}
+
+/** Files handed over in the last `days` days, for the agent performance page. */
+export async function listCustomsAgentStats(days = 180): Promise<CustomsAgentStat[]> {
+  return unwrap<CustomsAgentStat[]>(await supabase.rpc("customs_agent_stats", { p_days: days }));
+}
+
+/** The transporter on the shipment's quote (where Motion keeps it). */
+export async function getJobTransporter(jobId: string): Promise<{ id: string; company: string; email: string | null; contact: string | null } | null> {
+  const job = unwrap<{ quote_id: string | null } | null>(await supabase.from("jobs").select("quote_id").eq("id", jobId).maybeSingle());
+  if (!job?.quote_id) return null;
+  const quote = unwrap<{ transporter_id: string | null } | null>(
+    await supabase.from("quotes").select("transporter_id").eq("id", job.quote_id).maybeSingle(),
+  );
+  if (!quote?.transporter_id) return null;
+  return unwrap(await supabase.from("transporters").select("id,company,email,contact").eq("id", quote.transporter_id).maybeSingle());
+}
+
+/** Motion AI reads the customs file's documents (/api/ai-customs). */
+export async function extractCustomsDocuments(fileId: string): Promise<CustomsExtraction> {
+  const res = await authed("/api/ai-customs", { file_id: fileId });
+  const raw = (await res.json().catch(() => ({}))) as CustomsExtraction & { error?: string };
+  if (!res.ok) {
+    if (res.status === 404 && !raw.error) throw new Error("Motion AI runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Motion AI returned ${res.status}`);
+  }
+  return raw;
+}
+
+/* ---------- Broker Desk: the clearing agent's side (0232) ---------- */
+
+export async function listBrokerFiles(): Promise<BrokerFile[]> {
+  return unwrap<BrokerFile[]>(await supabase.rpc("broker_files"));
+}
+export async function brokerUpdate(input: { fileId: string; stage?: "lodged" | "query" | "cleared" | null; entryNo?: string | null; note?: string | null }): Promise<void> {
+  unwrap(
+    await supabase.rpc("broker_update", {
+      p_file: input.fileId,
+      p_stage: input.stage ?? null,
+      p_entry_no: input.entryNo ?? null,
+      p_note: input.note ?? null,
+    }),
+  );
+}
+export async function brokerUploadDocument(fileId: string, file: File, docType: string): Promise<void> {
+  const safe = file.name.replace(/[^\w.() -]+/g, "_");
+  const path = `broker/${fileId}/${Date.now()}-${safe}`;
+  const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
+  if (up.error) throw up.error;
+  try {
+    unwrap(
+      await supabase.rpc("broker_add_document", { p_file: fileId, p_name: file.name, p_path: path, p_doc_type: docType, p_size: file.size }),
+    );
+  } catch (e) {
+    await supabase.storage.from(DOCS_BUCKET).remove([path]);
+    throw e;
+  }
+}
+/** Downloads a stored document's bytes (for the ZIP of a file's documents). */
+export async function downloadShipmentDocument(storagePath: string): Promise<Uint8Array> {
+  const { data, error } = await supabase.storage.from(DOCS_BUCKET).download(storagePath);
+  if (error || !data) throw error ?? new Error("Could not download the document");
+  return new Uint8Array(await data.arrayBuffer());
 }
 
 export async function addCustomsEvent(fileId: string, kind: "note" | "handover", note: string): Promise<void> {

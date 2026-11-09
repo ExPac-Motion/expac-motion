@@ -267,6 +267,26 @@ export function useUpdateCustomsFile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["customs"] }),
   });
 }
+export function useCustomsAgentStats(days = 180) {
+  return useQuery({ queryKey: ["customs", "agent_stats", days], queryFn: () => db.listCustomsAgentStats(days) });
+}
+export function useBrokerFiles() {
+  return useQuery({ queryKey: ["broker_files"], queryFn: db.listBrokerFiles });
+}
+export function useBrokerUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.brokerUpdate,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["broker_files"] }),
+  });
+}
+export function useBrokerUpload() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { fileId: string; file: File; docType: string }) => db.brokerUploadDocument(input.fileId, input.file, input.docType),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["broker_files"] }),
+  });
+}
 export function useAddCustomsEvent() {
   const qc = useQueryClient();
   return useMutation({

@@ -15,6 +15,7 @@ import { CoverageEditor, CoverageView, coverageOf, type Coverage } from "../part
 import type { MyPartner } from "../../lib/types";
 import { PARTNER_LABEL } from "../../lib/tariff";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
+import BrokerDesk from "./BrokerDesk";
 
 /** The partner's own coverage, editable with the edit_coverage permission. */
 function MyCoverage({ me, canEdit }: { me: MyPartner; canEdit: boolean }) {
@@ -75,6 +76,10 @@ export default function PartnerPortalPage() {
   const me = q.data;
   // Switches from Settings > Roles & Permissions (0131).
   const can = useCan();
+  // Clearing agents also get the Broker Desk (customs files, 0232), first.
+  const broker = me?.partner_kind === "clearing_agent";
+  const [tab, setTab] = useState<"customs" | "rates">("customs");
+  const view = broker ? tab : "rates";
 
   return (
     <div className="app-shell">
@@ -83,7 +88,18 @@ export default function PartnerPortalPage() {
           <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac Motion" />
         </Link>
         <nav className="topbar-primary">
-          <span className="topbar-tab active">Rate Sheets</span>
+          {broker && (
+            <button type="button" className={`topbar-tab${view === "customs" ? " active" : ""}`} onClick={() => setTab("customs")}>
+              Customs Files
+            </button>
+          )}
+          {broker ? (
+            <button type="button" className={`topbar-tab${view === "rates" ? " active" : ""}`} onClick={() => setTab("rates")}>
+              Rate Sheets
+            </button>
+          ) : (
+            <span className="topbar-tab active">Rate Sheets</span>
+          )}
         </nav>
         <div className="topbar-utils">
           <div className="topbar-account">
@@ -117,6 +133,16 @@ export default function PartnerPortalPage() {
               ExPac Partner Portal · {PARTNER_LABEL[me.partner_kind]}
             </p>
             <h1 style={{ margin: "0 0 6px" }}>{me.company || "Your company"}</h1>
+            {view === "customs" ? (
+              <>
+                <p className="hint" style={{ margin: "0 0 14px" }}>
+                  Customs files ExPac Forwarding has instructed you to clear: the shipment, importer and documents, ready to download.
+                  Update each file as you go (entry lodged, queries, cleared) and upload the release note; ExPac sees every step.
+                </p>
+                <BrokerDesk />
+              </>
+            ) : (
+            <>
             <p className="hint" style={{ margin: "0 0 14px" }}>
               Keep your air and sea freight rates to ExPac Forwarding up to date, one rate sheet
               per mode and trade route, using ExPac's charge codes. Update them whenever your rates
@@ -136,6 +162,8 @@ export default function PartnerPortalPage() {
             <div className="panel" style={{ marginTop: 14 }}>
               <MyCoverage me={me} canEdit={can("edit_coverage")} />
             </div>
+            </>
+            )}
           </>
         )}
       </main>

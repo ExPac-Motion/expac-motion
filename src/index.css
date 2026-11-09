@@ -12416,7 +12416,7 @@ body:has(.jobs-panel) .topbar-lead .search-box {
   .customs-file-grid { grid-template-columns: 1fr; }
   .customs-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-.customs-cards { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.customs-cards { grid-template-columns: repeat(9, minmax(0, 1fr)); }
 @media (max-width: 1200px) { .customs-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .customs-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* Customs: carrier ANF (0231) */
@@ -12430,3 +12430,21 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 .inbox-attachment-wrap { display: inline-flex; align-items: center; gap: 4px; }
 .inbox-attachment-wrap .inbox-menu .btn { padding: 2px 8px; font-size: 0.72rem; }
 .inbox-att-saved { font-size: 0.75rem; font-weight: 700; color: var(--green-dark, #4c7a1c); }
+/* Customs Phases 2-4 (0232): data panel, after clearance, Broker Desk */
+.customs-wide { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.customs-wide h4 { margin: 0 0 8px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.customs-wide-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.customs-wide-head h4 { margin: 0; }
+.customs-data-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 14px; margin: 0 0 12px; }
+.customs-data-facts > div { min-width: 0; }
+.customs-data-facts dt { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.customs-data-facts dd { margin: 2px 0 0; font-size: 0.88rem; font-weight: 600; overflow-wrap: anywhere; }
+.customs-data-facts dd input { width: 100%; }
+.customs-data-warn { list-style: none; margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--amber-tint); color: var(--amber-ink, #8a5a00); font-size: 0.84rem; display: grid; gap: 3px; }
+.customs-lines { width: 100%; font-size: 0.82rem; }
+.customs-lines td input { width: 100%; min-width: 60px; }
+.customs-lines tfoot td { font-weight: 700; border-top: 2px solid var(--line); }
+.customs-hs { font-weight: 700; color: var(--teal-ink, #016b6e); white-space: nowrap; }
+.broker-docs { list-style: none; padding: 0; display: grid; gap: 4px; }
+.customs-steps.broker { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit; }
