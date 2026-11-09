@@ -1,41 +1,79 @@
 /**
- * Cloudflare Pages Function, sync the support@ mailbox into the Admin Inbox
- * (Sales CRM › Inbox, migration 0134).
+ * Cloudflare Pages Function, keeps each login's mailbox and the Inbox in
+ * step, both ways (migration 0227; first built in 0134).
  *
- * Connects over IMAP (Workers TCP sockets), lists the last year of INBOX,
- * the Sent folder (mail sent from Outlook, stored as direction 'out') and
- * Junk, and for each message not yet stored: saves its envelope (from / to /
- * cc / subject / date / Message-ID / threading headers / flags) to
- * inbox_messages and the raw .eml to the private "inbox" storage bucket. The
- * app parses the .eml when a message is opened, so this function stays light
- * (no MIME decoding here). Up to BATCH new messages per run, newest first, so
- * the every-minute cron (0183) drains the year's backlog behind any new mail. Also
- * refreshes Seen / Answered flags (read or answered in Outlook / webmail) for
- * the last 30 days.
+ * For each mailbox (mailboxes table, one per login):
+ *   1. PUSH: changes made in Motion (pending_* on inbox_messages: read /
+ *      unread, flag, archive, delete, spam, move to folder, and copies of
+ *      mail sent from Motion for the Sent folder) are made on the server,
+ *      only when the mailbox has write_back on.
+ *   2. FOLDERS: every folder on the server is listed (mailbox_folders);
+ *      Outlook's system folders and Drafts are left out.
+ *   3. SYNC: each folder that changed since last time (STATUS: message
+ *      count, next uid, CONDSTORE mod-sequence) is compared with what's
+ *      stored: new mail is stored (envelope in inbox_messages, raw .eml in
+ *      the private "inbox" bucket, parsed by the app when opened), mail
+ *      that left the folder is marked gone and picked up where it turns up
+ *      (inbox_relocate / inbox_reconcile), and the server's flags (read,
+ *      answered, flagged) come across for the last 30 days.
  *
- * Auth: x-cron-key (pg_cron, CRON_SECRET) or a signed-in Admin / Standard
- * User with the "inbox" permission ("Sync now" in the app).
+ * Calls:
+ *   x-cron-key (pg_cron every minute, CRON_SECRET): every mailbox, longest
+ *     waiting first, as far as one run's request budget goes.
+ *   A signed-in login with Inbox access: their own mailbox. Body
+ *     { mode: "push" } only pushes (the app calls it right after a change).
+ *     { mode: "create_folder", name, parent? } creates a folder on the
+ *     server (Inbox › New folder). Nothing else ever creates folders: a
+ *     change that needs a folder the server lacks is left undone and reported.
  *
- * Env: IMAP_HOST, IMAP_PORT (993 = TLS, 143 = STARTTLS), IMAP_USER,
- *      IMAP_PASSWORD, SUPABASE_URL, SUPABASE_ANON_KEY,
+ * Cloudflare allows 50 requests per call (each Supabase call counts, the
+ * mail server connection counts once), so every run keeps to BUDGET and
+ * picks up where it stopped on the next.
+ *
+ * Env: IMAP_HOST, IMAP_PORT, IMAP_USER, IMAP_PASSWORD (support@ and the
+ *      default server for other mailboxes), SUPABASE_URL, SUPABASE_ANON_KEY,
  *      SUPABASE_SERVICE_ROLE_KEY, CRON_SECRET
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
 import { connect } from "cloudflare:sockets";
+import {
+  addresses,
+  copyUid,
+  decodeWords,
+  fetchItems,
+  createFolder,
+  folderStatus,
+  headerValue,
+  imapDate,
+  listFolders,
+  openImap,
+  quote,
+  searchUids,
+  selectFolder,
+  utf8,
+  val,
+} from "../../server/mail/imap";
 
-const MAILBOX = "support";
-// Mail history kept: a year back, filled newest first (new mail always
-// comes in before the backlog), BATCH messages per run.
+// Mail history kept per folder: a year back, newest first.
 const HISTORY_DAYS = 365;
-// Seen / Answered flags are refreshed for the recent window only.
+// The server's flags are read for the recent window only.
 const FLAGS_DAYS = 30;
-// Each message costs two requests (raw upload + its row), and a run must
-// stay within Cloudflare's 50-requests-per-call limit.
-const BATCH = 12;
-// Stored-uid lookups per request (stays under PostgREST's row cap).
-const UID_CHUNK = 500;
 const MAX_RAW_BYTES = 20 * 1024 * 1024;
+// Requests per run (Cloudflare's limit is 50; each mail server connection
+// counts as one, and a signed-in call spends two checking the caller).
+const BUDGET = 46;
+// Kept back for the end of a mailbox: folder state, reconcile, mailbox state.
+const RESERVE = 3;
+// New uids checked against mail we already hold (moved in Outlook) per folder per run.
+const RELOCATE_MAX = 150;
+// Without CONDSTORE a folder's flags can change unseen: look again this often.
+const RECHECK_MS = 10 * 60 * 1000;
+// Pending Motion changes pushed per run.
+const PUSH_MAX = 60;
+// Motion never creates folders on the mailbox: a change that needs a folder
+// the server doesn't have (e.g. no Archive) is left undone and reported.
+const ROLE_NAME = { archive: "Archive", trash: "Trash / Deleted Items", junk: "Junk", sent: "Sent" };
 
 function json(data, status) {
   return new Response(JSON.stringify(data), {
@@ -44,395 +82,367 @@ function json(data, status) {
   });
 }
 
-/* ---------- Supabase (service role) ---------- */
-function sb(env, extra) {
+class OutOfBudget extends Error {}
+
+/** Supabase with the service role, counting requests against the budget. */
+class Api {
+  constructor(env) {
+    this.env = env;
+    this.left = BUDGET;
+  }
+  /** A mail server connection counts as one request too. */
+  socket() {
+    if (this.left < 1) throw new OutOfBudget("out of budget");
+    this.left--;
+  }
+  can(n) {
+    return this.left - n >= RESERVE;
+  }
+  async req(path, init = {}, force = false) {
+    if (!force && !this.can(1)) throw new OutOfBudget("out of budget");
+    if (this.left < 1) throw new OutOfBudget("out of budget");
+    this.left--;
+    const r = await fetch(`${this.env.SUPABASE_URL}${path}`, {
+      ...init,
+      headers: {
+        apikey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        authorization: "Bearer " + this.env.SUPABASE_SERVICE_ROLE_KEY,
+        ...(init.body && typeof init.body === "string" ? { "content-type": "application/json" } : {}),
+        ...(init.headers || {}),
+      },
+    });
+    if (!r.ok) throw new Error(`${path.split("?")[0]}: ${r.status} ${await r.text()}`);
+    return r;
+  }
+  async json(path, init = {}, force = false) {
+    const t = await (await this.req(path, init, force)).text();
+    return t ? JSON.parse(t) : null;
+  }
+  rpc(name, args, force = false) {
+    return this.json(`/rest/v1/rpc/${name}`, { method: "POST", body: JSON.stringify(args) }, force);
+  }
+}
+
+/** A signed-in caller with Inbox access: their mailbox ids, else null. */
+async function callerMailboxes(env, authHeader) {
+  if (!authHeader || !env.SUPABASE_ANON_KEY) return null;
+  const call = (fn) =>
+    fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader, "content-type": "application/json" },
+      body: "{}",
+    });
+  const ok = await call("can_use_inbox");
+  if (!ok.ok || (await ok.json()) !== true) return null;
+  const ids = await call("my_mailbox_ids");
+  if (!ids.ok) return null;
+  const list = await ids.json();
+  return Array.isArray(list) ? list : [];
+}
+
+/** The mailbox's login: its own (Vault) or, without one, the Cloudflare IMAP_* settings. */
+async function credentials(api, env, mb) {
+  if (mb.secret_id) {
+    const password = await api.rpc("mailbox_password", { p_mailbox: mb.id });
+    if (!password) throw new Error("The mailbox password is missing, connect the mailbox again.");
+    return {
+      host: mb.imap_host || env.IMAP_HOST,
+      port: mb.imap_port || env.IMAP_PORT || 993,
+      user: mb.imap_user || mb.email,
+      password,
+    };
+  }
+  if (!env.IMAP_HOST || !env.IMAP_USER || !env.IMAP_PASSWORD) {
+    throw new Error(
+      "The inbox isn't connected yet, add IMAP_HOST, IMAP_PORT, IMAP_USER and IMAP_PASSWORD " +
+        "to the Cloudflare Pages project (Settings › Variables and Secrets), then redeploy.",
+    );
+  }
+  return { host: env.IMAP_HOST, port: env.IMAP_PORT || 993, user: env.IMAP_USER, password: env.IMAP_PASSWORD };
+}
+
+const mailboxKey = (mb) => String(mb.email || "mailbox").split("@")[0].toLowerCase();
+const safe = (s) => String(s).replace(/[^a-z0-9-]/gi, "_");
+
+/* ---------- 1. Push: Motion's changes onto the server ---------- */
+
+/** The folder for a role ('\archive' style), or null when the mailbox has
+ *  none: Motion never creates folders. Other folders are used as they are. */
+function resolveFolder(folders, target) {
+  if (!target || target[0] !== "\\") return target;
+  const role = target.slice(1);
+  if (role === "inbox") return "INBOX";
+  return folders.find((f) => f.role === role)?.path ?? null;
+}
+
+async function push(api, imap, mb, folders) {
+  if (!mb.write_back) return { pushed: 0 };
+  const rows = await api.json(
+    `/rest/v1/inbox_messages?mailbox_id=eq.${mb.id}&pending_at=not.is.null` +
+      `&select=id,folder,uid,uidvalidity,pending_at,pending_from_folder,pending_from_uid,pending_from_uidvalidity,` +
+      `pending_seen,pending_flagged,pending_append,raw_path&order=pending_at&limit=${PUSH_MAX}`,
+  );
+  if (!rows || !rows.length) return { pushed: 0 };
+  const results = [];
+  const errors = [];
+
+  // Sent from Motion: a copy into the server's Sent folder.
+  const appends = rows.filter((r) => r.pending_append && r.uid == null && r.raw_path && !r.pending_from_folder);
+  const moves = rows.filter((r) => !appends.includes(r));
+
+  // Group by where each message really is on the server now.
+  const groups = new Map();
+  for (const r of moves) {
+    const src = r.pending_from_folder ?? r.folder;
+    const srcUid = r.pending_from_uid ?? r.uid;
+    const srcUv = r.pending_from_uidvalidity ?? r.uidvalidity;
+    if (!src || !srcUid) {
+      // Not on the server (yet): nothing to do there.
+      results.push({ id: r.id, token: r.pending_at, folder: r.folder, uid: r.uid, uidvalidity: r.uidvalidity });
+      continue;
+    }
+    if (!groups.has(src)) groups.set(src, []);
+    groups.get(src).push({ r, srcUid, srcUv });
+  }
+
+  for (const [src, list] of groups) {
+    try {
+      let uv;
+      try {
+        uv = await selectFolder(imap, src);
+      } catch {
+        uv = null;
+      }
+      const live = [];
+      for (const x of list) {
+        if (uv && x.srcUv === uv) live.push(x);
+        // The folder was rebuilt or removed: where it is now is found by the next sync.
+        else results.push({ id: x.r.id, token: x.r.pending_at, folder: x.r.folder, uid: null, uidvalidity: null });
+      }
+      if (!live.length) continue;
+
+      // Flags first, in the folder it's in (they travel with a move).
+      const store = async (uids, how, flag) => {
+        if (uids.length) await imap.cmd(`UID STORE ${uids.join(",")} ${how}FLAGS.SILENT (${flag})`);
+      };
+      await store(live.filter((x) => x.r.pending_seen === true).map((x) => x.srcUid), "+", "\\Seen");
+      await store(live.filter((x) => x.r.pending_seen === false).map((x) => x.srcUid), "-", "\\Seen");
+      await store(live.filter((x) => x.r.pending_flagged === true).map((x) => x.srcUid), "+", "\\Flagged");
+      await store(live.filter((x) => x.r.pending_flagged === false).map((x) => x.srcUid), "-", "\\Flagged");
+
+      // Moves, per destination.
+      const byTarget = new Map();
+      for (const x of live) {
+        if (x.r.folder && x.r.folder !== src) {
+          if (!byTarget.has(x.r.folder)) byTarget.set(x.r.folder, []);
+          byTarget.get(x.r.folder).push(x);
+        } else {
+          results.push({ id: x.r.id, token: x.r.pending_at, folder: src, uid: x.srcUid, uidvalidity: uv });
+        }
+      }
+      for (const [target, xs] of byTarget) {
+        const path = resolveFolder(folders, target);
+        if (!path || (path !== "INBOX" && !folders.some((f) => f.path === path))) {
+          // No such folder on the server (none for that role, or deleted
+          // since): the message stays where it is, and Motion says so.
+          for (const x of xs) results.push({ id: x.r.id, token: x.r.pending_at, folder: src, uid: x.srcUid, uidvalidity: uv });
+          const role = target[0] === "\\" ? target.slice(1) : null;
+          const n = `${xs.length} email${xs.length === 1 ? " was" : "s were"}`;
+          errors.push(
+            role
+              ? `The mailbox has no ${ROLE_NAME[role] || role} folder, so ${n} left in ${src} (Motion doesn't create folders)`
+              : `The folder "${target}" isn't on the mail server any more, so ${n} left in ${src}`,
+          );
+          continue;
+        }
+        const uids = xs.map((x) => x.srcUid).join(",");
+        let res;
+        if (imap.has("MOVE")) {
+          res = await imap.cmd(`UID MOVE ${uids} ${quote(path)}`);
+        } else {
+          res = await imap.cmd(`UID COPY ${uids} ${quote(path)}`);
+          await imap.cmd(`UID STORE ${uids} +FLAGS.SILENT (\\Deleted)`);
+          // Only expunge the moved ones; without UIDPLUS they stay marked deleted.
+          if (imap.has("UIDPLUS")) await imap.cmd(`UID EXPUNGE ${uids}`);
+        }
+        const cu = copyUid(res);
+        for (const x of xs) {
+          const uid = cu?.map[x.srcUid] ?? null;
+          results.push({ id: x.r.id, token: x.r.pending_at, folder: path, uid, uidvalidity: uid ? cu.uidvalidity : null });
+        }
+      }
+    } catch (e) {
+      errors.push(`${src}: ${e && e.message ? e.message : e}`);
+    }
+  }
+
+  if (appends.length) {
+    try {
+      const sentPath = resolveFolder(folders, "\\sent");
+      if (!sentPath) {
+        // No Sent folder on the server: no copy (the email itself was sent).
+        for (const r of appends) results.push({ id: r.id, token: r.pending_at, folder: null, uid: null, uidvalidity: null });
+        errors.push("The mailbox has no Sent folder, so no copy of mail sent from Motion was kept there (Motion doesn't create folders)");
+      }
+      for (const r of sentPath ? appends : []) {
+        if (!api.can(2)) break;
+        const raw = new Uint8Array(
+          await (await api.req(`/storage/v1/object/inbox/${r.raw_path.split("/").map(encodeURIComponent).join("/")}`)).arrayBuffer(),
+        );
+        const res = await imap.cmd(`APPEND ${quote(sentPath)} (\\Seen)`, raw);
+        const m = (res.done || "").match(/\[APPENDUID (\d+) (\d+)\]/i);
+        results.push({
+          id: r.id,
+          token: r.pending_at,
+          folder: sentPath,
+          uid: m ? Number(m[2]) : null,
+          uidvalidity: m ? Number(m[1]) : null,
+        });
+      }
+    } catch (e) {
+      errors.push(`Sent: ${e && e.message ? e.message : e}`);
+    }
+  }
+
+  if (results.length) await api.rpc("inbox_push_done", { p_results: results }, true);
+  return { pushed: results.length, error: errors.length ? errors.join("; ") : null };
+}
+
+/* ---------- 3. One folder ---------- */
+
+function buildRow(r, mb, f, uv) {
+  const o = fetchItems(r);
+  if (!o || !o.UID) return null;
+  const uid = Number(val(o.UID, r.lits));
+  const env_ = o.ENVELOPE || [];
+  const flags = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((x) => String(x).toLowerCase());
+  const headers = val(o.BODY, r.lits) || "";
+  const from = addresses(env_[2], r.lits)[0] || { name: null, email: null };
+  const messageId = val(env_[9], r.lits);
+  const inReplyTo = val(env_[8], r.lits);
+  const references = headerValue(headers, "References");
+  const root = (references.match(/<[^>]+>/) || [])[0] || inReplyTo || messageId || null;
+  const autoSub = headerValue(headers, "Auto-Submitted").toLowerCase();
+  const prec = headerValue(headers, "Precedence").toLowerCase();
+  const bulk =
+    (autoSub && autoSub !== "no") ||
+    ["bulk", "list", "junk"].includes(prec) ||
+    !!headerValue(headers, "List-Unsubscribe") ||
+    !!headerValue(headers, "List-Id") ||
+    /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounce)/i.test(from.email || "");
+  const internal = val(o.INTERNALDATE, r.lits);
+  const size = Number(val(o["RFC822.SIZE"], r.lits) || 0);
+  const date = internal
+    ? new Date(internal.replace(/^(\d+)-(\w+)-(\d+)/, "$1 $2 $3"))
+    : new Date(val(env_[0], r.lits) || Date.now());
+  const out = f.role === "sent";
+  const now = new Date().toISOString();
+  const flagged = flags.includes("\\flagged");
   return {
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY,
-    ...(extra || {}),
+    motion_id: headerValue(headers, "X-Motion-Id"),
+    row: {
+      mailbox: mailboxKey(mb) + (out ? ":sent" : f.role === "junk" ? ":junk" : ""),
+      mailbox_id: mb.id,
+      folder: f.path,
+      uidvalidity: uv,
+      uid,
+      direction: out ? "out" : "in",
+      message_id: messageId,
+      in_reply_to: inReplyTo,
+      refs: references || null,
+      thread_key: root,
+      from_email: from.email,
+      from_name: from.name,
+      to_emails: addresses(env_[5], r.lits).map((a) => a.email),
+      cc_emails: addresses(env_[6], r.lits).map((a) => a.email),
+      subject: decodeWords(val(env_[1], r.lits)) || "(no subject)",
+      size_bytes: size || null,
+      is_bulk: !out && !!bulk,
+      sent_at: isNaN(date.getTime()) ? now : date.toISOString(),
+      seen: out || flags.includes("\\seen"),
+      answered: !out && flags.includes("\\answered"),
+      flagged,
+      server_flagged: flagged,
+      spam: f.role === "junk",
+      deleted_at: f.role === "trash" ? now : null,
+      archived_at: f.role === "archive" ? now : null,
+      raw_path: null,
+      has_attachments: false,
+    },
   };
 }
-async function sbJson(env, path, init) {
-  const r = await fetch(`${env.SUPABASE_URL}${path}`, init);
-  if (!r.ok) throw new Error(`${path.split("?")[0]}: ${r.status} ${await r.text()}`);
-  const t = await r.text();
-  return t ? JSON.parse(t) : null;
-}
 
-async function callerMayUseInbox(env, authHeader) {
-  if (!authHeader || !env.SUPABASE_ANON_KEY) return false;
-  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/can_use_inbox`, {
-    method: "POST",
-    headers: { apikey: env.SUPABASE_ANON_KEY, authorization: authHeader, "content-type": "application/json" },
-    body: "{}",
-  });
-  if (!r.ok) return false;
-  return (await r.json()) === true;
-}
+async function syncFolder(api, imap, mb, f) {
+  const uv = await selectFolder(imap, f.path);
+  const all = searchUids(await imap.cmd("UID SEARCH ALL"));
+  const since = (days) => imapDate(new Date(Date.now() - days * 86400000));
+  const recent = all.length ? searchUids(await imap.cmd(`UID SEARCH SINCE ${since(HISTORY_DAYS)}`)) : [];
+  const recentFlags = recent.length ? searchUids(await imap.cmd(`UID SEARCH SINCE ${since(FLAGS_DAYS)}`)) : [];
 
-/* ---------- Minimal IMAP client ---------- */
-const enc = new TextEncoder();
-const utf8 = new TextDecoder("utf-8");
-
-class Imap {
-  constructor(socket) {
-    this.socket = socket;
-    this.reader = socket.readable.getReader();
-    this.writer = socket.writable.getWriter();
-    this.buf = new Uint8Array(0);
-    this.n = 0;
-  }
-  async fill() {
-    const { value, done } = await this.reader.read();
-    if (done) throw new Error("The mail server closed the connection");
-    const b = new Uint8Array(this.buf.length + value.length);
-    b.set(this.buf);
-    b.set(value, this.buf.length);
-    this.buf = b;
-  }
-  async line() {
-    for (;;) {
-      for (let i = 0; i + 1 < this.buf.length; i++) {
-        if (this.buf[i] === 13 && this.buf[i + 1] === 10) {
-          const l = this.buf.subarray(0, i);
-          this.buf = this.buf.subarray(i + 2);
-          return utf8.decode(l);
-        }
-      }
-      await this.fill();
-    }
-  }
-  async bytes(n) {
-    const out = new Uint8Array(n);
-    let got = Math.min(n, this.buf.length);
-    out.set(this.buf.subarray(0, got));
-    this.buf = this.buf.subarray(got);
-    while (got < n) {
-      const { value, done } = await this.reader.read();
-      if (done) throw new Error("The mail server closed the connection");
-      const take = Math.min(n - got, value.length);
-      out.set(value.subarray(0, take), got);
-      got += take;
-      if (take < value.length) this.buf = value.slice(take);
-    }
-    return out;
-  }
-  /** One response: its text (literals replaced by \u0000i\u0000) + literal bytes. */
-  async response() {
-    let text = "";
-    const lits = [];
-    for (;;) {
-      const l = await this.line();
-      const m = l.match(/\{(\d+)\}$/);
-      if (m) {
-        text += l.slice(0, -m[0].length) + `\u0000${lits.length}\u0000`;
-        lits.push(await this.bytes(Number(m[1])));
-        continue;
-      }
-      return { text: text + l, lits };
-    }
-  }
-  async greeting() {
-    const r = await this.response();
-    if (!/^\* (OK|PREAUTH)/i.test(r.text)) throw new Error("Unexpected greeting: " + r.text);
-  }
-  async cmd(command) {
-    const tag = "X" + ++this.n;
-    await this.writer.write(enc.encode(`${tag} ${command}\r\n`));
-    const out = [];
-    for (;;) {
-      const r = await this.response();
-      if (r.text.startsWith(tag + " ")) {
-        if (!new RegExp(`^${tag} OK`, "i").test(r.text)) {
-          throw new Error(r.text.slice(tag.length + 1).replace(/\u0000\d+\u0000/g, "…"));
-        }
-        return out;
-      }
-      out.push(r);
-    }
-  }
-}
-
-const quote = (s) => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
-
-/* ---------- IMAP response parsing ---------- */
-function tokenize(text) {
-  const out = [];
-  let i = 0;
-  while (i < text.length) {
-    const c = text[i];
-    if (c === " ") { i++; continue; }
-    if (c === "(" || c === ")") { out.push(c); i++; continue; }
-    if (c === '"') {
-      let s = "";
-      i++;
-      while (i < text.length && text[i] !== '"') {
-        if (text[i] === "\\" && i + 1 < text.length) i++;
-        s += text[i++];
-      }
-      i++;
-      out.push({ s });
-      continue;
-    }
-    if (c === "\u0000") {
-      const j = text.indexOf("\u0000", i + 1);
-      out.push({ lit: Number(text.slice(i + 1, j)) });
-      i = j + 1;
-      continue;
-    }
-    // atom (incl. BODY[HEADER.FIELDS (A B)], keep bracketed parts together)
-    let s = "";
-    let depth = 0;
-    while (i < text.length) {
-      const ch = text[i];
-      if (ch === "[") depth++;
-      if (ch === "]") depth--;
-      if (depth === 0 && (ch === " " || ch === "(" || ch === ")")) break;
-      s += ch;
-      i++;
-    }
-    out.push(s);
-  }
-  return out;
-}
-function parseList(tokens, pos) {
-  const list = [];
-  while (pos.i < tokens.length) {
-    const t = tokens[pos.i++];
-    if (t === "(") list.push(parseList(tokens, pos));
-    else if (t === ")") return list;
-    else list.push(t);
-  }
-  return list;
-}
-function val(t, lits) {
-  if (t == null) return null;
-  if (typeof t === "string") return t.toUpperCase() === "NIL" ? null : t;
-  if ("s" in t) return t.s;
-  if ("lit" in t) return utf8.decode(lits[t.lit]);
-  return null;
-}
-
-/** RFC 2047 encoded words: =?UTF-8?B?...?= / =?ISO-8859-1?Q?...?= */
-function decodeWords(s) {
-  if (!s || !s.includes("=?")) return s;
-  return s
-    .replace(/\?=\s+=\?/g, "?==?")
-    .replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_m, cs, how, data) => {
-      let bytes;
-      if (how.toUpperCase() === "B") {
-        const bin = atob(data);
-        bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
-      } else {
-        const t = data.replace(/_/g, " ");
-        const arr = [];
-        for (let i = 0; i < t.length; i++) {
-          if (t[i] === "=" && /^[0-9A-Fa-f]{2}$/.test(t.slice(i + 1, i + 3))) {
-            arr.push(parseInt(t.slice(i + 1, i + 3), 16));
-            i += 2;
-          } else arr.push(t.charCodeAt(i));
-        }
-        bytes = new Uint8Array(arr);
-      }
-      try {
-        return new TextDecoder(cs.toLowerCase()).decode(bytes);
-      } catch {
-        return String.fromCharCode(...bytes);
-      }
-    });
-}
-function addresses(list, lits) {
-  if (!Array.isArray(list)) return [];
-  return list
-    .filter(Array.isArray)
-    .map((a) => {
-      const name = decodeWords(val(a[0], lits));
-      const box = val(a[2], lits);
-      const host = val(a[3], lits);
-      return { name, email: box && host ? `${box}@${host}`.toLowerCase() : null };
-    })
-    .filter((a) => a.email);
-}
-function headerValue(headers, name) {
-  const unfolded = headers.replace(/\r?\n[ \t]+/g, " ");
-  const m = unfolded.match(new RegExp(`^${name}:[ \\t]*(.*)$`, "im"));
-  return m ? m[1].trim() : "";
-}
-function imapDate(d) {
-  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${d.getUTCDate()}-${mon[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
-}
-
-/** "* n FETCH (...)" -> { UID, FLAGS, ENVELOPE, ... } */
-function fetchItems(r) {
-  const m = r.text.match(/^\* \d+ FETCH (.*)$/is);
-  if (!m) return null;
-  const list = parseList(tokenize(m[1]), { i: 0 })[0];
-  if (!Array.isArray(list)) return null;
-  const o = {};
-  for (let i = 0; i + 1 < list.length; i += 2) {
-    const k = typeof list[i] === "string" ? list[i].toUpperCase() : "";
-    o[k.startsWith("BODY[") ? "BODY" : k] = list[i + 1];
-  }
-  return o;
-}
-
-/** Every folder on the server, with its flags (lower-cased). */
-let folderCache = null;
-async function listFolders(imap) {
-  if (folderCache) return folderCache;
-  const list = await imap.cmd('LIST "" "*"');
-  const folders = [];
-  for (const r of list) {
-    const m = r.text.match(/^\* LIST \(([^)]*)\) (?:"(?:[^"\\]|\\.)*"|NIL) (.+)$/i);
-    if (!m) continue;
-    const name = val(tokenize(m[2])[0], r.lits);
-    if (name) folders.push({ name, flags: m[1].toLowerCase() });
-  }
-  folderCache = folders;
-  return folders;
-}
-
-/** The mailbox's Junk / Spam folder: the one flagged \Junk (RFC 6154), else
- *  a common name (Junk, Junk Email, Junk E-mail, Spam, INBOX.Junk, …). */
-async function findJunkFolder(imap) {
-  const folders = await listFolders(imap);
-  const flagged = folders.find((f) => f.flags.includes("\\junk"));
-  if (flagged) return flagged.name;
-  const named = folders.find((f) =>
-    /^(inbox[./])?(junk( ?e-?mail)?|spam|bulk ?mail)$/i.test(f.name.trim()),
-  );
-  return named ? named.name : null;
-}
-/** The mailbox's Sent folder: the one flagged \Sent (RFC 6154), else a
- *  common name (Sent, Sent Items, Sent Messages, INBOX.Sent, …). */
-async function findSentFolder(imap) {
-  const folders = await listFolders(imap);
-  const flagged = folders.find((f) => f.flags.includes("\\sent"));
-  if (flagged) return flagged.name;
-  const named = folders.find((f) => /^(inbox[./])?sent( items| messages| mail)?$/i.test(f.name.trim()));
-  return named ? named.name : null;
-}
-
-async function searchSince(imap, days) {
-  const found = await imap.cmd(`UID SEARCH SINCE ${imapDate(new Date(Date.now() - days * 86400000))}`);
-  return found
-    .flatMap((r) => (r.text.match(/^\* SEARCH(.*)$/i)?.[1] || "").trim().split(/\s+/))
-    .filter(Boolean)
-    .map(Number)
-    .sort((a, b) => a - b);
-}
-
-/** One folder: store its new messages (up to `budget`) and refresh flags.
- *  `direction` is "out" for the Sent folder (mail sent from Outlook). */
-async function syncFolder(imap, env, folder, key, spam, budget, direction = "in") {
-  const sel = await imap.cmd(`SELECT ${quote(folder)}`);
-  const uv = Number(sel.map((r) => r.text.match(/UIDVALIDITY (\d+)/i)).find(Boolean)?.[1] || 0);
-
-  // The history window on the server vs what's stored, newest first, a
-  // chunk of uids at a time until the batch is full.
-  const serverUids = await searchSince(imap, HISTORY_DAYS);
-  const base = `/rest/v1/inbox_messages?mailbox=eq.${encodeURIComponent(key)}&uidvalidity=eq.${uv}&direction=eq.${direction}`;
-  const newest = [...serverUids].reverse();
-  const batch = [];
-  for (let i = 0; i < newest.length && batch.length < budget; i += UID_CHUNK) {
-    const chunk = newest.slice(i, i + UID_CHUNK);
-    const stored = await sbJson(
-      env,
-      `${base}&select=uid&uid=gte.${chunk[chunk.length - 1]}&uid=lte.${chunk[0]}&limit=${UID_CHUNK * 2}`,
-      { headers: sb(env) },
-    );
-    const have = new Set((stored || []).map((r) => Number(r.uid)));
-    for (const u of chunk) {
-      if (have.has(u)) continue;
-      batch.push(u);
-      if (batch.length >= budget) break;
-    }
-  }
-  // How many are still to come (shown as "N more on the way").
-  let pendingCount = 0;
-  if (serverUids.length) {
-    const head = await fetch(`${env.SUPABASE_URL}${base}&select=uid&uid=gte.${serverUids[0]}`, {
-      method: "HEAD",
-      headers: sb(env, { prefer: "count=exact", range: "0-0" }),
-    });
-    const total = Number((head.headers.get("content-range") || "").split("/")[1] || 0);
-    pendingCount = Math.max(0, serverUids.length - total);
-  }
-
-  let added = 0;
-  if (batch.length) {
-    const meta = await imap.cmd(
-      `UID FETCH ${batch.join(",")} (UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE ` +
-        `BODY.PEEK[HEADER.FIELDS (REFERENCES AUTO-SUBMITTED PRECEDENCE LIST-UNSUBSCRIBE LIST-ID)])`,
-    );
-    const rows = [];
-    for (const r of meta) {
+  const flags = {};
+  if (recentFlags.length) {
+    const fl = await imap.cmd(`UID FETCH ${recentFlags[0]}:* (UID FLAGS)`);
+    for (const r of fl) {
       const o = fetchItems(r);
       if (!o || !o.UID) continue;
-      const uid = Number(val(o.UID, r.lits));
-      const env_ = o.ENVELOPE || [];
-      const flags = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((f) => String(f).toLowerCase());
-      const headers = val(o.BODY, r.lits) || "";
-      const from = addresses(env_[2], r.lits)[0] || { name: null, email: null };
-      const messageId = val(env_[9], r.lits);
-      const inReplyTo = val(env_[8], r.lits);
-      const references = headerValue(headers, "References");
-      const root = (references.match(/<[^>]+>/) || [])[0] || inReplyTo || messageId || null;
-      const autoSub = headerValue(headers, "Auto-Submitted").toLowerCase();
-      const prec = headerValue(headers, "Precedence").toLowerCase();
-      const bulk =
-        (autoSub && autoSub !== "no") ||
-        ["bulk", "list", "junk"].includes(prec) ||
-        !!headerValue(headers, "List-Unsubscribe") ||
-        !!headerValue(headers, "List-Id") ||
-        /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounce)/i.test(from.email || "");
-      const internal = val(o.INTERNALDATE, r.lits);
-      const size = Number(val(o["RFC822.SIZE"], r.lits) || 0);
-      const date = internal
-        ? new Date(internal.replace(/^(\d+)-(\w+)-(\d+)/, "$1 $2 $3"))
-        : new Date(val(env_[0], r.lits) || Date.now());
-      rows.push({
-        mailbox: key,
-        // only Junk rows carry the column (0136), so Inbox sync never depends on it
-        ...(spam ? { spam: true } : {}),
-        uidvalidity: uv,
-        uid,
-        direction,
-        message_id: messageId,
-        in_reply_to: inReplyTo,
-        refs: references || null,
-        thread_key: root,
-        from_email: from.email,
-        from_name: from.name,
-        to_emails: addresses(env_[5], r.lits).map((a) => a.email),
-        cc_emails: addresses(env_[6], r.lits).map((a) => a.email),
-        subject: decodeWords(val(env_[1], r.lits)) || "(no subject)",
-        size_bytes: size || null,
-        is_bulk: direction === "in" && !!bulk,
-        sent_at: isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString(),
-        seen: direction === "out" || flags.includes("\\seen"),
-        answered: direction === "in" && flags.includes("\\answered"),
-        raw_path: null,
-        has_attachments: false,
-      });
+      const x = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((v) => String(v).toLowerCase());
+      flags[Number(val(o.UID, r.lits))] = [x.includes("\\seen"), x.includes("\\answered"), x.includes("\\flagged")];
     }
+  }
 
-    // Newest first, and each message stored as soon as its raw source is
-    // uploaded: a run that's cut short keeps everything it got through.
-    rows.sort((a, b) => b.uid - a.uid);
+  const missing =
+    (await api.rpc("inbox_folder_seen", {
+      p_mailbox: mb.id,
+      p_folder: f.path,
+      p_uidvalidity: uv,
+      p_all: all,
+      p_recent: recent,
+      p_flags: flags,
+    })) || [];
+  let added = 0;
+  let relocated = 0;
+
+  if (missing.length && api.can(2)) {
+    const head = missing.slice(0, RELOCATE_MAX);
+    const meta = await imap.cmd(
+      `UID FETCH ${head.join(",")} (UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE ` +
+        `BODY.PEEK[HEADER.FIELDS (REFERENCES AUTO-SUBMITTED PRECEDENCE LIST-UNSUBSCRIBE LIST-ID X-MOTION-ID)])`,
+    );
+    const built = meta.map((r) => buildRow(r, mb, f, uv)).filter(Boolean);
+    // Mail we already hold (moved here in Outlook, or our own copy in Sent) just moves.
+    const matched = new Set(
+      (await api.rpc("inbox_relocate", {
+        p_mailbox: mb.id,
+        p_folder: f.path,
+        p_uidvalidity: uv,
+        p_items: built.map((b) => ({ uid: b.row.uid, message_id: b.row.message_id, motion_id: b.motion_id })),
+      })) || [],
+    );
+    relocated = matched.size;
+
+    // The rest is new: raw source first, then the rows in one go. A run
+    // cut short keeps nothing half-stored (the raw is simply uploaded again).
+    const rows = built.filter((b) => !matched.has(b.row.uid)).map((b) => b.row).sort((a, b) => b.uid - a.uid);
+    const store = [];
     for (const row of rows) {
+      if (!api.can(2)) break;
       if (!row.size_bytes || row.size_bytes <= MAX_RAW_BYTES) {
         const res = await imap.cmd(`UID FETCH ${row.uid} (UID BODY.PEEK[])`);
         const lit = res.find((r) => r.lits.length)?.lits?.[0];
         if (lit) {
-          const path = `${key.replace(/[^a-z0-9-]/gi, "_")}/${uv}/${row.uid}.eml`;
-          const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/inbox/${path}`, {
-            method: "POST",
-            headers: sb(env, { "content-type": "message/rfc822", "x-upsert": "true" }),
-            body: lit,
-          });
-          if (up.ok) {
+          const path = `${mb.id}/${safe(f.path)}/${uv}/${row.uid}.eml`;
+          const up = await api
+            .req(`/storage/v1/object/inbox/${path}`, {
+              method: "POST",
+              headers: { "content-type": "message/rfc822", "x-upsert": "true" },
+              body: lit,
+            })
+            .then(() => true)
+            .catch((e) => {
+              if (e instanceof OutOfBudget) throw e;
+              return false;
+            });
+          if (up) {
             row.raw_path = path;
             row.has_attachments = /content-disposition:\s*attachment/i.test(
               utf8.decode(lit.subarray(0, Math.min(lit.length, 400000))),
@@ -440,142 +450,239 @@ async function syncFolder(imap, env, folder, key, spam, budget, direction = "in"
           }
         }
       }
-      await sbJson(env, `/rest/v1/inbox_messages?on_conflict=mailbox,uidvalidity,uid`, {
-        method: "POST",
-        headers: sb(env, {
-          "content-type": "application/json",
-          prefer: "resolution=ignore-duplicates,return=minimal",
-        }),
-        body: JSON.stringify([row]),
-      });
-      added++;
+      store.push(row);
+    }
+    if (store.length) {
+      await api.req(
+        `/rest/v1/inbox_messages?on_conflict=mailbox_id,folder,uidvalidity,uid`,
+        {
+          method: "POST",
+          headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+          body: JSON.stringify(store),
+        },
+        true,
+      );
+      added = store.length;
     }
   }
-
-  // Seen / Answered changed elsewhere (Outlook, webmail), recent mail only.
-  const recent = direction === "in" ? await searchSince(imap, FLAGS_DAYS) : [];
-  const minUid = recent[0] || 0;
-  if (minUid) {
-    const fl = await imap.cmd(`UID FETCH ${minUid}:* (UID FLAGS)`);
-    const flags = {};
-    for (const r of fl) {
-      const o = fetchItems(r);
-      if (!o || !o.UID) continue;
-      const f = (Array.isArray(o.FLAGS) ? o.FLAGS : []).map((x) => String(x).toLowerCase());
-      flags[Number(val(o.UID, r.lits))] = [f.includes("\\seen"), f.includes("\\answered")];
-    }
-    if (Object.keys(flags).length) {
-      await sbJson(env, `/rest/v1/rpc/inbox_apply_flags`, {
-        method: "POST",
-        headers: sb(env, { "content-type": "application/json" }),
-        body: JSON.stringify({ p_mailbox: key, p_uidvalidity: uv, p_flags: flags }),
-      });
-    }
-  }
-
-  return { added, pending: Math.max(0, pendingCount - added), uidvalidity: uv };
+  return { uidvalidity: uv, added, relocated, backlog: Math.max(0, missing.length - added - relocated) };
 }
 
-/* ---------- Sync ---------- */
-async function sync(env) {
-  const port = Number(env.IMAP_PORT || 993);
-  const socket = connect(
-    { hostname: env.IMAP_HOST, port },
-    { secureTransport: port === 993 ? "on" : "starttls", allowHalfOpen: false },
-  );
-  let imap = new Imap(socket);
+/* ---------- One mailbox ---------- */
+
+const folderRow = (f, extra = {}) => ({
+  path: f.path,
+  name: f.name,
+  delim: f.delim,
+  role: f.role,
+  hidden: !f.selectable || f.system || f.role === "drafts",
+  ...extra,
+});
+
+async function syncMailbox(api, env, mb, { pushOnly = false } = {}) {
+  const creds = await credentials(api, env, mb);
+  api.socket();
+  const imap = await openImap(connect, creds);
+  const out = { mailbox: mb.email, added: 0, relocated: 0, pushed: 0, pending: 0 };
+  let pushError = null;
   try {
-    await imap.greeting();
-    if (port !== 993) {
-      await imap.cmd("STARTTLS");
-      imap.reader.releaseLock();
-      imap.writer.releaseLock();
-      imap = new Imap(socket.startTls());
+    const folders = await listFolders(imap);
+    const stored = pushOnly
+      ? []
+      : (await api.json(`/rest/v1/mailbox_folders?mailbox_id=eq.${mb.id}&select=*`)) || [];
+
+    // The folder list (and any '\sent' style names resolved) before anything else.
+    if (!pushOnly) {
+      await api.rpc("inbox_folders_save", {
+        p_mailbox: mb.id,
+        p_folders: folders.map((f) => folderRow(f)),
+        p_complete: true,
+      });
     }
-    await imap.cmd(`LOGIN ${quote(env.IMAP_USER)} ${quote(env.IMAP_PASSWORD)}`);
-    folderCache = null;
-    // The Inbox first, then the Sent folder (mail sent from Outlook), then
-    // Junk / Spam, sharing one batch budget per run. Inbox takes most of
-    // it, so Sent history still fills while the Inbox backlog drains.
-    const main = await syncFolder(imap, env, "INBOX", MAILBOX, false, BATCH - 5);
-    let left = BATCH - main.added;
-    let otherPending = 0;
-    // A Sent or Junk folder problem never stops the Inbox sync.
-    try {
-      const sent = await findSentFolder(imap);
-      if (sent) {
-        const s = await syncFolder(imap, env, sent, `${MAILBOX}:sent`, false, Math.max(0, left - 2), "out");
-        otherPending += s.pending;
-        main.added += s.added;
-        left -= s.added;
+
+    const p = await push(api, imap, mb, folders);
+    out.pushed = p.pushed;
+    pushError = p.error || null;
+    if (pushOnly) {
+      await api.req(
+        `/rest/v1/mailboxes?id=eq.${mb.id}`,
+        { method: "PATCH", body: JSON.stringify({ last_push_at: new Date().toISOString(), push_error: pushError }) },
+        true,
+      );
+      return out;
+    }
+
+    const prev = new Map(stored.map((s) => [s.path, s]));
+    const rank = (f) => (f.role === "inbox" ? 0 : f.role === "sent" ? 1 : 2);
+    const order = folders
+      .filter((f) => f.selectable && !f.system && f.role !== "drafts")
+      .sort((a, b) => rank(a) - rank(b) || String(prev.get(a.path)?.synced_at || "").localeCompare(String(prev.get(b.path)?.synced_at || "")));
+
+    const visited = [];
+    for (const f of order) {
+      if (!api.can(2)) break;
+      let st;
+      try {
+        st = await folderStatus(imap, f.path);
+      } catch {
+        continue;
       }
-    } catch {
-      /* Sent folder unreadable, the Inbox is still synced */
-    }
-    try {
-      const junk = await findJunkFolder(imap);
-      if (junk) {
-        const j = await syncFolder(imap, env, junk, `${MAILBOX}:junk`, true, left);
-        otherPending += j.pending;
-        main.added += j.added;
+      const was = prev.get(f.path);
+      const stale = !was?.synced_at || Date.now() - new Date(was.synced_at).getTime() > RECHECK_MS;
+      const changed =
+        !was ||
+        !was.synced_at ||
+        was.backlog > 0 ||
+        Number(was.uidvalidity) !== st.uidvalidity ||
+        Number(was.uidnext) !== st.uidnext ||
+        Number(was.messages) !== st.messages ||
+        (st.modseq ? String(was.modseq) !== st.modseq : stale || f.role === "inbox");
+      if (!changed) continue;
+      try {
+        const r = await syncFolder(api, imap, mb, f);
+        out.added += r.added;
+        out.relocated += r.relocated;
+        visited.push(
+          folderRow(f, {
+            uidvalidity: st.uidvalidity,
+            uidnext: st.uidnext,
+            messages: st.messages,
+            modseq: st.modseq,
+            backlog: r.backlog,
+            synced_at: new Date().toISOString(),
+          }),
+        );
+        prev.set(f.path, { ...was, backlog: r.backlog });
+      } catch (e) {
+        if (e instanceof OutOfBudget) break;
+        throw e;
       }
-    } catch {
-      /* Junk folder unreadable or 0136 not applied yet, Inbox still synced */
     }
-    await imap.cmd("LOGOUT").catch(() => undefined);
-    return { added: main.added, pending: main.pending + otherPending, uidvalidity: main.uidvalidity };
+
+    // Mail that left one folder and was stored again in another takes over its links.
+    await api.rpc("inbox_reconcile", { p_mailbox: mb.id }, true);
+    if (visited.length) {
+      await api.rpc("inbox_folders_save", { p_mailbox: mb.id, p_folders: visited, p_complete: false }, true);
+    }
+
+    out.pending = [...prev.values()].reduce((n, s) => n + (Number(s?.backlog) || 0), 0);
+    const now = new Date().toISOString();
+    await api.req(
+      `/rest/v1/mailboxes?id=eq.${mb.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          last_sync_at: now,
+          last_error: null,
+          pending: out.pending,
+          ...(mb.write_back ? { last_push_at: now, push_error: pushError } : {}),
+        }),
+      },
+      true,
+    );
+    return out;
   } finally {
-    try {
-      socket.close();
-    } catch {
-      /* already closed */
-    }
+    await imap.close();
   }
 }
 
-async function saveState(env, patch) {
-  await fetch(`${env.SUPABASE_URL}/rest/v1/inbox_state?on_conflict=mailbox`, {
-    method: "POST",
-    headers: sb(env, {
-      "content-type": "application/json",
-      prefer: "resolution=merge-duplicates,return=minimal",
-    }),
-    body: JSON.stringify({ mailbox: MAILBOX, ...patch }),
-  }).catch(() => undefined);
+/** Creates a folder on the mail server because the mailbox's owner asked for
+ *  it (Inbox › New folder), optionally inside another folder. */
+async function createUserFolder(api, env, mb, rawName, parent) {
+  const name = String(rawName || "").trim();
+  if (!name) throw new Error("Give the folder a name.");
+  if (name.length > 120 || /[\r\n*%"\\]/.test(name)) throw new Error("Folder names can't contain * % \" \\ or line breaks.");
+  const creds = await credentials(api, env, mb);
+  api.socket();
+  const imap = await openImap(connect, creds);
+  try {
+    const folders = await listFolders(imap);
+    const delim = folders.find((f) => f.delim)?.delim || "/";
+    if (name.includes(delim)) throw new Error(`Folder names can't contain "${delim}".`);
+    let base = "";
+    if (parent) {
+      const p = folders.find((f) => f.path === parent);
+      if (!p) throw new Error("The folder to put it in isn't on the mail server.");
+      base = p.path + delim;
+    } else {
+      // Servers that keep every folder under INBOX (INBOX.Clients) get the same.
+      const other = folders.filter((f) => f.path.toUpperCase() !== "INBOX");
+      if (other.length && other.every((f) => f.path.toUpperCase().startsWith("INBOX" + delim))) base = "INBOX" + delim;
+    }
+    const path = base + name;
+    if (folders.some((f) => f.path.toLowerCase() === path.toLowerCase())) throw new Error(`There's already a folder "${name}" there.`);
+    await createFolder(imap, path);
+    const f = { path, name, delim, role: null, flags: "", selectable: true, system: false };
+    await api.rpc("inbox_folders_save", { p_mailbox: mb.id, p_folders: [folderRow(f)], p_complete: false }, true);
+    return { ok: true, path };
+  } finally {
+    await imap.close();
+  }
+}
+
+async function saveError(api, mb, msg) {
+  await api
+    .req(
+      `/rest/v1/mailboxes?id=eq.${mb.id}`,
+      { method: "PATCH", body: JSON.stringify({ last_sync_at: new Date().toISOString(), last_error: msg }) },
+      true,
+    )
+    .catch(() => undefined);
 }
 
 export async function onRequestPost({ request, env }) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return json({ error: "Supabase isn't configured on this deployment." }, 500);
   }
+  const body = await request.json().catch(() => ({}));
+  const pushOnly = body && body.mode === "push";
   const cronKey = request.headers.get("x-cron-key");
   const viaCron = !!cronKey && !!env.CRON_SECRET && cronKey === env.CRON_SECRET;
-  if (!viaCron && !(await callerMayUseInbox(env, request.headers.get("authorization")))) {
-    return json({ error: "Not allowed." }, 403);
+  let mine = null;
+  if (!viaCron) {
+    mine = await callerMailboxes(env, request.headers.get("authorization"));
+    if (!mine) return json({ error: "Not allowed." }, 403);
+    if (!mine.length) return json({ error: "No mailbox is connected to your login yet.", notConnected: true }, 409);
   }
-  if (!env.IMAP_HOST || !env.IMAP_USER || !env.IMAP_PASSWORD) {
-    return json(
-      {
-        error:
-          "The inbox isn't connected yet, add IMAP_HOST, IMAP_PORT, IMAP_USER and IMAP_PASSWORD " +
-          "to the Cloudflare Pages project (Settings › Variables and Secrets), then redeploy.",
-        notConnected: true,
-      },
-      503,
-    );
+
+  const api = new Api(env);
+
+  // New folder, asked for by the mailbox's owner (never done on its own).
+  if (body && body.mode === "create_folder") {
+    if (viaCron) return json({ error: "Not allowed." }, 403);
+    const id = mine.includes(body.mailboxId) ? body.mailboxId : mine[0];
+    const mbs = (await api.json(`/rest/v1/mailboxes?id=eq.${id}&select=*`)) || [];
+    if (!mbs[0]) return json({ error: "Mailbox not found." }, 404);
+    try {
+      return json(await createUserFolder(api, env, mbs[0], body.name, body.parent));
+    } catch (e) {
+      return json({ error: e && e.message ? e.message : String(e) }, 400);
+    }
   }
-  try {
-    const r = await sync(env);
-    await saveState(env, {
-      uidvalidity: r.uidvalidity,
-      last_sync_at: new Date().toISOString(),
-      last_error: null,
-      pending: r.pending,
-    });
-    return json(r);
-  } catch (e) {
-    const msg = e && e.message ? e.message : String(e);
-    await saveState(env, { last_sync_at: new Date().toISOString(), last_error: msg });
-    return json({ error: "Inbox sync failed: " + msg }, 502);
+
+  const filter = mine ? `&id=in.(${mine.join(",")})` : "";
+  const mailboxes =
+    (await api.json(`/rest/v1/mailboxes?enabled=is.true${filter}&select=*&order=last_sync_at.asc.nullsfirst`)) || [];
+
+  const results = [];
+  for (const mb of mailboxes) {
+    // Enough left for a useful run (connect, folders, a folder or two).
+    if (results.length && api.left < (pushOnly ? 6 : 14)) break;
+    try {
+      results.push(await syncMailbox(api, env, mb, { pushOnly }));
+    } catch (e) {
+      const msg = e && e.message ? e.message : String(e);
+      if (!pushOnly) await saveError(api, mb, msg);
+      results.push({ mailbox: mb.email, error: msg });
+    }
   }
+
+  const failed = results.filter((r) => r.error);
+  const sum = (k) => results.reduce((n, r) => n + (Number(r[k]) || 0), 0);
+  const res = { added: sum("added"), relocated: sum("relocated"), pushed: sum("pushed"), pending: sum("pending"), mailboxes: results };
+  if (!viaCron && failed.length && failed.length === results.length) {
+    const notConnected = /isn't connected/i.test(failed[0].error);
+    return json({ ...res, error: "Inbox sync failed: " + failed[0].error, notConnected }, notConnected ? 503 : 502);
+  }
+  return json(res);
 }

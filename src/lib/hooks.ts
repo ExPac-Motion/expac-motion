@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { documentTypes } from "./docTemplates";
 import {
+  type QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
@@ -13,6 +14,8 @@ import type {
   ClientSupplierInput,
   InboxMessage,
   InboxMessagePatch,
+  Mailbox,
+  MailboxPatch,
   RateTierId,
   MailCampaignPatch,
   Client,
@@ -427,6 +430,9 @@ const SHIPMENT_LIVE_KEYS: LiveKeys = {
   inbox_messages: ["inbox", "inbox_unread", "inbox_search", "inbox_sent"],
   inbox_drafts: ["inbox_drafts"],
   inbox_state: ["inbox_state"],
+  // Own mailbox and its folders (0227).
+  mailboxes: ["my_mailbox", "inbox_state"],
+  mailbox_folders: ["mailbox_folders"],
 };
 
 /** Live WMS (0212). The WMS screens and the portal's warehouse pages all read
@@ -1953,6 +1959,60 @@ export function usePartnerRateSheets(kind: PartnerKind, partnerId: string | null
   });
 }
 /* ---------- Admin Inbox (0134) ---------- */
+/** After a change in the Inbox: make it on the mail server straight away
+ *  when the mailbox is two-way (0227); the every-minute sync is the fallback. */
+let pushTimer: number | undefined;
+function schedulePush(qc: QueryClient) {
+  const mb = qc.getQueryData<Mailbox | null>(["my_mailbox"]);
+  if (!mb?.write_back) return;
+  window.clearTimeout(pushTimer);
+  pushTimer = window.setTimeout(() => {
+    void db.pushInbox().then(() => {
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["my_mailbox"] });
+    });
+  }, 1200);
+}
+/** Your own mailbox (0227): null when none is connected; an error before 0227. */
+export function useMyMailbox(enabled = true) {
+  return useQuery({ queryKey: ["my_mailbox"], queryFn: db.getMyMailbox, enabled, retry: false, refetchInterval: 60_000 });
+}
+export function useMailboxFolders(mailboxId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["mailbox_folders", mailboxId],
+    queryFn: () => db.listMailboxFolders(mailboxId as string),
+    enabled: !!mailboxId,
+    refetchInterval: 120_000,
+  });
+}
+export function useUpdateMailbox() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: MailboxPatch }) => db.updateMailbox(input.id, input.patch),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["my_mailbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_state"] });
+    },
+  });
+}
+export function useCreateMailFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.createMailFolder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mailbox_folders"] }),
+  });
+}
+export function useConnectMailbox() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: db.connectMailbox,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my_mailbox"] });
+      qc.invalidateQueries({ queryKey: ["inbox_state"] });
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+    },
+  });
+}
 export function useInbox(enabled = true) {
   // Every 30s while open: the server syncs the mailbox every minute (0183).
   return useQuery({ queryKey: ["inbox"], queryFn: db.listInbox, enabled, refetchInterval: 30_000 });
@@ -1971,6 +2031,7 @@ export function useUpdateInboxMessage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox"] });
       qc.invalidateQueries({ queryKey: ["inbox_unread"] });
+      schedulePush(qc);
     },
   });
 }
@@ -1990,6 +2051,7 @@ export function useUpdateInboxMessages() {
     onError: (_e, _v, ctx) => {
       if (ctx?.before) qc.setQueryData(["inbox"], ctx.before);
     },
+    onSuccess: () => schedulePush(qc),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["inbox"] });
       qc.invalidateQueries({ queryKey: ["inbox_unread"] });

@@ -22,8 +22,16 @@
  * Function project's own one-click endpoint, not the browser-rendered
  * /unsubscribe page, mail clients POST to it directly with no JS).
  *
+ * Inbox mail (0227): `fromMailbox: true` sends from the caller's own
+ * mailbox address (mailboxes, when it's an @expac.co.za address), with
+ * replies to it. `copyToSent: "<uuid>"` (needs SUPABASE_SERVICE_ROLE_KEY)
+ * also stores a copy of the message as <mailbox>/motion-sent/<uuid>.eml for
+ * /api/inbox-sync to put in the mailbox's Sent folder, when the mailbox has
+ * two-way on. The reply then carries { mailbox, copy }.
+ *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
+import { buildMime } from "../../server/mail/mime";
 
 function json(data, status) {
   return new Response(JSON.stringify(data), {
@@ -107,11 +115,13 @@ export async function onRequestPost(context) {
   const cronKey = context.request.headers.get("x-cron-key");
   const viaCron = !!cronKey && !!env.CRON_SECRET && cronKey === env.CRON_SECRET;
   let internalOnly = false;
+  let userId = null;
   if (!viaCron) {
     const authHeader = context.request.headers.get("authorization");
     const user = await verifyUser(env, authHeader);
     if (!user) return json({ error: "Not authenticated." }, 401);
     internalOnly = !(await isStaffUser(env, authHeader, user.id));
+    userId = user.id;
   }
 
   let body;
@@ -201,10 +211,32 @@ export async function onRequestPost(context) {
     const s = typeof v === "string" ? v.trim() : "";
     return /^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/.test(s) && !/@send\./i.test(s) ? s : "";
   };
-  const replyTo =
+  let replyTo =
     usableReplyTo(body.replyTo) ||
     usableReplyTo(env.MAIL_REPLY_TO) ||
     "support@expac.co.za";
+
+  // Inbox mail goes out from the sender's own mailbox (0227).
+  let mailbox = null;
+  if (body.fromMailbox && userId && !internalOnly && env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const r = await fetch(
+        env.SUPABASE_URL +
+          "/rest/v1/mailboxes?select=id,email,display_name,write_back&owner_id=eq." +
+          encodeURIComponent(userId),
+        { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY } },
+      );
+      const rows = r.ok ? await r.json() : [];
+      mailbox = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    } catch {
+      mailbox = null;
+    }
+    if (mailbox && String(mailbox.email).toLowerCase().endsWith(INTERNAL_DOMAIN)) {
+      const name = fromName || mailbox.display_name || "";
+      from = name ? name + " <" + mailbox.email + ">" : mailbox.email;
+      replyTo = mailbox.email;
+    }
+  }
 
   const headers = {};
   if (body.jobId) headers["X-Shipment-Id"] = String(body.jobId);
@@ -256,5 +288,48 @@ export async function onRequestPost(context) {
       res.status === 429 ? 429 : res.status >= 500 ? 502 : 400,
     );
   }
-  return json({ id: data.id });
+  // A copy for the mailbox's Sent folder (put there by /api/inbox-sync).
+  let copy = null;
+  const copyId =
+    typeof body.copyToSent === "string" && /^[0-9a-f-]{36}$/i.test(body.copyToSent) ? body.copyToSent : "";
+  if (copyId && mailbox && mailbox.write_back) {
+    try {
+      const messageId = "<" + copyId + "@motion.expac.co.za>";
+      const addr = String(from).match(/^(.*?)\s*<([^>]+)>$/);
+      const raw = buildMime({
+        fromName: addr ? addr[1].replace(/"/g, "").trim() : "",
+        fromEmail: addr ? addr[2] : String(from),
+        to,
+        cc,
+        bcc,
+        subject: String(body.subject),
+        html: withDefaultFont(body.html) || "",
+        text: body.text || "",
+        attachments,
+        messageId,
+        inReplyTo: headers["In-Reply-To"],
+        references: headers["References"],
+        motionId: copyId,
+      });
+      const rawPath = mailbox.id + "/motion-sent/" + copyId + ".eml";
+      const up = await fetch(env.SUPABASE_URL + "/storage/v1/object/inbox/" + rawPath, {
+        method: "POST",
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY,
+          "content-type": "message/rfc822",
+          "x-upsert": "true",
+        },
+        body: raw,
+      });
+      if (up.ok) copy = { rawPath, messageId };
+    } catch {
+      copy = null;
+    }
+  }
+  return json({
+    id: data.id,
+    ...(mailbox ? { mailbox: { id: mailbox.id, email: mailbox.email, writeBack: !!mailbox.write_back } } : {}),
+    ...(copy ? { copy } : {}),
+  });
 }

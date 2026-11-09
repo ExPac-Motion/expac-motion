@@ -12218,3 +12218,18 @@ body:has(.jobs-panel) .topbar-lead .search-box {
   padding: 0 30px 0 12px;
   line-height: 1.2;
 }
+
+/* --- Inbox: your own mailbox and folders (0227) --- */
+.inbox-dot.cat-folder { background: transparent; border: 1.5px solid var(--muted); border-radius: 2px; }
+.inbox-count.warn { background: var(--orange-ink); }
+.inbox-error-note { color: var(--orange-ink); font-weight: 600; }
+.inbox-check-row { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.inbox-connect-form { display: grid; gap: 4px; max-width: 460px; }
+.inbox-connect-form .field { margin-bottom: 8px; }
+.inbox-connect-form .field > span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--teal-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

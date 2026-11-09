@@ -26,6 +26,17 @@ export interface SendMailInput {
   /** Inbox replies: thread under the original (its Message-ID / References). */
   inReplyTo?: string;
   references?: string;
+  /** Inbox mail (0227): send from your own mailbox address. */
+  fromMailbox?: boolean;
+  /** Inbox mail (0227): keep a copy for your mailbox's Sent folder, under this new row id. */
+  copyToSent?: string;
+}
+
+/** What /api/send-mail says about your mailbox and the Sent copy (0227). */
+export interface SendMailResult0227 {
+  id: string;
+  mailbox?: { id: string; email: string; writeBack: boolean };
+  copy?: { rawPath: string; messageId: string };
 }
 
 /** Standing rule: support@ is blind-copied on every Shipment Comms message and
@@ -36,6 +47,8 @@ export const SUPPORT_BCC = ["support@expac.co.za"];
 interface SendMailResult {
   id?: string;
   error?: string;
+  mailbox?: SendMailResult0227["mailbox"];
+  copy?: SendMailResult0227["copy"];
 }
 
 /** The sender name from Settings → Email, null when it can't be read (e.g.
@@ -52,7 +65,7 @@ async function settingsSenderName(): Promise<string | null> {
  * `fromName` the Settings sender name is used (chat, portal invites, POD and
  * warehouse notices), not the server's MAIL_FROM default.
  */
-export async function sendMail(input: SendMailInput): Promise<{ id: string }> {
+export async function sendMail(input: SendMailInput): Promise<SendMailResult0227> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -81,5 +94,5 @@ export async function sendMail(input: SendMailInput): Promise<{ id: string }> {
     }
     throw new Error(raw.error || `Mail service returned ${res.status}`);
   }
-  return { id: raw.id };
+  return { id: raw.id, mailbox: raw.mailbox, copy: raw.copy };
 }

@@ -4,6 +4,8 @@
 // to a shipment views across them. /api/inbox-sync copies new mail in every
 // 5 minutes (and on Sync now); a message's raw .eml is parsed here when it's
 // opened. Replies go out through /api/send-mail, threaded under the original.
+// 0227: each login's own mailbox with all its folders; with two-way on,
+// read / flag / archive / delete / spam / move are made on the mail server too.
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,11 +39,17 @@ import {
   useInboxSearch,
   useMailTemplates,
   useSaveMailTemplate,
+  useMyMailbox,
+  useMailboxFolders,
+  useUpdateMailbox,
+  useConnectMailbox,
+  useCreateMailFolder,
 } from "../../lib/hooks";
 import {
   deleteInboxDraft,
   downloadInboxRaw,
   insertInboxMessage,
+  pushInbox,
   removeInboxDraftFiles,
   saveInboxDraft,
   uploadInboxDraftFile,
@@ -63,11 +71,14 @@ import type {
   InboxMessage,
   InboxMessagePatch,
   Job,
+  Mailbox,
+  MailboxFolder,
   SentMail,
 } from "../../lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Folder = "all" | InboxCategory | "spam" | "sent" | "drafts" | "snoozed" | "archive" | "trash";
+/** "f:<path>" is one of your own folders on the mail server (0227). */
+type Folder = "all" | InboxCategory | "spam" | "sent" | "drafts" | "snoozed" | "archive" | "trash" | `f:${string}`;
 type View = "all" | "unread" | "needs" | "flagged" | "job";
 
 const FOLDERS: { key: Folder; label: string }[] = [
@@ -226,6 +237,26 @@ export default function InboxTab() {
   const update = useUpdateInboxMessage();
   const jobsQ = useJobs();
   const { toast, error } = useToast();
+  // Your own mailbox and its folders (0227; before it, the shared support@ inbox).
+  const mailboxQ = useMyMailbox();
+  const mailbox = mailboxQ.data ?? null;
+  const twoWay = !!mailbox?.write_back;
+  const foldersQ = useMailboxFolders(mailbox?.id);
+  const roleOf = useMemo(() => {
+    const map = new Map((foldersQ.data ?? []).map((f) => [f.path, f.role]));
+    return (path: string | null | undefined) =>
+      !path ? null : path.toUpperCase() === "INBOX" ? "inbox" : path.startsWith("\\") ? path.slice(1) : map.get(path) ?? null;
+  }, [foldersQ.data]);
+  /** Your own folders on the mail server, not the Inbox, Sent, Archive, Trash or Junk. */
+  const myFolders = useMemo(
+    () => (foldersQ.data ?? []).filter((f) => !f.role && !f.hidden && f.path.toUpperCase() !== "INBOX"),
+    [foldersQ.data],
+  );
+  /** Filed in one of your own folders (so not in the Inbox). */
+  const inOwnFolder = (m: InboxMessage) =>
+    !!m.folder && !m.folder.startsWith("\\") && m.folder.toUpperCase() !== "INBOX" && !roleOf(m.folder) && !!foldersQ.data;
+  const [showMailbox, setShowMailbox] = useState(false);
+  const [newFolder, setNewFolder] = useState(false);
   const [folder, setFolder] = useState<Folder>("all");
   const [view, setView] = useState<View>("all");
   const [jobFilter, setJobFilter] = useState("");
@@ -332,11 +363,14 @@ export default function InboxTab() {
   const organiseOn = recent.length === 0 || "flagged" in recent[0];
   // Trash, Spam, Snoozed and Archive each keep their mail out of the other
   // folders; a search still finds archived mail.
+  const ownKey = folder.startsWith("f:") ? folder.slice(2) : null;
   const inFolder = (m: InboxMessage) => {
     if (folder === "trash") return !!m.deleted_at;
     if (m.deleted_at) return false;
     if (folder === "spam") return !!m.spam;
     if (m.spam) return false;
+    if (ownKey !== null) return m.folder === ownKey;
+    if (inOwnFolder(m) && !needle) return false;
     if (folder === "snoozed") return isSnoozed(m);
     if (isSnoozed(m)) return false;
     if (folder === "archive") return !!m.archived_at;
@@ -398,9 +432,11 @@ export default function InboxTab() {
   );
 
   // In the main folders: not deleted, spam, snoozed or archived.
-  const live = (m: InboxMessage) => !m.deleted_at && !m.spam && !isSnoozed(m) && !m.archived_at;
+  const live = (m: InboxMessage) => !m.deleted_at && !m.spam && !isSnoozed(m) && !m.archived_at && !inOwnFolder(m);
   const folderCount = (f: Folder) =>
-    f === "drafts"
+    f.startsWith("f:")
+      ? incoming.filter((m) => !m.deleted_at && !m.spam && m.folder === f.slice(2) && isUnread(m)).length
+      : f === "drafts"
       ? drafts.length
       : f === "snoozed"
         ? incoming.filter((m) => !m.deleted_at && isSnoozed(m)).length
@@ -470,6 +506,15 @@ export default function InboxTab() {
         until ? { snoozed_until: until.toISOString(), archived_at: null } : { snoozed_until: null },
         until ? `Snoozed until ${formatDateTime(until.toISOString())}` : "Back in the inbox",
       ),
+    // Two-way (0227): file in one of your folders, on the mail server too.
+    move: (ids: string[], path: string, label: string) =>
+      organise(
+        ids,
+        { folder: path, archived_at: null, deleted_at: null, spam: false, snoozed_until: null },
+        `${plural(ids.length, "email")} moved to ${label}`,
+        ownKey !== path,
+      ),
+    folders: twoWay ? myFolders : [],
   };
   const linkedJobs = jobs.filter((j) => all.some((m) => m.job_id === j.id));
 
@@ -598,8 +643,15 @@ export default function InboxTab() {
         ? `Synced ${formatDateTime(st.last_sync_at)}`
         : "Not synced yet";
 
+  // 0227 is run but this login has no mailbox yet: connect it first.
+  if (mailboxQ.isSuccess && !mailbox) return <MailboxConnect />;
+
   return (
     <>
+      {newFolder && <NewFolderModal folders={myFolders} onClose={() => setNewFolder(false)} />}
+      {showMailbox && mailbox && (
+        <MailboxPanel mailbox={mailbox} folders={foldersQ.data ?? []} onClose={() => setShowMailbox(false)} />
+      )}
       <PageTools
         search={<SearchInput value={search} onChange={setSearch} placeholder="Search sender, subject, shipment…" />}
         count={
@@ -616,7 +668,9 @@ export default function InboxTab() {
             ? foundQ.isFetching
               ? "Searching the whole mail history…"
               : `Searched the whole mail history (sender, subject and the text of opened emails). ${syncNote}`
-            : `support@expac.co.za, sorted by who the sender is in the CRM. ${syncNote}${
+            : `${st?.mailbox ?? "support@expac.co.za"}${twoWay ? " · two-way with Outlook" : ""}, sorted by who the sender is in the CRM. ${syncNote}${
+                st?.push_error ? ` · Could not update the mail server: ${st.push_error}` : ""
+              }${
                 st?.pending ? ` · Older mail still coming in (${st.pending} to go)` : ""
               }`
         }
@@ -659,6 +713,42 @@ export default function InboxTab() {
               </button>
             );
           })}
+          {myFolders.length > 0 && (
+            <>
+              <div className="inbox-nav-head">Your folders</div>
+              {myFolders.map((f) => {
+                const key = `f:${f.path}` as Folder;
+                const n = folderCount(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`inbox-nav-item${folder === key ? " on" : ""}`}
+                    style={{ paddingLeft: 12 + folderDepth(f) * 14 }}
+                    title={f.backlog ? `${f.path}: ${f.backlog} older emails still coming in` : f.path}
+                    onClick={() => {
+                      setFolder(key);
+                      setChecked(new Set());
+                    }}
+                  >
+                    <span className="inbox-dot cat-folder" />
+                    {f.name}
+                    {n > 0 && <span className="inbox-count">{n}</span>}
+                  </button>
+                );
+              })}
+            </>
+          )}
+          {mailbox && foldersQ.isSuccess && (
+            <button
+              type="button"
+              className="inbox-nav-item muted"
+              onClick={() => setNewFolder(true)}
+              title="Create a folder in your mailbox (Outlook shows it too)"
+            >
+              + New folder
+            </button>
+          )}
           <div className="inbox-nav-head">Views</div>
           {VIEWS.map((v) => {
             const n = viewCount(v.key);
@@ -696,6 +786,16 @@ export default function InboxTab() {
                 title="A pop-up from your browser when new mail arrives, on any Motion page"
               >
                 {alerts ? "🔔 Desktop alerts on" : "🔕 Desktop alerts off"}
+              </button>
+            )}
+            {mailbox && (
+              <button
+                type="button"
+                className="inbox-nav-item"
+                onClick={() => setShowMailbox(true)}
+                title="Your mailbox: connection, two-way with Outlook"
+              >
+                ✉ Mailbox{(mailbox.last_error || mailbox.push_error) && <span className="inbox-count warn">!</span>}
               </button>
             )}
             <button type="button" className="inbox-nav-item" onClick={() => setShowKeys(true)} title="Keyboard shortcuts (?)">
@@ -893,6 +993,7 @@ export default function InboxTab() {
                   {isSnoozed(m) && <span className="inbox-chip">Snoozed until {shortDate(m.snoozed_until as string)}</span>}
                   {backFromSnooze(m) && <span className="inbox-chip job">Back from snooze</span>}
                   {m.archived_at && folder !== "archive" && <span className="inbox-chip">Archived</span>}
+                  {inOwnFolder(m) && ownKey === null && <span className="inbox-chip">📁 {folderLabel(foldersQ.data, m.folder)}</span>}
                   {m.snippet && <span className="inbox-snippet">{m.snippet}</span>}
                 </div>
                 </div>
@@ -1060,6 +1161,237 @@ interface OrganiseActions {
   flag: (ids: string[], on: boolean) => void;
   read: (ids: string[], on: boolean) => void;
   snooze: (ids: string[], until: Date | null) => void;
+  /** Two-way (0227): move to one of your folders on the mail server. */
+  move?: (ids: string[], path: string, label: string) => void;
+  /** Your folders, when two-way is on (else empty: no Move to…). */
+  folders?: MailboxFolder[];
+}
+
+/** New folder: created on the mail server only when you ask for it here. */
+function NewFolderModal({ folders, onClose }: { folders: MailboxFolder[]; onClose: () => void }) {
+  const create = useCreateMailFolder();
+  const { toast, error } = useToast();
+  const [name, setName] = useState("");
+  const [parent, setParent] = useState("");
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    try {
+      await create.mutateAsync({ name: name.trim(), parent: parent || null });
+      toast(`Folder "${name.trim()}" created`);
+      onClose();
+    } catch (err) {
+      error(err instanceof Error ? err.message : "Could not create the folder");
+    }
+  }
+  return (
+    <Modal title="New folder" onClose={onClose}>
+      <form onSubmit={submit} className="inbox-connect-form">
+        <label className="field">
+          <span>Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} autoFocus required maxLength={120} />
+        </label>
+        <label className="field">
+          <span>Inside</span>
+          <select value={parent} onChange={(e) => setParent(e.target.value)}>
+            <option value="">(top level)</option>
+            {folders.map((f) => (
+              <option key={f.path} value={f.path}>
+                {"   ".repeat(folderDepth(f)) + f.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="hint">The folder is made in your mailbox, so Outlook shows it too.</p>
+        <div>
+          <button className="btn" disabled={create.isPending || !name.trim()}>
+            {create.isPending ? "Creating…" : "Create folder"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** How deep a folder sits ("Clients/2026" is one level down). */
+function folderDepth(f: MailboxFolder): number {
+  return f.delim ? f.path.split(f.delim).length - 1 : 0;
+}
+function folderLabel(folders: MailboxFolder[] | undefined, path: string | null | undefined): string {
+  return folders?.find((f) => f.path === path)?.name ?? path ?? "";
+}
+
+/** Move to: the Inbox or one of your own folders (two-way, 0227). */
+function MoveMenu({
+  folders,
+  current,
+  onPick,
+}: {
+  folders: MailboxFolder[];
+  current?: string | null;
+  onPick: (path: string, label: string) => void;
+}) {
+  return (
+    <select
+      className="inbox-snooze"
+      value=""
+      title="File it in one of your folders (Outlook shows it there too)"
+      onChange={(e) => {
+        const v = e.target.value;
+        if (!v) return;
+        onPick(v, v === "INBOX" ? "the Inbox" : folderLabel(folders, v));
+      }}
+    >
+      <option value="">📁 Move to…</option>
+      {(current ?? "").toUpperCase() !== "INBOX" && <option value="INBOX">Inbox</option>}
+      {folders
+        .filter((f) => f.path !== current)
+        .map((f) => (
+          <option key={f.path} value={f.path}>
+            {"\u00a0\u00a0\u00a0".repeat(folderDepth(f)) + f.name}
+          </option>
+        ))}
+    </select>
+  );
+}
+
+/** Connect your own mailbox (0227): its address and password, tested on the mail server. */
+function MailboxConnectForm({ email: startEmail, onDone }: { email?: string; onDone?: () => void }) {
+  const connect = useConnectMailbox();
+  const { toast, error } = useToast();
+  const [email, setEmail] = useState(startEmail ?? "");
+  const [password, setPassword] = useState("");
+  const [more, setMore] = useState(false);
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState("993");
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    try {
+      const r = await connect.mutateAsync({
+        email: email.trim(),
+        password,
+        host: host.trim() || undefined,
+        port: Number(port) || undefined,
+      });
+      setPassword("");
+      toast(`Mailbox connected (${r.folders} folder${r.folders === 1 ? "" : "s"}). Your mail starts coming in now.`);
+      onDone?.();
+    } catch (err) {
+      error(err instanceof Error ? err.message : "Could not connect the mailbox");
+    }
+  }
+  return (
+    <form onSubmit={submit} className="inbox-connect-form">
+      <label className="field">
+        <span>Email address</span>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@expac.co.za" required autoComplete="username" />
+      </label>
+      <label className="field">
+        <span>Mailbox password</span>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+      </label>
+      {more ? (
+        <>
+          <label className="field">
+            <span>Mail server (IMAP)</span>
+            <input value={host} onChange={(e) => setHost(e.target.value)} placeholder="Leave empty for ExPac's mail server" />
+          </label>
+          <label className="field">
+            <span>Port</span>
+            <input value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" />
+          </label>
+        </>
+      ) : (
+        <button type="button" className="link-btn" onClick={() => setMore(true)} style={{ justifySelf: "start" }}>
+          Another mail server?
+        </button>
+      )}
+      <p className="hint">
+        Motion signs in to the mailbox to read your mail and folders. The password is kept encrypted and only the
+        server can read it. Nobody else in Motion sees this mailbox, only mail you link to a shipment.
+      </p>
+      <div>
+        <button className="btn" disabled={connect.isPending}>
+          {connect.isPending ? "Testing the login…" : "Connect mailbox"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** No mailbox on this login yet. */
+function MailboxConnect() {
+  return (
+    <div className="panel" style={{ padding: 24 }}>
+      <h2 style={{ marginTop: 0 }}>Connect your mailbox</h2>
+      <p>
+        The Inbox shows your own mailbox, with all your Outlook folders. Connect it once with its address and password.
+      </p>
+      <MailboxConnectForm />
+    </div>
+  );
+}
+
+/** Inbox › Mailbox: the connection, its folders, and two-way with Outlook. */
+function MailboxPanel({ mailbox, folders, onClose }: { mailbox: Mailbox; folders: MailboxFolder[]; onClose: () => void }) {
+  const update = useUpdateMailbox();
+  const { toast, error } = useToast();
+  const [reconnect, setReconnect] = useState(false);
+  const synced = folders.filter((f) => !f.hidden);
+  const backlog = synced.reduce((n, f) => n + (f.backlog || 0), 0);
+  function setTwoWay(on: boolean) {
+    update.mutate(
+      { id: mailbox.id, patch: { write_back: on } },
+      {
+        onSuccess: () => {
+          toast(on ? "Two-way is on: what you do here happens in Outlook too" : "Two-way is off: changes stay in Motion");
+          if (on) void pushInbox();
+        },
+        onError: (e) => error(e instanceof Error ? e.message : "Could not change the setting"),
+      },
+    );
+  }
+  return (
+    <Modal title="Your mailbox" onClose={onClose}>
+      <p>
+        <strong>{mailbox.email}</strong>
+        <br />
+        <span className="muted">
+          {mailbox.secret_id ? mailbox.imap_host || "ExPac's mail server" : "Connected through the company's mail settings"}
+          {" · "}
+          {mailbox.last_sync_at ? `synced ${formatDateTime(mailbox.last_sync_at)}` : "not synced yet"}
+        </span>
+      </p>
+      {mailbox.last_error && <p className="inbox-error-note">Last sync failed: {mailbox.last_error}</p>}
+      <p className="muted">
+        {synced.length} folder{synced.length === 1 ? "" : "s"} synced
+        {backlog > 0 ? ` · ${backlog} older emails still coming in (a batch every minute)` : ""}
+      </p>
+
+      <h3>Two-way with Outlook</h3>
+      <label className="inbox-check-row">
+        <input type="checkbox" checked={mailbox.write_back} disabled={update.isPending} onChange={(e) => setTwoWay(e.target.checked)} />
+        Make my changes on the mail server too
+      </label>
+      <p className="hint">
+        On: reading, marking unread, flagging, archiving, deleting, spam and moving to a folder here do the same in
+        Outlook, and mail you send from Motion shows in Outlook's Sent Items. Off: those stay in Motion only. Either
+        way, what you do in Outlook shows here.
+      </p>
+      {mailbox.write_back && mailbox.push_error && <p className="inbox-error-note">Last update of the mail server failed: {mailbox.push_error}</p>}
+      {mailbox.write_back && mailbox.last_push_at && !mailbox.push_error && (
+        <p className="muted">Mail server last updated {formatDateTime(mailbox.last_push_at)}.</p>
+      )}
+
+      <h3>Connection</h3>
+      {reconnect ? (
+        <MailboxConnectForm email={mailbox.email} onDone={() => setReconnect(false)} />
+      ) : (
+        <button type="button" className="btn outline small" onClick={() => setReconnect(true)}>
+          {mailbox.secret_id ? "Change the password or mailbox" : "Connect with its own password"}
+        </button>
+      )}
+    </Modal>
+  );
 }
 
 /** Snooze: later today / tomorrow / next week, or a date and time. */
@@ -1175,6 +1507,13 @@ function BulkBar({
               </button>
             ) : (
               <SnoozeMenu onPick={(d) => actions.snooze(ids, d)} />
+            )}
+            {actions.move && !!actions.folders?.length && (
+              <MoveMenu
+                folders={actions.folders}
+                current={folder.startsWith("f:") ? folder.slice(2) : folder === "all" ? "INBOX" : null}
+                onPick={(path, label) => actions.move?.(ids, path, label)}
+              />
             )}
           </>
         )}
@@ -1474,6 +1813,13 @@ function Reader({
                   </>
                 ) : (
                   <SnoozeMenu onPick={(d) => organise.snooze([msg.id], d)} />
+                )}
+                {organise.move && !!organise.folders?.length && (
+                  <MoveMenu
+                    folders={organise.folders}
+                    current={msg.folder}
+                    onPick={(path, label) => organise.move?.([msg.id], path, label)}
+                  />
                 )}
               </>
             )}
@@ -2255,7 +2601,12 @@ function ComposeModal({
         )),
         ...(await Promise.all(newFiles.current.map(async (f) => ({ filename: f.name, content: await fileBase64(f) })))),
       ];
+      // Your own mailbox (0227): sent from its address, a copy for its Sent folder when two-way.
+      const mb = qc.getQueryData<Mailbox | null>(["my_mailbox"]) ?? null;
+      const rowId = crypto.randomUUID();
       const sentRes = await sendMail({
+        fromMailbox: !!mb,
+        copyToSent: mb?.write_back ? rowId : undefined,
         to: toList,
         cc: ccList,
         bcc: list(bcc),
@@ -2271,11 +2622,20 @@ function ComposeModal({
       stopped.current = true;
       // Keep the sent message in the conversation (and on its shipment).
       await insertInboxMessage({
+        ...(mb ? { id: rowId, mailbox_id: mb.id } : {}),
+        ...(sentRes.copy
+          ? {
+              raw_path: sentRes.copy.rawPath,
+              message_id: sentRes.copy.messageId,
+              pending_append: true,
+              pending_at: new Date().toISOString(),
+            }
+          : {}),
         direction: "out",
-        mailbox: "support",
+        mailbox: mb ? mb.email.split("@")[0] : "support",
         provider_id: sentRes.id,
         delivery_status: "sent",
-        from_email: "support@expac.co.za",
+        from_email: sentRes.mailbox?.email ?? mb?.email ?? "support@expac.co.za",
         from_name: settings?.mail_sender_name || "ExPac",
         to_emails: toList,
         cc_emails: ccList,
@@ -2294,6 +2654,7 @@ function ComposeModal({
         seen: true,
         answered: false,
       });
+      if (sentRes.copy) void pushInbox();
       if (replyTo) await update.mutateAsync({ id: replyTo.id, patch: { replied_at: new Date().toISOString() } });
       // Sent: the draft (and its files) go.
       await chain.current;

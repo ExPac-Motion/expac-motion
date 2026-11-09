@@ -2068,6 +2068,17 @@ export interface InboxMessage {
   deleted_at?: string | null;
   flagged?: boolean;
   snoozed_until?: string | null;
+  /** Your own mailbox and its folders (0227). */
+  mailbox_id?: string | null;
+  /** The folder on the mail server ("INBOX", "Sent Items", a folder of your own…); empty for mail never on the server. */
+  folder?: string | null;
+  /** inbox | sent | archive | trash | junk | drafts, or null for your own folders (view). */
+  folder_role?: string | null;
+  /** Moved or deleted in Outlook, not found again yet. */
+  gone_at?: string | null;
+  /** A change made in Motion still to be made on the mail server. */
+  pending_at?: string | null;
+  pending_append?: boolean;
 }
 export type InboxMessagePatch = Partial<
   Pick<
@@ -2085,6 +2096,7 @@ export type InboxMessagePatch = Partial<
     | "deleted_at"
     | "flagged"
     | "snoozed_until"
+    | "folder"
   >
 >;
 export interface InboxState {
@@ -2092,6 +2104,44 @@ export interface InboxState {
   last_sync_at: string | null;
   last_error: string | null;
   pending: number | null;
+  /** Two-way (0227): the last push of Motion's changes to the server. */
+  last_push_at?: string | null;
+  push_error?: string | null;
+}
+
+/** mailboxes (0227): a login's own mailbox, synced both ways with the mail server. */
+export interface Mailbox {
+  id: string;
+  owner_id: string | null;
+  email: string;
+  display_name: string | null;
+  imap_host: string | null;
+  imap_port: number;
+  imap_user: string | null;
+  /** Its own password in Vault; empty = the company's Cloudflare IMAP settings. */
+  secret_id: string | null;
+  enabled: boolean;
+  /** Changes made in Motion are made on the mail server too. */
+  write_back: boolean;
+  last_sync_at: string | null;
+  last_error: string | null;
+  pending: number | null;
+  last_push_at: string | null;
+  push_error: string | null;
+}
+export type MailboxPatch = Partial<Pick<Mailbox, "display_name" | "enabled" | "write_back">>;
+
+/** mailbox_folders (0227): a folder on the mail server. */
+export interface MailboxFolder {
+  mailbox_id: string;
+  path: string;
+  name: string;
+  delim: string | null;
+  role: "inbox" | "sent" | "archive" | "trash" | "junk" | "drafts" | null;
+  hidden: boolean;
+  messages: number | null;
+  backlog: number;
+  synced_at: string | null;
 }
 
 /** A file kept with an Inbox draft (private "inbox" bucket, drafts/<id>/). */

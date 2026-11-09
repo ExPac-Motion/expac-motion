@@ -17,6 +17,7 @@ const SIGNATURE = "<table role=\"presentation\" width=\"595\" cellpadding=\"0\" 
 const MAIL = [
   {
     id: "m1",
+    folder: "INBOX",
     flagged: true,
     archived_at: null,
     deleted_at: null,
@@ -43,6 +44,7 @@ const MAIL = [
   },
   {
     id: "m2",
+    folder: "INBOX",
     direction: "in",
     message_id: "<m2@agent.cn>",
     thread_key: "t2",
@@ -68,6 +70,7 @@ const MAIL = [
   {
     // Answered from Outlook (Sent folder sync): m2 no longer needs a reply.
     id: "m3",
+    folder: "Sent Items",
     mailbox: "support:sent",
     direction: "out",
     message_id: "<m3@expac.co.za>",
@@ -90,6 +93,7 @@ const MAIL = [
   },
   {
     id: "m4",
+    folder: "Clients",
     direction: "in",
     thread_key: "t4",
     from_email: "accounts@highveld.co.za",
@@ -138,7 +142,50 @@ export default function InboxDemoPage() {
     };
     seed(["inbox"], MAIL);
     seed(["inbox_sent"], []);
-    seed(["inbox_state"], { mailbox: "support", last_sync_at: ago(3), last_error: null });
+    seed(["inbox_state"], { mailbox: "support@expac.co.za", last_sync_at: ago(3), last_error: null });
+    // Own mailbox with Outlook's folders, two-way on (0227).
+    seed(["my_mailbox"], {
+      id: "mb-1",
+      owner_id: "u-1",
+      email: "support@expac.co.za",
+      display_name: "ExPac Support",
+      imap_host: null,
+      imap_port: 993,
+      imap_user: null,
+      secret_id: null,
+      enabled: true,
+      write_back: true,
+      last_sync_at: ago(1),
+      last_error: null,
+      pending: 0,
+      last_push_at: ago(1),
+      push_error: null,
+    });
+    seed(
+      ["mailbox_folders", "mb-1"],
+      [
+        ["INBOX", "INBOX", "inbox"],
+        ["Sent Items", "Sent Items", "sent"],
+        ["Archive", "Archive", "archive"],
+        ["Deleted Items", "Deleted Items", "trash"],
+        ["Junk Email", "Junk Email", "junk"],
+        ["Clients", "Clients", null],
+        ["Projects", "Projects", null],
+        ["Done", "Done", null],
+        ["Done/2026", "2026", null],
+        ["Suppliers", "Suppliers", null],
+      ].map(([path, name, role]) => ({
+        mailbox_id: "mb-1",
+        path,
+        name,
+        delim: "/",
+        role,
+        hidden: false,
+        messages: 10,
+        backlog: path === "Suppliers" ? 240 : 0,
+        synced_at: ago(2),
+      })),
+    );
     seed(["company_settings"], { id: 1, mail_signature_html: SIGNATURE, mail_sender_name: "ExPac Forwarding" });
     seed(["jobs"], [{ id: "job-1", reference: "SEA826893", origin: "CNSZX", destination: "ZADUR", mode: "Sea Freight (LCL)", client: { company: "Maritsu Van Straaten" } }]);
     seed(["clients"], []);

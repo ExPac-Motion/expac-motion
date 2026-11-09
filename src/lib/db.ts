@@ -12,6 +12,9 @@ import type {
   InboxMessage,
   InboxMessagePatch,
   InboxState,
+  Mailbox,
+  MailboxFolder,
+  MailboxPatch,
   InboxDraft,
   InboxDraftFile,
   InboxDraftPatch,
@@ -2551,7 +2554,18 @@ const INBOX_LIST_COLS =
   "done_at,job_id,job_linked_by,created_at,category,record_kind,record_id,record_name,job_reference," +
   "archived_at,deleted_at,flagged,snoozed_until";
 const ORGANISE_COLS = ",archived_at,deleted_at,flagged,snoozed_until";
+/** Own mailbox and its folders (0227). */
+const MAILBOX_COLS = ",mailbox_id,folder,folder_role,gone_at,pending_at,pending_append";
+/** Before migration 0227 there's no inbox_mine_v (your own mailbox): the old shared view is used. */
+const before0227 = (e: { message?: string; code?: string } | null) =>
+  !!e && (/inbox_mine|folder_role|mailbox_id|gone_at|pending_a/.test(e.message ?? "") || e.code === "42P01" || e.code === "PGRST205");
 export async function listInbox(): Promise<InboxMessage[]> {
+  const mine = await supabase
+    .from("inbox_mine_v")
+    .select((INBOX_LIST_COLS + MAILBOX_COLS) as "*")
+    .order("sent_at", { ascending: false })
+    .limit(2000);
+  if (!before0227(mine.error)) return unwrap<InboxMessage[]>(mine);
   const run = (cols: string) =>
     supabase
       .from("inbox_messages_v")
@@ -2605,6 +2619,26 @@ export interface InboxUnread {
   sent_at: string;
 }
 export async function listInboxUnread(): Promise<InboxUnread[]> {
+  // Your own mailbox (0227), else the old shared inbox.
+  const mine = await supabase
+    .from("inbox_mine")
+    .select("id,from_name,from_email,subject,sent_at,snoozed_until,folder" as "*")
+    .eq("direction", "in")
+    .eq("spam", false)
+    .is("archived_at", null)
+    .is("deleted_at", null)
+    .or("marked_unread.is.true,and(seen.is.false,read_at.is.null)")
+    .order("sent_at", { ascending: false })
+    .limit(300);
+  if (!before0227(mine.error)) {
+    const now = Date.now();
+    return unwrap<(InboxUnread & { snoozed_until: string | null; folder: string | null })[]>(mine).filter(
+      (r) =>
+        (!r.snoozed_until || new Date(r.snoozed_until).getTime() <= now) &&
+        // Only the Inbox itself, not mail filed in your own folders.
+        (!r.folder || r.folder.toUpperCase() === "INBOX"),
+    );
+  }
   const run = (organised: boolean) => {
     let q = supabase
       .from("inbox_messages")
@@ -2643,13 +2677,15 @@ export async function searchInbox(term: string): Promise<InboxMessage[]> {
   const t = term.replace(/[,()*%"\\]/g, " ").trim();
   if (t.length < 3) return [];
   const like = `"*${t}*"`;
-  const run = (cols: string) =>
+  const run = (cols: string, from = "inbox_messages_v") =>
     supabase
-      .from("inbox_messages_v")
+      .from(from)
       .select(cols as "*")
       .or(["subject", "from_email", "from_name", "snippet", "body_text"].map((c) => `${c}.ilike.${like}`).join(","))
       .order("sent_at", { ascending: false })
       .limit(200);
+  const mine = await run(INBOX_LIST_COLS + MAILBOX_COLS, "inbox_mine_v");
+  if (!before0227(mine.error)) return unwrap<InboxMessage[]>(mine);
   const res = await run(INBOX_LIST_COLS);
   if (res.error && /archived_at|deleted_at|flagged|snoozed_until/.test(res.error.message)) {
     return unwrap<InboxMessage[]>(await run(INBOX_LIST_COLS.replace(ORGANISE_COLS, "")));
@@ -2666,6 +2702,20 @@ export async function listSentMail(): Promise<SentMail[]> {
   );
 }
 export async function getInboxState(): Promise<InboxState | null> {
+  // Your own mailbox (0227).
+  const mb = await getMyMailbox().catch(() => undefined);
+  if (mb !== undefined) {
+    return mb
+      ? {
+          mailbox: mb.email,
+          last_sync_at: mb.last_sync_at,
+          last_error: mb.last_error,
+          pending: mb.pending,
+          last_push_at: mb.last_push_at,
+          push_error: mb.push_error,
+        }
+      : null;
+  }
   const rows = unwrap<InboxState[]>(
     await supabase
       .from("inbox_state")
@@ -2731,6 +2781,74 @@ export async function syncInbox(): Promise<{ added: number; pending: number }> {
     throw new Error(raw.error || `Inbox sync returned ${res.status}`);
   }
   return { added: raw.added ?? 0, pending: raw.pending ?? 0 };
+}
+
+/* ---------- Your own mailbox (0227) ---------- */
+/** The mailbox of the signed-in login (an admin without one sees a mailbox
+ *  nobody owns yet, e.g. support@); null when none is connected. Throws
+ *  before migration 0227. */
+export async function getMyMailbox(): Promise<Mailbox | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const uid = session?.user?.id ?? null;
+  const rows = unwrap<Mailbox[]>(await supabase.from("mailboxes").select("*").limit(50));
+  return rows.find((r) => r.owner_id === uid) ?? rows.find((r) => r.owner_id === null) ?? null;
+}
+export async function listMailboxFolders(mailboxId: string): Promise<MailboxFolder[]> {
+  return unwrap<MailboxFolder[]>(
+    await supabase.from("mailbox_folders").select("*").eq("mailbox_id", mailboxId).order("path"),
+  );
+}
+export async function updateMailbox(id: string, patch: MailboxPatch): Promise<void> {
+  unwrap(await supabase.from("mailboxes").update(patch).eq("id", id));
+}
+async function authed(path: string, body: unknown): Promise<Response> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return fetch(path, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+}
+/** Connects (or reconnects) your own mailbox: the login is tested first. */
+export async function connectMailbox(input: {
+  email: string;
+  password: string;
+  host?: string;
+  port?: number;
+}): Promise<{ folders: number }> {
+  const res = await authed("/api/mailbox-connect", input);
+  const raw = (await res.json().catch(() => ({}))) as { folders?: number; error?: string };
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Connecting a mailbox runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Connecting returned ${res.status}`);
+  }
+  return { folders: raw.folders ?? 0 };
+}
+/** Creates a folder in your mailbox on the mail server (optionally inside another). */
+export async function createMailFolder(input: { name: string; parent?: string | null }): Promise<{ path: string }> {
+  const res = await authed("/api/inbox-sync", { mode: "create_folder", name: input.name, parent: input.parent || undefined });
+  const raw = (await res.json().catch(() => ({}))) as { path?: string; error?: string };
+  if (!res.ok) {
+    if (res.status === 404 && !raw.error) throw new Error("Creating folders runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Creating the folder returned ${res.status}`);
+  }
+  return { path: raw.path ?? input.name };
+}
+/** Makes the changes just made in Motion on the mail server now (the
+ *  every-minute sync does it otherwise). Never throws. */
+export async function pushInbox(): Promise<void> {
+  try {
+    await authed("/api/inbox-sync", { mode: "push" });
+  } catch {
+    /* the next sync pushes it */
+  }
 }
 
 /** Runs /api/vessel-sync now for one shipment (the cron checks every
