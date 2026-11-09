@@ -613,6 +613,8 @@ export default function InboxTab() {
 
   /* ---------- Keyboard shortcuts ---------- */
   const [showKeys, setShowKeys] = useState(false);
+  // "g" then a letter jumps to a folder (g s = Sent); the "g" waits 1.5 s.
+  const goKey = useRef(0);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.ctrlKey || e.metaKey || e.altKey || compose || tasking || showKeys) return;
@@ -626,6 +628,18 @@ export default function InboxTab() {
         document.querySelector<HTMLInputElement>(".search-box input")?.focus();
         return;
       }
+      if (goKey.current && e.timeStamp - goKey.current < 1500) {
+        goKey.current = 0;
+        const to = ({ i: "all", s: "sent", d: "drafts", a: "archive", t: "trash", z: "snoozed" } as Record<string, Folder>)[k];
+        if (to) {
+          e.preventDefault();
+          setFolder(to);
+          setChecked(new Set());
+          setExpanded(false);
+        }
+        return;
+      }
+      if (k === "g") return void (goKey.current = e.timeStamp);
       if (k === "c" || k === "n") return void (e.preventDefault(), setCompose({}));
       if (folder === "sent" || folder === "drafts") return;
       const at = open ? rows.findIndex((m) => m.id === open.id) : -1;
@@ -1271,6 +1285,12 @@ const KEYS: [string, string][] = [
   ["s", "Flag / remove the flag"],
   ["u", "Mark unread"],
   ["x", "Tick / untick the open email"],
+  ["g s", "Go to Sent"],
+  ["g i", "Go to the Inbox (All mail)"],
+  ["g d", "Go to Drafts"],
+  ["g a", "Go to Archive"],
+  ["g t", "Go to Trash"],
+  ["g z", "Go to Snoozed"],
   ["/", "Search"],
   ["?", "These shortcuts"],
 ];
