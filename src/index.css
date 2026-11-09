@@ -12416,6 +12416,17 @@ body:has(.jobs-panel) .topbar-lead .search-box {
   .customs-file-grid { grid-template-columns: 1fr; }
   .customs-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-.customs-cards { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.customs-cards { grid-template-columns: repeat(8, minmax(0, 1fr)); }
 @media (max-width: 1200px) { .customs-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .customs-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Customs: carrier ANF (0231) */
+.customs-anf { font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--night-tint, #e7e9ea); white-space: nowrap; }
+.customs-anf.waiting { background: var(--orange-tint); color: var(--orange-ink, #b4461f); }
+.customs-row.anf-waiting td:first-child { box-shadow: inset 3px 0 0 var(--orange, #e8662f); }
+.customs-anf-box { border-radius: 10px; padding: 8px 10px; background: var(--green-tint); font-size: 0.85rem; display: grid; gap: 2px; margin-bottom: 4px; }
+.customs-anf-box.waiting { background: var(--orange-tint); color: var(--orange-ink, #b4461f); }
+.customs-anf-box .link-btn { justify-self: start; font-size: 0.8rem; }
+/* Inbox: save an attachment to the shipment */
+.inbox-attachment-wrap { display: inline-flex; align-items: center; gap: 4px; }
+.inbox-attachment-wrap .inbox-menu .btn { padding: 2px 8px; font-size: 0.72rem; }
+.inbox-att-saved { font-size: 0.75rem; font-weight: 700; color: var(--green-dark, #4c7a1c); }

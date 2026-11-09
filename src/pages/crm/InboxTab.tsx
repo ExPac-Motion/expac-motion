@@ -47,6 +47,7 @@ import {
   useSetFolderHidden,
   useCan,
   useQuotes,
+  useUploadShipmentDocument,
 } from "../../lib/hooks";
 import {
   deleteInboxDraft,
@@ -1847,10 +1848,13 @@ function MessageBody({ msg }: { msg: InboxMessage }) {
           {parsed.attachments
             .filter((a) => !a.inline)
             .map((a) => (
-              <a key={a.url} href={a.url} download={a.name} className="inbox-attachment">
-                📎 {a.name}
-                <span className="muted"> {Math.max(1, Math.round(a.size / 1024))} KB</span>
-              </a>
+              <span key={a.url} className="inbox-attachment-wrap">
+                <a href={a.url} download={a.name} className="inbox-attachment">
+                  📎 {a.name}
+                  <span className="muted"> {Math.max(1, Math.round(a.size / 1024))} KB</span>
+                </a>
+                {msg.job_id && <SaveToShipment msg={msg} att={a} />}
+              </span>
             ))}
         </div>
       )}
@@ -1913,6 +1917,51 @@ function ConvoCard({
         </div>
       )}
     </div>
+  );
+}
+
+const ANF_RE = /(arrival\s+notice|arrival\s+notification|notice\s+of\s+arrival|arrival\s+advice|cargo\s+arrival|pre-?\s?arrival|\bANF\b|\bA\/N\b)/i;
+/** Document types offered when saving an attachment to its shipment. */
+const SAVE_TYPES = ["Arrival Notification (ANF)", "Commercial Invoice", "Packing List", "HBL", "HAWB", "Bill of Lading / AWB", "Certificate of Origin", "Customs Release Note", "Customs", "Invoice", "Proof of Delivery", "Other"];
+
+/** Save an email attachment to the linked shipment's Document Vault (an ANF
+ *  also marks the shipment's customs file, 0231). */
+function SaveToShipment({ msg, att }: { msg: InboxMessage; att: Parsed["attachments"][number] }) {
+  const upload = useUploadShipmentDocument();
+  const { toast, error } = useToast();
+  const [saved, setSaved] = useState<string | null>(null);
+  const guessAnf = ANF_RE.test(att.name) || ANF_RE.test(msg.subject ?? "");
+  const types = guessAnf ? SAVE_TYPES : [...SAVE_TYPES.slice(1, 3), SAVE_TYPES[0], ...SAVE_TYPES.slice(3)];
+  async function saveAs(docType: string) {
+    if (!msg.job_id) return;
+    try {
+      const blob = await (await fetch(att.url)).blob();
+      const file = new File([blob], att.name, { type: att.type || blob.type });
+      await upload.mutateAsync({ jobId: msg.job_id, file, docType });
+      setSaved(docType);
+      toast(docType.startsWith("Arrival") ? "ANF saved to the shipment (customs file marked)" : `Saved to the shipment as ${docType}`);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not save the attachment");
+    }
+  }
+  if (saved) return <span className="inbox-att-saved" title={`Saved as ${saved}`}>✓ Saved</span>;
+  return (
+    <MenuButton label={upload.isPending ? "Saving…" : "Save to shipment ▾"} title="Save this attachment to the shipment's Document Vault">
+      {(close) =>
+        types.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => {
+              close();
+              void saveAs(t);
+            }}
+          >
+            {t === "Arrival Notification (ANF)" ? "As the carrier's ANF" : `As ${t}`}
+          </button>
+        ))
+      }
+    </MenuButton>
   );
 }
 

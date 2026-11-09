@@ -2356,7 +2356,7 @@ export async function listCustomsFiles(): Promise<CustomsFile[]> {
 
 export async function updateCustomsFile(
   id: string,
-  patch: Partial<Pick<CustomsFile, "clearing_agent_id" | "stage" | "required_docs" | "entry_no" | "query_note" | "notes" | "handover_to">>,
+  patch: Partial<Pick<CustomsFile, "clearing_agent_id" | "stage" | "required_docs" | "entry_no" | "query_note" | "notes" | "handover_to" | "anf_at" | "anf_source">>,
 ): Promise<void> {
   unwrap(await supabase.from("customs_files").update(patch).eq("id", id));
 }

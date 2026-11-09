@@ -435,6 +435,7 @@ export const DOCUMENT_TYPES = [
   "Customs",
   "Customs Release Note",
   "Certificate of Origin",
+  "Arrival Notification (ANF)",
   "Other",
 ] as const;
 
@@ -459,6 +460,9 @@ export interface CustomsFile {
   query_at: string | null;
   cleared_at: string | null;
   closed_at: string | null;
+  /** Carrier arrival notification received (0231), and where it was seen. */
+  anf_at?: string | null;
+  anf_source?: string | null;
   created_at: string;
   updated_at: string;
   job?: {
@@ -487,7 +491,7 @@ export interface CustomsEvent {
   file_id: string;
   at: string;
   by: string | null;
-  kind: "opened" | "stage" | "handover" | "note" | "agent" | "docs" | "closed" | "reopened";
+  kind: "opened" | "stage" | "handover" | "note" | "agent" | "docs" | "closed" | "reopened" | "anf";
   stage: CustomsStage | null;
   note: string | null;
 }

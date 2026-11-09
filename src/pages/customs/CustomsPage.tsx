@@ -18,9 +18,10 @@ import { formatDate } from "../../lib/format";
 import { shipmentStatusSlug, type CustomsFile, type CustomsStage, type ShipmentDocument } from "../../lib/types";
 import CustomsFileModal from "./CustomsFileModal";
 
-type View = "open" | "docs_pending" | "ready" | "with_agent" | "query" | "cleared";
+type View = "open" | "anf" | "docs_pending" | "ready" | "with_agent" | "query" | "cleared";
 const VIEWS: { key: View; label: string }[] = [
   { key: "open", label: "All open" },
+  { key: "anf", label: "ANF in, not handed over" },
   { key: "docs_pending", label: "Documents pending" },
   { key: "ready", label: "Ready to hand over" },
   { key: "with_agent", label: "With agent" },
@@ -44,6 +45,8 @@ function inView(f: CustomsFile, v: View): boolean {
   switch (v) {
     case "open":
       return open && f.stage !== "cleared";
+    case "anf":
+      return open && anfWaiting(f);
     case "docs_pending":
       return open && f.stage === "docs_pending";
     case "ready":
@@ -55,6 +58,11 @@ function inView(f: CustomsFile, v: View): boolean {
     case "cleared":
       return f.stage === "cleared";
   }
+}
+
+/** The carrier's ANF is in but the file hasn't gone to the agent yet. */
+export function anfWaiting(f: CustomsFile): boolean {
+  return !!f.anf_at && (f.stage === "docs_pending" || f.stage === "ready");
 }
 
 function ClearanceBoard() {
@@ -112,7 +120,7 @@ function ClearanceBoard() {
         return [j?.reference, j?.client?.company, j?.awb_mbl, j?.container_no, j?.po_no, f.agent?.company, f.entry_no]
           .some((v) => v?.toLowerCase().includes(s));
       })
-      .sort((a, b) => (a.job?.eta ?? "9999").localeCompare(b.job?.eta ?? "9999"));
+      .sort((a, b) => Number(anfWaiting(b)) - Number(anfWaiting(a)) || (a.job?.eta ?? "9999").localeCompare(b.job?.eta ?? "9999"));
   }, [files, view, agent, search]);
 
   if (filesQ.isLoading) return <Loading />;
@@ -139,6 +147,7 @@ function ClearanceBoard() {
 
       <div className="cards wms-cards customs-cards">
         <Kpi label="Open files" value={String(counts.open)} />
+        <Kpi label="ANF in, not handed over" value={String(counts.anf)} tone={counts.anf ? "orange" : undefined} />
         <Kpi label="Documents pending" value={String(counts.docs_pending)} tone={counts.docs_pending ? "amber" : undefined} />
         <Kpi label="Ready to hand over" value={String(counts.ready)} tone={counts.ready ? "teal" : undefined} />
         <Kpi label="With agent" value={String(counts.with_agent)} sub={kpi.overdue ? `${kpi.overdue} over 3 days` : undefined} />
@@ -179,6 +188,7 @@ function ClearanceBoard() {
                   <th>Customer</th>
                   <th>AWB / B/L</th>
                   <th>ETA</th>
+                  <th>ANF</th>
                   <th>Status</th>
                   <th>Clearing agent</th>
                   <th>Documents</th>
@@ -192,7 +202,7 @@ function ClearanceBoard() {
                   const have = list.filter((i) => i.docs.length).length;
                   const withAgent = WITH_AGENT.includes(f.stage) || f.stage === "cleared" ? daysBetween(f.handed_over_at, f.cleared_at) : null;
                   return (
-                    <tr key={f.id} className="customs-row" onClick={() => setOpenId(f.id)}>
+                    <tr key={f.id} className={`customs-row${anfWaiting(f) ? " anf-waiting" : ""}`} onClick={() => setOpenId(f.id)}>
                       <td>
                         <button type="button" className="link-btn" onClick={() => setOpenId(f.id)}>
                           {f.job?.reference ?? "—"}
@@ -205,6 +215,15 @@ function ClearanceBoard() {
                         {f.job?.container_no && <div className="hint">{f.job.container_no}</div>}
                       </td>
                       <td>{f.job?.eta ? formatDate(f.job.eta) : "—"}</td>
+                      <td>
+                        {f.anf_at ? (
+                          <span className={`customs-anf${anfWaiting(f) ? " waiting" : ""}`} title={f.anf_source ?? undefined}>
+                            {formatDate(f.anf_at)}
+                          </span>
+                        ) : (
+                          <span className="hint">—</span>
+                        )}
+                      </td>
                       <td>
                         <span className={`job-status job-status-ro is-${shipmentStatusSlug(f.job?.shipment_status)}`}>
                           {f.job?.shipment_status ?? "—"}
@@ -280,6 +299,7 @@ function CustomsSettings() {
         <li>A file opens when an air or sea shipment is marked In Transit (or Arrived, Unloaded, Customs or Detained).</li>
         <li>A master cleared as one gets one file; a master cleared per house gets a file for each house.</li>
         <li>It's "Ready to hand over" once the required documents are in the shipment's Document Vault.</li>
+        <li>The carrier's ANF is marked when an arrival notice email is linked to the shipment in the Inbox, when an "Arrival Notification (ANF)" document is added, or by hand on the file.</li>
         <li>It closes when the shipment is Released, On-Delivery or Delivered, or completed.</li>
       </ul>
       <p className="hint">Stages: {CUSTOMS_STAGES.map((s) => s.label).join(" → ")}.</p>

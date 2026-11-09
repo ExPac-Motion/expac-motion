@@ -23,7 +23,7 @@ import { CUSTOMS_STAGES, WITH_AGENT, checklist, daysBetween, fmtDays, requiredDo
 import { formatDate, formatDateTime } from "../../lib/format";
 import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
 import { DOCUMENT_TYPES, type CustomsFile, type CustomsStage, type ShipmentDocument } from "../../lib/types";
-import { CustomsStagePill } from "./CustomsPage";
+import { CustomsStagePill, anfWaiting } from "./CustomsPage";
 
 const esc = (s: string | null | undefined) =>
   (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -278,6 +278,39 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
               </p>
             )}
 
+            <h4>Carrier arrival notification (ANF)</h4>
+            {file.anf_at ? (
+              <div className={`customs-anf-box${anfWaiting(file) ? " waiting" : ""}`}>
+                <strong>ANF received {formatDateTime(file.anf_at)}</strong>
+                {file.anf_source && <div className="hint">{file.anf_source}</div>}
+                {anfWaiting(file) && <div>Not handed over to the agent yet.</div>}
+                {!closed && (
+                  <button type="button" className="link-btn" onClick={() => void save({ anf_at: null }, "ANF removed")}>
+                    Remove
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="customs-actions">
+                <span className="hint">Not received yet.</span>
+                {!closed && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn ghost small"
+                      onClick={() => void save({ anf_at: new Date().toISOString(), anf_source: "Marked by hand" }, "ANF marked as received")}
+                    >
+                      Mark ANF received
+                    </button>
+                    <button type="button" className="btn ghost small" onClick={() => pickUpload("Arrival Notification (ANF)")} disabled={upload.isPending}>
+                      Upload ANF
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <p className="hint">Arrival notice emails linked to this shipment in the Inbox mark it by themselves.</p>
+
             <h4>Customs</h4>
             <label className="customs-field">
               Entry no. (MRN)
@@ -393,7 +426,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
                 <li key={e.id}>
                   <span className="hint">{formatDateTime(e.at)}</span>{" "}
                   <span>
-                    {e.kind === "stage" && e.stage ? stageLabel(e.stage) : e.kind === "opened" ? "File opened" : e.kind === "closed" ? "File closed" : e.kind === "reopened" ? "File reopened" : e.kind === "agent" ? "Clearing agent" : e.kind === "handover" ? "Handed over" : "Note"}
+                    {e.kind === "stage" && e.stage ? stageLabel(e.stage) : e.kind === "opened" ? "File opened" : e.kind === "closed" ? "File closed" : e.kind === "reopened" ? "File reopened" : e.kind === "agent" ? "Clearing agent" : e.kind === "handover" ? "Handed over" : e.kind === "anf" ? "ANF" : "Note"}
                     {e.note && e.kind !== "stage" ? `: ${e.note}` : ""}
                   </span>{" "}
                   {e.by && <span className="hint">– {people.get(e.by) ?? "Someone"}</span>}

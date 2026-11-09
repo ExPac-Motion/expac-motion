@@ -60,8 +60,8 @@ const J3 = job("j3", "SEA330870", "Sea Freight (LCL)", "Customs", "Delta Express
 const J4 = job("j4", "AIR260098", "Air Freight (Consol)", "Customs", "VF Exclamation", { eta: inDays(-2) });
 const J5 = job("j5", "SEA329004", "Sea Freight (FCL)", "Released", "Jetda Imports", { eta: inDays(-9) });
 const FILES = [
-  file("f1", J1, "docs_pending", AGENTS[0]),
-  file("f2", J2, "ready", AGENTS[1]),
+  file("f1", J1, "docs_pending", AGENTS[0], { anf_at: ago(5), anf_source: "Email: noreply@emirates.com – Arrival Notice AWB 618-59678135" }),
+  file("f2", J2, "ready", AGENTS[1], { anf_at: ago(20), anf_source: "Document: ANF MSC.pdf" }),
   file("f3", J3, "lodged", AGENTS[1], { handed_over_at: ago(80), lodged_at: ago(40), entry_no: "MRN 26ZA0001234", handover_to: "entries@portside.co.za" }),
   file("f4", J4, "query", AGENTS[0], { handed_over_at: ago(30), query_at: ago(6), query_note: "Commercial invoice value doesn't match the packing list", handover_to: "docs@swiftclearing.co.za" }),
   file("f5", J5, "cleared", AGENTS[0], { handed_over_at: ago(200), lodged_at: ago(170), cleared_at: ago(150), closed_at: ago(140), entry_no: "MRN 26ZA0000988" }),
