@@ -7,7 +7,8 @@
 --   * a direct shipment;
 --   * a master cleared as one (clearance_basis 'master');
 --   * each house of a master cleared house by house ('house').
--- The file is assigned to the shipment's clearing agent (or the default one
+-- The file is assigned to the clearing agent on the shipment's quote
+-- (quotes.clearing_agent_id; or the default one
 -- in company_settings.customs_default_agent_id) and moves through
 --   docs_pending -> ready -> handed_over -> lodged -> query -> cleared.
 -- docs_pending / ready follow the shipment's Document Vault: ready once the
@@ -90,6 +91,14 @@ grant update (clearing_agent_id, stage, required_docs, entry_no, query_note, not
 grant select, insert on public.customs_events to authenticated;
 
 -- ---------- 3. Which shipments get a file ----------
+-- The shipment's clearing agent lives on its quote (0013); else the default.
+create or replace function public.customs_agent_for(p_quote uuid)
+returns uuid language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select q.clearing_agent_id from public.quotes q where q.id = p_quote),
+    (select customs_default_agent_id from public.company_settings where id = 1));
+$$;
+
 create or replace function public.customs_eligible(j public.jobs)
 returns boolean language sql stable security definer set search_path = public as $$
   select (j.mode like 'Air%' or j.mode like 'Sea%')
@@ -155,7 +164,7 @@ begin
   select * into f from public.customs_files where job_id = new.id;
   if public.customs_eligible(new) then
     if f.id is null then
-      agent := coalesce(new.clearing_agent_id, (select customs_default_agent_id from public.company_settings where id = 1));
+      agent := public.customs_agent_for(new.quote_id);
       insert into public.customs_files (job_id, clearing_agent_id) values (new.id, agent) returning * into f;
       insert into public.customs_events (file_id, kind, stage, note, by)
         values (f.id, 'opened', 'docs_pending', 'Shipment ' || btrim(new.shipment_status), auth.uid());
@@ -164,10 +173,6 @@ begin
       update public.customs_files set closed_at = null where id = f.id;
       insert into public.customs_events (file_id, kind, note, by)
         values (f.id, 'reopened', 'Shipment back to ' || btrim(new.shipment_status), auth.uid());
-    end if;
-    -- A clearing agent set on the shipment later fills an unassigned file.
-    if f.id is not null and new.clearing_agent_id is not null and f.clearing_agent_id is null then
-      update public.customs_files set clearing_agent_id = new.clearing_agent_id where id = f.id;
     end if;
   elsif f.id is not null and f.closed_at is null and (public.customs_past(new) or new.ops_completed_at is not null) then
     if public.customs_past(new) and f.stage <> 'cleared' then
@@ -184,7 +189,7 @@ $$;
 
 drop trigger if exists trg_customs_on_job on public.jobs;
 create trigger trg_customs_on_job
-  after insert or update of shipment_status, mode, ops_completed_at, clearance_basis, clearing_agent_id
+  after insert or update of shipment_status, mode, ops_completed_at, clearance_basis
   on public.jobs for each row execute function public.customs_on_job();
 
 -- ---------- 5. Stage timestamps + history ----------
@@ -258,6 +263,26 @@ revoke all on function public.customs_on_file() from public, anon, authenticated
 revoke all on function public.customs_on_required() from public, anon, authenticated;
 revoke all on function public.customs_on_document() from public, anon, authenticated;
 
+-- A clearing agent picked on the quote later fills its shipments' open,
+-- unassigned files.
+create or replace function public.customs_on_quote()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.clearing_agent_id is not null then
+    update public.customs_files cf set clearing_agent_id = new.clearing_agent_id
+      from public.jobs j
+     where j.id = cf.job_id and j.quote_id = new.id
+       and cf.clearing_agent_id is null and cf.closed_at is null;
+  end if;
+  return null;
+end;
+$$;
+drop trigger if exists trg_customs_on_quote on public.quotes;
+create trigger trg_customs_on_quote after update of clearing_agent_id on public.quotes
+  for each row execute function public.customs_on_quote();
+revoke all on function public.customs_on_quote() from public, anon, authenticated;
+revoke all on function public.customs_agent_for(uuid) from public, anon, authenticated;
+
 -- ---------- 7. Shipments already in transit ----------
 do $$
 declare
@@ -268,7 +293,7 @@ begin
              and not exists (select 1 from public.customs_files cf where cf.job_id = x.id)
   loop
     insert into public.customs_files (job_id, clearing_agent_id)
-      values (j.id, coalesce(j.clearing_agent_id, (select customs_default_agent_id from public.company_settings where id = 1)))
+      values (j.id, public.customs_agent_for(j.quote_id))
       returning id into fid;
     insert into public.customs_events (file_id, kind, stage, note, by)
       values (fid, 'opened', 'docs_pending', 'Shipment ' || btrim(j.shipment_status), null);
