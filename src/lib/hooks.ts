@@ -248,6 +248,34 @@ export function useDeleteDestinationAgent() {
   });
 }
 
+/* ---------- Customs: clearance files (0230) ---------- */
+export function useCustomsFiles() {
+  return useQuery({ queryKey: ["customs", "files"], queryFn: db.listCustomsFiles });
+}
+export function useCustomsEvents(fileId: string | undefined) {
+  return useQuery({
+    queryKey: ["customs", "events", fileId],
+    queryFn: () => db.listCustomsEvents(fileId as string),
+    enabled: Boolean(fileId),
+  });
+}
+export function useUpdateCustomsFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: Parameters<typeof db.updateCustomsFile>[1] }) =>
+      db.updateCustomsFile(input.id, input.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["customs"] }),
+  });
+}
+export function useAddCustomsEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { fileId: string; kind: "note" | "handover"; note: string }) =>
+      db.addCustomsEvent(input.fileId, input.kind, input.note),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["customs"] }),
+  });
+}
+
 /* ---------- Clearing agents ---------- */
 export function useClearingAgents() {
   return useQuery({
@@ -501,6 +529,9 @@ const STAFF_LIVE_KEYS: LiveKeys = {
   ai_action_policies: ["ai_policies"],
   ai_events: ["ai_events"],
   ai_triggers: ["ai_triggers"],
+  // Customs files (0230): opened / moved by shipment and document changes too.
+  customs_files: ["customs"],
+  shipment_documents: [...SHIPMENT_LIVE_KEYS.shipment_documents, "customs"],
 };
 
 /** Live updates (0198, 0203, 0212): any change to shipments, quotes, the

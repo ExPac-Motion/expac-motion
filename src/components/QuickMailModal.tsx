@@ -40,6 +40,9 @@ export default function QuickMailModal({
   initialSubject,
   initialBody,
   onSent,
+  job,
+  initialFiles,
+  initialCc,
 }: {
   to: string | null | undefined;
   company: string;
@@ -54,16 +57,21 @@ export default function QuickMailModal({
   initialBody?: string;
   /** Called after a successful send, before the modal closes. */
   onSent?: (info: { id: string; to: string; subject: string }) => void;
+  /** Offer this shipment's documents in the attach picker. */
+  job?: { id: string; reference: string } | null;
+  /** Attachments ticked from the start (e.g. the customs documents). */
+  initialFiles?: ShipmentAttachmentPick[];
+  initialCc?: string;
 }) {
   const { data: templates } = useMailTemplates();
   const { data: settings } = useCompanySettings();
   const uploadAsset = useUploadMailAsset();
   const { toast, error: toastError } = useToast();
   const [subject, setSubject] = useState(initialSubject ?? "");
-  const [cc, setCc] = useState("");
+  const [cc, setCc] = useState(initialCc ?? "");
   const [body, setBody] = useState(initialBody ?? "");
   const [attachQuote, setAttachQuote] = useState(false);
-  const [files, setFiles] = useState<ShipmentAttachmentPick[]>([]);
+  const [files, setFiles] = useState<ShipmentAttachmentPick[]>(initialFiles ?? []);
   const [phase, setPhase] = useState<"idle" | "pdf" | "sending">("idle");
   const sending = phase !== "idle";
   const subjectRef = useRef<HTMLInputElement>(null);
@@ -205,7 +213,7 @@ export default function QuickMailModal({
                   Attach “Quotation - {quote.reference}.pdf”
                 </label>
               )}
-              <AttachDocumentPicker job={null} quote={null} picks={files} onChange={setFiles} inline />
+              <AttachDocumentPicker job={job ?? null} quote={null} picks={files} onChange={setFiles} inline />
             </span>
           </div>
           <RichTextEditor

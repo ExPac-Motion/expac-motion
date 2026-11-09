@@ -54,6 +54,8 @@ import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
 import PortalLayout from "./pages/portal/PortalLayout";
 import WmsPage from "./pages/WmsPage";
+import CustomsPage from "./pages/customs/CustomsPage";
+import CustomsDemoPage from "./pages/customs/CustomsDemoPage";
 import CustomerRecordPage from "./pages/clients/CustomerRecordPage";
 import WmsPrintPage from "./pages/wms/WmsPrintPage";
 import WmsPrintDemoPage from "./pages/wms/WmsPrintDemoPage";
@@ -257,6 +259,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/masters" element={<MastersDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/houses" element={<MastersDemo view="houses" />} />}
           {import.meta.env.DEV && <Route path="/dev/inbox" element={<InboxDemoPage />} />}
+          {import.meta.env.DEV && <Route path="/dev/customs" element={<CustomsDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/motion-ai" element={<MotionAiDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/pre-alert" element={<PreAlertDemoPage />} />}
           {import.meta.env.DEV && (
@@ -372,6 +375,7 @@ function AppRoutes() {
             <Route path="wms/receipts/:id/edit" element={<NeedsPerm perm="warehouse"><WmsReceiptPage edit /></NeedsPerm>} />
             <Route path="wms/counts/:id" element={<NeedsPerm perm="warehouse"><WmsCountPage /></NeedsPerm>} />
             <Route path="wms/consols/:id" element={<NeedsPerm perm="warehouse"><WmsConsolPage /></NeedsPerm>} />
+            <Route path="customs" element={<NeedsPerm perm="customs"><CustomsPage /></NeedsPerm>} />
             <Route path="import-vat-duty" element={<NeedsPerm perm="customs"><ImportVatDutyPage /></NeedsPerm>} />
             <Route path="quotes/new" element={<NeedsPerm perm="quotes"><QuoteBuilderPage /></NeedsPerm>} />
             <Route path="quotes/:id/view" element={<NeedsPerm perm="quotes"><QuoteWorkspacePage /></NeedsPerm>} />

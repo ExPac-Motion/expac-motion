@@ -98,6 +98,8 @@ import type {
   WebFormSubmission,
   PublicWebForm,
   UiTableLayout,
+  CustomsEvent,
+  CustomsFile,
 } from "./types";
 
 function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
@@ -2333,6 +2335,40 @@ export async function getShipmentDocumentUrl(
     .createSignedUrl(storagePath, 300);
   if (error || !data) throw error ?? new Error("Could not create download link");
   return brandStorageUrl(data.signedUrl);
+}
+
+/* ---------- Customs: clearance files (0230) ---------- */
+
+const CUSTOMS_SELECT =
+  "*, job:jobs(id,reference,mode,shipment_status,shipment_kind,master_job_id,awb_mbl,container_no,vessel_name,carrier_name,eta,etd,origin,destination,po_no, client:clients(id,company)), agent:clearing_agents(id,company,email,contact,phone)";
+
+/** Open customs files, plus the ones closed in the last 60 days. */
+export async function listCustomsFiles(): Promise<CustomsFile[]> {
+  const since = new Date(Date.now() - 60 * 86_400_000).toISOString();
+  return unwrap<CustomsFile[]>(
+    await supabase
+      .from("customs_files")
+      .select(CUSTOMS_SELECT)
+      .or(`closed_at.is.null,closed_at.gte.${since}`)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+export async function updateCustomsFile(
+  id: string,
+  patch: Partial<Pick<CustomsFile, "clearing_agent_id" | "stage" | "required_docs" | "entry_no" | "query_note" | "notes" | "handover_to">>,
+): Promise<void> {
+  unwrap(await supabase.from("customs_files").update(patch).eq("id", id));
+}
+
+export async function listCustomsEvents(fileId: string): Promise<CustomsEvent[]> {
+  return unwrap<CustomsEvent[]>(
+    await supabase.from("customs_events").select("*").eq("file_id", fileId).order("at", { ascending: false }),
+  );
+}
+
+export async function addCustomsEvent(fileId: string, kind: "note" | "handover", note: string): Promise<void> {
+  unwrap(await supabase.from("customs_events").insert({ file_id: fileId, kind, note }));
 }
 
 /* ---------- Per-user table column layout ---------- */

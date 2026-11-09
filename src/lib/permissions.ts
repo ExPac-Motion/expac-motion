@@ -35,7 +35,7 @@ export const STAFF_PERMS: PermDef<StaffPerm>[] = [
   { key: "shipments", label: "Shipments", hint: "Active and completed shipments, every mode" },
   { key: "quotes", label: "Quotations", hint: "Quote list and Quote Builder" },
   { key: "warehouse", label: "Motion WMS (warehouse)", hint: "Receipts, movements, releases, inventory, storage billing, cycle counts" },
-  { key: "customs", label: "Customs Charges", hint: "Import VAT and duty calculator" },
+  { key: "customs", label: "Customs", hint: "Clearance Board (customs files, handover to the clearing agent) and the Customs Charges calculator" },
   { key: "customers", label: "Customers", hint: "Customer records (Portal Access stays Admin only)" },
   { key: "suppliers", label: "Suppliers and partners", hint: "Shippers, agents, transporters, clearing and destination agents" },
   { key: "leads", label: "Sales CRM leads and outreach", hint: "Leads, opportunities, templates, campaigns, workflows, forms, media" },

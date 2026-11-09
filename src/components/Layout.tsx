@@ -87,7 +87,15 @@ const NAV: NavModule[] = [
       { to: "/wms?tab=settings", label: "Settings" },
     ],
   },
-  { to: "/import-vat-duty", label: "Customs Charges" },
+  {
+    to: "/customs",
+    label: "Customs",
+    children: [
+      { to: "/customs", label: "Clearance Board" },
+      { to: "/import-vat-duty", label: "Customs Charges" },
+      { to: "/customs?tab=settings", label: "Settings" },
+    ],
+  },
   { to: "/rates", label: "Rates & Tariff" },
   {
     to: "/clients",
@@ -208,7 +216,7 @@ export default function Layout() {
     "/jobs": "shipments",
     "/quotes": "quotes",
     "/wms": "warehouse",
-    "/import-vat-duty": "customs",
+    "/customs": "customs",
     "/clients": "customers",
     "/agents": "suppliers",
     "/rates": "rates",

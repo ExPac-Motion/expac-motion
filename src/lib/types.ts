@@ -135,6 +135,8 @@ export type ShipmentCommsConfig = Partial<
 
 export interface CompanySettings {
   id: number;
+  /** Customs (0230): the clearing agent a new customs file goes to when the shipment has none. */
+  customs_default_agent_id?: string | null;
   /** Editable tier margins (0130), e.g. { platinum: 10, gold: 15, silver: 18 }. */
   tier_margins?: Partial<Record<RateTierId, number>> | null;
   /** Per-role permission switches (0131), see lib/permissions.ts. */
@@ -431,8 +433,64 @@ export const DOCUMENT_TYPES = [
   "Proof of Delivery",
   "Bill of Lading / AWB",
   "Customs",
+  "Customs Release Note",
+  "Certificate of Origin",
   "Other",
 ] as const;
+
+/* ---------- Customs: clearance files (0230) ---------- */
+
+export type CustomsStage = "docs_pending" | "ready" | "handed_over" | "lodged" | "query" | "cleared";
+
+export interface CustomsFile {
+  id: string;
+  job_id: string;
+  clearing_agent_id: string | null;
+  stage: CustomsStage;
+  /** 'ci', 'pl', 'tdoc' or a Document Vault type label. */
+  required_docs: string[];
+  entry_no: string | null;
+  query_note: string | null;
+  notes: string | null;
+  handover_to: string | null;
+  handed_over_at: string | null;
+  handed_over_by: string | null;
+  lodged_at: string | null;
+  query_at: string | null;
+  cleared_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  job?: {
+    id: string;
+    reference: string;
+    mode: QuoteMode | null;
+    shipment_status: string | null;
+    shipment_kind?: ShipmentKind | null;
+    master_job_id?: string | null;
+    awb_mbl: string | null;
+    container_no: string | null;
+    vessel_name: string | null;
+    carrier_name: string | null;
+    eta: string | null;
+    etd: string | null;
+    origin: string | null;
+    destination: string | null;
+    po_no: string | null;
+    client?: { id: string; company: string } | null;
+  } | null;
+  agent?: { id: string; company: string; email: string | null; contact: string | null; phone: string | null } | null;
+}
+
+export interface CustomsEvent {
+  id: string;
+  file_id: string;
+  at: string;
+  by: string | null;
+  kind: "opened" | "stage" | "handover" | "note" | "agent" | "docs" | "closed" | "reopened";
+  stage: CustomsStage | null;
+  note: string | null;
+}
 
 /* ---------- Sales CRM: Leads ---------- */
 
