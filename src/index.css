@@ -6547,10 +6547,19 @@ table.dt .task-title {
   grid-template-columns: 210px var(--inbox-list, 380px) 7px minmax(0, 1fr);
   gap: 0;
   padding: 0;
-  min-height: 70vh;
+  /* A fixed height, so the folder list, the email list and the reading
+     pane all run to the bottom and each scrolls on its own (a long folder
+     list used to stretch the panel and leave white space under the rest). */
+  height: calc(100vh - var(--inbox-top, 150px) - 48px);
+  min-height: 480px;
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
 }
+.panel.inbox > * {
+  min-height: 0;
+}
 .inbox-nav {
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -6612,7 +6621,6 @@ table.dt .task-title {
 .inbox-dot.cat-all { background: var(--night); }
 .inbox-list {
   overflow-y: auto;
-  max-height: 78vh;
 }
 .inbox-row {
   display: grid;
@@ -6692,7 +6700,6 @@ table.dt .task-title {
 .inbox-reader {
   min-width: 0;
   overflow-y: auto;
-  max-height: 78vh;
 }
 .inbox-read {
   --read-pad-top: 14px;
@@ -6818,6 +6825,14 @@ table.dt .task-title {
 @media (max-width: 900px) {
   .panel.inbox {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
+  }
+  .panel.inbox.expanded {
+    height: auto;
+  }
+  .panel.inbox.expanded .inbox-reader {
+    max-height: calc(100vh - 120px);
   }
   .inbox-splitter {
     display: none;
@@ -6845,8 +6860,8 @@ table.dt .task-title {
   display: none;
 }
 /* Still its own scroll area, so the header can stay frozen. */
-.panel.inbox.expanded .inbox-reader {
-  max-height: calc(100vh - 120px);
+.panel.inbox.expanded {
+  height: calc(100vh - var(--inbox-top, 120px) - 48px);
 }
 .panel.inbox.expanded .inbox-reader-bar {
   justify-content: flex-start;

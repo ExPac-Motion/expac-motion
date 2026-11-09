@@ -327,6 +327,22 @@ export default function InboxTab() {
       return 380;
     }
   });
+  // The panel runs from where it starts down to the bottom of the window,
+  // whatever sits above it (header, tabs, notices); see .panel.inbox.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const fit = () => el.style.setProperty("--inbox-top", `${Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY))}px`);
+    fit();
+    const ro = new ResizeObserver(fit);
+    if (el.parentElement) ro.observe(el.parentElement);
+    window.addEventListener("resize", fit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [mailboxQ.isSuccess && !mailbox]); // the panel only exists once a mailbox is connected
   function startResize(e: React.MouseEvent) {
     e.preventDefault();
     const startX = e.clientX;
@@ -739,6 +755,7 @@ export default function InboxTab() {
       )}
 
       <div
+        ref={panelRef}
         className={`panel inbox${expanded ? " expanded" : ""}`}
         style={{ "--inbox-list": `${listWidth}px` } as React.CSSProperties}
       >
@@ -1125,7 +1142,7 @@ export default function InboxTab() {
         />
 
         <div className="inbox-reader">
-          {folder !== "drafts" && (folder === "sent" ? openSent : open) && (
+          {folder === "sent" && openSent && (
             <div className="inbox-reader-bar">
               {expanded ? (
                 <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Back to the list (Esc)">
@@ -1167,6 +1184,22 @@ export default function InboxTab() {
               onReply={(parsed, replyAll, aiDraft) => startReply(open, parsed, replyAll, aiDraft)}
               onForward={(parsed) => setCompose({ forward: open, parsed })}
               onTask={() => setTasking(open)}
+              viewToggle={
+                expanded ? (
+                  <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Back to the list (Esc)">
+                    ‹ Back to the list
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => setExpanded(true)}
+                    title="Open the email full width (or double-click it in the list)"
+                  >
+                    ⤢ Full view
+                  </button>
+                )
+              }
               composer={
                 compose && inlineReply && compose.replyTo?.id === open.id ? (
                   <ComposeModal
@@ -1920,8 +1953,11 @@ function Reader({
   onForward,
   onTask,
   composer,
+  viewToggle,
 }: {
   msg: InboxMessage;
+  /** Full view / Back to the list, beside the subject. */
+  viewToggle?: ReactNode;
   /** The reply being written to this email, shown under it. */
   composer?: ReactNode;
   lastOut: LastOut;
@@ -2094,6 +2130,7 @@ function Reader({
             <button type="button" className="btn ghost small inbox-side-toggle" onClick={toggleSide} title="Sender, shipments and quotes">
               {showSide ? "Hide details" : "Details"}
             </button>
+            {viewToggle}
           </div>
           <div className="inbox-bar">
             {incoming && (
