@@ -770,6 +770,7 @@ export default function InboxTab() {
         className={`panel inbox${expanded ? " expanded" : ""}`}
         style={{ "--inbox-list": `${listWidth}px` } as React.CSSProperties}
       >
+        {expanded && <div className="inbox-full-backdrop" onClick={() => setExpanded(false)} aria-hidden="true" />}
         <nav className="inbox-nav">
           <div className="inbox-nav-head">Folders</div>
           {folders.map((f) => {
@@ -1156,8 +1157,8 @@ export default function InboxTab() {
           {folder === "sent" && openSent && (
             <div className="inbox-reader-bar">
               {expanded ? (
-                <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Back to the list (Esc)">
-                  ‹ Back to {folder === "sent" ? "Sent" : "the list"}
+                <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Close full view (Esc)">
+                  ✕ Close
                 </button>
               ) : (
                 <button
@@ -1197,8 +1198,8 @@ export default function InboxTab() {
               onTask={() => setTasking(open)}
               viewToggle={
                 expanded ? (
-                  <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Back to the list (Esc)">
-                    ‹ Back to the list
+                  <button type="button" className="btn ghost small" onClick={() => setExpanded(false)} title="Close full view (Esc)">
+                    ✕ Close
                   </button>
                 ) : (
                   <button
@@ -1275,7 +1276,7 @@ const KEYS: [string, string][] = [
   ["j ↓", "Next email"],
   ["k ↑", "Previous email"],
   ["Enter", "Open full view"],
-  ["Esc", "Back to the list"],
+  ["Esc", "Close full view"],
   ["r", "Reply"],
   ["a", "Reply all"],
   ["f", "Forward"],
@@ -1960,7 +1961,7 @@ function Reader({
   viewToggle,
 }: {
   msg: InboxMessage;
-  /** Full view / Back to the list, beside the subject. */
+  /** Full view / Close, beside the subject. */
   viewToggle?: ReactNode;
   /** The reply being written to this email, shown under it. */
   composer?: ReactNode;
