@@ -216,8 +216,12 @@ export async function onRequestPost(context) {
     usableReplyTo(env.MAIL_REPLY_TO) ||
     "support@expac.co.za";
 
-  // Inbox mail goes out from the sender's own mailbox (0227).
+  // Inbox mail goes out from the sender's own mailbox (0227). Resend only
+  // sends from a verified domain: if the mailbox's domain isn't verified
+  // there, the mail goes from the verified address (MAIL_FROM) under the
+  // mailbox's name, with replies to the mailbox (verifiedFrom below).
   let mailbox = null;
+  let verifiedFrom = from;
   if (body.fromMailbox && userId && !internalOnly && env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const r = await fetch(
@@ -235,6 +239,10 @@ export async function onRequestPost(context) {
       const name = fromName || mailbox.display_name || "";
       from = name ? name + " <" + mailbox.email + ">" : mailbox.email;
       replyTo = mailbox.email;
+      if (name) {
+        const m = String(baseFrom).match(/<([^>]+)>/);
+        verifiedFrom = name + " <" + (m ? m[1] : baseFrom) + ">";
+      }
     }
   }
 
@@ -265,9 +273,8 @@ export async function onRequestPost(context) {
   if (bcc.length) payload.bcc = bcc;
   if (attachments.length) payload.attachments = attachments;
 
-  let res;
-  try {
-    res = await fetch("https://api.resend.com/emails", {
+  const sendNow = () =>
+    fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         authorization: "Bearer " + env.RESEND_API_KEY,
@@ -275,11 +282,23 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify(payload),
     });
+  let res;
+  let data;
+  try {
+    res = await sendNow();
+    data = await res.json().catch(() => ({}));
+    // The mailbox's own domain isn't verified on Resend: send again from the
+    // verified address (same name, replies still to the mailbox).
+    if (!res.ok && payload.from !== verifiedFrom && /not verified|verify your domain/i.test(String((data && (data.message || data.error)) || ""))) {
+      payload.from = verifiedFrom;
+      from = verifiedFrom;
+      res = await sendNow();
+      data = await res.json().catch(() => ({}));
+    }
   } catch (e) {
     return json({ error: "Could not reach Resend: " + (e && e.message ? e.message : e) }, 502);
   }
 
-  const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.id) {
     return json(
       { error: (data && (data.message || data.error)) || "Resend returned " + res.status },
