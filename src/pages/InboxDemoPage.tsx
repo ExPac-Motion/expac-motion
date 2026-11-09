@@ -131,6 +131,26 @@ const MAIL = [
     category: "unknown",
     archived_at: ago(60 * 24 * 5),
   },
+  {
+    // A scam like the fake xneelo email: flagged in the list and the reader.
+    id: "m6",
+    folder: "INBOX",
+    direction: "in",
+    thread_key: "t6",
+    from_email: "noreply@hosting-alerts.ru",
+    from_name: "Support Security",
+    to_emails: ["support@expac.co.za"],
+    cc_emails: [],
+    subject: "Your PHP website remains vulnerable to active exploits",
+    snippet: "A security update for PHP is now available. The security update requires an initial payment.",
+    body_html:
+      "<p>Hello,</p><p>A security update for PHP is now available for https://expac.co.za. The security update requires an initial payment.</p><p><a href=\"https://login-portal.hosting-alerts.ru/pay\">https://xneelo.com/realms/PHP/protocol/openid-connect/updating</a></p>",
+    has_attachments: false,
+    sent_at: ago(90),
+    seen: false,
+    answered: false,
+    category: "unknown",
+  },
 ];
 
 export default function InboxDemoPage() {

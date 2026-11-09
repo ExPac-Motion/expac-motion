@@ -12311,3 +12311,25 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 .inbox-nav-check input { margin: 0; }
 .inbox-nav-hint { font-size: 0.72rem; margin: 2px 8px 6px; }
 .inbox-reader-bar + .inbox-read .inbox-side { top: 44px; }
+
+/* --- Inbox triage: scam warning, Motion AI summary and draft --- */
+.inbox-chip.warn { background: var(--orange-tint); color: var(--orange-ink); font-weight: 700; }
+.inbox-scam {
+  margin: 12px 0 0; padding: 12px 14px; border-radius: 10px;
+  background: var(--orange-tint); border: 1px solid var(--orange); color: var(--ink); font-size: 0.86rem;
+}
+.inbox-scam strong { color: var(--orange-ink); }
+.inbox-scam ul { margin: 6px 0; padding-left: 18px; }
+.inbox-scam p { margin: 6px 0 8px; }
+.inbox-ai-summary {
+  margin: 12px 0 0; padding: 12px 14px; border-radius: 10px;
+  background: var(--teal-tint); border: 1px solid var(--teal); font-size: 0.88rem;
+}
+.inbox-ai-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; color: var(--teal-ink); }
+.inbox-ai-summary p { margin: 4px 0 8px; }
+.inbox-ai-summary ul { margin: 2px 0 8px; padding-left: 18px; }
+.inbox-ai-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--teal-ink); }
+.inbox-ai-draft { display: grid; gap: 6px; min-width: 280px; }
+.inbox-ai-draft textarea { width: 100%; font: inherit; font-size: 0.82rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+.inbox-ai-draft .btn { justify-self: start; }
+.inbox-menu-pop > button:disabled { opacity: 0.5; cursor: default; }

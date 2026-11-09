@@ -53,6 +53,10 @@ import {
   downloadInboxRaw,
   insertInboxMessage,
   pushInbox,
+  summariseMail,
+  draftMailReply,
+  type AiMailInput,
+  type AiMailSummary,
   removeInboxDraftFiles,
   saveInboxDraft,
   uploadInboxDraftFile,
@@ -79,11 +83,12 @@ import type {
   SentMail,
 } from "../../lib/types";
 import { isShipmentComplete } from "../../lib/types";
+import { checkSafety, isAutoReply } from "../../lib/mailSafety";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 /** "f:<path>" is one of your own folders on the mail server (0227). */
 type Folder = "all" | InboxCategory | "spam" | "sent" | "drafts" | "snoozed" | "archive" | "trash" | `f:${string}`;
-type View = "all" | "unread" | "needs" | "flagged" | "job";
+type View = "all" | "today" | "unread" | "needs" | "flagged" | "job";
 
 const FOLDERS: { key: Folder; label: string }[] = [
   { key: "all", label: "All mail" },
@@ -103,6 +108,7 @@ const FOLDERS: { key: Folder; label: string }[] = [
 const ORGANISE_FOLDERS: Folder[] = ["snoozed", "archive", "trash"];
 const VIEWS: { key: View; label: string }[] = [
   { key: "all", label: "Everything" },
+  { key: "today", label: "Today" },
   { key: "unread", label: "Unread" },
   { key: "needs", label: "Needs reply" },
   { key: "flagged", label: "Flagged" },
@@ -176,7 +182,27 @@ const needsReply = (m: InboxMessage, lastOut?: LastOut) =>
   !m.done_at &&
   !(m.thread_key && (lastOut?.get(m.thread_key) ?? "") > m.sent_at) &&
   !m.is_bulk &&
-  !isOurs(m.from_email);
+  !isOurs(m.from_email) &&
+  // Out-of-office, bounces, read receipts, meeting replies.
+  !isAutoReply(m.subject) &&
+  // Only copied in (not in To): for information.
+  !ccOnly(m) &&
+  // Looks like a scam: never something to answer.
+  !checkSafety(m).suspicious;
+/** ExPac only in Cc, someone else in To: sent for information. */
+const ccOnly = (m: InboxMessage) =>
+  m.to_emails.length > 0 && !m.to_emails.some((e) => isOurs(e)) && m.cc_emails.some((e) => isOurs(e));
+/** Today: what needs you now. Waiting on a reply, flagged, back from a
+ *  snooze, or new today (not bulk mail). */
+const forToday = (m: InboxMessage, lastOut?: LastOut) =>
+  m.direction === "in" &&
+  (needsReply(m, lastOut) ||
+    !!m.flagged ||
+    backFromSnooze(m) ||
+    (isUnread(m) &&
+      !m.is_bulk &&
+      !checkSafety(m).suspicious &&
+      new Date(m.sent_at).toDateString() === new Date().toDateString()));
 const cat = (m: InboxMessage): InboxCategory => m.category ?? "unknown";
 
 function shortDate(iso: string) {
@@ -207,6 +233,8 @@ interface Parsed {
   rawHtml: string | null;
   text: string | null;
   attachments: { name: string; type: string; url: string; size: number; inline: boolean }[];
+  /** Reply-To addresses (a scam signal when another domain). */
+  replyTo: string[];
 }
 async function parseRaw(path: string): Promise<Parsed> {
   const [{ default: PostalMime }, buf] = await Promise.all([import("postal-mime"), downloadInboxRaw(path)]);
@@ -230,7 +258,8 @@ async function parseRaw(path: string): Promise<Parsed> {
   const rawHtml = email.html ?? null;
   let html = rawHtml;
   if (html && cids.size) html = html.replace(/cid:([^"'\s)>]+)/gi, (m, id) => cids.get(id) ?? m);
-  return { html, rawHtml, text: email.text ?? null, attachments };
+  const replyTo = (email.replyTo ?? []).map((a) => (a.address ?? "").toLowerCase()).filter(Boolean);
+  return { html, rawHtml, text: email.text ?? null, attachments, replyTo };
 }
 
 export default function InboxTab() {
@@ -394,7 +423,9 @@ export default function InboxTab() {
     return folder === "all" || cat(m) === folder;
   };
   const inView = (m: InboxMessage) =>
-    view === "unread"
+    view === "today"
+      ? forToday(m, lastOut)
+      : view === "unread"
       ? isUnread(m)
       : view === "needs"
         ? needsReply(m, lastOut)
@@ -462,7 +493,9 @@ export default function InboxTab() {
             ? incoming.filter((m) => m.spam && !m.deleted_at && isUnread(m)).length
             : incoming.filter((m) => live(m) && (f === "all" || cat(m) === f) && isUnread(m)).length;
   const viewCount = (v: View) =>
-    v === "unread"
+    v === "today"
+      ? incoming.filter((m) => inFolder(m) && forToday(m, lastOut)).length
+      : v === "unread"
       ? incoming.filter((m) => inFolder(m) && isUnread(m)).length
       : v === "needs"
         ? incoming.filter((m) => inFolder(m) && needsReply(m, lastOut)).length
@@ -546,10 +579,10 @@ export default function InboxTab() {
       update.mutate({ id: m.id, patch: { read_at: new Date().toISOString(), marked_unread: false } });
   }
   /** Reply (or reply all); a reply already started carries on from its draft. */
-  function startReply(m: InboxMessage, parsed: Parsed | undefined, replyAll: boolean) {
+  function startReply(m: InboxMessage, parsed: Parsed | undefined, replyAll: boolean, aiDraft?: string) {
     const d = drafts.find((x) => x.reply_to_id === m.id);
-    if (d) openDraft(d);
-    else setCompose({ replyTo: m, replyAll, parsed });
+    if (d && !aiDraft) openDraft(d);
+    else setCompose({ replyTo: m, replyAll, parsed, aiDraft });
   }
 
   /* ---------- Desktop alerts (switched on per browser) ---------- */
@@ -1055,6 +1088,11 @@ export default function InboxTab() {
                 <div className="inbox-meta">
                   {m.record_name && <span className="inbox-chip">{m.record_name}</span>}
                   {m.job_reference && <span className="inbox-chip job">{m.job_reference}</span>}
+                  {checkSafety(m).suspicious && (
+                    <span className="inbox-chip warn" title={checkSafety(m).reasons.join(". ")}>
+                      ⚠ Suspicious
+                    </span>
+                  )}
                   {needsReply(m, lastOut) && <span className="inbox-chip needs">Needs reply</span>}
                   {m.direction === "out" && <span className="inbox-chip">Sent</span>}
                   {isSnoozed(m) && <span className="inbox-chip">Snoozed until {shortDate(m.snoozed_until as string)}</span>}
@@ -1126,7 +1164,7 @@ export default function InboxTab() {
                 const m = all.find((x) => x.id === id);
                 if (m) select(m);
               }}
-              onReply={(parsed, replyAll) => startReply(open, parsed, replyAll)}
+              onReply={(parsed, replyAll, aiDraft) => startReply(open, parsed, replyAll, aiDraft)}
               onForward={(parsed) => setCompose({ forward: open, parsed })}
               onTask={() => setTasking(open)}
               composer={
@@ -1674,6 +1712,17 @@ function SentReader({ mail }: { mail: SentMail }) {
   );
 }
 
+/** Plain text (Motion AI's draft) as editor HTML: one div per line, a blank line between paragraphs. */
+function textToHtml(text: string): string {
+  const esc = (x: string) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/\r/g, "")
+    .trim()
+    .split(/\n{2,}/)
+    .map((para) => para.split("\n").map((line) => `<div>${esc(line) || "<br>"}</div>`).join(""))
+    .join("<div><br></div>");
+}
+
 /** A message's raw source, parsed once and shared (reader, conversation, shortcuts). */
 function useParsed(m: InboxMessage) {
   return useQuery({
@@ -1884,7 +1933,7 @@ function Reader({
   organise?: OrganiseActions;
   /** Open another email of the conversation. */
   onOpen: (id: string) => void;
-  onReply: (parsed: Parsed | undefined, replyAll: boolean) => void;
+  onReply: (parsed: Parsed | undefined, replyAll: boolean, aiDraft?: string) => void;
   onForward: (parsed: Parsed | undefined) => void;
   /** Create a task from this email. */
   onTask: () => void;
@@ -1895,6 +1944,85 @@ function Reader({
   const parsed = parsedQ.data;
   const busy = !!msg.raw_path && parsedQ.isLoading;
   const [addingAs, setAddingAs] = useState(false);
+  const qc = useQueryClient();
+  const can = useCan();
+
+  // Scam check on the whole email once it's loaded (the list only sees the sender).
+  const safety = checkSafety(
+    msg,
+    parsed || msg.body_html || msg.body_text
+      ? {
+          html: parsed?.rawHtml ?? parsed?.html ?? msg.body_html,
+          text: parsed?.text ?? msg.body_text,
+          replyTo: parsed?.replyTo,
+        }
+      : undefined,
+  );
+
+  /* ---------- Motion AI: summary and a drafted reply (only when asked) ---------- */
+  const [summary, setSummary] = useState<AiMailSummary | null>(null);
+  const [aiBusy, setAiBusy] = useState<"summary" | "draft" | null>(null);
+  const [instruction, setInstruction] = useState("");
+  /** The conversation as text (each email loaded if it hasn't been yet). */
+  async function aiInput(): Promise<AiMailInput> {
+    const list = [...thread, msg].sort((a, b) => a.sent_at.localeCompare(b.sent_at)).slice(-10);
+    const emails = await Promise.all(
+      list.map(async (t) => {
+        let p = t.raw_path ? qc.getQueryData<Parsed>(["inbox_raw", t.raw_path]) : undefined;
+        if (!p && t.raw_path) {
+          p = await qc
+            .fetchQuery({ queryKey: ["inbox_raw", t.raw_path], queryFn: () => parseRaw(t.raw_path as string), staleTime: Infinity })
+            .catch(() => undefined);
+        }
+        const text = p?.text || htmlToText(p?.html ?? t.body_html ?? "") || t.body_text || t.snippet || "";
+        return {
+          from: t.direction === "out" ? senderLabel(t) : `${t.from_name ?? ""} <${t.from_email ?? ""}>`.trim(),
+          to: [...t.to_emails, ...t.cc_emails].join(", "),
+          date: formatDateTime(t.sent_at),
+          direction: t.direction,
+          text,
+          current: t.id === msg.id,
+        };
+      }),
+    );
+    return {
+      subject: msg.subject ?? "",
+      sender: {
+        name: msg.from_name,
+        email: msg.direction === "in" ? msg.from_email : msg.to_emails[0] ?? null,
+        relation: msg.record_name ? `${CATEGORY_LABEL[cat(msg)]}: ${msg.record_name}` : CATEGORY_LABEL[cat(msg)],
+      },
+      emails,
+    };
+  }
+  async function summarise() {
+    setAiBusy("summary");
+    try {
+      setSummary(await summariseMail(await aiInput()));
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Motion AI couldn't summarise this");
+    } finally {
+      setAiBusy(null);
+    }
+  }
+  async function draftReply() {
+    setAiBusy("draft");
+    try {
+      const r = await draftMailReply({ ...(await aiInput()), instruction: instruction.trim() || undefined });
+      setInstruction("");
+      onReply(parsed, false, textToHtml(r.reply));
+      toast("Motion AI drafted a reply: read it and change what you need before sending");
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Motion AI couldn't draft a reply");
+    } finally {
+      setAiBusy(null);
+    }
+  }
+  function askChat() {
+    const body = (parsed?.text ?? msg.body_text ?? "").trim().slice(0, 3000);
+    const text = `About this email from ${senderLabel(msg)}, "${msg.subject || "(no subject)"}" (${formatDateTime(msg.sent_at)}):\n\n${body}\n\n`;
+    window.dispatchEvent(new CustomEvent("motion-ai:ask", { detail: { text } }));
+  }
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   // Wide enough: the sender panel sits alongside; else above the conversation.
@@ -2076,6 +2204,33 @@ function Reader({
                 )}
               </MenuButton>
             )}
+            <MenuButton label={aiBusy ? "✦ Working…" : "✦ Motion AI ▾"} title="Summarise this conversation or draft a reply">
+              {(close) => (
+                <>
+                  <button type="button" disabled={!!aiBusy} onClick={() => (close(), void summarise())}>
+                    Summarise the conversation
+                  </button>
+                  {incoming && (
+                    <div className="inbox-menu-row inbox-ai-draft">
+                      <textarea
+                        rows={2}
+                        value={instruction}
+                        onChange={(e) => setInstruction(e.target.value)}
+                        placeholder="What should the reply say? (optional, e.g. rate is R12 400, ETD Friday)"
+                      />
+                      <button type="button" className="btn small" disabled={!!aiBusy} onClick={() => (close(), void draftReply())}>
+                        Draft a reply
+                      </button>
+                    </div>
+                  )}
+                  {can("motion_ai") && (
+                    <button type="button" onClick={() => (close(), askChat())}>
+                      Ask Motion AI something else…
+                    </button>
+                  )}
+                </>
+              )}
+            </MenuButton>
           </div>
           {(isSnoozed(msg) || msg.deleted_at) && (
             <div className="inbox-bar-note muted">
@@ -2085,6 +2240,67 @@ function Reader({
         </div>
 
         {!wide && showSide && <div className="inbox-side stacked">{panel}</div>}
+
+        {safety.suspicious && (
+          <div className="inbox-scam" role="alert">
+            <strong>⚠ This email looks like a scam</strong>
+            <ul>
+              {safety.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+            <p>
+              Don't click its links, open its attachments or pay anything. If it claims to be from a company you deal
+              with, check with them another way (their number, or their website typed in yourself).
+            </p>
+            {incoming && !msg.spam && (
+              <button type="button" className="btn small outline warn" onClick={() => patch({ spam: true }, "Moved to Spam")}>
+                Move to Spam
+              </button>
+            )}
+          </div>
+        )}
+
+        {(summary || aiBusy === "summary") && (
+          <div className="inbox-ai-summary">
+            <div className="inbox-ai-head">
+              <strong>✦ Summary</strong>
+              {summary && (
+                <button type="button" className="btn ghost small" onClick={() => setSummary(null)} aria-label="Close the summary">
+                  ✕
+                </button>
+              )}
+            </div>
+            {!summary ? (
+              <p className="muted">Motion AI is reading the conversation…</p>
+            ) : (
+              <>
+                <p>{summary.summary}</p>
+                {summary.points.length > 0 && (
+                  <ul className="inbox-ai-points">
+                    {summary.points.map((x) => (
+                      <li key={x}>{x}</li>
+                    ))}
+                  </ul>
+                )}
+                {summary.asks.length > 0 && (
+                  <>
+                    <div className="inbox-ai-label">They ask</div>
+                    <ul>
+                      {summary.asks.map((x) => (
+                        <li key={x}>{x}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <div className="inbox-ai-label">Next step</div>
+                <p>{summary.next_step}</p>
+                {summary.warning && <p className="inbox-error-note">⚠ {summary.warning}</p>}
+                <p className="hint">Written by Motion AI from the emails; check before acting on it.</p>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="inbox-convo2">
           {convo.map((t) =>
@@ -2540,6 +2756,8 @@ interface ComposeState {
   forward?: InboxMessage;
   /** Reopening a saved draft (0180). */
   draft?: InboxDraft;
+  /** A reply Motion AI wrote (HTML), put above the signature to edit. */
+  aiDraft?: string;
 }
 
 /** Saves a draft this long after the last change. */
@@ -2551,6 +2769,7 @@ function ComposeModal({
   parsed: parsedProp,
   forward: fwd,
   draft,
+  aiDraft,
   draftsOn,
   book,
   jobs,
@@ -2636,7 +2855,8 @@ function ComposeModal({
   useEffect(() => {
     // Settings failing to load just means no signature, never a stuck editor.
     if (seed !== null || settingsQ.isLoading) return;
-    const s = sig ? `${blank}${sig}` : blank;
+    const top = aiDraft ? `${aiDraft}<div><br></div>` : blank;
+    const s = sig ? `${top}${sig}` : top;
     setSeed(s);
     setBody((b) => (b.trim() ? b : s));
     // eslint-disable-next-line react-hooks/exhaustive-deps

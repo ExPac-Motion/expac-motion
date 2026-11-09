@@ -2835,6 +2835,44 @@ export async function connectMailbox(input: {
   }
   return { folders: raw.folders ?? 0 };
 }
+/* ---------- Motion AI on an Inbox email (Phase 3, /api/ai-mail) ---------- */
+export interface AiMailEmail {
+  from: string;
+  to: string;
+  date: string;
+  direction: "in" | "out";
+  text: string;
+  /** The email being read / replied to. */
+  current?: boolean;
+}
+export interface AiMailInput {
+  subject: string;
+  mailbox?: string;
+  sender?: { name: string | null; email: string | null; relation: string | null };
+  emails: AiMailEmail[];
+  /** Draft only: what the reply should say, in the user's words. */
+  instruction?: string;
+}
+export interface AiMailSummary {
+  summary: string;
+  points: string[];
+  asks: string[];
+  next_step: string;
+  needs_reply: boolean;
+  warning: string | null;
+}
+async function aiMail<T>(action: "summary" | "draft", input: AiMailInput): Promise<T> {
+  const res = await authed("/api/ai-mail", { action, ...input });
+  const raw = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) {
+    if (res.status === 404 && !raw.error) throw new Error("Motion AI runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Motion AI returned ${res.status}`);
+  }
+  return raw;
+}
+export const summariseMail = (input: AiMailInput) => aiMail<AiMailSummary>("summary", input);
+export const draftMailReply = (input: AiMailInput) => aiMail<{ reply: string }>("draft", input);
+
 /** Creates a folder in your mailbox on the mail server (optionally inside another). */
 export async function createMailFolder(input: { name: string; parent?: string | null }): Promise<{ path: string }> {
   const res = await authed("/api/inbox-sync", { mode: "create_folder", name: input.name, parent: input.parent || undefined });
