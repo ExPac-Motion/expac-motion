@@ -45,6 +45,18 @@ const NAV: NavModule[] = [
     ],
   },
   {
+    to: "/quotes",
+    label: "Quotations",
+    children: [
+      { to: "/quotes", label: "All Quotes" },
+      { to: "/quotes?status=open", label: "New Lead" },
+      { to: "/quotes?status=sent", label: "Quote Sent" },
+      { to: "/quotes?status=accepted", label: "Quote Accepted" },
+      { to: "/quotes?status=completed", label: "Completed" },
+      { to: "/quotes?status=lost", label: "Not Proceeding" },
+    ],
+  },
+  {
     to: "/jobs",
     label: "Shipments",
     children: [
@@ -56,18 +68,6 @@ const NAV: NavModule[] = [
       { to: "/jobs/completed", label: "Completed Shipments" },
       { to: "/jobs/masters", label: "Masters" },
       { to: "/jobs/houses", label: "Houses" },
-    ],
-  },
-  {
-    to: "/quotes",
-    label: "Quotations",
-    children: [
-      { to: "/quotes", label: "All Quotes" },
-      { to: "/quotes?status=open", label: "New Lead" },
-      { to: "/quotes?status=sent", label: "Quote Sent" },
-      { to: "/quotes?status=accepted", label: "Quote Accepted" },
-      { to: "/quotes?status=completed", label: "Completed" },
-      { to: "/quotes?status=lost", label: "Not Proceeding" },
     ],
   },
   {
