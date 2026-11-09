@@ -330,6 +330,7 @@ export default function InboxTab() {
   // The panel runs from where it starts down to the bottom of the window,
   // whatever sits above it (header, tabs, notices); see .panel.inbox.
   const panelRef = useRef<HTMLDivElement>(null);
+  const noMailbox = mailboxQ.isSuccess && !mailbox;
   useEffect(() => {
     const el = panelRef.current;
     if (!el) return;
@@ -342,7 +343,7 @@ export default function InboxTab() {
       ro.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, [mailboxQ.isSuccess && !mailbox]); // the panel only exists once a mailbox is connected
+  }, [noMailbox]); // the panel only exists once a mailbox is connected
   function startResize(e: React.MouseEvent) {
     e.preventDefault();
     const startX = e.clientX;
