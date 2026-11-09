@@ -3,12 +3,7 @@
  * and corrected by ExPac, read-only for the clearing agent. Exports as CSV.
  */
 import { useState } from "react";
-import { EXTRACTION_FIELDS, extractionCsvRows, type CustomsExtraction, type CustomsLine } from "../../lib/customs";
-import { saveBlob, toCsv } from "../../lib/zip";
-
-export function downloadExtractionCsv(ref: string, ext: CustomsExtraction) {
-  saveBlob(new Blob([toCsv(extractionCsvRows(ref, ext))], { type: "text/csv" }), `${ref} customs data.csv`);
-}
+import { EXTRACTION_FIELDS, downloadExtractionCsv, type CustomsExtraction, type CustomsLine } from "../../lib/customs";
 
 const money = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -4,6 +4,7 @@
  * the times used on the board.
  */
 import type { CustomsFile, CustomsStage, ShipmentDocument } from "./types";
+import { saveBlob, toCsv } from "./zip";
 
 export const CUSTOMS_STAGES: { key: CustomsStage; label: string; short: string }[] = [
   { key: "docs_pending", label: "Documents pending", short: "Docs pending" },
@@ -202,4 +203,8 @@ export interface CustomsAgentStat {
   cleared_at: string | null;
   closed_at: string | null;
   queries: number;
+}
+
+export function downloadExtractionCsv(ref: string, ext: CustomsExtraction) {
+  saveBlob(new Blob([toCsv(extractionCsvRows(ref, ext))], { type: "text/csv" }), `${ref} customs data.csv`);
 }

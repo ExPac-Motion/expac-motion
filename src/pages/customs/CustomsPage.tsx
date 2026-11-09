@@ -268,7 +268,7 @@ function AgentPerformance() {
   const [days, setDays] = useState(90);
   const statsQ = useCustomsAgentStats(days);
   const agentsQ = useClearingAgents();
-  const names = new Map((agentsQ.data ?? []).map((a) => [a.id, a.company]));
+  const names = useMemo(() => new Map((agentsQ.data ?? []).map((a) => [a.id, a.company])), [agentsQ.data]);
   const rows = useMemo(() => {
     const by = new Map<string, CustomsAgentStat[]>();
     for (const r of statsQ.data ?? []) {
