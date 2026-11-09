@@ -584,13 +584,9 @@ export default function InboxTab() {
   };
   const linkedJobs = jobs.filter((j) => all.some((m) => m.job_id === j.id));
 
-  // A reply opens under its email in the reading pane; a forward, a new
-  // email or a draft reopened elsewhere stays a popup.
-  const replyClose = useRef<(() => Promise<boolean>) | null>(null);
-  const inlineReply = !!compose?.replyTo && !compose.forward && folder !== "sent" && folder !== "drafts";
-  async function select(m: InboxMessage) {
-    // Moving to another email: the reply in progress is saved to Drafts first.
-    if (inlineReply && compose?.replyTo?.id !== m.id && replyClose.current && !(await replyClose.current())) return;
+  // Every reply, forward, new email and reopened draft opens in the same
+  // popup, whichever view you're in (list, full view or Drafts).
+  function select(m: InboxMessage) {
     setOpenId(m.id);
     if (isUnread(m))
       update.mutate({ id: m.id, patch: { read_at: new Date().toISOString(), marked_unread: false } });
@@ -1201,19 +1197,6 @@ export default function InboxTab() {
                   </button>
                 )
               }
-              composer={
-                compose && inlineReply && compose.replyTo?.id === open.id ? (
-                  <ComposeModal
-                    {...compose}
-                    draftsOn={draftsOn}
-                    jobs={jobs}
-                    book={book}
-                    onClose={() => setCompose(null)}
-                    inline
-                    closeRef={replyClose}
-                  />
-                ) : undefined
-              }
             />
           ) : (
             <EmptyState>Pick a message.</EmptyState>
@@ -1260,7 +1243,7 @@ export default function InboxTab() {
           <p className="hint">Shortcuts work in the Inbox while you're not typing in a box. Archive, delete, flag and mark unread act on the ticked emails when some are ticked.</p>
         </Modal>
       )}
-      {compose && !(inlineReply && compose.replyTo?.id === open?.id) && (
+      {compose && (
         <ComposeModal
           {...compose}
           draftsOn={draftsOn}
