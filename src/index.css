@@ -12494,3 +12494,10 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 .broker-docs { list-style: none; padding: 0; display: grid; gap: 4px; }
 .customs-steps.broker { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit; }
+
+/* Shipment Comms: Motion AI draft */
+.comms-remarks-tools { display: inline-flex; align-items: center; gap: 10px; }
+.comms-ai-btn { color: var(--teal-ink, var(--teal)); font-weight: 700; white-space: nowrap; }
+.comms-ai-panel { display: grid; gap: 6px; margin: 4px 0 8px; padding: 8px; border: 1px solid var(--teal-tint); background: color-mix(in srgb, var(--teal-tint) 35%, transparent); border-radius: 10px; }
+.comms-ai-panel textarea { width: 100%; font: inherit; font-size: 0.85rem; }
+.comms-ai-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }

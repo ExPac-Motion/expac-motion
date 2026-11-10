@@ -13,11 +13,13 @@ import {
   useCompanySettings,
   useMessages,
   useSendMessage,
+  useJobTracking,
 } from "../../lib/hooks";
+import { draftShipmentComms } from "../../lib/db";
 import AttachDocumentPicker from "../../components/AttachDocumentPicker";
 import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
 import { buildShipmentEmail, buildShipmentReply } from "../../lib/mailTemplates";
-import { formatDateTime } from "../../lib/format";
+import { formatDate, formatDateTime } from "../../lib/format";
 import type { Job, Message, MessageStatus } from "../../lib/types";
 
 function statusTone(s: MessageStatus): string {
@@ -61,6 +63,76 @@ export default function CommsPanel({
   const [remarks, setRemarks] = useState(initialRemarks ?? "");
   const remarksRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState("");
+  // Motion AI draft: optional instruction, busy flag, the text it replaced.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiAsk, setAiAsk] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiUndo, setAiUndo] = useState<string | null>(null);
+  const trackingQ = useJobTracking();
+
+  async function aiDraft() {
+    const t = (trackingQ.data ?? []).find((r) => r.job_id === job.id);
+    const live = !!(t?.eta && job.eta && t.eta.slice(0, 10) === job.eta.slice(0, 10));
+    const d = (v: string | null | undefined) => (v ? formatDate(v) : null);
+    const msgs = [...(msgsQ.data ?? [])]
+      .filter((m) => m.kind === "email" && m.status !== "failed")
+      .sort((a, b) => (a.sent_at ?? a.created_at).localeCompare(b.sent_at ?? b.created_at))
+      .slice(-8)
+      .map((m) => ({
+        direction: m.direction,
+        date: formatDateTime(m.sent_at ?? m.created_at),
+        subject: m.subject ?? "",
+        text: (m.direction === "out" ? m.remarks || m.body : m.body) ?? "",
+      }));
+    setAiBusy(true);
+    try {
+      const text = await draftShipmentComms({
+        template,
+        shipment: {
+          reference: job.reference,
+          mode: job.mode,
+          status: job.shipment_status,
+          customer: job.client?.company,
+          contact: job.client?.contact,
+          shipper: job.supplier?.company,
+          customer_reference: job.po_no,
+          origin: job.origin,
+          destination: job.destination,
+          vessel: job.vessel_name,
+          container: job.container_no,
+          bill: job.awb_mbl,
+          etd: d(job.etd),
+          eta: d(job.eta),
+          eta_source: !job.eta
+            ? null
+            : live
+              ? "live from the shipping line"
+              : t && !t.eta
+                ? "typed in, tracking has no ETA yet"
+                : "typed in",
+          eta_told:
+            job.eta_told && job.eta && job.eta_told.slice(0, 10) !== job.eta.slice(0, 10)
+              ? `${d(job.eta_told)} (on ${d(job.eta_told_at)})`
+              : null,
+          eta_prev: job.eta_prev && job.eta_changed_at ? `${d(job.eta_prev)} (changed ${d(job.eta_changed_at)})` : null,
+          pdd: d(job.provisional_delivery_date),
+          tracking_status: t?.status ?? null,
+          incoterms: quoteQ.data?.incoterms ?? null,
+          notes: job.notes,
+        },
+        messages: msgs,
+        instruction: aiAsk.trim() || undefined,
+      });
+      if (!text) throw new Error("Motion AI returned an empty draft, try again.");
+      setAiUndo(remarks);
+      setRemarks(text);
+      setAiOpen(false);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Motion AI couldn't draft this.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
   const [ccText, setCcText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
 
@@ -180,6 +252,7 @@ export default function CommsPanel({
       await send.mutateAsync({ job, remarks, to, cc, template, attachments: picks });
       toast(picks.length ? `Message sent with ${picks.length} attachment${picks.length === 1 ? "" : "s"}` : "Message sent");
       setRemarks("");
+      setAiUndo(null);
       setPicks([]);
     } catch (e) {
       error(e instanceof Error ? e.message : "Could not send");
@@ -337,17 +410,72 @@ export default function CommsPanel({
           <div className="field">
             <div className="merge-code-row">
               <label>Remarks (your message)</label>
-              <MergeCodeMenu targetRef={remarksRef} onChange={setRemarks} />
+              <span className="comms-remarks-tools">
+                <button
+                  type="button"
+                  className="link-btn comms-ai-btn"
+                  onClick={() => setAiOpen((v) => !v)}
+                  disabled={aiBusy}
+                  title="Let Motion AI draft this message from the shipment's details and the emails so far"
+                >
+                  {aiBusy ? "✦ Drafting…" : "✦ Draft with Motion AI"}
+                </button>
+                <MergeCodeMenu targetRef={remarksRef} onChange={setRemarks} />
+              </span>
             </div>
+            {aiOpen && (
+              <div className="comms-ai-panel">
+                <textarea
+                  value={aiAsk}
+                  onChange={(e) => setAiAsk(e.target.value)}
+                  rows={2}
+                  placeholder="What should it say? Optional, e.g. ETA moved a day, balance due before release"
+                  spellCheck
+                  lang="en"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      void aiDraft();
+                    }
+                  }}
+                />
+                <div className="comms-ai-row">
+                  <button type="button" className="btn btn-sm" onClick={() => void aiDraft()} disabled={aiBusy}>
+                    {aiBusy ? "Drafting…" : remarks.trim() ? "Redraft" : "Draft"}
+                  </button>
+                  <button type="button" className="link-btn" onClick={() => setAiOpen(false)} disabled={aiBusy}>
+                    Cancel
+                  </button>
+                  <span className="muted small">
+                    {template === "reply" ? "Short message, no shipment block." : "Goes above the shipment details."} Check it before sending.
+                  </span>
+                </div>
+              </div>
+            )}
             <textarea
               ref={remarksRef}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Good day, …"
-              rows={4}
+              rows={aiUndo !== null ? 8 : 4}
               spellCheck
               lang="en"
             />
+            {aiUndo !== null && (
+              <div className="comms-ai-row">
+                <span className="muted small">✦ Drafted by Motion AI, edit as needed.</span>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => {
+                    setRemarks(aiUndo);
+                    setAiUndo(null);
+                  }}
+                >
+                  Undo
+                </button>
+              </div>
+            )}
           </div>
 
           <AttachDocumentPicker

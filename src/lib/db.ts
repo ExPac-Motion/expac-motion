@@ -2970,6 +2970,22 @@ async function aiMail<T>(action: "summary" | "draft", input: AiMailInput): Promi
   }
   return raw;
 }
+/* ---------- Motion AI in Shipment Comms (/api/ai-comms) ---------- */
+export interface AiCommsInput {
+  template: "update" | "reply";
+  shipment: Record<string, string | null | undefined>;
+  messages: { direction: "in" | "out"; date: string; subject: string; text: string }[];
+  instruction?: string;
+}
+export async function draftShipmentComms(input: AiCommsInput): Promise<string> {
+  const res = await authed("/api/ai-comms", input);
+  const raw = (await res.json().catch(() => ({}))) as { remarks?: string; error?: string };
+  if (!res.ok) {
+    if (res.status === 404 && !raw.error) throw new Error("Motion AI runs on the deployed site (no API here in dev).");
+    throw new Error(raw.error || `Motion AI returned ${res.status}`);
+  }
+  return raw.remarks ?? "";
+}
 export const summariseMail = (input: AiMailInput) => aiMail<AiMailSummary>("summary", input);
 export const draftMailReply = (input: AiMailInput) => aiMail<{ reply: string }>("draft", input);
 
