@@ -197,7 +197,12 @@ export async function onRequestPost(context) {
   // Sender display name / reply-to can be overridden per request (from the
   // configurable email identity in Settings); the address itself stays the
   // verified domain from MAIL_FROM.
-  const baseFrom = env.MAIL_FROM || "EXPAC Forwarding <support@expac.co.za>";
+  // The brand is written "ExPac": fix an older MAIL_FROM secret that still
+  // says "EXPAC Forwarding".
+  const baseFrom = String(env.MAIL_FROM || "ExPac Forwarding <support@expac.co.za>").replace(
+    /^\s*"?EXPAC Forwarding"?/,
+    "ExPac Forwarding",
+  );
   const fromName = typeof body.fromName === "string" ? body.fromName.trim() : "";
   let from = baseFrom;
   if (fromName) {
