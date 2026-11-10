@@ -1061,7 +1061,8 @@ table.dt th.dt-sortable {
   color: #fff !important;
   border-color: var(--orange) !important;
 }
-/* ETA cell marks (0234): teal dot = live tracking ETA, orange ↻ = the ETA
+/* ETA cell marks (0234): teal dot = live tracking ETA, grey ring = tracked
+   but no ETA from tracking yet (typed-in date), orange ↻ = the ETA
    moved since the client's last comms (or in the last 7 days). */
 .job-eta-cell {
   display: flex;
@@ -1086,6 +1087,14 @@ table.dt th.dt-sortable {
   border-radius: 50%;
   background: var(--teal);
   box-shadow: 0 0 0 3px var(--teal-tint);
+  cursor: help;
+}
+.eta-pending {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  box-sizing: border-box;
   cursor: help;
 }
 .eta-moved {

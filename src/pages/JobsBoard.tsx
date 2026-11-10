@@ -187,6 +187,14 @@ function liveEta(j: Job, t: { eta: string | null; synced_at?: string | null } | 
   return "Live ETA from vessel tracking" + (t.synced_at ? `, last update ${formatDateTime(t.synced_at)}` : "");
 }
 
+/** Tooltip for the grey ring: live tracking follows the shipment but has
+ *  no ETA for it yet, so the date shown was typed in. */
+function trackedNoEta(t: { eta: string | null; status?: string | null; provider?: string | null } | undefined): string | null {
+  if (!t || t.eta) return null;
+  const how = t.provider === "ais" ? "Vessel tracking" : "Live tracking";
+  return `${how} has no ETA yet${t.status ? ` (${t.status})` : ""}: this date was typed in`;
+}
+
 /** Tooltip for the ↻ flag: the client was told a different ETA in the last
  *  Shipment Comms, or (never told) the ETA moved in the last 7 days. */
 function etaMoved(j: Job): string | null {
@@ -1030,12 +1038,16 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   ? "Arriving today"
                   : `Arriving in ${n} day${n === 1 ? "" : "s"}`;
           const live = liveEta(j, trackingByJob.get(j.id));
+          const pending = live ? null : trackedNoEta(trackingByJob.get(j.id));
           const moved = etaMoved(j);
           return (
             <span className="job-eta-cell">
               <span className="job-eta-marks">
                 {live && (
                   <span className="eta-live" title={live} aria-label={live} />
+                )}
+                {pending && (
+                  <span className="eta-pending" title={pending} aria-label={pending} />
                 )}
                 {moved && (
                   <span className="eta-moved" title={moved} aria-label={moved}>
