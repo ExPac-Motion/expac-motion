@@ -408,20 +408,16 @@ export default function CommsPanel({
             </button>
           </div>
           <div className="field">
-            <div className="merge-code-row">
-              <label>Remarks (your message)</label>
-              <span className="comms-remarks-tools">
-                <button
-                  type="button"
-                  className="link-btn comms-ai-btn"
-                  onClick={() => setAiOpen((v) => !v)}
-                  disabled={aiBusy}
-                  title="Let Motion AI draft this message from the shipment's details and the emails so far"
-                >
-                  {aiBusy ? "✦ Drafting…" : "✦ Draft with Motion AI"}
-                </button>
-                <MergeCodeMenu targetRef={remarksRef} onChange={setRemarks} />
-              </span>
+            <div className="comms-ai-top">
+              <button
+                type="button"
+                className="link-btn comms-ai-btn"
+                onClick={() => setAiOpen((v) => !v)}
+                disabled={aiBusy}
+                title="Let Motion AI draft this message from the shipment's details and the emails so far"
+              >
+                {aiBusy ? "✦ Drafting…" : "✦ Draft with Motion AI"}
+              </button>
             </div>
             {aiOpen && (
               <div className="comms-ai-panel">
@@ -452,6 +448,10 @@ export default function CommsPanel({
                 </div>
               </div>
             )}
+            <div className="merge-code-row">
+              <label>Remarks (your message)</label>
+              <MergeCodeMenu targetRef={remarksRef} onChange={setRemarks} />
+            </div>
             <textarea
               ref={remarksRef}
               value={remarks}
