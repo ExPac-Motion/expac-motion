@@ -1061,6 +1061,43 @@ table.dt th.dt-sortable {
   color: #fff !important;
   border-color: var(--orange) !important;
 }
+/* ETA cell marks (0234): teal dot = live tracking ETA, orange ↻ = the ETA
+   moved since the client's last comms (or in the last 7 days). */
+.job-eta-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.job-eta-cell > .date-input {
+  flex: 1;
+  min-width: 0;
+}
+.job-eta-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  min-width: 22px;
+  justify-content: center;
+}
+.eta-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-tint);
+  cursor: help;
+}
+.eta-moved {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--orange);
+  border-radius: 999px;
+  padding: 2px 3px;
+  cursor: help;
+}
 /* DateInput (src/components/DateInput.tsx): dd/mm/yyyy text field with a
    calendar button; the native date input only hosts the picker. */
 .date-input {

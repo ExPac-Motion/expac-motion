@@ -35,6 +35,7 @@ import {
   useJobs,
   useMarkJobMessagesRead,
   useOpsTasks,
+  useJobTracking,
   useSetJobMilestone,
   refreshShipmentData,
   useShipmentDocuments,
@@ -67,7 +68,7 @@ import { houseLabel, houseNo, masterLabel } from "./wms/WmsConsols";
 import { consolModeFor } from "./wms/houseFromShipment";
 import { getShipmentDocumentUrl } from "../lib/db";
 import { DOCUMENT_TYPES_LIST, carrierLabel } from "../lib/docTemplates";
-import { formatDate, newReference, portCode } from "../lib/format";
+import { formatDate, formatDateTime, newReference, portCode } from "../lib/format";
 import { LOCODES } from "../lib/locodes";
 import { isTracked } from "../lib/tracking";
 import { downloadXlsx } from "../lib/xlsx";
@@ -177,6 +178,28 @@ function JobDateCell({
       onChange={onCommit}
     />
   );
+}
+
+/** Tooltip for the live dot when the shipment's ETA is the one live
+ *  tracking last reported, else null. */
+function liveEta(j: Job, t: { eta: string | null; synced_at?: string | null } | undefined): string | null {
+  if (!t?.eta || !j.eta || t.eta.slice(0, 10) !== j.eta.slice(0, 10)) return null;
+  return "Live ETA from vessel tracking" + (t.synced_at ? `, last update ${formatDateTime(t.synced_at)}` : "");
+}
+
+/** Tooltip for the ↻ flag: the client was told a different ETA in the last
+ *  Shipment Comms, or (never told) the ETA moved in the last 7 days. */
+function etaMoved(j: Job): string | null {
+  if (!j.eta) return null;
+  const by = j.eta_changed_source === "tracking" ? " by live tracking" : j.eta_changed_source === "manual" ? " manually" : "";
+  const when = j.eta_changed_at ? ` (changed${by} ${formatDateTime(j.eta_changed_at)})` : "";
+  if (j.eta_told) {
+    if (j.eta_told.slice(0, 10) === j.eta.slice(0, 10)) return null;
+    return `ETA moved since the last comms: client was told ${formatDate(j.eta_told)} on ${formatDate(j.eta_told_at)}${when}. Send an update.`;
+  }
+  if (!j.eta_prev || !j.eta_changed_at) return null;
+  if (Date.now() - new Date(j.eta_changed_at).getTime() > 7 * 86_400_000) return null;
+  return `ETA moved from ${formatDate(j.eta_prev)}${when}.`;
 }
 
 type BoardMode = "active" | "completed";
@@ -364,6 +387,12 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     return set;
   }, [sentTodayQ.data, jobs]);
   const tasksQ = useOpsTasks();
+  // Live ETA marker (0234): which shipments' ETA is the tracked one.
+  const trackingQ = useJobTracking();
+  const trackingByJob = useMemo(
+    () => new Map((trackingQ.data ?? []).map((t) => [t.job_id, t])),
+    [trackingQ.data],
+  );
   const openTaskJobIds = useMemo(
     () =>
       new Set(
@@ -984,7 +1013,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       {
         key: "eta",
         header: "ETA",
-        width: 120,
+        width: 140,
         sortValue: (j) => j.eta ?? "",
         render: (j) => {
           // Active board only: flag shipments arriving within 5 days or
@@ -1000,7 +1029,20 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                 : n === 0
                   ? "Arriving today"
                   : `Arriving in ${n} day${n === 1 ? "" : "s"}`;
+          const live = liveEta(j, trackingByJob.get(j.id));
+          const moved = etaMoved(j);
           return (
+            <span className="job-eta-cell">
+              <span className="job-eta-marks">
+                {live && (
+                  <span className="eta-live" title={live} aria-label={live} />
+                )}
+                {moved && (
+                  <span className="eta-moved" title={moved} aria-label={moved}>
+                    ↻
+                  </span>
+                )}
+              </span>
             <JobDateCell
               value={j.eta}
               className={
@@ -1019,6 +1061,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               }
               onCommit={(v) => save(j.id, { eta: v })}
             />
+            </span>
           );
         },
       },

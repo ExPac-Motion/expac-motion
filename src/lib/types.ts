@@ -1523,6 +1523,13 @@ export type ShipmentKind = "direct" | "master" | "house";
 export interface Job {
   id: string;
   quote_id: string | null;
+  /** ETA history (0234): the date it replaced, when, "tracking" | "manual". */
+  eta_prev?: string | null;
+  eta_changed_at?: string | null;
+  eta_changed_source?: string | null;
+  /** The ETA when the last Shipment Comms email went to the client (0234). */
+  eta_told?: string | null;
+  eta_told_at?: string | null;
   reference: string;
   /** Private key on the Live Tracking link (0186); unlocks customer,
    *  shipper and PO on the public track page. Undefined before 0186. */
