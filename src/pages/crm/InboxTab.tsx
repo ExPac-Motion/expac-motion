@@ -2394,7 +2394,8 @@ function Reader({
         )}
 
         <div className="inbox-convo2">
-          {convo.map((t) =>
+          {/* Newest email first, like Outlook. */}
+          {[...convo].reverse().map((t) =>
             t.id === msg.id ? (
               <div key={t.id}>
                 <ConvoCard msg={t} current open />
