@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 /**
  * Control Tower → World Clock. Every time is rendered by the browser's Intl
@@ -6,9 +6,10 @@ import { useEffect, useMemo, useState } from "react";
  * Sydney, Auckland, Egypt…) are applied automatically, no hard-coded offsets.
  *
  * Features: digital home clock, "plan a time" slider (every clock moves with
- * it), best-time-to-call heat strip for pinned locations, every US state and
- * territory mapped to its time zone (split states flagged), pin any city /
- * state / IANA zone to "My board", 12h/24h toggle, open-now filter.
+ * it), best-time-to-call heat strip for pinned locations, one tab per ExPac
+ * trade route (China, Europe, India, UK, USA) with every region mapped to
+ * its zone (split regions flagged) and shared office hours with JHB, pin any
+ * city / region / IANA zone to "My board", 12h/24h toggle, open-now filter.
  */
 
 interface Entry {
@@ -114,253 +115,607 @@ const REGIONS: Region[] = [
   },
 ];
 
-/* ---------------- United States ---------------- */
+/* ---------------- ExPac trade routes ---------------- */
 
-type ZoneKey = "ET" | "CT" | "MT" | "AZ" | "PT" | "AK" | "HT" | "AT" | "CH" | "SM";
-
-interface UsZone {
-  key: ZoneKey;
+interface RouteZone {
+  key: string;
   name: string;
   zone: string;
   blurb?: string;
-  cities: { city: string; state: string }[];
+  /** `area` is an Area code of the same route (shown on the chip). */
+  cities: { city: string; area?: string }[];
 }
-
-const US_ZONES: UsZone[] = [
-  {
-    key: "ET",
-    name: "Eastern",
-    zone: "America/New_York",
-    blurb: "East Coast: NY / NJ ports, Southeast",
-    cities: [
-      { city: "New York", state: "NY" },
-      { city: "Newark", state: "NJ" },
-      { city: "Philadelphia", state: "PA" },
-      { city: "Baltimore", state: "MD" },
-      { city: "Atlanta", state: "GA" },
-      { city: "Savannah", state: "GA" },
-      { city: "Charleston", state: "SC" },
-      { city: "Miami", state: "FL" },
-      { city: "Detroit", state: "MI" },
-    ],
-  },
-  {
-    key: "CT",
-    name: "Central",
-    zone: "America/Chicago",
-    blurb: "Midwest, Texas Gulf, Mississippi valley",
-    cities: [
-      { city: "Chicago", state: "IL" },
-      { city: "Houston", state: "TX" },
-      { city: "Dallas", state: "TX" },
-      { city: "Memphis", state: "TN" },
-      { city: "Nashville", state: "TN" },
-      { city: "New Orleans", state: "LA" },
-      { city: "Kansas City", state: "MO" },
-      { city: "Minneapolis", state: "MN" },
-    ],
-  },
-  {
-    key: "MT",
-    name: "Mountain",
-    zone: "America/Denver",
-    blurb: "Rockies (observes DST)",
-    cities: [
-      { city: "Denver", state: "CO" },
-      { city: "Salt Lake City", state: "UT" },
-      { city: "Albuquerque", state: "NM" },
-      { city: "El Paso", state: "TX" },
-      { city: "Boise", state: "ID" },
-    ],
-  },
-  {
-    key: "AZ",
-    name: "Arizona",
-    zone: "America/Phoenix",
-    blurb: "Mountain Standard all year, no DST (matches Pacific in summer)",
-    cities: [
-      { city: "Phoenix", state: "AZ" },
-      { city: "Tucson", state: "AZ" },
-    ],
-  },
-  {
-    key: "PT",
-    name: "Pacific",
-    zone: "America/Los_Angeles",
-    blurb: "West Coast: LA / Long Beach, Oakland, Seattle",
-    cities: [
-      { city: "Los Angeles", state: "CA" },
-      { city: "Long Beach", state: "CA" },
-      { city: "San Francisco", state: "CA" },
-      { city: "Oakland", state: "CA" },
-      { city: "San Diego", state: "CA" },
-      { city: "Seattle", state: "WA" },
-      { city: "Portland", state: "OR" },
-      { city: "Las Vegas", state: "NV" },
-    ],
-  },
-  {
-    key: "AK",
-    name: "Alaska",
-    zone: "America/Anchorage",
-    cities: [
-      { city: "Anchorage", state: "AK" },
-      { city: "Juneau", state: "AK" },
-    ],
-  },
-  {
-    key: "HT",
-    name: "Hawaii",
-    zone: "Pacific/Honolulu",
-    blurb: "No DST",
-    cities: [{ city: "Honolulu", state: "HI" }],
-  },
-  {
-    key: "AT",
-    name: "Atlantic",
-    zone: "America/Puerto_Rico",
-    blurb: "Territories, no DST",
-    cities: [{ city: "San Juan", state: "PR" }],
-  },
-  {
-    key: "CH",
-    name: "Chamorro",
-    zone: "Pacific/Guam",
-    blurb: "Territories, no DST",
-    cities: [{ city: "Hagåtña", state: "GU" }],
-  },
-  {
-    key: "SM",
-    name: "Samoa",
-    zone: "Pacific/Pago_Pago",
-    blurb: "Territory, no DST",
-    cities: [{ city: "Pago Pago", state: "AS" }],
-  },
-];
-
-interface UsState {
-  abbr: string;
+interface Area {
+  code: string;
   name: string;
-  zone: ZoneKey;
-  /** Second zone used in part of the state. */
-  also?: ZoneKey;
+  zone: string; // RouteZone key
+  /** Second zone used in part of the area. */
+  also?: string;
   note?: string;
-  territory?: boolean;
+}
+interface Route {
+  key: string;
+  tab: string;
+  country: string;
+  intro: string;
+  areaLabel: string;
+  /** Zone used for the route's summary chip in the hero. */
+  primary: string;
+  zones: RouteZone[];
+  areas: Area[];
 }
 
-const US_STATES: UsState[] = [
-  { abbr: "AL", name: "Alabama", zone: "CT" },
-  { abbr: "AK", name: "Alaska", zone: "AK", note: "Western Aleutian Islands use Hawaii–Aleutian time" },
-  { abbr: "AZ", name: "Arizona", zone: "AZ", also: "MT", note: "No DST, except the Navajo Nation (follows Mountain DST)" },
-  { abbr: "AR", name: "Arkansas", zone: "CT" },
-  { abbr: "CA", name: "California", zone: "PT" },
-  { abbr: "CO", name: "Colorado", zone: "MT" },
-  { abbr: "CT", name: "Connecticut", zone: "ET" },
-  { abbr: "DE", name: "Delaware", zone: "ET" },
-  { abbr: "DC", name: "District of Columbia", zone: "ET" },
-  { abbr: "FL", name: "Florida", zone: "ET", also: "CT", note: "Panhandle west of the Apalachicola River (Pensacola) is Central" },
-  { abbr: "GA", name: "Georgia", zone: "ET" },
-  { abbr: "HI", name: "Hawaii", zone: "HT" },
-  { abbr: "ID", name: "Idaho", zone: "MT", also: "PT", note: "Northern panhandle (Coeur d'Alene) is Pacific" },
-  { abbr: "IL", name: "Illinois", zone: "CT" },
-  { abbr: "IN", name: "Indiana", zone: "ET", also: "CT", note: "NW corner (Gary) and SW corner (Evansville) are Central" },
-  { abbr: "IA", name: "Iowa", zone: "CT" },
-  { abbr: "KS", name: "Kansas", zone: "CT", also: "MT", note: "Four western border counties are Mountain" },
-  { abbr: "KY", name: "Kentucky", zone: "ET", also: "CT", note: "Western half (Bowling Green, Paducah) is Central" },
-  { abbr: "LA", name: "Louisiana", zone: "CT" },
-  { abbr: "ME", name: "Maine", zone: "ET" },
-  { abbr: "MD", name: "Maryland", zone: "ET" },
-  { abbr: "MA", name: "Massachusetts", zone: "ET" },
-  { abbr: "MI", name: "Michigan", zone: "ET", also: "CT", note: "Four Upper Peninsula counties bordering Wisconsin are Central" },
-  { abbr: "MN", name: "Minnesota", zone: "CT" },
-  { abbr: "MS", name: "Mississippi", zone: "CT" },
-  { abbr: "MO", name: "Missouri", zone: "CT" },
-  { abbr: "MT", name: "Montana", zone: "MT" },
-  { abbr: "NE", name: "Nebraska", zone: "CT", also: "MT", note: "Western panhandle is Mountain" },
-  { abbr: "NV", name: "Nevada", zone: "PT", also: "MT", note: "West Wendover is Mountain" },
-  { abbr: "NH", name: "New Hampshire", zone: "ET" },
-  { abbr: "NJ", name: "New Jersey", zone: "ET" },
-  { abbr: "NM", name: "New Mexico", zone: "MT" },
-  { abbr: "NY", name: "New York", zone: "ET" },
-  { abbr: "NC", name: "North Carolina", zone: "ET" },
-  { abbr: "ND", name: "North Dakota", zone: "CT", also: "MT", note: "South-west corner is Mountain" },
-  { abbr: "OH", name: "Ohio", zone: "ET" },
-  { abbr: "OK", name: "Oklahoma", zone: "CT" },
-  { abbr: "OR", name: "Oregon", zone: "PT", also: "MT", note: "Most of Malheur County is Mountain" },
-  { abbr: "PA", name: "Pennsylvania", zone: "ET" },
-  { abbr: "RI", name: "Rhode Island", zone: "ET" },
-  { abbr: "SC", name: "South Carolina", zone: "ET" },
-  { abbr: "SD", name: "South Dakota", zone: "CT", also: "MT", note: "Western half (Rapid City) is Mountain" },
-  { abbr: "TN", name: "Tennessee", zone: "CT", also: "ET", note: "East Tennessee (Knoxville, Chattanooga) is Eastern" },
-  { abbr: "TX", name: "Texas", zone: "CT", also: "MT", note: "El Paso and Hudspeth counties are Mountain" },
-  { abbr: "UT", name: "Utah", zone: "MT" },
-  { abbr: "VT", name: "Vermont", zone: "ET" },
-  { abbr: "VA", name: "Virginia", zone: "ET" },
-  { abbr: "WA", name: "Washington", zone: "PT" },
-  { abbr: "WV", name: "West Virginia", zone: "ET" },
-  { abbr: "WI", name: "Wisconsin", zone: "CT" },
-  { abbr: "WY", name: "Wyoming", zone: "MT" },
-  { abbr: "PR", name: "Puerto Rico", zone: "AT", territory: true },
-  { abbr: "VI", name: "U.S. Virgin Islands", zone: "AT", territory: true },
-  { abbr: "GU", name: "Guam", zone: "CH", territory: true },
-  { abbr: "MP", name: "Northern Mariana Islands", zone: "CH", territory: true },
-  { abbr: "AS", name: "American Samoa", zone: "SM", territory: true },
-];
+const CHINA: Route = {
+  key: "CN",
+  tab: "China",
+  country: "China",
+  intro: "All of mainland China runs on Beijing time (no DST), 6h ahead of SAST. Hong Kong and Macau share the same clock.",
+  areaLabel: "Provinces & regions",
+  primary: "CN",
+  zones: [
+    {
+      key: "CN",
+      name: "China Standard",
+      zone: "Asia/Shanghai",
+      blurb: "Whole mainland, one zone, no DST",
+      cities: [
+        { city: "Shanghai", area: "SH" },
+        { city: "Ningbo", area: "ZJ" },
+        { city: "Yiwu", area: "ZJ" },
+        { city: "Shenzhen", area: "GD" },
+        { city: "Guangzhou", area: "GD" },
+        { city: "Dongguan", area: "GD" },
+        { city: "Foshan", area: "GD" },
+        { city: "Xiamen", area: "FJ" },
+        { city: "Qingdao", area: "SD" },
+        { city: "Tianjin", area: "TJ" },
+        { city: "Dalian", area: "LN" },
+        { city: "Beijing", area: "BJ" },
+      ],
+    },
+    {
+      key: "HK",
+      name: "Hong Kong & Macau",
+      zone: "Asia/Hong_Kong",
+      blurb: "Same time as the mainland, no DST",
+      cities: [{ city: "Hong Kong", area: "HK" }, { city: "Macau", area: "MO" }],
+    },
+    {
+      key: "XJ",
+      name: "Xinjiang local",
+      zone: "Asia/Urumqi",
+      blurb: "Unofficial local time, 2h behind Beijing. Business mostly uses Beijing time",
+      cities: [{ city: "Ürümqi", area: "XJ" }],
+    },
+  ],
+  areas: [
+    { code: "AH", name: "Anhui", zone: "CN" },
+    { code: "BJ", name: "Beijing", zone: "CN" },
+    { code: "CQ", name: "Chongqing", zone: "CN" },
+    { code: "FJ", name: "Fujian", zone: "CN" },
+    { code: "GS", name: "Gansu", zone: "CN" },
+    { code: "GD", name: "Guangdong", zone: "CN" },
+    { code: "GX", name: "Guangxi", zone: "CN" },
+    { code: "GZ", name: "Guizhou", zone: "CN" },
+    { code: "HI", name: "Hainan", zone: "CN" },
+    { code: "HE", name: "Hebei", zone: "CN" },
+    { code: "HL", name: "Heilongjiang", zone: "CN" },
+    { code: "HA", name: "Henan", zone: "CN" },
+    { code: "HB", name: "Hubei", zone: "CN" },
+    { code: "HN", name: "Hunan", zone: "CN" },
+    { code: "NM", name: "Inner Mongolia", zone: "CN" },
+    { code: "JS", name: "Jiangsu", zone: "CN" },
+    { code: "JX", name: "Jiangxi", zone: "CN" },
+    { code: "JL", name: "Jilin", zone: "CN" },
+    { code: "LN", name: "Liaoning", zone: "CN" },
+    { code: "NX", name: "Ningxia", zone: "CN" },
+    { code: "QH", name: "Qinghai", zone: "CN" },
+    { code: "SN", name: "Shaanxi", zone: "CN" },
+    { code: "SD", name: "Shandong", zone: "CN" },
+    { code: "SH", name: "Shanghai", zone: "CN" },
+    { code: "SX", name: "Shanxi", zone: "CN" },
+    { code: "SC", name: "Sichuan", zone: "CN" },
+    { code: "TJ", name: "Tianjin", zone: "CN" },
+    { code: "XZ", name: "Tibet", zone: "CN" },
+    { code: "XJ", name: "Xinjiang", zone: "CN", also: "XJ", note: "Official time is Beijing time; many locals keep Xinjiang time (2h behind)" },
+    { code: "YN", name: "Yunnan", zone: "CN" },
+    { code: "ZJ", name: "Zhejiang", zone: "CN" },
+    { code: "HK", name: "Hong Kong SAR", zone: "HK" },
+    { code: "MO", name: "Macau SAR", zone: "HK" },
+  ],
+};
 
-const US_ZONE_BY_KEY = new Map(US_ZONES.map((z) => [z.key, z]));
-const STATE_BY_ABBR = new Map(US_STATES.map((s) => [s.abbr, s]));
+const EUROPE: Route = {
+  key: "EU",
+  tab: "Europe",
+  country: "Europe",
+  intro: "Mainland Europe spans three zones plus Türkiye. All EU zones change clocks on the same dates (last Sunday of March and October).",
+  areaLabel: "Countries",
+  primary: "CET",
+  zones: [
+    {
+      key: "WET",
+      name: "Western European",
+      zone: "Europe/Lisbon",
+      blurb: "Same clock as the UK",
+      cities: [
+        { city: "Lisbon", area: "PT" },
+        { city: "Porto / Leixões", area: "PT" },
+        { city: "Sines", area: "PT" },
+        { city: "Dublin", area: "IE" },
+        { city: "Cork", area: "IE" },
+        { city: "Las Palmas", area: "ES" },
+      ],
+    },
+    {
+      key: "CET",
+      name: "Central European",
+      zone: "Europe/Berlin",
+      blurb: "Main North-Sea and Mediterranean ports",
+      cities: [
+        { city: "Rotterdam", area: "NL" },
+        { city: "Antwerp", area: "BE" },
+        { city: "Hamburg", area: "DE" },
+        { city: "Bremerhaven", area: "DE" },
+        { city: "Le Havre", area: "FR" },
+        { city: "Marseille", area: "FR" },
+        { city: "Valencia", area: "ES" },
+        { city: "Barcelona", area: "ES" },
+        { city: "Algeciras", area: "ES" },
+        { city: "Genoa", area: "IT" },
+        { city: "Milan", area: "IT" },
+        { city: "Gdańsk", area: "PL" },
+        { city: "Gothenburg", area: "SE" },
+        { city: "Copenhagen", area: "DK" },
+        { city: "Koper", area: "SI" },
+      ],
+    },
+    {
+      key: "EET",
+      name: "Eastern European",
+      zone: "Europe/Athens",
+      blurb: "Greece, Balkans east, Baltics, Finland",
+      cities: [
+        { city: "Piraeus", area: "GR" },
+        { city: "Thessaloniki", area: "GR" },
+        { city: "Constanța", area: "RO" },
+        { city: "Varna", area: "BG" },
+        { city: "Limassol", area: "CY" },
+        { city: "Helsinki", area: "FI" },
+        { city: "Riga", area: "LV" },
+      ],
+    },
+    {
+      key: "TRT",
+      name: "Türkiye",
+      zone: "Europe/Istanbul",
+      blurb: "UTC+3 all year, no DST",
+      cities: [
+        { city: "Istanbul", area: "TR" },
+        { city: "Izmir", area: "TR" },
+        { city: "Mersin", area: "TR" },
+        { city: "Bursa", area: "TR" },
+      ],
+    },
+  ],
+  areas: [
+    { code: "PT", name: "Portugal", zone: "WET", note: "The Azores are 1h behind Lisbon" },
+    { code: "IE", name: "Ireland", zone: "WET" },
+    { code: "AL", name: "Albania", zone: "CET" },
+    { code: "AT", name: "Austria", zone: "CET" },
+    { code: "BE", name: "Belgium", zone: "CET" },
+    { code: "BA", name: "Bosnia & Herzegovina", zone: "CET" },
+    { code: "HR", name: "Croatia", zone: "CET" },
+    { code: "CZ", name: "Czechia", zone: "CET" },
+    { code: "DK", name: "Denmark", zone: "CET" },
+    { code: "FR", name: "France", zone: "CET" },
+    { code: "DE", name: "Germany", zone: "CET" },
+    { code: "HU", name: "Hungary", zone: "CET" },
+    { code: "IT", name: "Italy", zone: "CET" },
+    { code: "LU", name: "Luxembourg", zone: "CET" },
+    { code: "MT", name: "Malta", zone: "CET" },
+    { code: "ME", name: "Montenegro", zone: "CET" },
+    { code: "NL", name: "Netherlands", zone: "CET" },
+    { code: "MK", name: "North Macedonia", zone: "CET" },
+    { code: "NO", name: "Norway", zone: "CET" },
+    { code: "PL", name: "Poland", zone: "CET" },
+    { code: "RS", name: "Serbia", zone: "CET" },
+    { code: "SK", name: "Slovakia", zone: "CET" },
+    { code: "SI", name: "Slovenia", zone: "CET" },
+    { code: "ES", name: "Spain", zone: "CET", also: "WET", note: "Canary Islands (Las Palmas, Tenerife) are 1h behind mainland Spain" },
+    { code: "SE", name: "Sweden", zone: "CET" },
+    { code: "CH", name: "Switzerland", zone: "CET" },
+    { code: "BG", name: "Bulgaria", zone: "EET" },
+    { code: "CY", name: "Cyprus", zone: "EET" },
+    { code: "EE", name: "Estonia", zone: "EET" },
+    { code: "FI", name: "Finland", zone: "EET" },
+    { code: "GR", name: "Greece", zone: "EET" },
+    { code: "LV", name: "Latvia", zone: "EET" },
+    { code: "LT", name: "Lithuania", zone: "EET" },
+    { code: "MD", name: "Moldova", zone: "EET" },
+    { code: "RO", name: "Romania", zone: "EET" },
+    { code: "UA", name: "Ukraine", zone: "EET" },
+    { code: "TR", name: "Türkiye", zone: "TRT" },
+  ],
+};
+
+const INDIA: Route = {
+  key: "IN",
+  tab: "India",
+  country: "India",
+  intro: "All of India is on one zone, IST (UTC+5:30, no DST), 3h 30m ahead of SAST all year. Neighbouring transhipment and sourcing hubs are shown too.",
+  areaLabel: "States & union territories",
+  primary: "IST",
+  zones: [
+    {
+      key: "IST",
+      name: "India Standard",
+      zone: "Asia/Kolkata",
+      blurb: "Whole country, one zone, no DST",
+      cities: [
+        { city: "Mumbai", area: "MH" },
+        { city: "Nhava Sheva", area: "MH" },
+        { city: "Pune", area: "MH" },
+        { city: "Mundra", area: "GJ" },
+        { city: "Ahmedabad", area: "GJ" },
+        { city: "Delhi", area: "DL" },
+        { city: "Chennai", area: "TN" },
+        { city: "Tiruppur", area: "TN" },
+        { city: "Bengaluru", area: "KA" },
+        { city: "Hyderabad", area: "TG" },
+        { city: "Kolkata", area: "WB" },
+        { city: "Kochi", area: "KL" },
+        { city: "Visakhapatnam", area: "AP" },
+        { city: "Ludhiana", area: "PB" },
+      ],
+    },
+    {
+      key: "LK",
+      name: "Sri Lanka",
+      zone: "Asia/Colombo",
+      blurb: "Same clock as India; Colombo transhipment hub",
+      cities: [{ city: "Colombo", area: "LKA" }],
+    },
+    {
+      key: "BD",
+      name: "Bangladesh",
+      zone: "Asia/Dhaka",
+      blurb: "30m ahead of India, no DST",
+      cities: [{ city: "Dhaka", area: "BGD" }, { city: "Chattogram", area: "BGD" }],
+    },
+    {
+      key: "PK",
+      name: "Pakistan",
+      zone: "Asia/Karachi",
+      blurb: "30m behind India, no DST",
+      cities: [{ city: "Karachi", area: "PAK" }, { city: "Lahore", area: "PAK" }],
+    },
+  ],
+  areas: [
+    { code: "AP", name: "Andhra Pradesh", zone: "IST" },
+    { code: "AR", name: "Arunachal Pradesh", zone: "IST" },
+    { code: "AS", name: "Assam", zone: "IST" },
+    { code: "BR", name: "Bihar", zone: "IST" },
+    { code: "CG", name: "Chhattisgarh", zone: "IST" },
+    { code: "GA", name: "Goa", zone: "IST" },
+    { code: "GJ", name: "Gujarat", zone: "IST" },
+    { code: "HR", name: "Haryana", zone: "IST" },
+    { code: "HP", name: "Himachal Pradesh", zone: "IST" },
+    { code: "JH", name: "Jharkhand", zone: "IST" },
+    { code: "KA", name: "Karnataka", zone: "IST" },
+    { code: "KL", name: "Kerala", zone: "IST" },
+    { code: "MP", name: "Madhya Pradesh", zone: "IST" },
+    { code: "MH", name: "Maharashtra", zone: "IST" },
+    { code: "MN", name: "Manipur", zone: "IST" },
+    { code: "ML", name: "Meghalaya", zone: "IST" },
+    { code: "MZ", name: "Mizoram", zone: "IST" },
+    { code: "NL", name: "Nagaland", zone: "IST" },
+    { code: "OD", name: "Odisha", zone: "IST" },
+    { code: "PB", name: "Punjab", zone: "IST" },
+    { code: "RJ", name: "Rajasthan", zone: "IST" },
+    { code: "SK", name: "Sikkim", zone: "IST" },
+    { code: "TN", name: "Tamil Nadu", zone: "IST" },
+    { code: "TG", name: "Telangana", zone: "IST" },
+    { code: "TR", name: "Tripura", zone: "IST" },
+    { code: "UP", name: "Uttar Pradesh", zone: "IST" },
+    { code: "UK", name: "Uttarakhand", zone: "IST" },
+    { code: "WB", name: "West Bengal", zone: "IST" },
+    { code: "AN", name: "Andaman & Nicobar", zone: "IST" },
+    { code: "CH", name: "Chandigarh", zone: "IST" },
+    { code: "DH", name: "Dadra & Nagar Haveli and Daman & Diu", zone: "IST" },
+    { code: "DL", name: "Delhi", zone: "IST" },
+    { code: "JK", name: "Jammu & Kashmir", zone: "IST" },
+    { code: "LA", name: "Ladakh", zone: "IST" },
+    { code: "LD", name: "Lakshadweep", zone: "IST" },
+    { code: "PY", name: "Puducherry", zone: "IST" },
+    { code: "LKA", name: "Sri Lanka", zone: "LK" },
+    { code: "BGD", name: "Bangladesh", zone: "BD" },
+    { code: "PAK", name: "Pakistan", zone: "PK" },
+  ],
+};
+
+const UK: Route = {
+  key: "UK",
+  tab: "UK",
+  country: "UK",
+  intro: "The UK is on GMT in winter (2h behind SAST) and BST in summer (1h behind). Gibraltar is the one British territory on Central European time.",
+  areaLabel: "Nations & territories",
+  primary: "UK",
+  zones: [
+    {
+      key: "UK",
+      name: "UK (GMT / BST)",
+      zone: "Europe/London",
+      blurb: "Great Britain, Northern Ireland, Channel Islands, Isle of Man",
+      cities: [
+        { city: "London", area: "ENG" },
+        { city: "Heathrow", area: "ENG" },
+        { city: "Felixstowe", area: "ENG" },
+        { city: "London Gateway", area: "ENG" },
+        { city: "Southampton", area: "ENG" },
+        { city: "Tilbury", area: "ENG" },
+        { city: "Immingham", area: "ENG" },
+        { city: "Liverpool", area: "ENG" },
+        { city: "Manchester", area: "ENG" },
+        { city: "Birmingham", area: "ENG" },
+        { city: "Leeds", area: "ENG" },
+        { city: "Glasgow", area: "SCT" },
+        { city: "Cardiff", area: "WLS" },
+        { city: "Belfast", area: "NIR" },
+      ],
+    },
+    {
+      key: "GI",
+      name: "Gibraltar",
+      zone: "Europe/Gibraltar",
+      blurb: "British territory on Central European time",
+      cities: [{ city: "Gibraltar", area: "GI" }],
+    },
+  ],
+  areas: [
+    { code: "ENG", name: "England", zone: "UK" },
+    { code: "SCT", name: "Scotland", zone: "UK" },
+    { code: "WLS", name: "Wales", zone: "UK" },
+    { code: "NIR", name: "Northern Ireland", zone: "UK" },
+    { code: "JE", name: "Jersey", zone: "UK" },
+    { code: "GG", name: "Guernsey", zone: "UK" },
+    { code: "IM", name: "Isle of Man", zone: "UK" },
+    { code: "GI", name: "Gibraltar", zone: "GI" },
+  ],
+};
+
+const USA: Route = {
+  key: "US",
+  tab: "USA",
+  country: "USA",
+  intro: "Every state, DC and territory, by time zone. US clocks change on different dates from Europe, so the gap to SAST shifts in March and November.",
+  areaLabel: "States",
+  primary: "ET",
+  zones: [
+    {
+      key: "ET",
+      name: "Eastern",
+      zone: "America/New_York",
+      blurb: "East Coast: NY / NJ ports, Southeast",
+      cities: [
+        { city: "New York", area: "NY" },
+        { city: "Newark", area: "NJ" },
+        { city: "Philadelphia", area: "PA" },
+        { city: "Baltimore", area: "MD" },
+        { city: "Atlanta", area: "GA" },
+        { city: "Savannah", area: "GA" },
+        { city: "Charleston", area: "SC" },
+        { city: "Miami", area: "FL" },
+        { city: "Detroit", area: "MI" },
+      ],
+    },
+    {
+      key: "CT",
+      name: "Central",
+      zone: "America/Chicago",
+      blurb: "Midwest, Texas Gulf, Mississippi valley",
+      cities: [
+        { city: "Chicago", area: "IL" },
+        { city: "Houston", area: "TX" },
+        { city: "Dallas", area: "TX" },
+        { city: "Memphis", area: "TN" },
+        { city: "Nashville", area: "TN" },
+        { city: "New Orleans", area: "LA" },
+        { city: "Kansas City", area: "MO" },
+        { city: "Minneapolis", area: "MN" },
+      ],
+    },
+    {
+      key: "MT",
+      name: "Mountain",
+      zone: "America/Denver",
+      blurb: "Rockies (observes DST)",
+      cities: [
+        { city: "Denver", area: "CO" },
+        { city: "Salt Lake City", area: "UT" },
+        { city: "Albuquerque", area: "NM" },
+        { city: "El Paso", area: "TX" },
+        { city: "Boise", area: "ID" },
+      ],
+    },
+    {
+      key: "AZ",
+      name: "Arizona",
+      zone: "America/Phoenix",
+      blurb: "Mountain Standard all year, no DST (matches Pacific in summer)",
+      cities: [{ city: "Phoenix", area: "AZ" }, { city: "Tucson", area: "AZ" }],
+    },
+    {
+      key: "PT",
+      name: "Pacific",
+      zone: "America/Los_Angeles",
+      blurb: "West Coast: LA / Long Beach, Oakland, Seattle",
+      cities: [
+        { city: "Los Angeles", area: "CA" },
+        { city: "Long Beach", area: "CA" },
+        { city: "San Francisco", area: "CA" },
+        { city: "Oakland", area: "CA" },
+        { city: "San Diego", area: "CA" },
+        { city: "Seattle", area: "WA" },
+        { city: "Portland", area: "OR" },
+        { city: "Las Vegas", area: "NV" },
+      ],
+    },
+    {
+      key: "AK",
+      name: "Alaska",
+      zone: "America/Anchorage",
+      cities: [{ city: "Anchorage", area: "AK" }, { city: "Juneau", area: "AK" }],
+    },
+    { key: "HT", name: "Hawaii", zone: "Pacific/Honolulu", blurb: "No DST", cities: [{ city: "Honolulu", area: "HI" }] },
+    { key: "AT", name: "Atlantic", zone: "America/Puerto_Rico", blurb: "Territories, no DST", cities: [{ city: "San Juan", area: "PR" }] },
+    { key: "CH", name: "Chamorro", zone: "Pacific/Guam", blurb: "Territories, no DST", cities: [{ city: "Hagåtña", area: "GU" }] },
+    { key: "SM", name: "Samoa", zone: "Pacific/Pago_Pago", blurb: "Territory, no DST", cities: [{ city: "Pago Pago", area: "AS" }] },
+  ],
+  areas: [
+    { code: "AL", name: "Alabama", zone: "CT" },
+    { code: "AK", name: "Alaska", zone: "AK", note: "Western Aleutian Islands use Hawaii–Aleutian time" },
+    { code: "AZ", name: "Arizona", zone: "AZ", also: "MT", note: "No DST, except the Navajo Nation (follows Mountain DST)" },
+    { code: "AR", name: "Arkansas", zone: "CT" },
+    { code: "CA", name: "California", zone: "PT" },
+    { code: "CO", name: "Colorado", zone: "MT" },
+    { code: "CT", name: "Connecticut", zone: "ET" },
+    { code: "DE", name: "Delaware", zone: "ET" },
+    { code: "DC", name: "District of Columbia", zone: "ET" },
+    { code: "FL", name: "Florida", zone: "ET", also: "CT", note: "Panhandle west of the Apalachicola River (Pensacola) is Central" },
+    { code: "GA", name: "Georgia", zone: "ET" },
+    { code: "HI", name: "Hawaii", zone: "HT" },
+    { code: "ID", name: "Idaho", zone: "MT", also: "PT", note: "Northern panhandle (Coeur d'Alene) is Pacific" },
+    { code: "IL", name: "Illinois", zone: "CT" },
+    { code: "IN", name: "Indiana", zone: "ET", also: "CT", note: "NW corner (Gary) and SW corner (Evansville) are Central" },
+    { code: "IA", name: "Iowa", zone: "CT" },
+    { code: "KS", name: "Kansas", zone: "CT", also: "MT", note: "Four western border counties are Mountain" },
+    { code: "KY", name: "Kentucky", zone: "ET", also: "CT", note: "Western half (Bowling Green, Paducah) is Central" },
+    { code: "LA", name: "Louisiana", zone: "CT" },
+    { code: "ME", name: "Maine", zone: "ET" },
+    { code: "MD", name: "Maryland", zone: "ET" },
+    { code: "MA", name: "Massachusetts", zone: "ET" },
+    { code: "MI", name: "Michigan", zone: "ET", also: "CT", note: "Four Upper Peninsula counties bordering Wisconsin are Central" },
+    { code: "MN", name: "Minnesota", zone: "CT" },
+    { code: "MS", name: "Mississippi", zone: "CT" },
+    { code: "MO", name: "Missouri", zone: "CT" },
+    { code: "MT", name: "Montana", zone: "MT" },
+    { code: "NE", name: "Nebraska", zone: "CT", also: "MT", note: "Western panhandle is Mountain" },
+    { code: "NV", name: "Nevada", zone: "PT", also: "MT", note: "West Wendover is Mountain" },
+    { code: "NH", name: "New Hampshire", zone: "ET" },
+    { code: "NJ", name: "New Jersey", zone: "ET" },
+    { code: "NM", name: "New Mexico", zone: "MT" },
+    { code: "NY", name: "New York", zone: "ET" },
+    { code: "NC", name: "North Carolina", zone: "ET" },
+    { code: "ND", name: "North Dakota", zone: "CT", also: "MT", note: "South-west corner is Mountain" },
+    { code: "OH", name: "Ohio", zone: "ET" },
+    { code: "OK", name: "Oklahoma", zone: "CT" },
+    { code: "OR", name: "Oregon", zone: "PT", also: "MT", note: "Most of Malheur County is Mountain" },
+    { code: "PA", name: "Pennsylvania", zone: "ET" },
+    { code: "RI", name: "Rhode Island", zone: "ET" },
+    { code: "SC", name: "South Carolina", zone: "ET" },
+    { code: "SD", name: "South Dakota", zone: "CT", also: "MT", note: "Western half (Rapid City) is Mountain" },
+    { code: "TN", name: "Tennessee", zone: "CT", also: "ET", note: "East Tennessee (Knoxville, Chattanooga) is Eastern" },
+    { code: "TX", name: "Texas", zone: "CT", also: "MT", note: "El Paso and Hudspeth counties are Mountain" },
+    { code: "UT", name: "Utah", zone: "MT" },
+    { code: "VT", name: "Vermont", zone: "ET" },
+    { code: "VA", name: "Virginia", zone: "ET" },
+    { code: "WA", name: "Washington", zone: "PT" },
+    { code: "WV", name: "West Virginia", zone: "ET" },
+    { code: "WI", name: "Wisconsin", zone: "CT" },
+    { code: "WY", name: "Wyoming", zone: "MT" },
+    { code: "PR", name: "Puerto Rico", zone: "AT" },
+    { code: "VI", name: "U.S. Virgin Islands", zone: "AT" },
+    { code: "GU", name: "Guam", zone: "CH" },
+    { code: "MP", name: "Northern Mariana Islands", zone: "CH" },
+    { code: "AS", name: "American Samoa", zone: "SM" },
+  ],
+};
+
+/** The five ExPac trade lanes, in the order the website lists them. */
+const ROUTES: Route[] = [CHINA, EUROPE, INDIA, UK, USA];
+const ROUTE_BY_KEY = new Map(ROUTES.map((r) => [r.key, r]));
+
+const zoneOf = (r: Route, key: string) => r.zones.find((z) => z.key === key)!;
+const areaOf = (r: Route, code?: string) => (code ? r.areas.find((a) => a.code === code) : undefined);
+const cityChip = (r: Route, c: { city: string; area?: string }) =>
+  c.area && r.key === "US" ? `${c.city}, ${c.area}` : c.city;
 
 /* ---------------- entries (anything that can be a clock) ---------------- */
 
 const cityId = (zone: string, city: string) => `city:${zone}:${city}`;
+const areaId = (r: Route, code: string) => `area:${r.key}:${code}`;
+const rzoneId = (r: Route, key: string) => `rzone:${r.key}:${key}`;
 
-const US_CITY_ENTRIES: Entry[] = US_ZONES.flatMap((z) =>
-  z.cities.map((c) => ({
-    id: cityId(z.zone, c.city),
-    label: c.city,
-    sub: `${STATE_BY_ABBR.get(c.state)?.name ?? c.state}, USA · ${z.name}`,
-    zone: z.zone,
-  })),
-);
+function routeCityEntries(r: Route): Entry[] {
+  return r.zones.flatMap((z) =>
+    z.cities.map((c) => {
+      const a = areaOf(r, c.area);
+      return {
+        id: cityId(z.zone, c.city),
+        label: c.city,
+        sub: `${a ? a.name : r.country} · ${z.name} time`,
+        zone: z.zone,
+      };
+    }),
+  );
+}
+
+const ROUTE_CITY_ENTRIES: Entry[] = ROUTES.flatMap(routeCityEntries);
 
 const WORLD_GROUPS: { name: string; entries: Entry[] }[] = [
   ...REGIONS.slice(0, 5).map((r) => ({
     name: r.name,
     entries: r.cities.map((c) => ({ id: cityId(c.zone, c.city), label: c.city, sub: c.country, zone: c.zone })),
   })),
-  { name: "United States", entries: US_CITY_ENTRIES },
+  { name: "United States", entries: routeCityEntries(USA) },
   {
     name: "Americas",
     entries: REGIONS[5].cities.map((c) => ({ id: cityId(c.zone, c.city), label: c.city, sub: c.country, zone: c.zone })),
   },
 ];
 
-const STATE_ENTRIES: Entry[] = US_STATES.map((s) => {
-  const z = US_ZONE_BY_KEY.get(s.zone)!;
-  return {
-    id: `state:${s.abbr}`,
-    label: s.name,
-    sub: `${s.territory ? "US territory" : "USA"} · ${z.name} time`,
-    zone: z.zone,
-    note: s.note,
-  };
-});
+const AREA_ENTRIES: Entry[] = ROUTES.flatMap((r) =>
+  r.areas.map((a) => {
+    const z = zoneOf(r, a.zone);
+    return {
+      id: areaId(r, a.code),
+      label: a.name,
+      sub: `${r.country === a.name ? "" : `${r.country} · `}${z.name} time`,
+      zone: z.zone,
+      note: a.note,
+    };
+  }),
+);
 
-const ZONE_ENTRIES: Entry[] = US_ZONES.map((z) => ({
-  id: `uszone:${z.key}`,
-  label: `US ${z.name}`,
-  sub: "United States time zone",
-  zone: z.zone,
-  note: z.blurb,
-}));
+const RZONE_ENTRIES: Entry[] = ROUTES.flatMap((r) =>
+  r.zones.map((z) => ({
+    id: rzoneId(r, z.key),
+    label: r.key === "US" ? `US ${z.name}` : z.name,
+    sub: `${r.tab} trade route · time zone`,
+    zone: z.zone,
+    note: z.blurb,
+  })),
+);
 
 const HOME_ID = cityId(HOME.zone, HOME.city);
-const ALL_ENTRIES: Entry[] = [...WORLD_GROUPS.flatMap((g) => g.entries), ...STATE_ENTRIES, ...ZONE_ENTRIES];
+const ALL_ENTRIES: Entry[] = [
+  ...WORLD_GROUPS.flatMap((g) => g.entries),
+  ...ROUTE_CITY_ENTRIES,
+  ...AREA_ENTRIES,
+  ...RZONE_ENTRIES,
+];
 const ENTRY_BY_ID = new Map(ALL_ENTRIES.map((e) => [e.id, e]));
 
 function tzEntry(zone: string): Entry {
   const last = zone.split("/").pop() ?? zone;
   return { id: `tz:${zone}`, label: last.replace(/_/g, " "), sub: zone, zone };
+}
+/** Pins saved by the first version used `state:NJ` / `uszone:ET`. */
+function upgradeId(id: string): string {
+  if (id.startsWith("state:")) return `area:US:${id.slice(6)}`;
+  if (id.startsWith("uszone:")) return `rzone:US:${id.slice(7)}`;
+  return id;
 }
 function resolveEntry(id: string): Entry | undefined {
   return ENTRY_BY_ID.get(id) ?? (id.startsWith("tz:") ? tzEntry(id.slice(3)) : undefined);
@@ -411,15 +766,22 @@ function formatterFor(zone: string): Intl.DateTimeFormat {
 }
 
 const abbrCache = new Map<string, Intl.DateTimeFormat>();
-/** Short zone name like "EST" / "EDT" / "PST"; null when Intl only knows "GMT+x". */
+/** Short zone name like "EST" / "BST" / "CET"; null when Intl only knows "GMT+x". */
 function zoneAbbr(zone: string, at: Date): string | null {
   let f = abbrCache.get(zone);
   if (!f) {
-    f = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" });
+    f = new Intl.DateTimeFormat("en-GB", { timeZone: zone, timeZoneName: "short" });
     abbrCache.set(zone, f);
   }
-  const name = f.formatToParts(at).find((p) => p.type === "timeZoneName")?.value ?? "";
-  return name && !/^(GMT|UTC)/.test(name) ? name : null;
+  let name = f.formatToParts(at).find((p) => p.type === "timeZoneName")?.value ?? "";
+  if (/^(GMT|UTC)[+−-]/.test(name) && zone.startsWith("America/")) {
+    // en-GB lacks US abbreviations; en-US has them.
+    name =
+      new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" })
+        .formatToParts(at)
+        .find((p) => p.type === "timeZoneName")?.value ?? name;
+  }
+  return name && !/^(GMT|UTC)[+−-]/.test(name) ? name : null;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -454,11 +816,15 @@ function isDst(zone: string, at: Date): boolean {
   return jan !== jul && offsetMinutes(zone, at) > Math.min(jan, jul);
 }
 
+interface Transition {
+  at: Date;
+  from: number;
+  to: number;
+}
 /** Next daylight-saving change within ~13 months, to the day. */
-function nextTransition(zone: string, from: Date): { at: Date; from: number; to: number } | null {
+function nextTransition(zone: string, from: Date): Transition | null {
   const DAY = 86_400_000;
-  const start = offsetMinutes(zone, from);
-  let prev = start;
+  let prev = offsetMinutes(zone, from);
   for (let d = 1; d <= 400; d++) {
     const t = new Date(from.getTime() + d * DAY);
     const off = offsetMinutes(zone, t);
@@ -497,6 +863,18 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function fmtHM(hour: number, minute: number, h12: boolean): { hm: string; ampm: string } {
   if (!h12) return { hm: `${pad(hour)}:${pad(minute)}`, ampm: "" };
   return { hm: `${pad(hour % 12 || 12)}:${pad(minute)}`, ampm: hour < 12 ? "AM" : "PM" };
+}
+function fmtMinOfDay(min: number, h12: boolean): string {
+  const t = fmtHM(Math.floor(min / 60), min % 60, h12);
+  return t.ampm ? `${t.hm} ${t.ampm}` : t.hm;
+}
+
+/** Office-hours overlap with JHB on a weekday, in SAST. `diff` = zone − SAST minutes. */
+function sharedHours(diff: number, h12: boolean): { text: string; none: boolean } {
+  const s = Math.max(OPEN_HOUR * 60, OPEN_HOUR * 60 - diff);
+  const e = Math.min(CLOSE_HOUR * 60, CLOSE_HOUR * 60 - diff);
+  if (e <= s) return { text: "No shared office hours with JHB: email or call outside hours", none: true };
+  return { text: `Shared office hours: ${fmtMinOfDay(s, h12)}–${fmtMinOfDay(e, h12)} SAST (${fmtDur(e - s)})`, none: false };
 }
 
 interface BizStatus {
@@ -582,6 +960,33 @@ function DayStrip({ z }: { z: ZoneParts }) {
   );
 }
 
+function StatusRow({ st }: { st: BizStatus }) {
+  return (
+    <div className="wc-status">
+      <span className={`wc-badge ${st.open ? (st.soon ? "soon" : "open") : "closed"}`}>{st.open ? "Open" : "Closed"}</span>
+      <span className="wc-status-label">{st.label}</span>
+    </div>
+  );
+}
+
+function PinButton({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`wc-pin${on ? " on" : ""}`}
+      onClick={(ev) => {
+        ev.stopPropagation(); // the card itself is clickable (focus)
+        onClick();
+      }}
+      title={on ? "Remove from My board" : "Pin to My board"}
+      aria-label={on ? `Unpin ${label}` : `Pin ${label}`}
+      aria-pressed={on}
+    >
+      {on ? "★" : "☆"}
+    </button>
+  );
+}
+
 interface CardProps {
   e: Entry;
   at: Date;
@@ -591,9 +996,28 @@ interface CardProps {
   home?: boolean;
   pinned?: boolean;
   onPin?: () => void;
+  focused?: boolean;
+  onFocus?: () => void;
 }
 
-function ClockCard({ e, at, homeOffset, h12, live, home, pinned, onPin }: CardProps) {
+/** Props that make a card act as a button which puts it in the big top panel. */
+function focusProps(label: string, onFocus?: () => void) {
+  if (!onFocus) return {};
+  return {
+    role: "button",
+    tabIndex: 0,
+    title: `Show ${label} in the top panel`,
+    onClick: onFocus,
+    onKeyDown: (ev: KeyboardEvent) => {
+      if (ev.target === ev.currentTarget && (ev.key === "Enter" || ev.key === " ")) {
+        ev.preventDefault();
+        onFocus();
+      }
+    },
+  };
+}
+
+function ClockCard({ e, at, homeOffset, h12, live, home, pinned, onPin, focused, onFocus }: CardProps) {
   const z = zoneParts(e.zone, at);
   const off = offsetMinutes(e.zone, at);
   const dst = isDst(e.zone, at);
@@ -603,24 +1027,16 @@ function ClockCard({ e, at, homeOffset, h12, live, home, pinned, onPin }: CardPr
   const t = fmtHM(z.hour, z.minute, h12);
 
   return (
-    <div className={`wc-card${home ? " home" : ""}${night ? " night" : ""}${pinned ? " pinned" : ""}`}>
+    <div
+      className={`wc-card${home ? " home" : ""}${night ? " night" : ""}${pinned ? " pinned" : ""}${focused ? " focused" : ""}${onFocus ? " clickable" : ""}`}
+      {...focusProps(e.label, onFocus)}
+    >
       <div className="wc-top">
         <div className="wc-name">
           <div className="wc-city">{e.label}</div>
           <div className="wc-country">{e.sub}</div>
         </div>
-        {onPin && (
-          <button
-            type="button"
-            className={`wc-pin${pinned ? " on" : ""}`}
-            onClick={onPin}
-            title={pinned ? "Remove from My board" : "Pin to My board"}
-            aria-label={pinned ? `Unpin ${e.label}` : `Pin ${e.label}`}
-            aria-pressed={pinned}
-          >
-            {pinned ? "★" : "☆"}
-          </button>
-        )}
+        {onPin && <PinButton on={!!pinned} label={e.label} onClick={onPin} />}
       </div>
       <div className="wc-time">
         {t.hm}
@@ -632,12 +1048,7 @@ function ClockCard({ e, at, homeOffset, h12, live, home, pinned, onPin }: CardPr
         {abbr && <span className="wc-abbr">{abbr}</span>}
       </div>
       <DayStrip z={z} />
-      <div className="wc-status">
-        <span className={`wc-badge ${st.open ? (st.soon ? "soon" : "open") : "closed"}`}>
-          {st.open ? "Open" : "Closed"}
-        </span>
-        <span className="wc-status-label">{st.label}</span>
-      </div>
+      <StatusRow st={st} />
       <div className="wc-meta">
         <span>
           {fmtOffset(off)}
@@ -682,7 +1093,7 @@ function CallPlanner({
         <strong>Best time to call</strong>
         <span>
           {fallback
-            ? "Pin locations (☆) to plan around your own suppliers. Showing the main US zones meanwhile."
+            ? "Showing your 5 trade routes. Pin locations (☆) to plan around your own suppliers instead."
             : `Next 24 hours (SAST) vs ${targets.length} pinned location${targets.length === 1 ? "" : "s"}.`}{" "}
           Click an hour to preview it.
         </span>
@@ -707,7 +1118,9 @@ function CallPlanner({
               onClick={() => setShift(s.i === 0 ? 0 : Math.ceil((s.t.getTime() - now.getTime()) / 60_000))}
             >
               <span className="wc-heat-bar" />
-              <span className="wc-heat-label">{h12 ? `${parseInt(s.label.hm, 10)}${s.label.ampm[0].toLowerCase()}` : s.label.hm.slice(0, 2)}</span>
+              <span className="wc-heat-label">
+                {h12 ? `${parseInt(s.label.hm, 10)}${s.label.ampm[0].toLowerCase()}` : s.label.hm.slice(0, 2)}
+              </span>
             </button>
           );
         })}
@@ -721,7 +1134,8 @@ function CallPlanner({
   );
 }
 
-function UsZoneCard({
+function RouteZoneCard({
+  route,
   z,
   at,
   homeOffset,
@@ -731,8 +1145,11 @@ function UsZoneCard({
   pins,
   togglePin,
   transition,
+  focused,
+  onFocus,
 }: {
-  z: UsZone;
+  route: Route;
+  z: RouteZone;
   at: Date;
   homeOffset: number;
   h12: boolean;
@@ -740,26 +1157,33 @@ function UsZoneCard({
   term: string;
   pins: string[];
   togglePin: (id: string) => void;
-  transition: { at: Date; from: number; to: number } | null;
+  transition: Transition | null;
+  focused: boolean;
+  onFocus: () => void;
 }) {
   const p = zoneParts(z.zone, at);
   const off = offsetMinutes(z.zone, at);
   const st = bizStatus(p);
   const abbr = zoneAbbr(z.zone, at);
   const t = fmtHM(p.hour, p.minute, h12);
-  const primary = US_STATES.filter((s) => s.zone === z.key);
-  const partial = US_STATES.filter((s) => s.also === z.key);
-  const matches = (s: UsState) =>
-    !!term && (s.name.toLowerCase().includes(term) || s.abbr.toLowerCase() === term);
+  const shared = sharedHours(off - homeOffset, h12);
+  const primary = route.areas.filter((a) => a.zone === z.key);
+  const partial = route.areas.filter((a) => a.also === z.key);
+  const matches = (a: Area) => !!term && (a.name.toLowerCase().includes(term) || a.code.toLowerCase() === term);
   const anyMatch =
     !term ||
     [...primary, ...partial].some(matches) ||
     z.name.toLowerCase().includes(term) ||
     z.cities.some((c) => c.city.toLowerCase().includes(term));
-  const zoneId = `uszone:${z.key}`;
+  const zid = rzoneId(route, z.key);
+  // Hide an area list that only repeats the zone's own name (e.g. "Sri Lanka").
+  const showAreas = primary.length > 1 || (primary.length === 1 && primary[0].name !== z.name);
 
   return (
-    <div className={`wc-us${anyMatch ? "" : " dim"}${p.hour < 6 || p.hour >= 20 ? " night" : ""}`}>
+    <div
+      className={`wc-us clickable${anyMatch ? "" : " dim"}${p.hour < 6 || p.hour >= 20 ? " night" : ""}${focused ? " focused" : ""}`}
+      {...focusProps(z.name, onFocus)}
+    >
       <div className="wc-us-head">
         <div>
           <div className="wc-us-name">
@@ -768,15 +1192,7 @@ function UsZoneCard({
           </div>
           {z.blurb && <div className="wc-country">{z.blurb}</div>}
         </div>
-        <button
-          type="button"
-          className={`wc-pin${pins.includes(zoneId) ? " on" : ""}`}
-          onClick={() => togglePin(zoneId)}
-          title={pins.includes(zoneId) ? "Remove from My board" : "Pin this zone to My board"}
-          aria-pressed={pins.includes(zoneId)}
-        >
-          {pins.includes(zoneId) ? "★" : "☆"}
-        </button>
+        <PinButton on={pins.includes(zid)} label={z.name} onClick={() => togglePin(zid)} />
       </div>
       <div className="wc-time">
         {t.hm}
@@ -787,10 +1203,8 @@ function UsZoneCard({
         {WEEKDAYS[p.weekday]} {p.day} {MONTHS[p.month - 1]} · {fmtOffset(off)} · {fmtDiff(off - homeOffset)}
       </div>
       <DayStrip z={p} />
-      <div className="wc-status">
-        <span className={`wc-badge ${st.open ? (st.soon ? "soon" : "open") : "closed"}`}>{st.open ? "Open" : "Closed"}</span>
-        <span className="wc-status-label">{st.label}</span>
-      </div>
+      <StatusRow st={st} />
+      <div className={`wc-shared${shared.none ? " none" : ""}`}>{shared.text}</div>
       {transition && (
         <div className="wc-dst-next">
           Clocks change {WEEKDAYS[transition.at.getUTCDay()]} {transition.at.getUTCDate()} {MONTHS[transition.at.getUTCMonth()]}: gap
@@ -798,7 +1212,7 @@ function UsZoneCard({
         </div>
       )}
 
-      <div className="wc-us-sec">Cities</div>
+      <div className="wc-us-sec">Cities & ports</div>
       <div className="wc-chips">
         {z.cities.map((c) => {
           const id = cityId(z.zone, c.city);
@@ -808,32 +1222,40 @@ function UsZoneCard({
               key={id}
               type="button"
               className={`wc-chip${on ? " on" : ""}${term && c.city.toLowerCase().includes(term) ? " hit" : ""}`}
-              onClick={() => togglePin(id)}
-              title={on ? "Unpin" : "Pin to My board"}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                togglePin(id);
+              }}
+              title={`${areaOf(route, c.area)?.name ?? route.country} (click to ${on ? "unpin" : "pin"})`}
             >
-              {c.city}, {c.state}
+              {cityChip(route, c)}
             </button>
           );
         })}
       </div>
 
-      {primary.length > 0 && (
+      {showAreas && (
         <>
-          <div className="wc-us-sec">States ({primary.length})</div>
+          <div className="wc-us-sec">
+            {route.areaLabel} ({primary.length})
+          </div>
           <div className="wc-chips">
-            {primary.map((s) => {
-              const id = `state:${s.abbr}`;
+            {primary.map((a) => {
+              const id = areaId(route, a.code);
               const on = pins.includes(id);
               return (
                 <button
-                  key={s.abbr}
+                  key={a.code}
                   type="button"
-                  className={`wc-chip state${on ? " on" : ""}${matches(s) ? " hit" : ""}${s.also ? " split" : ""}`}
-                  onClick={() => togglePin(id)}
-                  title={`${s.name}${s.note ? `: ${s.note}` : ""} (click to ${on ? "unpin" : "pin"})`}
+                  className={`wc-chip state${on ? " on" : ""}${matches(a) ? " hit" : ""}${a.also || a.note ? " split" : ""}`}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    togglePin(id);
+                  }}
+                  title={`${a.name}${a.note ? `: ${a.note}` : ""} (click to ${on ? "unpin" : "pin"})`}
                 >
-                  {s.name}
-                  {s.also ? " *" : ""}
+                  {a.name}
+                  {a.also || a.note ? " *" : ""}
                 </button>
               );
             })}
@@ -844,9 +1266,14 @@ function UsZoneCard({
         <>
           <div className="wc-us-sec">Partly in this zone</div>
           <div className="wc-chips">
-            {partial.map((s) => (
-              <span key={s.abbr} className={`wc-chip partial${matches(s) ? " hit" : ""}`} title={s.note}>
-                {s.name}
+            {partial.map((a) => (
+              <span
+                key={a.code}
+                className={`wc-chip partial${matches(a) ? " hit" : ""}`}
+                title={a.note}
+                onClick={(ev) => ev.stopPropagation()}
+              >
+                {a.name}
               </span>
             ))}
           </div>
@@ -858,17 +1285,24 @@ function UsZoneCard({
 
 /* ---------------- main ---------------- */
 
-type Tab = "board" | "world" | "usa";
+type Tab = "board" | "world" | string; // or a route key
 
 export default function WorldClock() {
   const now = useNow();
   const [shiftMin, setShift] = useState(0);
   const [h12, setH12] = useStored<boolean>("wc:h12", false);
-  const [pins, setPins] = useStored<string[]>("wc:pins", []);
-  const [tab, setTab] = useStored<Tab>("wc:tab", "world");
+  const [rawPins, setPins] = useStored<string[]>("wc:pins", []);
+  const [rawTab, setTab] = useStored<Tab>("wc:tab", "world");
   const [openOnly, setOpenOnly] = useState(false);
   const [q, setQ] = useState("");
   const [addZone, setAddZone] = useState("");
+  // Clicking a clock puts it in the big top panel (null = Johannesburg).
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  const pins = useMemo(() => rawPins.map(upgradeId), [rawPins]);
+  const tab: Tab = rawTab === "usa" ? "US" : rawTab;
+  const route = ROUTE_BY_KEY.get(tab);
 
   const live = shiftMin === 0;
   const at = live ? now : new Date(now.getTime() + shiftMin * 60_000);
@@ -883,27 +1317,30 @@ export default function WorldClock() {
   const dayKey = now.toISOString().slice(0, 10);
   const transitions = useMemo(() => {
     const from = new Date(`${dayKey}T12:00:00Z`);
-    return new Map(US_ZONES.map((z) => [z.key, nextTransition(z.zone, from)]));
+    const byZone = new Map<string, Transition | null>();
+    for (const r of ROUTES) for (const z of r.zones) if (!byZone.has(z.zone)) byZone.set(z.zone, nextTransition(z.zone, from));
+    return byZone;
   }, [dayKey]);
 
-  const plannerTargets = pinnedEntries.length
-    ? pinnedEntries
-    : ["ET", "CT", "MT", "PT"].map((k) => ZONE_ENTRIES.find((e) => e.id === `uszone:${k}`)!);
+  const routePrimaryEntries = ROUTES.map((r) => ENTRY_BY_ID.get(rzoneId(r, r.primary))!).map((e, i) => ({
+    ...e,
+    label: ROUTES[i].tab,
+  }));
+  const plannerTargets = pinnedEntries.length ? pinnedEntries : routePrimaryEntries;
 
   const passOpen = (e: Entry) => !openOnly || isOpenAt(e.zone, at);
 
-  // Global search: cities, every US state / territory, any IANA zone.
+  // Global search: cities, every route region, any IANA zone.
   const results: Entry[] = useMemo(() => {
     if (!term) return [];
     const hit = (e: Entry) => [e.label, e.sub, e.zone].some((v) => v.toLowerCase().includes(term));
-    const stateHits = STATE_ENTRIES.filter(
-      (e) => hit(e) || e.id.slice(6).toLowerCase() === term,
-    );
-    const cityHits = WORLD_GROUPS.flatMap((g) =>
-      g.entries.filter((e) => hit(e) || g.name.toLowerCase().includes(term)),
-    );
-    const zoneHits = ZONE_ENTRIES.filter(hit);
-    const known = new Set([...stateHits, ...cityHits, ...zoneHits].map((e) => e.zone));
+    const areaHits = AREA_ENTRIES.filter((e) => hit(e) || e.id.split(":")[2].toLowerCase() === term);
+    const cityHits = [
+      ...WORLD_GROUPS.flatMap((g) => g.entries.filter((e) => hit(e) || g.name.toLowerCase().includes(term))),
+      ...ROUTE_CITY_ENTRIES.filter(hit),
+    ];
+    const zoneHits = RZONE_ENTRIES.filter(hit);
+    const known = new Set([...areaHits, ...cityHits, ...zoneHits].map((e) => e.zone));
     const tzHits =
       term.length >= 3
         ? IANA_ZONES.filter((z) => z.toLowerCase().replace(/_/g, " ").includes(term) && !known.has(z))
@@ -911,13 +1348,25 @@ export default function WorldClock() {
             .map(tzEntry)
         : [];
     const seen = new Set<string>();
-    return [...stateHits, ...zoneHits, ...cityHits, ...tzHits].filter((e) => !seen.has(e.id) && !!seen.add(e.id));
+    return [...areaHits, ...zoneHits, ...cityHits, ...tzHits].filter((e) => !seen.has(e.id) && !!seen.add(e.id));
   }, [term]);
 
+  const focusEntry = focusId && focusId !== HOME_ID ? resolveEntry(focusId) ?? null : null;
+  const focusOn = (id: string) => {
+    setFocusId(id === HOME_ID ? null : id);
+    heroRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  // Big panel: the focused clock, or Johannesburg.
+  const heroZone = focusEntry?.zone ?? HOME.zone;
+  const heroZ = zoneParts(heroZone, at);
+  const heroT = fmtHM(heroZ.hour, heroZ.minute, h12);
+  const heroSt = bizStatus(heroZ);
+  const heroOff = offsetMinutes(heroZone, at);
+  const heroAbbr = focusEntry ? zoneAbbr(heroZone, at) ?? fmtOffset(heroOff) : "SAST";
   const homeZ = zoneParts(HOME.zone, at);
   const homeT = fmtHM(homeZ.hour, homeZ.minute, h12);
   const homeSt = bizStatus(homeZ);
-  const usOpen = US_ZONES.slice(0, 5).filter((z) => isOpenAt(z.zone, at)).length;
 
   const card = (e: Entry) => (
     <ClockCard
@@ -930,6 +1379,8 @@ export default function WorldClock() {
       home={e.id === HOME_ID}
       pinned={pins.includes(e.id)}
       onPin={e.id === HOME_ID ? undefined : () => togglePin(e.id)}
+      focused={(focusEntry?.id ?? HOME_ID) === e.id}
+      onFocus={() => focusOn(e.id)}
     />
   );
 
@@ -951,23 +1402,70 @@ export default function WorldClock() {
   return (
     <div className="panel wc">
       {/* ---------- hero: digital home clock + time planner ---------- */}
-      <div className={`wc-hero${live ? "" : " planning"}`}>
+      <div ref={heroRef} className={`wc-hero${live ? "" : " planning"}${focusEntry ? " focused" : ""}`}>
         <div className="wc-hero-clock">
           <div className="wc-hero-label">
             <span className={`wc-led-dot${live ? " live" : ""}`} />
-            {live ? "LIVE" : "PLANNING"} · Johannesburg · SAST
+            {live ? "LIVE" : "PLANNING"} · {focusEntry ? focusEntry.label : "Johannesburg"} · {heroAbbr}
+            {focusEntry && (
+              <button type="button" className="wc-hero-back" onClick={() => setFocusId(null)}>
+                ← Back to Johannesburg
+              </button>
+            )}
           </div>
+          {focusEntry && <div className="wc-hero-sub">{focusEntry.sub}</div>}
           <div className="wc-hero-time">
-            {homeT.hm}
-            {live && <span className="wc-hero-sec">:{pad(homeZ.second)}</span>}
-            {homeT.ampm && <span className="wc-hero-ampm">{homeT.ampm}</span>}
+            {heroT.hm}
+            {live && <span className="wc-hero-sec">:{pad(heroZ.second)}</span>}
+            {heroT.ampm && <span className="wc-hero-ampm">{heroT.ampm}</span>}
           </div>
           <div className="wc-hero-date">
-            {WEEKDAYS[homeZ.weekday]} {homeZ.day} {MONTHS[homeZ.month - 1]} {homeZ.year} ·{" "}
-            <span className={homeSt.open ? "ok" : "off"}>Office {homeSt.open ? "open" : "closed"}</span> · {usOpen}/5 mainland US
-            zones open
+            {WEEKDAYS[heroZ.weekday]} {heroZ.day} {MONTHS[heroZ.month - 1]} {heroZ.year} ·{" "}
+            <span className={heroSt.open ? "ok" : "off"}>
+              Office {heroSt.open ? "open" : "closed"}
+            </span>{" "}
+            · {heroSt.label}
           </div>
-          {localZone && localZone !== HOME.zone && <div className="wc-hero-sub">Your device is on {localZone}.</div>}
+          {focusEntry ? (
+            <div className="wc-hero-sub">
+              Johannesburg {homeT.hm}
+              {homeT.ampm && ` ${homeT.ampm}`} ({homeSt.open ? "open" : "closed"}) · {fmtDiff(heroOff - homeOffset)} ·{" "}
+              {sharedHours(heroOff - homeOffset, h12).text}
+            </div>
+          ) : (
+            <>
+              {localZone && localZone !== HOME.zone && <div className="wc-hero-sub">Your device is on {localZone}.</div>}
+              <div className="wc-hero-sub">Click any clock below to show it here.</div>
+            </>
+          )}
+          <div className="wc-hero-routes" aria-label="Trade routes">
+            {ROUTES.map((r) => {
+              const pz = zoneOf(r, r.primary);
+              const zp = zoneParts(pz.zone, at);
+              const open = bizStatus(zp).open;
+              const rt = fmtHM(zp.hour, zp.minute, h12);
+              return (
+                <button
+                  key={r.key}
+                  type="button"
+                  className={`wc-route-chip${open ? " open" : ""}${tab === r.key ? " on" : ""}`}
+                  onClick={() => {
+                    setTab(r.key);
+                    setQ("");
+                    setFocusId(rzoneId(r, r.primary));
+                  }}
+                  title={`${r.tab} ⇄ South Africa · ${pz.name} · ${open ? "open" : "closed"}`}
+                >
+                  <i />
+                  <span className="rc-name">{r.tab}</span>
+                  <span className="rc-time">
+                    {rt.hm}
+                    {rt.ampm && ` ${rt.ampm}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="wc-hero-controls">
@@ -1024,11 +1522,23 @@ export default function WorldClock() {
             [
               ["board", `My board${pinnedEntries.length ? ` (${pinnedEntries.length})` : ""}`],
               ["world", "World"],
-              ["usa", "USA time zones"],
             ] as [Tab, string][]
           ).map(([k, label]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
               {label}
+            </button>
+          ))}
+          <span className="wc-tabs-label">Trade routes</span>
+          {ROUTES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === r.key}
+              className={tab === r.key ? "on" : ""}
+              onClick={() => setTab(r.key)}
+            >
+              {r.tab}
             </button>
           ))}
         </div>
@@ -1037,8 +1547,8 @@ export default function WorldClock() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="City, country, US state (e.g. New Jersey, TX)…"
-          aria-label="Find a city, country or US state"
+          placeholder={route ? `Find in ${route.tab}: city, ${route.areaLabel.toLowerCase()}…` : "City, country, state or province…"}
+          aria-label="Find a city, country, state or province"
         />
         <label className="wc-toggle">
           <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /> Open now only
@@ -1049,12 +1559,11 @@ export default function WorldClock() {
         and the call planner.
       </p>
 
-      {/* ---------- search results ---------- */}
-      {term && tab !== "usa" ? (
+      {term && !route ? (
         <>
           <h3 className="wc-section-title">Results for "{q.trim()}"</h3>
           {results.filter(passOpen).length === 0 ? (
-            <p className="hint">No match. Try a city, a country, a US state name or abbreviation, or a zone like "Asia/Kathmandu".</p>
+            <p className="hint">No match. Try a city, a country, a state or province, or a zone like "Asia/Kathmandu".</p>
           ) : (
             <div className="wc-grid">{results.filter(passOpen).map(card)}</div>
           )}
@@ -1067,7 +1576,7 @@ export default function WorldClock() {
           </div>
           {pinnedEntries.length === 0 && (
             <p className="hint">
-              Nothing pinned yet. Tap ☆ on any clock (or a state in "USA time zones") to build a board for the suppliers you deal with.
+              Nothing pinned yet. Tap ☆ on any clock, or a city or region in a trade route tab, to build a board for the suppliers you deal with.
             </p>
           )}
           <div className="wc-add">
@@ -1084,12 +1593,45 @@ export default function WorldClock() {
                 <option key={z} value={z} />
               ))}
             </datalist>
-            <button type="button" className="wc-ghost primary" onClick={addCustom} disabled={!IANA_ZONES.some((v) => v.toLowerCase() === addZone.trim().toLowerCase())}>
+            <button
+              type="button"
+              className="wc-ghost primary"
+              onClick={addCustom}
+              disabled={!IANA_ZONES.some((v) => v.toLowerCase() === addZone.trim().toLowerCase())}
+            >
               Add clock
             </button>
           </div>
         </>
-      ) : tab === "world" ? (
+      ) : route ? (
+        <>
+          <p className="hint">
+            <strong>{route.tab} ⇄ South Africa.</strong> {route.intro} * = split across zones or has an exception (hover for detail). Click a
+            city or region to pin it.
+          </p>
+          <div className="wc-us-grid">
+            {route.zones
+              .filter((z) => !openOnly || isOpenAt(z.zone, at))
+              .map((z) => (
+                <RouteZoneCard
+                  key={z.key}
+                  route={route}
+                  z={z}
+                  at={at}
+                  homeOffset={homeOffset}
+                  h12={h12}
+                  live={live}
+                  term={term}
+                  pins={pins}
+                  togglePin={togglePin}
+                  transition={transitions.get(z.zone) ?? null}
+                  focused={focusEntry?.id === rzoneId(route, z.key)}
+                  onFocus={() => focusOn(rzoneId(route, z.key))}
+                />
+              ))}
+          </div>
+        </>
+      ) : (
         /* One continuous grid (no gaps at the end of a region's row); the
            region name sits above its first clock, the other cells keep the
            same space so every row of cards lines up. */
@@ -1105,28 +1647,6 @@ export default function WorldClock() {
             )),
           )}
         </div>
-      ) : (
-        <>
-          <p className="hint">
-            Every state, DC and territory, by time zone. * = state split across two zones (hover for which part). Click a state or city to pin it.
-          </p>
-          <div className="wc-us-grid">
-            {US_ZONES.filter((z) => !openOnly || isOpenAt(z.zone, at)).map((z) => (
-              <UsZoneCard
-                key={z.key}
-                z={z}
-                at={at}
-                homeOffset={homeOffset}
-                h12={h12}
-                live={live}
-                term={term}
-                pins={pins}
-                togglePin={togglePin}
-                transition={transitions.get(z.key) ?? null}
-              />
-            ))}
-          </div>
-        </>
       )}
     </div>
   );

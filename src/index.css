@@ -4545,9 +4545,107 @@ select.badge-select.lost {
 }
 .wc-tabs {
   display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow-x: auto;
   background: var(--night-tint);
   border-radius: 10px;
   padding: 3px;
+}
+.wc-tabs button {
+  white-space: nowrap;
+}
+.wc-tabs-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0 6px 0 12px;
+  margin-left: 4px;
+  border-left: 1px solid var(--line);
+  white-space: nowrap;
+}
+/* Route chips in the hero: live time per trade lane */
+.wc-hero-routes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.wc-route-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e9ecea;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.wc-route-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.wc-route-chip.on {
+  border-color: var(--green);
+}
+.wc-route-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff8a5e;
+}
+.wc-route-chip.open i {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+.wc-route-chip .rc-time {
+  font-family: var(--wc-digits);
+  color: #b9c0bb;
+}
+.wc-hero-back {
+  margin-left: auto;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9ecea;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+.wc-hero-back:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+/* Clickable clocks: click puts the clock in the hero */
+.wc-card.clickable,
+.wc-us.clickable {
+  cursor: pointer;
+}
+.wc-card.clickable:focus-visible,
+.wc-us.clickable:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.wc-card.focused,
+.wc-us.focused {
+  border-color: var(--night);
+  box-shadow: 0 0 0 2px var(--green);
+}
+.wc-shared {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--teal-ink);
+  background: var(--teal-tint);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.wc-shared.none {
+  color: var(--orange-ink);
+  background: var(--orange-tint);
 }
 .wc-tabs button {
   border: 0;
