@@ -1532,6 +1532,10 @@ export interface Job {
   /** The ETA when the last Shipment Comms email went to the client (0234). */
   eta_told?: string | null;
   eta_told_at?: string | null;
+  /** ETD history (0237): the date it replaced, when, "tracking" | "manual". */
+  etd_prev?: string | null;
+  etd_changed_at?: string | null;
+  etd_changed_source?: string | null;
   reference: string;
   /** Private key on the Live Tracking link (0186); unlocks customer,
    *  shipper and PO on the public track page. Undefined before 0186. */

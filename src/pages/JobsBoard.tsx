@@ -163,11 +163,13 @@ function JobDateCell({
   value,
   onCommit,
   title,
+  iconTitle,
   className,
 }: {
   value: string | null | undefined;
   onCommit: (v: string) => void;
   title?: string;
+  iconTitle?: string;
   className?: string;
 }) {
   return (
@@ -175,9 +177,33 @@ function JobDateCell({
       value={value ?? ""}
       className={className}
       title={title}
+      iconTitle={iconTitle}
       onChange={onCommit}
     />
   );
+}
+
+/** "Previously 05/12/2026 (changed by live tracking 10/11/2026 22:02)". */
+function prevLine(prev: string | null | undefined, at: string | null | undefined, source: string | null | undefined): string | null {
+  if (!at) return null;
+  const by = source === "tracking" ? " by live tracking" : source === "manual" ? " manually" : "";
+  return `Previously ${prev ? formatDate(prev) : "blank"} (changed${by} ${formatDateTime(at)})`;
+}
+
+/** Calendar-icon hover on the ETD cell: the current ETD and what it replaced (0237). */
+function etdHistory(j: Job): string {
+  const now = j.etd ? `ETD ${formatDate(j.etd)}` : "No ETD yet";
+  return [now, prevLine(j.etd_prev, j.etd_changed_at, j.etd_changed_source) ?? "No ETD change recorded"].join("\n");
+}
+
+/** ETA change lines for the calendar-icon hover: what it replaced (0234)
+ *  and what the client was last told. */
+function etaHistory(j: Job): string[] {
+  return [
+    j.eta ? `ETA ${formatDate(j.eta)}` : "No ETA yet",
+    prevLine(j.eta_prev, j.eta_changed_at, j.eta_changed_source) ?? "No ETA change recorded",
+    j.eta_told ? `Client last told ${formatDate(j.eta_told)} on ${formatDate(j.eta_told_at)}` : null,
+  ].filter((s): s is string => !!s);
 }
 
 /** Tooltip line when the shipment's ETA is the one live tracking last
@@ -217,6 +243,7 @@ function EtaCell({
   pending,
   moved,
   urgencyText,
+  history,
   onCommit,
 }: {
   value: string | null | undefined;
@@ -225,6 +252,7 @@ function EtaCell({
   pending: string | null;
   moved: string | null;
   urgencyText: string | null;
+  history: string[];
   onCommit: (v: string) => void;
 }) {
   const prev = useRef(value);
@@ -248,8 +276,10 @@ function EtaCell({
   const title = [live ?? pending ?? "Typed-in ETA (not tracked)", moved, urgencyText]
     .filter(Boolean)
     .join("\n");
+  // Calendar hover: the change history first, then the same state lines.
+  const iconTitle = [...history, "", title].join("\n");
   return (
-    <JobDateCell value={value} className={cls} title={title} onCommit={onCommit} />
+    <JobDateCell value={value} className={cls} title={title} iconTitle={iconTitle} onCommit={onCommit} />
   );
 }
 
@@ -1073,7 +1103,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         width: 120,
         sortValue: (j) => j.etd ?? "",
         render: (j) => (
-          <JobDateCell value={j.etd} onCommit={(v) => save(j.id, { etd: v })} />
+          <JobDateCell value={j.etd} iconTitle={etdHistory(j)} onCommit={(v) => save(j.id, { etd: v })} />
         ),
       },
       {
@@ -1105,6 +1135,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               live={live}
               pending={pending}
               moved={etaMoved(j)}
+              history={etaHistory(j)}
               urgencyText={
                 level === "risk"
                   ? `${when}, work outstanding (open task or not yet cleared)`

@@ -47,6 +47,7 @@ export default function DateInput({
   name,
   className,
   title,
+  iconTitle,
   disabled,
 }: {
   value?: string | null;
@@ -55,6 +56,8 @@ export default function DateInput({
   name?: string;
   className?: string;
   title?: string;
+  /** Hover text on the calendar icon (e.g. the date's change history). */
+  iconTitle?: string;
   disabled?: boolean;
 }) {
   const controlled = value !== undefined;
@@ -118,6 +121,7 @@ export default function DateInput({
         tabIndex={-1}
         disabled={disabled}
         onClick={openPicker}
+        title={iconTitle}
         aria-label="Open calendar"
       >
         <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
