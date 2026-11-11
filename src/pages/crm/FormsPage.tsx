@@ -28,6 +28,7 @@ import {
   type WebFormKind,
   type WebFormPatch,
 } from "../../lib/types";
+import BackButton from "../../components/BackButton";
 
 /** Staff always open the Share tab on the app's own origin, so the hosted
  *  form link + iframe embed are built from that, no hard-coded deploy URL.
@@ -214,9 +215,7 @@ function FormEditor({
     <>
       <div className="panel-head" style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button className="btn outline btn-sm" onClick={back}>
-            ← Forms
-          </button>
+          <BackButton label="Forms" size="sm" onClick={back} />
           <input
             className="wf-name-input"
             value={draft.name}

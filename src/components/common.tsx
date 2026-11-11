@@ -15,6 +15,7 @@ import { useCan } from "../lib/hooks";
 import Modal from "./Modal";
 import DateInput from "./DateInput";
 import TimeInput from "./TimeInput";
+import BackButton from "./BackButton";
 
 /** Rounded search field with a magnifier icon, for list pages. */
 export function SearchInput({
@@ -638,13 +639,7 @@ export function PageHeader({
       <div className="topbar-left">
         <div>
           {canGoBack && (
-            <button
-              type="button"
-              className="link-btn page-back-btn"
-              onClick={() => navigate(-1)}
-            >
-              ← Back
-            </button>
+            <BackButton size="compact" onClick={() => navigate(-1)} />
           )}
           <div className="eyebrow">{eyebrow}</div>
           <h1>{title}</h1>

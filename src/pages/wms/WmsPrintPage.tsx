@@ -19,6 +19,7 @@ import { BillingLinesTable } from "./WmsBilling";
 import { consolTotals, houseNo } from "./WmsConsols";
 import { HblSheet, LoadPlanSheet, SeaManifestSheet } from "./WmsSeaDocs";
 import { useWmsLookups } from "./shared";
+import BackButton from "../../components/BackButton";
 
 const TITLES: Record<string, string> = {
   receipt: "Warehouse Receipt",
@@ -52,9 +53,7 @@ export default function WmsPrintPage() {
 
   const toolbar = (
     <div className="qs-toolbar">
-      <button className="btn outline" onClick={() => navigate(-1)}>
-        ← Back
-      </button>
+      <BackButton onClick={() => navigate(-1)} />
       <button className="btn" onClick={() => window.print()}>
         Print / Save as PDF
       </button>

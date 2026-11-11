@@ -18,6 +18,7 @@ import { chargeTotals, fxOf } from "../../lib/calc";
 import type { Lead, LeadPatch } from "../../lib/types";
 import { RecordTasks } from "../shipments/ShipmentWorkspacePage";
 import { LeadEditModal, QuickMailModal, linkify, useLeadPortalInvite } from "./LeadsPage";
+import BackButton from "../../components/BackButton";
 
 /**
  * Lead page (/crm/leads/:id): one page per prospect, same build as the
@@ -110,9 +111,7 @@ export default function LeadWorkspacePage() {
         title={lead.company}
         actions={
           <>
-            <button className="btn outline" onClick={goBack}>
-              ← Leads
-            </button>
+            <BackButton label={"Leads"} onClick={goBack} />
             <button className="btn outline" onClick={() => setMailing(true)} disabled={!lead.email}>
               Send email
             </button>

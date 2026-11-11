@@ -60,6 +60,7 @@ import PartnerRateSheets from "./partners/PartnerRateSheets";
 import PartnerMailModal from "./partners/PartnerMailModal";
 import PartnerLoginAccess from "./partners/PartnerLoginAccess";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import BackButton from "../components/BackButton";
 
 type ContactValues = Omit<Contact, "id" | "created_at">;
 
@@ -1182,9 +1183,7 @@ function ContactRecord({
         title={record.company}
         actions={
           <>
-            <button className="btn outline" onClick={goBack}>
-              ← {title}
-            </button>
+            <BackButton label={title} onClick={goBack} />
             {isPartner ? (
               <button className="btn outline" onClick={() => setMailing(true)} disabled={!record.email}>
                 Send email

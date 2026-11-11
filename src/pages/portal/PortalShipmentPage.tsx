@@ -30,6 +30,7 @@ import { VesselSummary } from "../../components/VesselTracking";
 import { houseTotals, useMyJobHouses } from "../../lib/houses";
 import PortalQuoteModal from "./PortalQuoteViewPage";
 import { modeEmoji } from "./PortalLayout";
+import BackButton from "../../components/BackButton";
 
 const isAir = (mode: string) => mode.startsWith("Air") || mode.startsWith("Courier");
 const day = (iso: string | null | undefined) => (iso ? formatDate(iso) : null);
@@ -230,9 +231,7 @@ export default function PortalShipmentPage() {
         title={job.house_no || job.reference}
         actions={
           <>
-            <button className="btn outline" onClick={() => navigate(-1)}>
-              ← Back
-            </button>
+            <BackButton onClick={() => navigate(-1)} />
             {quote && (
               <button className="btn" onClick={() => setShowQuote(true)}>
                 View quotation

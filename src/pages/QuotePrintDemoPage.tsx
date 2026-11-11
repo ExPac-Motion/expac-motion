@@ -4,6 +4,7 @@ import type { CategoryGroup, PackingTotals } from "../lib/calc";
 import type { LineCurrency, PackingItem, QuoteLine } from "../lib/types";
 import { COMPANY } from "../lib/company";
 import { QuoteSheet, sailingRows, type QuoteSheetData } from "./QuotePrintPage";
+import BackButton from "../components/BackButton";
 
 /**
  * DEV-ONLY preview of the paginated quotation with fabricated data, so the
@@ -130,12 +131,7 @@ export default function QuotePrintDemoPage() {
   return (
     <div className="qs-wrap">
       <div className="qs-toolbar">
-        <button
-          className="btn outline"
-          onClick={() => window.history.back()}
-        >
-          ← Back
-        </button>
+        <BackButton onClick={() => window.history.back()} />
         <button className="btn" onClick={() => window.print()}>
           Print / Save as PDF
         </button>

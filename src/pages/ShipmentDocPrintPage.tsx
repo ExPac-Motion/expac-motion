@@ -14,6 +14,7 @@ import { useCustomerConsignees } from "../lib/customers";
 import { shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 import { PreAlertDetails, PreAlertInstructions, type PreAlertData } from "./shipments/PreAlertSections";
+import BackButton from "../components/BackButton";
 
 function n2(v: number | string | null | undefined): string {
   return (Number(v) || 0).toLocaleString("en-ZA", {
@@ -83,9 +84,7 @@ export default function ShipmentDocPrintPage() {
   return (
     <div className="qs-wrap">
       <div className="qs-toolbar">
-        <button className="btn outline" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <button className="btn" onClick={() => window.print()}>
           Print / Save as PDF
         </button>

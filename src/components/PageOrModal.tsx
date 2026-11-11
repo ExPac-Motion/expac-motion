@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Modal from "./Modal";
+import BackButton from "./BackButton";
 import { PageHeader } from "./common";
 
 /**
@@ -54,9 +55,7 @@ export default function PageOrModal({
         title={title}
         actions={
           <>
-            <button className="btn outline" onClick={onClose}>
-              ← {backLabel}
-            </button>
+            <BackButton label={backLabel} onClick={onClose} />
             {headerActions}
           </>
         }

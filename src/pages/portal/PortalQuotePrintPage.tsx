@@ -6,6 +6,7 @@ import { currencyAmount, docName, formatDate } from "../../lib/format";
 import { COMPANY } from "../../lib/company";
 import type { LineCurrency, PackingItem, QuoteLine } from "../../lib/types";
 import { usePortalLetterhead, usePortalLines, usePortalMe, usePortalPacking, usePortalQuotes } from "../../lib/portal";
+import BackButton from "../../components/BackButton";
 
 /**
  * Customer Portal › Quotation document: the very same quotation sheet Motion
@@ -106,9 +107,7 @@ export default function PortalQuotePrintPage() {
   return (
     <div className="qs-wrap">
       <div className="qs-toolbar">
-        <button className="btn outline" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <button className="btn" onClick={() => window.print()}>
           Print / Save as PDF
         </button>

@@ -12,6 +12,7 @@ import { useJobHouses } from "../../lib/houses";
 import type { ConsolMode, WmsConsol, WmsConsolHouse } from "../../lib/wms";
 import { AwbSheet, ManifestSheet } from "../wms/WmsPrintPage";
 import { HblSheet, SeaManifestSheet } from "../wms/WmsSeaDocs";
+import BackButton from "../../components/BackButton";
 
 const isAir = (mode: string) => mode.startsWith("Air") || mode.startsWith("Courier");
 const party = (...lines: (string | null | undefined)[]) => lines.map((l) => (l ?? "").trim()).filter(Boolean).join("\n");
@@ -130,9 +131,7 @@ export default function HousePrintPage() {
         <style>{"@media print { @page { size: A4; margin: 8mm; } }"}</style>
       )}
       <div className="qs-toolbar">
-        <button className="btn outline" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <button className="btn" onClick={() => window.print()}>
           Print / Save as PDF
         </button>

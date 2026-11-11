@@ -37,6 +37,7 @@ import {
   ShipmentPodModal,
   codeOf,
 } from "../JobsBoard";
+import BackButton from "../../components/BackButton";
 
 /**
  * Shipment workspace (/jobs/:id): one page per shipment, where ops run it.
@@ -200,9 +201,7 @@ export default function ShipmentWorkspacePage() {
         title={job.reference}
         actions={
           <>
-            <button className="btn outline" onClick={goBack}>
-              ← {opsDone ? "Completed" : "Active"} shipments
-            </button>
+            <BackButton label={`${opsDone ? "Completed" : "Active"} shipments`} onClick={goBack} />
             {canRevert && (
               <button
                 className="btn outline"

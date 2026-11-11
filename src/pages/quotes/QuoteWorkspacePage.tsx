@@ -11,6 +11,7 @@ import { statusLabel } from "../../lib/steps";
 import { todayIso, useJobTimeline } from "../../lib/timeline";
 import { WON_QUOTE_STATUSES, type Job } from "../../lib/types";
 import { RecordTasks } from "../shipments/ShipmentWorkspacePage";
+import BackButton from "../../components/BackButton";
 
 /**
  * Quote page (/quotes/:id/view): one page per quotation, same build as the
@@ -126,9 +127,7 @@ export default function QuoteWorkspacePage() {
         title={q.reference}
         actions={
           <>
-            <button className="btn outline" onClick={goBack}>
-              ← Quotations
-            </button>
+            <BackButton label={"Quotations"} onClick={goBack} />
             <button className="btn outline" onClick={() => setRailOpen(true)}>
               Messages &amp; email
             </button>
