@@ -512,7 +512,7 @@ function splitForProgress(text: string): [string, string] | null {
 export function progressStep(status: string | null | undefined): number {
   const s = (status ?? "").trim().toLowerCase();
   if (s === "delivered") return PROGRESS_STEPS.length;
-  if (["in transit", "arrived", "unloaded", "customs", "detained", "released", "on-delivery", "on delivery"].includes(s))
+  if (["in transit", "clearance started", "arrived", "unloaded", "customs", "detained", "released", "on-delivery", "on delivery"].includes(s))
     return 4;
   if (s === "loaded" || s === "departed") return 3;
   if (s === "collected" || s === "received") return 2;

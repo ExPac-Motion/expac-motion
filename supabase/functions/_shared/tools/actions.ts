@@ -16,6 +16,7 @@ export const SHIPMENT_STATUSES = [
   "Loaded",
   "Departed",
   "In Transit",
+  "Clearance Started",
   "Arrived",
   "Unloaded",
   "Customs",

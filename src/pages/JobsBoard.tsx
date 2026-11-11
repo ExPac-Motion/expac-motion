@@ -180,23 +180,81 @@ function JobDateCell({
   );
 }
 
-/** Tooltip for the live dot when the shipment's ETA is the one live
- *  tracking last reported, else null. */
-function liveEta(j: Job, t: { eta: string | null; synced_at?: string | null } | undefined): string | null {
+/** Tooltip line when the shipment's ETA is the one live tracking last
+ *  reported (teal date + calendar), else null. */
+function liveEta(j: Job, t: { eta: string | null; synced_at?: string | null; provider?: string | null } | undefined): string | null {
   if (!t?.eta || !j.eta || t.eta.slice(0, 10) !== j.eta.slice(0, 10)) return null;
-  return "Live ETA from vessel tracking" + (t.synced_at ? `, last update ${formatDateTime(t.synced_at)}` : "");
+  const how = t.provider === "ais" ? "vessel tracking" : "live tracking";
+  return `Live ETA from ${how}` + (t.synced_at ? `, last sync ${formatDateTime(t.synced_at)}` : "");
 }
 
-/** Tooltip for the grey ring: live tracking follows the shipment but has
- *  no ETA for it yet, so the date shown was typed in. */
-function trackedNoEta(t: { eta: string | null; status?: string | null; provider?: string | null } | undefined): string | null {
+/** Tooltip line when live tracking follows the shipment but has no ETA for
+ *  it yet, so the date shown was typed in (faded teal calendar). */
+function trackedNoEta(t: { eta: string | null; status?: string | null; provider?: string | null; synced_at?: string | null } | undefined): string | null {
   if (!t || t.eta) return null;
   const how = t.provider === "ais" ? "Vessel tracking" : "Live tracking";
-  return `${how} has no ETA yet${t.status ? ` (${t.status})` : ""}: this date was typed in`;
+  return `${how} has no ETA yet${t.status ? ` (${t.status})` : ""}, this date was typed in` +
+    (t.synced_at ? `. Last sync ${formatDateTime(t.synced_at)}` : "");
 }
 
-/** Tooltip for the ↻ flag: the client was told a different ETA in the last
- *  Shipment Comms, or (never told) the ETA moved in the last 7 days. */
+/** Legend for the ETA column header. */
+const ETA_LEGEND = [
+  "ETA colours:",
+  "Teal date + teal calendar = live ETA from tracking (flashes when it updates)",
+  "Faded teal calendar = tracked, but tracking has no ETA yet (typed-in date)",
+  "Amber corner = ETA moved since the client was last told",
+  "Orange date = arriving within 5 days or passed; orange fill = work still outstanding",
+  "Hover a date for source, last sync and previous ETA.",
+].join("\n");
+
+/** ETA cell: no leading icons. Tracking state shows on the date and its
+ *  calendar icon, urgency on the date colour, a moved ETA as a corner mark,
+ *  and a brief teal flash when the ETA changes while the board is open. */
+function EtaCell({
+  value,
+  urgency,
+  live,
+  pending,
+  moved,
+  urgencyText,
+  onCommit,
+}: {
+  value: string | null | undefined;
+  urgency: "risk" | "due" | null;
+  live: string | null;
+  pending: string | null;
+  moved: string | null;
+  urgencyText: string | null;
+  onCommit: (v: string) => void;
+}) {
+  const prev = useRef(value);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (prev.current === value) return;
+    prev.current = value;
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 2600);
+    return () => window.clearTimeout(t);
+  }, [value]);
+  const cls = [
+    "job-eta",
+    urgency === "risk" ? "is-risk" : urgency === "due" ? "is-due" : "",
+    live ? "eta-live" : pending ? "eta-pending" : "",
+    moved ? "eta-moved" : "",
+    flash ? "eta-flash" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const title = [live ?? pending ?? "Typed-in ETA (not tracked)", moved, urgencyText]
+    .filter(Boolean)
+    .join("\n");
+  return (
+    <JobDateCell value={value} className={cls} title={title} onCommit={onCommit} />
+  );
+}
+
+/** Tooltip line for the amber corner: the client was told a different ETA
+ *  in the last Shipment Comms, or (never told) the ETA moved in the last 7 days. */
 function etaMoved(j: Job): string | null {
   if (!j.eta) return null;
   const by = j.eta_changed_source === "tracking" ? " by live tracking" : j.eta_changed_source === "manual" ? " manually" : "";
@@ -1020,7 +1078,8 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
       },
       {
         key: "eta",
-        header: "ETA",
+        header: <span title={ETA_LEGEND}>ETA</span>,
+        label: "ETA",
         width: 140,
         sortValue: (j) => j.eta ?? "",
         render: (j) => {
@@ -1039,41 +1098,22 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
                   : `Arriving in ${n} day${n === 1 ? "" : "s"}`;
           const live = liveEta(j, trackingByJob.get(j.id));
           const pending = live ? null : trackedNoEta(trackingByJob.get(j.id));
-          const moved = etaMoved(j);
           return (
-            <span className="job-eta-cell">
-              <span className="job-eta-marks">
-                {live && (
-                  <span className="eta-live" title={live} aria-label={live} />
-                )}
-                {pending && (
-                  <span className="eta-pending" title={pending} aria-label={pending} />
-                )}
-                {moved && (
-                  <span className="eta-moved" title={moved} aria-label={moved}>
-                    ↻
-                  </span>
-                )}
-              </span>
-            <JobDateCell
+            <EtaCell
               value={j.eta}
-              className={
-                level === "risk"
-                  ? "job-eta is-risk"
-                  : level === "due"
-                    ? "job-eta is-due"
-                    : undefined
-              }
-              title={
+              urgency={level}
+              live={live}
+              pending={pending}
+              moved={etaMoved(j)}
+              urgencyText={
                 level === "risk"
                   ? `${when}, work outstanding (open task or not yet cleared)`
                   : level === "due"
                     ? `${when}, nothing outstanding`
-                    : undefined
+                    : null
               }
               onCommit={(v) => save(j.id, { eta: v })}
             />
-            </span>
           );
         },
       },

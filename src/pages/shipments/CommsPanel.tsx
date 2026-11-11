@@ -457,7 +457,8 @@ export default function CommsPanel({
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Good day, …"
-              rows={aiUndo !== null ? 8 : 4}
+              rows={10}
+              style={{ height: 225 }}
               spellCheck
               lang="en"
             />

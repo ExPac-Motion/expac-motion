@@ -1014,6 +1014,10 @@ table.dt th.dt-sortable {
   background: var(--amber-tint) !important;
   color: var(--amber-ink);
 }
+.job-status.is-clearance-started {
+  background: var(--teal-tint) !important;
+  color: var(--teal-ink);
+}
 .job-status.is-arrived {
   background: hsl(90, 45%, 87%) !important;
   color: hsl(90, 40%, 28%);
@@ -1042,70 +1046,74 @@ table.dt th.dt-sortable {
   background: #e7f3d8 !important;
   color: var(--green-dark);
 }
-/* ETA cell on Active Shipments — same pill format as the Status cell.
-   is-due:  arriving within 5 days / passed, nothing outstanding (pale).
-   is-risk: same, but an open task or not yet cleared (solid var(--orange)). */
+/* ETA cell on Active Shipments (JobsBoard EtaCell). No leading icons:
+   - date colour = urgency. is-due: arriving within 5 days / passed, nothing
+     outstanding (orange text). is-risk: same, with an open task or not yet
+     cleared (pale orange fill).
+   - calendar icon = tracking. eta-live: the ETA is the live tracked one
+     (teal date + teal calendar). eta-pending: tracked, no ETA yet (faded teal).
+   - eta-moved: ETA moved since the client was told (amber corner mark).
+   - eta-flash: brief teal glow when the ETA changes while the board is open. */
 .job-eta.is-due,
 .job-eta.is-risk {
   font-weight: 700;
-  border-radius: 999px !important;
-  text-align: center;
 }
 .job-eta.is-due {
+  color: var(--orange-ink) !important;
+}
+.job-eta.is-risk {
   background: var(--orange-tint) !important;
   color: var(--orange-ink) !important;
   border-color: var(--orange-tint) !important;
+  border-radius: 999px !important;
 }
-.job-eta.is-risk {
-  background: var(--orange) !important;
-  color: #fff !important;
-  border-color: var(--orange) !important;
-}
-/* ETA cell marks (0234): teal dot = live tracking ETA, grey ring = tracked
-   but no ETA from tracking yet (typed-in date), orange ↻ = the ETA
-   moved since the client's last comms (or in the last 7 days). */
-.job-eta-cell {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.job-eta-cell > .date-input {
-  flex: 1;
-  min-width: 0;
-}
-.job-eta-marks {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex: none;
-  min-width: 22px;
-  justify-content: center;
-}
-.eta-live {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--teal);
-  box-shadow: 0 0 0 3px var(--teal-tint);
-  cursor: help;
-}
-.eta-pending {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid var(--muted);
-  box-sizing: border-box;
-  cursor: help;
-}
-.eta-moved {
-  font-size: 11px;
+.job-eta.eta-live {
+  color: var(--teal-ink) !important;
   font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  background: var(--orange);
-  border-radius: 999px;
-  padding: 2px 3px;
-  cursor: help;
+}
+.job-eta.eta-live:not(.is-risk):not(.is-due) {
+  background: var(--teal-tint) !important;
+  border-color: var(--teal-tint) !important;
+  border-radius: 999px !important;
+}
+.job-eta.eta-live.is-due,
+.job-eta.eta-live.is-risk {
+  color: var(--orange-ink) !important;
+}
+.date-input:has(.job-eta.eta-live) .date-input-btn {
+  color: var(--teal);
+}
+.date-input:has(.job-eta.eta-pending) .date-input-btn {
+  color: var(--teal);
+  opacity: 0.45;
+}
+.date-input:has(.eta-moved)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 8px solid var(--amber);
+  border-right: 8px solid transparent;
+  pointer-events: none;
+}
+.job-eta.eta-flash {
+  animation: eta-flash 2.6s ease-out;
+}
+@keyframes eta-flash {
+  0%,
+  30% {
+    box-shadow: 0 0 0 2px var(--teal), 0 0 10px 2px var(--teal);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent, 0 0 10px 2px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-eta.eta-flash {
+    animation: none;
+  }
 }
 /* DateInput (src/components/DateInput.tsx): dd/mm/yyyy text field with a
    calendar button; the native date input only hosts the picker. */
@@ -1134,10 +1142,8 @@ table.dt th.dt-sortable {
   cursor: default;
   opacity: 0.5;
 }
+.date-input:has(.is-due) .date-input-btn,
 .date-input:has(.is-risk) .date-input-btn {
-  color: #fff;
-}
-.date-input:has(.is-due) .date-input-btn {
   color: var(--orange-ink);
 }
 .date-input .date-input-native {
