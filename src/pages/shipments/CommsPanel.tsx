@@ -231,9 +231,9 @@ export default function CommsPanel({
     () =>
       template === "reply"
         ? buildShipmentReply(job, remarks, settings?.shipment_replies, settings?.mail_signature_html).text
-        : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms, settings?.mail_signature_html)
+        : buildShipmentEmail(job, (trackingQ.data ?? []).find((r) => r.job_id === job.id), remarks, settings?.shipment_comms, settings?.mail_signature_html)
             .text,
-    [job, remarks, settings, template],
+    [job, remarks, settings, template, trackingQ.data],
   );
 
   const messages = msgsQ.data ?? [];

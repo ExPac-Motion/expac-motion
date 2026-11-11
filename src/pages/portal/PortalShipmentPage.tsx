@@ -23,6 +23,8 @@ import { MILESTONE_BY_STATUS, SHIPMENT_STATUSES, type ClientDocument, type Packi
 import { portalTotals, usePortalLines, usePortalPacking, usePortalQuotes } from "../../lib/portal";
 import TrackingMap from "../../components/TrackingMap";
 import TrackMovements from "../../components/TrackMovements";
+import { resolveLegs, SailingTable } from "../../components/SailingLegs";
+import { transshipPorts } from "../../lib/legs";
 import { aisRoute, buildRoute, routeEventsFromRows, withLivePosition } from "../../lib/trackRoute";
 import { VesselSummary } from "../../components/VesselTracking";
 import { houseTotals, useMyJobHouses } from "../../lib/houses";
@@ -202,6 +204,8 @@ export default function PortalShipmentPage() {
   const transitDays =
     etd && eta ? Math.round((Date.parse(eta.slice(0, 10)) - Date.parse(etd.slice(0, 10))) / 86_400_000) : null;
   const air = isAir(job.mode);
+  // Transshipment legs (0239): shown when the cargo changes vessel.
+  const sailLegs = air ? [] : resolveLegs(tracking?.legs, trkEventsQ.data, job.manual_legs).legs;
 
   const packing: PackingItem[] = (packQ.data ?? []).map((p) => ({ ...p, cbm: p.cbm ?? "" }));
   const pack = packingTotals(packing, volumetricFactor(job.mode));
@@ -288,6 +292,18 @@ export default function PortalShipmentPage() {
         </div>
       </div>
 
+      {sailLegs.length > 1 && (
+        <div className="panel sp-card sail-panel">
+          <div className="sp-card-head">
+            <h3>
+              Sailing schedule
+              <span className="sail-ts">Transshipment via {transshipPorts(sailLegs).join(", ")}</span>
+            </h3>
+          </div>
+          <SailingTable legs={sailLegs} />
+        </div>
+      )}
+
       {/* Details */}
       <div className="sp-cards">
         <Card title="Shipment">
@@ -297,7 +313,7 @@ export default function PortalShipmentPage() {
           <Row label={carrierLabel(job.mode)} value={tracking?.carrier || job.carrier_name || job.shipping_line} />
           {!air && <Row label="Vessel" value={tracking?.vessel_name || job.vessel_name} />}
           <Row label={air ? "AWB" : "MBL / B/L"} value={job.awb_mbl} />
-          {!air && <Row label="Container" value={job.container_no} />}
+          {!air && <Row label="Container" value={[job.container_no, job.seal_no && `Seal ${job.seal_no}`].filter(Boolean).join(" · ")} />}
           <Row label="Provisional delivery" value={day(job.provisional_delivery_date)} />
         </Card>
 

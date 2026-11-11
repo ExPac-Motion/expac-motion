@@ -161,7 +161,7 @@ export function shipmentInfoRows(
         ["Shipping Line", t?.carrier || job.shipping_line || "—"],
         ["Vessel", t?.vessel_name || job.vessel_name || "—"],
         ["Voyage No", t?.voyage || quote?.voyage_no || "—"],
-        ["Container No", job.container_no || "—"],
+        ["Container No", [job.container_no, job.seal_no && `Seal ${job.seal_no}`].filter(Boolean).join(" / ") || "—"],
         ["Container Type", job.container_type || "—"],
         ["MBL No", quote?.mbl_no || job.awb_mbl || "—"],
         ["HBL No", quote?.hbl_no || "—"],

@@ -491,6 +491,14 @@ export async function saveQuote(draft: QuoteDraft): Promise<string> {
   if (voyageErr && voyageErr.code !== "PGRST204" && voyageErr.code !== "42703") {
     throw voyageErr;
   }
+  // Seal No (0238): separate, tolerant update like Voyage No.
+  const { error: sealErr } = await supabase
+    .from("quotes")
+    .update({ seal_no: draft.seal_no.trim() || null })
+    .eq("id", id);
+  if (sealErr && sealErr.code !== "PGRST204" && sealErr.code !== "42703") {
+    throw sealErr;
+  }
   // GBP rate (0113): saved outside save_quote like the fields below, and
   // tolerated while the column doesn't exist yet.
   const { error: gbpErr } = await supabase

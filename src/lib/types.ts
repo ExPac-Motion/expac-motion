@@ -1,4 +1,5 @@
 import type { RoutePath } from "./trackRoute";
+import type { SailingLeg } from "./legs";
 
 export type QuoteStatus = "open" | "sent" | "accepted" | "completed" | "lost";
 export type QuoteMode =
@@ -332,6 +333,9 @@ export interface ClientJob {
   shipment_status: string | null;
   awb_mbl: string | null;
   container_no: string | null;
+  /** Seal number (0238) and typed-in sailing legs (0239). */
+  seal_no?: string | null;
+  manual_legs?: SailingLeg[] | null;
   shipping_line: string | null;
   vessel_name: string | null;
   carrier_name: string | null;
@@ -1435,6 +1439,8 @@ export interface Quote {
   mbl_no: string | null;
   hbl_no: string | null;
   container_no: string | null;
+  /** Container seal number (0238), in step with the shipment's. */
+  seal_no?: string | null;
   /** e.g. "1x 20GP", "2x 40HC", Sea Freight only. */
   container_type: string | null;
   etd: string | null;
@@ -1556,6 +1562,10 @@ export interface Job {
   awb_mbl: string | null;
   /** Ocean container number (air jobs track on awb_mbl). */
   container_no: string | null;
+  /** Container seal number (0238), in step with the quotation's. */
+  seal_no?: string | null;
+  /** Sailing legs typed in on the shipment, for untracked transshipments (0239). */
+  manual_legs?: SailingLeg[] | null;
   /** e.g. "1x 20GP", "2x 40HC", Sea Freight only. */
   container_type: string | null;
   /** Sea Freight details for the customer update email; persist on the board. */
@@ -1646,6 +1656,8 @@ export type JobPatch = Partial<
     | "ops_remarks"
     | "awb_mbl"
     | "container_no"
+    | "seal_no"
+    | "manual_legs"
     | "container_type"
     | "shipping_line"
     | "vessel_name"
@@ -1895,6 +1907,8 @@ export interface JobTracking {
   ais_at?: string | null;
   /** ShipsGo's route, sailed / flown and to go (0202). */
   route_path: RoutePath | null;
+  /** Sailing legs from the tracking webhook (0239), more than one = transshipment. */
+  legs?: SailingLeg[] | null;
   route_synced_at: string | null;
   last_event: string | null;
   /** Legacy blob, new events land in the tracking_events table. */
@@ -1945,6 +1959,8 @@ export interface ClientJobTracking {
   position_at: string | null;
   synced_at: string | null;
   route_path: RoutePath | null;
+  /** Sailing legs from the tracking webhook (0239), more than one = transshipment. */
+  legs?: SailingLeg[] | null;
   /** "ais" = vessel tracking (0204); its ATD (0205). */
   provider?: string | null;
   atd?: string | null;
@@ -2064,6 +2080,7 @@ export interface QuoteDraft {
   mbl_no: string;
   hbl_no: string;
   container_no: string;
+  seal_no: string;
   container_type: string;
   etd: string;
   eta: string;

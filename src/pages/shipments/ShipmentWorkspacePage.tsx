@@ -5,6 +5,7 @@ import ShipmentTimeline from "../../components/ShipmentTimeline";
 import ShipmentQuickUpdate from "../../components/ShipmentQuickUpdate";
 import HousesSection from "../../components/HousesSection";
 import VesselTrackingCard from "../../components/VesselTracking";
+import SailingLegsPanel from "../../components/SailingLegs";
 import TaskEditModal from "../ops/TaskEditModal";
 import CommsRail from "./CommsRail";
 import { ErrorNote, Loading, PageHeader, useBackTo } from "../../components/common";
@@ -440,6 +441,7 @@ function OverviewTab({
 
       <div className="ws-wide">
         {!job.quote_id && <CreateQuoteForJob job={job} onDone={() => {}} />}
+        {job.mode?.startsWith("Sea") && <SailingLegsPanel job={job} />}
         {job.mode?.startsWith("Sea") && <VesselTrackingCard job={job} />}
         <ShipmentCards job={job} onEmail={onEmail} />
         {job.notes && (

@@ -44,6 +44,7 @@
  *
  * Not part of the Vite / tsc build; Cloudflare builds functions/ on its own.
  */
+import { currentLegIndex, legsFromEvents } from "../../src/lib/legs";
 
 function json(data, status) {
   return new Response(JSON.stringify(data), {
@@ -342,6 +343,23 @@ function normalise(payload) {
   const latest = actuals.length ? actuals[actuals.length - 1] : movements[movements.length - 1];
   const lastActual = actuals[actuals.length - 1] || null;
   const vesselMovement = movements.find((m) => m.vesselName) || null;
+  // Transshipment (0239): one leg per vessel + voyage. The tracked vessel
+  // is the leg that has the cargo now (the live map follows it); the
+  // shipment's Vessel / Voyage is the last leg, the vessel arriving in SA.
+  const legs = legsFromEvents(
+    movements.map((m) => ({
+      event_code: m.code,
+      location: m.locationName,
+      locode: m.locode,
+      vessel_name: m.vesselName,
+      voyage: m.voyage,
+      occurred_at: m.occurredAt,
+      is_actual: m.isActual,
+      vessel_imo: m.vesselImo,
+    })),
+  );
+  const curLeg = legs[currentLegIndex(legs)] || null;
+  const lastLeg = legs.length ? legs[legs.length - 1] : null;
 
   const polCode = polLoc.code || polLoc.iata || null;
   const podCode = podLoc.code || podLoc.iata || null;
@@ -373,9 +391,12 @@ function normalise(payload) {
     etd: dateOnly(pol.date_of_loading || pol.date_of_dep || pol.date),
     eta: dateOnly(pod.date_of_discharge_predicted || pod.date_of_discharge || pod.date_of_rcf || pod.date),
     podEta: iso(pod.date_of_discharge_predicted || pod.date_of_discharge || pod.date_of_rcf || pod.date),
-    vesselName: (vesselMovement && vesselMovement.vesselName) || null,
-    vesselImo: (vesselMovement && vesselMovement.vesselImo) || null,
-    voyage: (vesselMovement && vesselMovement.voyage) || null,
+    vesselName: (curLeg && curLeg.vessel) || (vesselMovement && vesselMovement.vesselName) || null,
+    vesselImo: curLeg ? curLeg.imo : (vesselMovement && vesselMovement.vesselImo) || null,
+    voyage: curLeg ? curLeg.voyage : (vesselMovement && vesselMovement.voyage) || null,
+    legs,
+    mainVessel: lastLeg ? lastLeg.vessel : null,
+    mainVoyage: lastLeg ? lastLeg.voyage : null,
     lastEvent: latest ? [latest.code, latest.locationName].filter(Boolean).join(" @ ") : null,
     // The last CONFIRMED (status "ACT") event's port, never a fabricated
     // live GPS fix, since ShipsGo's webhook doesn't carry one.
@@ -512,13 +533,16 @@ async function writeBackToShipment(env, jobId, n) {
     if (n.etd) common.etd = n.etd;
     if (n.eta) common.eta = n.eta;
     if (n.carrier) common[isSea ? "shipping_line" : "carrier_name"] = n.carrier;
-    if (isSea && n.vesselName) common.vessel_name = n.vesselName;
+    // Transshipment (0239): the shipment names the vessel arriving in SA.
+    const vessel = n.mainVessel || n.vesselName;
+    const voyage = n.mainVessel ? n.mainVoyage : n.voyage;
+    if (isSea && vessel) common.vessel_name = vessel;
 
     // With a quote, patch the quote only: trg_quote_fields_sync (0101) copies
     // vessel / carrier / ETD / ETA on to the job. Without one, patch the job.
     if (job.quote_id) {
       const quotePatch = { ...common };
-      if (isSea && n.voyage) quotePatch.voyage_no = n.voyage;
+      if (isSea && voyage) quotePatch.voyage_no = voyage;
       if (Object.keys(quotePatch).length) {
         await sbPatch(env, `quotes?id=eq.${job.quote_id}`, quotePatch);
       }
@@ -603,6 +627,27 @@ async function applyToJob(env, found, n, payload, routePath) {
   if (routePath) {
     patch.route_path = routePath;
     patch.route_synced_at = new Date().toISOString();
+  }
+
+  if (n.legs && n.legs.length) {
+    patch.legs = n.legs;
+    // The cargo moved to another vessel (transshipment): forget the old
+    // ship's AIS position and MMSI, so vessel-sync picks up the new one
+    // (fill_vessel_mmsi matches the new IMO / name).
+    const prev = (await sbGet(env, `job_tracking?job_id=eq.${jobId}&select=vessel_imo,vessel_name&limit=1`))[0];
+    const was = prev && (prev.vessel_imo || prev.vessel_name);
+    const now = n.vesselImo || n.vesselName;
+    const sameShip =
+      !was || !now ||
+      (prev.vessel_imo && n.vesselImo
+        ? String(prev.vessel_imo) === String(n.vesselImo)
+        : String(prev.vessel_name || "").trim().toUpperCase() === String(n.vesselName || "").trim().toUpperCase());
+    if (!sameShip) {
+      patch.ais_lat = null;
+      patch.ais_lon = null;
+      patch.ais_at = null;
+      await sbPatch(env, `jobs?id=eq.${jobId}`, { vessel_mmsi: null });
+    }
   }
 
   await sbPatch(env, `job_tracking?job_id=eq.${jobId}`, patch);

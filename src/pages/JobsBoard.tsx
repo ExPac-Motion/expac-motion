@@ -69,6 +69,7 @@ import { consolModeFor } from "./wms/houseFromShipment";
 import { getShipmentDocumentUrl } from "../lib/db";
 import { DOCUMENT_TYPES_LIST, carrierLabel } from "../lib/docTemplates";
 import { formatDate, formatDateTime, newReference, portCode } from "../lib/format";
+import { transshipPorts, type SailingLeg } from "../lib/legs";
 import { LOCODES } from "../lib/locodes";
 import { isTracked } from "../lib/tracking";
 import { downloadXlsx } from "../lib/xlsx";
@@ -221,6 +222,24 @@ function trackedNoEta(t: { eta: string | null; status?: string | null; provider?
   const how = t.provider === "ais" ? "Vessel tracking" : "Live tracking";
   return `${how} has no ETA yet${t.status ? ` (${t.status})` : ""}, this date was typed in` +
     (t.synced_at ? `. Last sync ${formatDateTime(t.synced_at)}` : "");
+}
+
+/** Sailing legs for the board: tracked (0239), else typed in. */
+function legsOf(j: Job, t: { legs?: SailingLeg[] | null } | undefined): SailingLeg[] {
+  return t?.legs?.length ? t.legs : j.manual_legs ?? [];
+}
+
+/** "CARL SCHULTE 018W CNNGB → SGSIN" per leg, for the T/S chip. */
+function legsSummary(legs: SailingLeg[]): string {
+  return [
+    `Transshipment via ${transshipPorts(legs).join(", ")}`,
+    ...legs.map((l, i) => `${i + 1}. ${[l.vessel, l.voyage].filter(Boolean).join(" ")}  ${l.pol ?? "?"} → ${l.pod ?? "?"}${l.eta ? `, arrives ${formatDate(l.eta)}` : ""}`),
+  ].join("\n");
+}
+
+/** ETA hover lines for a transshipment (none for a direct sailing). */
+function transshipLines(legs: SailingLeg[]): string[] {
+  return legs.length > 1 ? ["", legsSummary(legs)] : [];
 }
 
 /** Legend for the ETA column header. */
@@ -1069,7 +1088,19 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         width: 160,
         defaultHidden: true,
         sortValue: (j) => (j.vessel_name ?? "").toLowerCase(),
-        render: (j) => j.vessel_name || "—",
+        render: (j) => {
+          const ts = legsOf(j, trackingByJob.get(j.id));
+          return (
+            <>
+              {j.vessel_name || "—"}
+              {ts.length > 1 && (
+                <span className="bd-ts" title={legsSummary(ts)}>
+                  T/S
+                </span>
+              )}
+            </>
+          );
+        },
       },
       {
         key: "mbl_no",
@@ -1135,7 +1166,7 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
               live={live}
               pending={pending}
               moved={etaMoved(j)}
-              history={etaHistory(j)}
+              history={[...etaHistory(j), ...transshipLines(legsOf(j, trackingByJob.get(j.id)))]}
               urgencyText={
                 level === "risk"
                   ? `${when}, work outstanding (open task or not yet cleared)`
@@ -1856,7 +1887,7 @@ export function ShipmentCards({
                 {sea && (
                   <JvField
                     label="Container"
-                    value={[job.container_no, job.container_type].filter(Boolean).join(" · ")}
+                    value={[job.container_no, job.container_type, job.seal_no && `Seal ${job.seal_no}`].filter(Boolean).join(" · ")}
                     onAdd={() => setEditCard("route")}
                   />
                 )}
@@ -1934,6 +1965,7 @@ function JvRouteEdit({ job, air, sea, onDone }: { job: Job; air: boolean; sea: b
     if (sea) {
       patch.container_no = v("container_no");
       patch.container_type = v("container_type");
+      patch.seal_no = v("seal_no");
       patch.vessel_name = v("vessel_name");
     }
     updateJob.mutate(
@@ -1981,6 +2013,12 @@ function JvRouteEdit({ job, air, sea, onDone }: { job: Job; air: boolean; sea: b
             <input name="container_type" defaultValue={job.container_type ?? ""} placeholder="1x 20GP" />
           </label>
         </div>
+      )}
+      {sea && (
+        <label>
+          Seal No
+          <input name="seal_no" defaultValue={job.seal_no ?? ""} />
+        </label>
       )}
       {air && (
         <label>

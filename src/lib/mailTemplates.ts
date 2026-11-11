@@ -1,3 +1,4 @@
+import { transshipPorts, type SailingLeg } from "./legs";
 import { formatDate } from "./format";
 import { LOCODES } from "./locodes";
 import { resolveMergeFields, type MergeContext } from "./mailMerge";
@@ -210,7 +211,9 @@ export const DEFAULT_SHIPMENT_REPLIES: Record<
 };
 
 /** Merge-code values for a shipment-notification email. */
-export function shipmentMergeContext(job: Job): MergeContext {
+export function shipmentMergeContext(job: Job, legs?: SailingLeg[] | null): MergeContext {
+  // Transshipment (0239): name the change of vessel on the Vessel line.
+  const ts = legs && legs.length > 1 ? ` (transshipment via ${transshipPorts(legs).join(", ")})` : "";
   return {
     // {{ contact.name }}, the customer's contact person, else the company.
     name: job.client?.contact || job.client?.company || "Customer",
@@ -226,7 +229,7 @@ export function shipmentMergeContext(job: Job): MergeContext {
     origin: job.origin ?? "",
     destination: job.destination ?? "",
     shippingLine: job.shipping_line ?? "",
-    vesselName: job.vessel_name ?? "",
+    vesselName: job.vessel_name ? job.vessel_name + ts : "",
     containerNo: job.container_no ?? "",
     carrierName: job.carrier_name ?? "",
     awb: job.awb_mbl ?? "",
@@ -242,8 +245,9 @@ export function renderShipmentEmail(
   job: Job,
   tpl: ShipmentCommsTemplate,
   remarks: string,
+  legs?: SailingLeg[] | null,
 ): { subject: string; text: string } {
-  const ctx = shipmentMergeContext(job);
+  const ctx = shipmentMergeContext(job, legs);
   // Resolve codes the operator typed into their message first, then feed the
   // result in as {{ remarks }} so it isn't double-processed.
   const resolvedRemarks = resolveMergeFields((remarks ?? "").trim(), ctx);
@@ -548,7 +552,7 @@ function formatShipmentBody(text: string, esc: (s: string) => string): string {
  */
 export function buildShipmentEmail(
   job: Job,
-  _tracking: JobTracking | undefined,
+  tracking: JobTracking | undefined,
   remarks: string,
   config?: ShipmentCommsConfig | null,
   signatureHtml?: string | null,
@@ -557,7 +561,8 @@ export function buildShipmentEmail(
     shipmentCommsTemplate(shipmentModeKey(job.mode), config),
     signatureHtml,
   );
-  const { subject, text } = renderShipmentEmail(job, tpl, remarks);
+  const legs = tracking?.legs?.length ? tracking.legs : job.manual_legs;
+  const { subject, text } = renderShipmentEmail(job, tpl, remarks, legs);
   // Plain-text counterpart of the button shipmentEmailHtml inlines into the
   // html version, same spot, under Provisional Delivery Date.
   const textWithLink = insertAfterLabelLine(

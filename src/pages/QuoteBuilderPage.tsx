@@ -140,6 +140,7 @@ function draftFromQuote(q: Quote): QuoteDraft {
     mbl_no: q.mbl_no ?? "",
     hbl_no: q.hbl_no ?? "",
     container_no: q.container_no ?? "",
+    seal_no: q.seal_no ?? "",
     container_type: q.container_type ?? "",
     etd: q.etd ?? "",
     eta: q.eta ?? "",
@@ -1418,6 +1419,13 @@ export default function QuoteBuilderPage() {
               <input
                 value={draft.container_no}
                 onChange={(e) => set("container_no", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Seal Number</label>
+              <input
+                value={draft.seal_no}
+                onChange={(e) => set("seal_no", e.target.value)}
               />
             </div>
             <div className="field">

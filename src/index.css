@@ -13112,3 +13112,105 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
 .comms-ai-panel { display: grid; gap: 6px; margin: 4px 0 8px; padding: 8px; border: 1px solid var(--teal-tint); background: color-mix(in srgb, var(--teal-tint) 35%, transparent); border-radius: 10px; }
 .comms-ai-panel textarea { width: 100%; font: inherit; font-size: 0.85rem; }
 .comms-ai-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* Sailing schedule / transshipment legs (SailingLegs.tsx, 0239). */
+.sail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.sail-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.sail-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sail-table tr.is-current td {
+  background: var(--teal-tint);
+}
+.sail-table tr.is-current td:first-child {
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+.sail-voy {
+  color: var(--muted);
+}
+.sail-ae {
+  display: inline-block;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  vertical-align: 1px;
+}
+.sail-ae.is-act {
+  color: #fff;
+  background: var(--teal);
+  border-color: var(--teal);
+}
+.sail-ts {
+  margin-left: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--amber-ink);
+  background: var(--amber-tint);
+  border-radius: 999px;
+  padding: 1px 8px;
+  vertical-align: 2px;
+}
+.sail-warn {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--orange-ink);
+}
+.sail-panel .table-scroll,
+.sail-panel {
+  overflow-x: auto;
+}
+.sail-edit-row {
+  display: grid;
+  grid-template-columns: 18px 1.4fr 0.8fr 1fr 1fr 1fr 1fr 22px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.sail-edit-row input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.82rem;
+}
+.sail-leg-no {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.sail-edit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.bd-ts {
+  margin-left: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--amber-ink);
+  background: var(--amber-tint);
+  border-radius: 999px;
+  padding: 0 6px;
+  cursor: help;
+}

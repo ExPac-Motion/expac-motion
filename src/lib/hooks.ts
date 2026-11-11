@@ -48,6 +48,7 @@ import type {
   Supplier,
   PartnerKind,
   UiTableLayout,
+  JobTracking,
 } from "./types";
 import { fetchRoutePath, fetchTracking, trackableRef, trackingEventRowsFrom, trackingRowFrom } from "./tracking";
 import {
@@ -753,7 +754,14 @@ export function useSendMessage() {
       const mail =
         template === "reply"
           ? buildShipmentReply(job, remarks, settings?.shipment_replies, settings?.mail_signature_html)
-          : buildShipmentEmail(job, undefined, remarks, settings?.shipment_comms, settings?.mail_signature_html);
+          : buildShipmentEmail(
+              job,
+              // The tracking row (transshipment legs, 0239), from the board's cache.
+              qc.getQueryData<JobTracking[]>(["job_tracking"])?.find((t) => t.job_id === job.id),
+              remarks,
+              settings?.shipment_comms,
+              settings?.mail_signature_html,
+            );
       // The thread keeps a note of what went out attached (not in the email).
       const body = picks.length
         ? `${mail.text}

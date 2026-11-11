@@ -82,6 +82,7 @@ export function blankDraft(): QuoteDraft {
     mbl_no: "",
     hbl_no: "",
     container_no: "",
+    seal_no: "",
     container_type: "",
     etd: "",
     eta: "",
