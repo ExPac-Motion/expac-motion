@@ -1017,573 +1017,593 @@ export default function QuoteBuilderPage() {
         <div className="panel-head">
           <h2>Shipment Information</h2>
         </div>
-        <div className="grid4">
-          {/* Row 1 */}
-          <div className="field">
-            <label>Shipment No</label>
-            <input
-              value={draft.reference}
-              readOnly
-              title="System-generated shipment number, set by the transport mode"
-              style={{ background: "var(--paper)", cursor: "not-allowed" }}
-            />
+        {/* Grouped into bands (2026-11-11): same fields and controls as the
+            single grid they replaced, ordered by what ops fill in together. */}
+        <div className="qb-band">
+          <h3 className="qb-band-title">Quote</h3>
+          <div className="grid4">
+            <div className="field">
+              <label>Shipment No</label>
+              <input
+                value={draft.reference}
+                readOnly
+                title="System-generated shipment number, set by the transport mode"
+                style={{ background: "var(--paper)", cursor: "not-allowed" }}
+              />
+            </div>
+            <div className="field">
+              <label>Status</label>
+              <select
+                value={draft.status}
+                onChange={(e) =>
+                  set("status", e.target.value as QuoteDraft["status"])
+                }
+              >
+                {STATUS_ORDER.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Valid Until</label>
+              <DateInput
+                value={draft.valid_until}
+                onChange={(v) => set("valid_until", v)}
+              />
+            </div>
+            <div className="field">
+              <label>Sales Person</label>
+              <select
+                value={draft.sales_person_id}
+                onChange={(e) => set("sales_person_id", e.target.value)}
+              >
+                <option value="">— unassigned —</option>
+                {salesPeople.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name || "—"}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="field">
-            <label>Mode</label>
-            <select
-              value={draft.mode}
-              onChange={(e) => setMode(e.target.value as QuoteDraft["mode"])}
-            >
-              {QUOTE_MODES.map((m) => (
-                <option key={m}>{m}</option>
-              ))}
-            </select>
-            {existingQ.data?.mode_to_advise && draft.mode === existingQ.data.mode && (
-              <div className="hint mode-advise-hint">Client: not sure, please advise</div>
-            )}
-          </div>
-          <div className="field">
-            <label>Incoterms</label>
-            <select
-              value={draft.incoterms}
-              onChange={(e) => set("incoterms", e.target.value)}
-            >
-              <option value="">— incoterms —</option>
-              {draft.incoterms &&
-                !INCOTERM_CODES.includes(draft.incoterms) && (
-                  <option value={draft.incoterms}>{draft.incoterms}</option>
+        </div>
+        <div className="qb-band">
+          <h3 className="qb-band-title">Parties</h3>
+          <div className="grid4">
+            <div className="field">
+              <label>
+                Customer/Importer
+                {/* Fix the name (or any detail) of the customer / lead on the quote. */}
+                {draft.lead_id && leadsQ.data?.some((l) => l.id === draft.lead_id) ? (
+                  <button
+                    type="button"
+                    className="link-btn field-label-action"
+                    onClick={() => setEditingLead(true)}
+                    title="Edit this lead (name, contact, email…) without leaving the quote"
+                  >
+                    ✎ Edit lead
+                  </button>
+                ) : draft.client_id ? (
+                  <a
+                    className="link-btn field-label-action"
+                    href={`/clients/${draft.client_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Open the customer record in a new tab to edit it; this quote stays open"
+                  >
+                    ✎ Edit customer
+                  </a>
+                ) : null}
+              </label>
+              <select
+                value={draft.client_id ? `c:${draft.client_id}` : draft.lead_id ? `l:${draft.lead_id}` : ""}
+                onChange={(e) => {
+                  const [kind, id] = e.target.value.split(":");
+                  const pickedLead = kind === "l" ? unpromotedLeads.find((l) => l.id === id) : null;
+                  // The customer's rate tier (Silver for leads / by default).
+                  const tier: RateTierId =
+                    (kind === "c" ? clients.find((c) => c.id === id)?.rate_tier : null) ?? "silver";
+                  setDraft((d) =>
+                    d
+                      ? {
+                          ...d,
+                          client_id: kind === "c" ? id : "",
+                          lead_id: kind === "l" ? id : "",
+                          // A consignee belongs to one customer, so a new customer clears it.
+                          client_consignee_id:
+                            kind === "c" && id === d.client_id ? d.client_consignee_id : "",
+                          sales_person_id: pickedLead?.sales_person_id || d.sales_person_id,
+                          rate_tier: tier,
+                          tariff_sheet_id: tier === d.rate_tier ? d.tariff_sheet_id : "",
+                        }
+                      : d,
+                  );
+                }}
+              >
+                <option value="">Select customer</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={`c:${c.id}`}>
+                    {c.company}
+                  </option>
+                ))}
+                {unpromotedLeads.length > 0 && (
+                  <optgroup label="Leads (not yet a customer)">
+                    {unpromotedLeads.map((l) => (
+                      <option key={l.id} value={`l:${l.id}`}>
+                        {l.company}
+                      </option>
+                    ))}
+                  </optgroup>
                 )}
-              <optgroup label="Any mode (incl. air)">
-                {INCOTERMS_ANY_MODE.map((i) => (
-                  <option key={i.code} value={i.code}>
-                    {i.code}, {i.name}
+              </select>
+              {clients.length === 0 && unpromotedLeads.length === 0 && (
+                <span className="hint">
+                  No customers or leads yet, add one on the Customers or Leads page
+                  first.
+                </span>
+              )}
+              {draft.lead_id && (
+                <span className="hint">
+                  Accepting this quote will automatically create a real customer
+                  record for this lead.
+                </span>
+              )}
+            </div>
+            <div className="field">
+              <label>Shipper/Exporter</label>
+              <select
+                value={draft.supplier_id}
+                onChange={(e) => {
+                  if (e.target.value === "__add__") {
+                    setAddingShipper(true);
+                    return;
+                  }
+                  set("supplier_id", e.target.value);
+                }}
+              >
+                <option value="__add__">+ Add Shipper</option>
+                <option value="">Select shipper</option>
+                {/* Shippers belong to a customer (0142): this customer's own (all when none is picked yet). */}
+                {suppliers
+                  .filter((s) => !draft.client_id || s.client_id === draft.client_id || s.id === draft.supplier_id)
+                  .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.company}
                   </option>
                 ))}
-              </optgroup>
-              <optgroup label="Sea / inland waterway">
-                {INCOTERMS_SEA.map((i) => (
-                  <option key={i.code} value={i.code}>
-                    {i.code}, {i.name}
-                  </option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Consignee/Delivery Point</label>
+              <select
+                value={
+                  draft.client_consignee_id
+                    ? `k:${draft.client_consignee_id}`
+                    : draft.consignee_id
+                      ? `c:${draft.consignee_id}`
+                      : draft.consignee_lead_id
+                        ? `l:${draft.consignee_lead_id}`
+                        : ""
+                }
+                onChange={(e) => {
+                  const [kind, id] = e.target.value.split(":");
+                  setDraft((d) =>
+                    d
+                      ? {
+                          ...d,
+                          client_consignee_id: kind === "k" ? id : "",
+                          consignee_id: kind === "c" ? id : "",
+                          consignee_lead_id: kind === "l" ? id : "",
+                        }
+                      : d,
+                  );
+                }}
+              >
+                <option value="">Same as Customer/Importer</option>
+                {draft.client_id ? (
+                  <>
+                    {/* Only this customer's own consignees (Consignees & Shippers tab). */}
+                    {(consigneesQ.data ?? []).map((c) => (
+                      <option key={c.id} value={`k:${c.id}`}>
+                        {c.company}
+                      </option>
+                    ))}
+                    {/* An older quote's Customer/Lead consignee stays visible so it isn't lost. */}
+                    {draft.consignee_id && (
+                      <option value={`c:${draft.consignee_id}`}>
+                        {clients.find((c) => c.id === draft.consignee_id)?.company ?? "Previous consignee"}
+                      </option>
+                    )}
+                    {draft.consignee_lead_id && (
+                      <option value={`l:${draft.consignee_lead_id}`}>
+                        {unpromotedLeads.find((l) => l.id === draft.consignee_lead_id)?.company ??
+                          "Previous consignee"}
+                      </option>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {clients.map((c) => (
+                      <option key={c.id} value={`c:${c.id}`}>
+                        {c.company}
+                      </option>
+                    ))}
+                    {unpromotedLeads.length > 0 && (
+                      <optgroup label="Leads (not yet a customer)">
+                        {unpromotedLeads.map((l) => (
+                          <option key={l.id} value={`l:${l.id}`}>
+                            {l.company}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                )}
+              </select>
+            </div>
+            <div className="field">
+              <label>Reference</label>
+              <input
+                value={draft.customer_reference}
+                onChange={(e) => set("customer_reference", e.target.value)}
+                placeholder="Customer reference / PO"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="qb-band">
+          <h3 className="qb-band-title">Terms &amp; cargo</h3>
+          <div className="grid4">
+            <div className="field">
+              <label>Mode</label>
+              <select
+                value={draft.mode}
+                onChange={(e) => setMode(e.target.value as QuoteDraft["mode"])}
+              >
+                {QUOTE_MODES.map((m) => (
+                  <option key={m}>{m}</option>
                 ))}
-              </optgroup>
-            </select>
-          </div>
-          <div className="field">
-            <label>Status</label>
-            <select
-              value={draft.status}
-              onChange={(e) =>
-                set("status", e.target.value as QuoteDraft["status"])
-              }
-            >
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Row 2 */}
-          <div className="field">
-            <label>
-              Customer/Importer
-              {/* Fix the name (or any detail) of the customer / lead on the quote. */}
-              {draft.lead_id && leadsQ.data?.some((l) => l.id === draft.lead_id) ? (
-                <button
-                  type="button"
-                  className="link-btn field-label-action"
-                  onClick={() => setEditingLead(true)}
-                  title="Edit this lead (name, contact, email…) without leaving the quote"
-                >
-                  ✎ Edit lead
-                </button>
-              ) : draft.client_id ? (
-                <a
-                  className="link-btn field-label-action"
-                  href={`/clients/${draft.client_id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Open the customer record in a new tab to edit it; this quote stays open"
-                >
-                  ✎ Edit customer
-                </a>
-              ) : null}
-            </label>
-            <select
-              value={draft.client_id ? `c:${draft.client_id}` : draft.lead_id ? `l:${draft.lead_id}` : ""}
-              onChange={(e) => {
-                const [kind, id] = e.target.value.split(":");
-                const pickedLead = kind === "l" ? unpromotedLeads.find((l) => l.id === id) : null;
-                // The customer's rate tier (Silver for leads / by default).
-                const tier: RateTierId =
-                  (kind === "c" ? clients.find((c) => c.id === id)?.rate_tier : null) ?? "silver";
-                setDraft((d) =>
-                  d
-                    ? {
-                        ...d,
-                        client_id: kind === "c" ? id : "",
-                        lead_id: kind === "l" ? id : "",
-                        // A consignee belongs to one customer, so a new customer clears it.
-                        client_consignee_id:
-                          kind === "c" && id === d.client_id ? d.client_consignee_id : "",
-                        sales_person_id: pickedLead?.sales_person_id || d.sales_person_id,
-                        rate_tier: tier,
-                        tariff_sheet_id: tier === d.rate_tier ? d.tariff_sheet_id : "",
-                      }
-                    : d,
-                );
-              }}
-            >
-              <option value="">Select customer</option>
-              {clients.map((c) => (
-                <option key={c.id} value={`c:${c.id}`}>
-                  {c.company}
-                </option>
-              ))}
-              {unpromotedLeads.length > 0 && (
-                <optgroup label="Leads (not yet a customer)">
-                  {unpromotedLeads.map((l) => (
-                    <option key={l.id} value={`l:${l.id}`}>
-                      {l.company}
+              </select>
+              {existingQ.data?.mode_to_advise && draft.mode === existingQ.data.mode && (
+                <div className="hint mode-advise-hint">Client: not sure, please advise</div>
+              )}
+            </div>
+            <div className="field">
+              <label>Incoterms</label>
+              <select
+                value={draft.incoterms}
+                onChange={(e) => set("incoterms", e.target.value)}
+              >
+                <option value="">— incoterms —</option>
+                {draft.incoterms &&
+                  !INCOTERM_CODES.includes(draft.incoterms) && (
+                    <option value={draft.incoterms}>{draft.incoterms}</option>
+                  )}
+                <optgroup label="Any mode (incl. air)">
+                  {INCOTERMS_ANY_MODE.map((i) => (
+                    <option key={i.code} value={i.code}>
+                      {i.code}, {i.name}
                     </option>
                   ))}
                 </optgroup>
-              )}
-            </select>
-            {clients.length === 0 && unpromotedLeads.length === 0 && (
-              <span className="hint">
-                No customers or leads yet, add one on the Customers or Leads page
-                first.
-              </span>
-            )}
-            {draft.lead_id && (
-              <span className="hint">
-                Accepting this quote will automatically create a real customer
-                record for this lead.
-              </span>
-            )}
-          </div>
-          <div className="field">
-            <label>Reference</label>
-            <input
-              value={draft.customer_reference}
-              onChange={(e) => set("customer_reference", e.target.value)}
-              placeholder="Customer reference / PO"
-            />
-          </div>
-          <div className="field">
-            <label>Shipper/Exporter</label>
-            <select
-              value={draft.supplier_id}
-              onChange={(e) => {
-                if (e.target.value === "__add__") {
-                  setAddingShipper(true);
-                  return;
-                }
-                set("supplier_id", e.target.value);
-              }}
-            >
-              <option value="__add__">+ Add Shipper</option>
-              <option value="">Select shipper</option>
-              {/* Shippers belong to a customer (0142): this customer's own (all when none is picked yet). */}
-              {suppliers
-                .filter((s) => !draft.client_id || s.client_id === draft.client_id || s.id === draft.supplier_id)
-                .map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.company}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Consignee/Delivery Point</label>
-            <select
-              value={
-                draft.client_consignee_id
-                  ? `k:${draft.client_consignee_id}`
-                  : draft.consignee_id
-                    ? `c:${draft.consignee_id}`
-                    : draft.consignee_lead_id
-                      ? `l:${draft.consignee_lead_id}`
-                      : ""
-              }
-              onChange={(e) => {
-                const [kind, id] = e.target.value.split(":");
-                setDraft((d) =>
-                  d
-                    ? {
-                        ...d,
-                        client_consignee_id: kind === "k" ? id : "",
-                        consignee_id: kind === "c" ? id : "",
-                        consignee_lead_id: kind === "l" ? id : "",
-                      }
-                    : d,
-                );
-              }}
-            >
-              <option value="">Same as Customer/Importer</option>
-              {draft.client_id ? (
-                <>
-                  {/* Only this customer's own consignees (Consignees & Shippers tab). */}
-                  {(consigneesQ.data ?? []).map((c) => (
-                    <option key={c.id} value={`k:${c.id}`}>
-                      {c.company}
+                <optgroup label="Sea / inland waterway">
+                  {INCOTERMS_SEA.map((i) => (
+                    <option key={i.code} value={i.code}>
+                      {i.code}, {i.name}
                     </option>
                   ))}
-                  {/* An older quote's Customer/Lead consignee stays visible so it isn't lost. */}
-                  {draft.consignee_id && (
-                    <option value={`c:${draft.consignee_id}`}>
-                      {clients.find((c) => c.id === draft.consignee_id)?.company ?? "Previous consignee"}
-                    </option>
-                  )}
-                  {draft.consignee_lead_id && (
-                    <option value={`l:${draft.consignee_lead_id}`}>
-                      {unpromotedLeads.find((l) => l.id === draft.consignee_lead_id)?.company ??
-                        "Previous consignee"}
-                    </option>
-                  )}
-                </>
-              ) : (
-                <>
-                  {clients.map((c) => (
-                    <option key={c.id} value={`c:${c.id}`}>
-                      {c.company}
-                    </option>
-                  ))}
-                  {unpromotedLeads.length > 0 && (
-                    <optgroup label="Leads (not yet a customer)">
-                      {unpromotedLeads.map((l) => (
-                        <option key={l.id} value={`l:${l.id}`}>
-                          {l.company}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </>
-              )}
-            </select>
-          </div>
-          <div className="field">
-            <label>Delivery terms</label>
-            <input
-              value={draft.delivery_terms}
-              onChange={(e) => set("delivery_terms", e.target.value)}
-            />
-          </div>
-
-          {/* Row 3 */}
-          <div className="field">
-            <label>Commercial Value</label>
-            <div className="value-currency-row">
+                </optgroup>
+              </select>
+            </div>
+            <div className="field">
+              <label>Delivery terms</label>
               <input
-                type="number"
-                step="any"
-                value={draft.commercial_value}
-                onChange={(e) => set("commercial_value", e.target.value)}
+                value={draft.delivery_terms}
+                onChange={(e) => set("delivery_terms", e.target.value)}
               />
+            </div>
+            <div className="field">
+              <label>Commodity</label>
               <select
-                className="value-currency-select"
-                value={draft.value_currency}
-                onChange={(e) => set("value_currency", e.target.value)}
-                title="Currency the Commercial Value / Insurance Amount were captured in"
+                value={draft.commodity}
+                onChange={(e) => set("commodity", e.target.value)}
               >
-                {LINE_CURRENCIES.map((c) => (
+                {!COMMODITIES.includes(draft.commodity as Commodity) && (
+                  <option value={draft.commodity}>
+                    {draft.commodity || "Select commodity"}
+                  </option>
+                )}
+                {COMMODITIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
                 ))}
               </select>
             </div>
-          </div>
-          <div className="field">
-            <label>Insurance Amount</label>
-            <div className="value-currency-row">
-              <input
-                type="number"
-                readOnly
-                tabIndex={-1}
-                value={insuranceAmount(draft.commercial_value).toFixed(2)}
-                title="0.50% of Commercial Value"
-              />
-              <span className="value-currency-badge">{draft.value_currency}</span>
+            <div className="field">
+              <label>Commercial Value</label>
+              <div className="value-currency-row">
+                <input
+                  type="number"
+                  step="any"
+                  value={draft.commercial_value}
+                  onChange={(e) => set("commercial_value", e.target.value)}
+                />
+                <select
+                  className="value-currency-select"
+                  value={draft.value_currency}
+                  onChange={(e) => set("value_currency", e.target.value)}
+                  title="Currency the Commercial Value / Insurance Amount were captured in"
+                >
+                  {LINE_CURRENCIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-          <div className="field">
-            <label>Commodity</label>
-            <select
-              value={draft.commodity}
-              onChange={(e) => set("commodity", e.target.value)}
-            >
-              {!COMMODITIES.includes(draft.commodity as Commodity) && (
-                <option value={draft.commodity}>
-                  {draft.commodity || "Select commodity"}
-                </option>
-              )}
-              {COMMODITIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Valid Until</label>
-            <DateInput
-              value={draft.valid_until}
-              onChange={(v) => set("valid_until", v)}
-            />
-          </div>
-
-          {/* Row 4 */}
-          <datalist id="qb-locodes">
-            {LOCODE_OPTIONS.map((o) => (
-              <option key={o} value={o} />
-            ))}
-          </datalist>
-          <div className="field">
-            <label>Origin/Port of Load</label>
-            <input
-              list="qb-locodes"
-              value={draft.origin}
-              onChange={(e) => set("origin", e.target.value)}
-              placeholder="CNSHA, Shanghai, China"
-            />
-            <span className="hint">
-              Pick a UN/LOCODE or type your own (start with the 5-char code).
-            </span>
-          </div>
-          <div className="field">
-            <label>Destination/Port of Discharge</label>
-            <input
-              list="qb-locodes"
-              value={draft.destination}
-              onChange={(e) => set("destination", e.target.value)}
-              placeholder="ZADUR, Durban, South Africa"
-            />
-            <span className="hint">
-              Pick a UN/LOCODE or type your own (start with the 5-char code).
-            </span>
-          </div>
-          <div className="field">
-            <label>ETD</label>
-            <DateInput
-              value={draft.etd}
-              onChange={(v) => set("etd", v)}
-            />
-          </div>
-          <div className="field">
-            <label>ETA</label>
-            <DateInput
-              value={draft.eta}
-              onChange={(v) => set("eta", v)}
-            />
-          </div>
-          <div className="field">
-            <label>Provisional Delivery Date</label>
-            <DateInput
-              value={draft.provisional_delivery_date}
-              onChange={(v) => set("provisional_delivery_date", v)}
-            />
-          </div>
-
-          {/* Mode-specific fields, only the selected mode's fields are shown
-              (same split as the shipment documents; Road uses Sea for now).
-              Values typed under another mode are kept, just hidden. */}
-          {usesSeaLayout(draft.mode) ? (
+            <div className="field">
+              <label>Insurance Amount</label>
+              <div className="value-currency-row">
+                <input
+                  type="number"
+                  readOnly
+                  tabIndex={-1}
+                  value={insuranceAmount(draft.commercial_value).toFixed(2)}
+                  title="0.50% of Commercial Value"
+                />
+                <span className="value-currency-badge">{draft.value_currency}</span>
+              </div>
+            </div>
+            {/* Tier rate sheets (0119), admin-only, like Rates & Tariff */}
+            {canRates && (
             <>
             <div className="field">
-              <label>{carrierLabel(draft.mode)}</label>
-              <input
-                value={draft.shipping_line}
-                onChange={(e) => set("shipping_line", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Vessel Name</label>
-              <input
-                value={draft.vessel_name}
-                onChange={(e) => set("vessel_name", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Voyage No</label>
-              <input
-                value={draft.voyage_no}
-                onChange={(e) => set("voyage_no", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Container Number</label>
-              <input
-                value={draft.container_no}
-                onChange={(e) => set("container_no", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Seal Number</label>
-              <input
-                value={draft.seal_no}
-                onChange={(e) => set("seal_no", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Container Type</label>
-              <input
-                value={draft.container_type}
-                onChange={(e) => set("container_type", e.target.value)}
-                placeholder="e.g. 1x 20GP, 2x 40HC"
-              />
-            </div>
-            <div className="field">
-              <label>MBL No</label>
-              <input
-                value={draft.mbl_no}
-                onChange={(e) => set("mbl_no", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>HBL No</label>
-              <input
-                value={draft.hbl_no}
-                onChange={(e) => set("hbl_no", e.target.value)}
-              />
-            </div>
-            </>
-          ) : (
-            <>
-            <div className="field">
-              <label>Airline Name (internal only)</label>
-              <input
-                value={draft.carrier_name}
-                onChange={(e) => set("carrier_name", e.target.value)}
-              />
-              <span className="hint">Not shown on the customer quotation.</span>
-            </div>
-            <div className="field">
-              <label>Flight No</label>
-              <input
-                value={draft.flight_no}
-                onChange={(e) => set("flight_no", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>Flight Date</label>
-              <DateInput
-                value={draft.flight_date}
-                onChange={(v) => set("flight_date", v)}
-              />
-            </div>
-            <div className="field">
-              <label>Routing</label>
-              <input
-                value={draft.routing}
-                onChange={(e) => set("routing", e.target.value)}
-                placeholder="e.g. CAN – DXB – JNB"
-              />
-            </div>
-            <div className="field">
-              <label>Transit Time</label>
-              <input
-                value={draft.transit_time}
-                onChange={(e) => set("transit_time", e.target.value)}
-                placeholder="e.g. 3–5 days"
-              />
-            </div>
-            <div className="field">
-              <label>MAWB No</label>
-              <input
-                value={draft.mawb_no}
-                onChange={(e) => set("mawb_no", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label>HAWB No</label>
-              <input
-                value={draft.hawb_no}
-                onChange={(e) => set("hawb_no", e.target.value)}
-              />
-            </div>
-            </>
-          )}
-
-          {/* Tier rate sheets (0119), admin-only, like Rates & Tariff */}
-          {canRates && (
-          <>
-          <div className="field">
-            <label>
-              <TierDot tier={draft.rate_tier} />
-              Rate tier
-            </label>
-            <select
-              value={draft.rate_tier}
-              onChange={(e) =>
-                setDraft((d) =>
-                  d
-                    ? { ...d, rate_tier: e.target.value as RateTierId, tariff_sheet_id: "" }
-                    : d,
-                )
-              }
-            >
-              {RATE_TIERS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} ({t.margin}%)
-                </option>
-              ))}
-            </select>
-            <span className="hint">From the customer, change it for this quote if needed.</span>
-          </div>
-          <div className="field">
-            <label>Trade route</label>
-            <div style={{ display: "flex", gap: 8 }}>
+              <label>
+                <TierDot tier={draft.rate_tier} />
+                Rate tier
+              </label>
               <select
-                value={draft.tariff_sheet_id}
-                onChange={(e) => set("tariff_sheet_id", e.target.value)}
+                value={draft.rate_tier}
+                onChange={(e) =>
+                  setDraft((d) =>
+                    d
+                      ? { ...d, rate_tier: e.target.value as RateTierId, tariff_sheet_id: "" }
+                      : d,
+                  )
+                }
               >
-                <option value="">
-                  {tierRoutes.length
-                    ? "— pick a trade route —"
-                    : `No ${rateTier(draft.rate_tier).label} ${draft.mode} sheets yet`}
-                </option>
-                {tierRoutes.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.route}
+                {RATE_TIERS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label} ({t.margin}%)
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                className="btn outline"
-                disabled={!tierRoutes.some((s) => s.id === draft.tariff_sheet_id) || tierLoading}
-                onClick={loadTierRates}
-              >
-                {tierLoading ? "Loading…" : "Load rates"}
-              </button>
+              <span className="hint">From the customer, change it for this quote if needed.</span>
             </div>
-            <span className="hint">Fills the charge lines from the tier rate sheet.</span>
+            <div className="field">
+              <label>Trade route</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <select
+                  value={draft.tariff_sheet_id}
+                  onChange={(e) => set("tariff_sheet_id", e.target.value)}
+                >
+                  <option value="">
+                    {tierRoutes.length
+                      ? "— pick a trade route —"
+                      : `No ${rateTier(draft.rate_tier).label} ${draft.mode} sheets yet`}
+                  </option>
+                  {tierRoutes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.route}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn outline"
+                  disabled={!tierRoutes.some((s) => s.id === draft.tariff_sheet_id) || tierLoading}
+                  onClick={loadTierRates}
+                >
+                  {tierLoading ? "Loading…" : "Load rates"}
+                </button>
+              </div>
+              <span className="hint">Fills the charge lines from the tier rate sheet.</span>
+            </div>
+            </>
+            )}
           </div>
-          </>
-          )}
-
-          {/* Internal only / every mode */}
-          {partnerField("agent", agents, "Select agent")}
-          {partnerField("clearing_agent", clearingAgents, "Select clearing agent")}
-          {partnerField("transporter", transporters, "Select transporter")}
-          {partnerField("destination_agent", destinationAgents, "Select destination agent")}
-          <div className="field">
-            <label>Sales Person</label>
-            <select
-              value={draft.sales_person_id}
-              onChange={(e) => set("sales_person_id", e.target.value)}
-            >
-              <option value="">— unassigned —</option>
-              {salesPeople.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name || "—"}
-                </option>
+        </div>
+        <div className="qb-band">
+          <h3 className="qb-band-title">Route &amp; dates</h3>
+          <div className="grid5">
+            <datalist id="qb-locodes">
+              {LOCODE_OPTIONS.map((o) => (
+                <option key={o} value={o} />
               ))}
-            </select>
+            </datalist>
+            <div className="field">
+              <label>Origin/Port of Load</label>
+              <input
+                list="qb-locodes"
+                value={draft.origin}
+                onChange={(e) => set("origin", e.target.value)}
+                placeholder="CNSHA, Shanghai, China"
+              />
+              <span className="hint">
+                Pick a UN/LOCODE or type your own (start with the 5-char code).
+              </span>
+            </div>
+            <div className="field">
+              <label>Destination/Port of Discharge</label>
+              <input
+                list="qb-locodes"
+                value={draft.destination}
+                onChange={(e) => set("destination", e.target.value)}
+                placeholder="ZADUR, Durban, South Africa"
+              />
+              <span className="hint">
+                Pick a UN/LOCODE or type your own (start with the 5-char code).
+              </span>
+            </div>
+            <div className="field">
+              <label>ETD</label>
+              <DateInput
+                value={draft.etd}
+                onChange={(v) => set("etd", v)}
+              />
+            </div>
+            <div className="field">
+              <label>ETA</label>
+              <DateInput
+                value={draft.eta}
+                onChange={(v) => set("eta", v)}
+              />
+            </div>
+            <div className="field">
+              <label>Provisional Delivery Date</label>
+              <DateInput
+                value={draft.provisional_delivery_date}
+                onChange={(v) => set("provisional_delivery_date", v)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="qb-band">
+          <h3 className="qb-band-title">Transport</h3>
+          <div className="grid4">
+            {/* Mode-specific fields, only the selected mode's fields are shown
+                (same split as the shipment documents; Road uses Sea for now).
+                Values typed under another mode are kept, just hidden. */}
+            {usesSeaLayout(draft.mode) ? (
+              <>
+              <div className="field">
+                <label>{carrierLabel(draft.mode)}</label>
+                <input
+                  value={draft.shipping_line}
+                  onChange={(e) => set("shipping_line", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Vessel Name</label>
+                <input
+                  value={draft.vessel_name}
+                  onChange={(e) => set("vessel_name", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Voyage No</label>
+                <input
+                  value={draft.voyage_no}
+                  onChange={(e) => set("voyage_no", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Container Number</label>
+                <input
+                  value={draft.container_no}
+                  onChange={(e) => set("container_no", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Seal Number</label>
+                <input
+                  value={draft.seal_no}
+                  onChange={(e) => set("seal_no", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Container Type</label>
+                <input
+                  value={draft.container_type}
+                  onChange={(e) => set("container_type", e.target.value)}
+                  placeholder="e.g. 1x 20GP, 2x 40HC"
+                />
+              </div>
+              <div className="field">
+                <label>MBL No</label>
+                <input
+                  value={draft.mbl_no}
+                  onChange={(e) => set("mbl_no", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>HBL No</label>
+                <input
+                  value={draft.hbl_no}
+                  onChange={(e) => set("hbl_no", e.target.value)}
+                />
+              </div>
+              </>
+            ) : (
+              <>
+              <div className="field">
+                <label>Airline Name (internal only)</label>
+                <input
+                  value={draft.carrier_name}
+                  onChange={(e) => set("carrier_name", e.target.value)}
+                />
+                <span className="hint">Not shown on the customer quotation.</span>
+              </div>
+              <div className="field">
+                <label>Flight No</label>
+                <input
+                  value={draft.flight_no}
+                  onChange={(e) => set("flight_no", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Flight Date</label>
+                <DateInput
+                  value={draft.flight_date}
+                  onChange={(v) => set("flight_date", v)}
+                />
+              </div>
+              <div className="field">
+                <label>Routing</label>
+                <input
+                  value={draft.routing}
+                  onChange={(e) => set("routing", e.target.value)}
+                  placeholder="e.g. CAN – DXB – JNB"
+                />
+              </div>
+              <div className="field">
+                <label>Transit Time</label>
+                <input
+                  value={draft.transit_time}
+                  onChange={(e) => set("transit_time", e.target.value)}
+                  placeholder="e.g. 3–5 days"
+                />
+              </div>
+              <div className="field">
+                <label>MAWB No</label>
+                <input
+                  value={draft.mawb_no}
+                  onChange={(e) => set("mawb_no", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>HAWB No</label>
+                <input
+                  value={draft.hawb_no}
+                  onChange={(e) => set("hawb_no", e.target.value)}
+                />
+              </div>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="qb-band">
+          <h3 className="qb-band-title">Partners <span>internal only</span></h3>
+          <div className="grid4">
+            {/* Internal only / every mode */}
+            {partnerField("agent", agents, "Select agent")}
+            {partnerField("clearing_agent", clearingAgents, "Select clearing agent")}
+            {partnerField("transporter", transporters, "Select transporter")}
+            {partnerField("destination_agent", destinationAgents, "Select destination agent")}
           </div>
         </div>
       </div>
