@@ -363,16 +363,16 @@ export default function RfqReplyPage() {
                 </div>
               ),
             )}
-            {s !== EXTRA && (
-              <button type="button" className="btn outline rfq-sec-add" onClick={() => addRow(s)}>
-                + Add a charge
-              </button>
-            )}
+            <button type="button" className="btn outline rfq-sec-add" onClick={() => addRow(s)}>
+              + Add a charge
+            </button>
           </div>
         ))}
-        <button type="button" className="btn outline" onClick={() => addRow(EXTRA)}>
-          + Add a charge
-        </button>
+        {sections.length === 0 && (
+          <button type="button" className="btn outline" onClick={() => addRow(EXTRA)}>
+            + Add a charge
+          </button>
+        )}
 
         <div className="rfq-reply-grid">
           <div className="field">
