@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { COMPANY } from "../lib/company";
 import { formatDate } from "../lib/format";
-import { packingTotals, volumetricFactor } from "../lib/calc";
+import { rfqFactRows, rfqUnitOptions } from "../lib/rfq";
+import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 import { LINE_CURRENCIES, type PackingItem } from "../lib/types";
 import { cleanAmount, getRfqPublic, submitRfqPublic, type RfqPublic } from "../lib/rfqDb";
 
@@ -169,21 +170,24 @@ export default function RfqReplyPage() {
 
   const packing = data.packing as unknown as PackingItem[];
   const pack = packingTotals(packing, volumetricFactor(data.mode));
-  const facts: [string, string][] = [
-    ["Mode", data.mode],
-    ["Origin", data.origin || "-"],
-    ["Destination", data.destination || "-"],
-    ["Incoterms", data.incoterms || "-"],
-    ["Commodity", data.commodity || "-"],
-    ["Cargo ready", formatDate(data.ready_date)],
-    ["ETD", formatDate(data.etd)],
-    ...(data.container_type ? ([["Container", data.container_type]] as [string, string][]) : []),
-    ["Collect from", data.pickup || "-"],
-    ["Pieces", pack.qty ? String(pack.qty) : "-"],
-    ["Actual weight", pack.totalActual ? `${n2(pack.totalActual)} kg` : "-"],
-    ["Volume", pack.totalCbm ? `${n2(pack.totalCbm)} cbm` : "-"],
-    ["Chargeable", pack.chargeable ? `${n2(pack.chargeable)} kg` : "-"],
-  ];
+  const vFactor = volumetricFactor(data.mode);
+  // Same rows, same order as the RFQ PDF (src/lib/rfq.ts rfqFactRows).
+  const facts = rfqFactRows({
+    reference: data.reference ?? data.rfq_number.replace(/^RFQ-/, ""),
+    rfqDate: data.rfq_date ?? null,
+    replyBy: data.reply_by,
+    mode: data.mode,
+    origin: data.origin,
+    destination: data.destination,
+    incoterms: data.incoterms,
+    deliveryTerms: data.delivery_terms ?? null,
+    commodity: data.commodity,
+    readyDate: data.ready_date,
+    etd: data.etd,
+    containerType: data.container_type,
+    pickup: data.pickup,
+    kind: data.partner_kind ?? "agent",
+  });
   const sections = [...new Set(rows.map((r) => r.category))];
 
   return (
@@ -211,8 +215,83 @@ export default function RfqReplyPage() {
           </p>
         )}
 
+        <div className="rfq-sec-head">Packing List Information</div>
+        {packing.length > 0 ? (
+          <>
+            <div className="rfq-scroll">
+              <table className="qs-pk rfq-pk">
+                <thead>
+                  <tr>
+                    <th>L<br />(cm)</th>
+                    <th>W<br />(cm)</th>
+                    <th>H<br />(cm)</th>
+                    <th>Act<br />(Kg)</th>
+                    <th>Qty<br />(Pcs)</th>
+                    <th>Qty<br />(Ctns)</th>
+                    <th>CBM<br />(Ctn)</th>
+                    <th>Volume<br />(Kg)</th>
+                    <th>Ttl<br />(Cbm)</th>
+                    <th>Ttl Act<br />(Kg)</th>
+                    <th>Ttl Vol<br />(Kg)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packing.map((p, i) => {
+                    const r = packingRow(p, vFactor);
+                    return (
+                      <tr key={i}>
+                        <td>{n2(Number(p.length_cm))}</td>
+                        <td>{n2(Number(p.width_cm))}</td>
+                        <td>{n2(Number(p.height_cm))}</td>
+                        <td>{n2(Number(p.actual_kg))}</td>
+                        <td>{n2(Number(p.qty_pcs))}</td>
+                        <td>{n2(Number(p.qty_ctns))}</td>
+                        <td>{n2(r.cbm)}</td>
+                        <td>{n2(r.volumeKg)}</td>
+                        <td>{n2(r.totalCbm)}</td>
+                        <td>{n2(r.totalActual)}</td>
+                        <td>{n2(r.totalVolume)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={4}>Totals</td>
+                    <td>{n2(pack.pcs)}</td>
+                    <td>{n2(pack.qty)}</td>
+                    <td />
+                    <td />
+                    <td>{n2(pack.totalCbm)}</td>
+                    <td>{n2(pack.totalActual)}</td>
+                    <td>{n2(pack.totalVolume)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="rfq-pksum">
+              <span>
+                Total Act (KGS) <b>{n2(pack.totalActual)}</b>
+              </span>
+              <span>
+                Volume (KGS) <b>{n2(pack.totalVolume)}</b>
+              </span>
+              <span>
+                Chg Vol (CBM) <b>{n2(pack.totalCbm)}</b>
+              </span>
+              <span>
+                Chg Weight (KGS) <b>{n2(pack.chargeable)}</b>
+              </span>
+            </div>
+          </>
+        ) : (
+          <p className="hint">Packing list to follow.</p>
+        )}
+
         <h2>Your rates</h2>
-        <p className="hint">Rates excl. VAT. Leave a charge blank if it doesn't apply.</p>
+        <p className="hint">
+          Rates excl. VAT. Pick the unit you charge per. Remove any charge that doesn't apply, or add one that's missing.
+        </p>
         {sections.map((s) => (
           <div key={s} className="rfq-sec">
             <div className="rfq-sec-head">{s}</div>
@@ -220,8 +299,10 @@ export default function RfqReplyPage() {
               <span>Charge</span>
               <span>Cur</span>
               <span>Rate</span>
+              <span>Unit</span>
               <span>Min</span>
               <span>Remarks</span>
+              <span />
             </div>
             {rows.map((r, i) =>
               r.category !== s ? null : (
@@ -237,10 +318,7 @@ export default function RfqReplyPage() {
                     ) : (
                       <>
                         <b>{r.description}</b>
-                        <span className="muted">
-                          {r.code}
-                          {r.unit ? ` · per ${r.unit}` : ""}
-                        </span>
+                        <span className="muted">{r.code}</span>
                       </>
                     )}
                   </span>
@@ -250,6 +328,13 @@ export default function RfqReplyPage() {
                     ))}
                   </select>
                   <input inputMode="decimal" value={r.rate} onChange={(e) => set(i, { rate: e.target.value })} aria-label="Rate" placeholder="Rate" />
+                  <select value={r.unit} onChange={(e) => set(i, { unit: e.target.value })} aria-label="Unit" title="Charged per">
+                    {rfqUnitOptions(r.unit).map((u) => (
+                      <option key={u.value} value={u.value}>
+                        {u.label}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     inputMode="decimal"
                     value={r.min_charge}
@@ -258,6 +343,14 @@ export default function RfqReplyPage() {
                     placeholder="Min"
                   />
                   <input value={r.remarks} onChange={(e) => set(i, { remarks: e.target.value })} aria-label="Remarks" placeholder="Remarks" />
+                  <button
+                    type="button"
+                    className="link-btn rfq-remove"
+                    onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
+                    title="Remove this charge"
+                  >
+                    Remove
+                  </button>
                 </div>
               ),
             )}

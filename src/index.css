@@ -13303,7 +13303,7 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
 }
 .rfq-add {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
   gap: 6px;
 }
 @media (max-width: 720px) {
@@ -13430,7 +13430,7 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
 .rfq-rate-head,
 .rfq-rate {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) 80px 1fr 1fr minmax(0, 1.4fr);
+  grid-template-columns: minmax(0, 2fr) 76px 1fr 96px 1fr minmax(0, 1.3fr) auto;
   gap: 6px;
   align-items: center;
 }
@@ -13478,11 +13478,13 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
     display: none;
   }
   .rfq-rate {
-    grid-template-columns: 80px 1fr 1fr;
+    grid-template-columns: 76px 1fr 96px 1fr;
   }
-  .rfq-rate .rfq-charge,
-  .rfq-rate input:last-child {
+  .rfq-rate .rfq-charge {
     grid-column: 1 / -1;
+  }
+  .rfq-rate input[aria-label="Remarks"] {
+    grid-column: 1 / span 3;
   }
   .rfq-reply-grid {
     grid-template-columns: 1fr;
@@ -13497,4 +13499,39 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
 }
 .rfq-block {
   min-width: 0;
+}
+.rfq-remove {
+  font-size: 0.8rem;
+  color: var(--orange-ink);
+  white-space: nowrap;
+}
+.rfq-pk {
+  min-width: 640px;
+  margin-bottom: 4px;
+}
+.rfq-pksum {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.rfq-pksum b {
+  color: var(--ink);
+}
+.rfq-charge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+.rfq-charge-list .rfq-charge-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
 }

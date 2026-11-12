@@ -924,7 +924,10 @@ export default function QuoteBuilderPage() {
         await markRfqReplyUsed(rfqPendingUse).catch(() => undefined);
         setRfqPendingUse(null);
         void qc.invalidateQueries({ queryKey: ["quote_rfqs", savedId] });
-        navigate(`/quotes/${savedId}`, { replace: true });
+        // Agent rates in: straight on to sending the quotation to the client.
+        toast("Quotation saved with the agent's rates, send it to the client");
+        navigate(`/quotes/${savedId}/view?comms=1`, { replace: true });
+        return;
       }
       toast("Quotation saved");
       // Stay on the quotation until it's closed. A new one moves to its own

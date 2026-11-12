@@ -226,6 +226,11 @@ export async function deleteRfq(id: string) {
 
 export interface RfqPublic {
   rfq_number: string;
+  /** 0242 on: the details the PDF shows. */
+  reference?: string;
+  rfq_date?: string | null;
+  partner_kind?: PartnerKind;
+  delivery_terms?: string | null;
   mode: string;
   origin: string | null;
   destination: string | null;

@@ -121,7 +121,22 @@ export async function buildPrintSheetPdf(
     const ph = pdf.internal.pageSize.getHeight();
     // Canvas pixels that make up one A4 page at full width.
     const sliceH = Math.floor((canvas.width * ph) / pw);
-    const pages = Math.max(1, Math.ceil(canvas.height / sliceH));
+    // A sheet that's only a little over one page (bottom padding, a long
+    // footer line) is shrunk onto that one page instead of spilling a
+    // near-blank second page.
+    if (canvas.height <= sliceH * 1.12) {
+      const scale = Math.min(1, sliceH / canvas.height);
+      const w = pw * scale;
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", (pw - w) / 2, 0, w, (canvas.height * w) / canvas.width);
+      const one = pdf.output("datauristring");
+      return {
+        filename: `${docName(title, reference)}.pdf`,
+        content: one.slice(one.indexOf(",") + 1),
+      };
+    }
+    // Trailing slivers under ~3% of a page are only the sheet's bottom padding.
+    const rest = canvas.height % sliceH;
+    const pages = Math.max(1, Math.floor(canvas.height / sliceH) + (rest > sliceH * 0.03 ? 1 : 0));
     for (let i = 0; i < pages; i++) {
       const h = Math.min(sliceH, canvas.height - i * sliceH);
       const part = document.createElement("canvas");

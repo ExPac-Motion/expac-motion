@@ -1,10 +1,21 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useCompanySettings, useMyProfile, useQuote } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
-import { formatDate, portCode } from "../lib/format";
+import { formatDate } from "../lib/format";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
-import { usesSeaLayout } from "../lib/docTemplates";
-import { RFQ_TITLE, defaultReplyBy, isRfqKind, rfqChargeGroups, rfqKindLabel, rfqReplyUrl, rfqSections } from "../lib/rfq";
+
+import {
+  RFQ_TITLE,
+  decodeRfqCharges,
+  defaultReplyBy,
+  groupRfqCharges,
+  isRfqKind,
+  rfqDefaultCharges,
+  rfqFactRows,
+  rfqKindLabel,
+  rfqReplyUrl,
+  type RfqChargeItem,
+} from "../lib/rfq";
 import BackButton from "../components/BackButton";
 import type { PartnerKind, Quote } from "../lib/types";
 
@@ -15,14 +26,6 @@ function n2(v: number | string | null | undefined): string {
   });
 }
 
-/** Short section names for the Service Scope line. */
-const SCOPE_LABEL: Record<string, string> = {
-  "International Freight Charges": "International freight",
-  "Ex-Works Charges": "Ex-works / pick up",
-  "FOB Charges": "FOB charges",
-  "Destination Handling and Delivery Charges": "Destination handling and delivery",
-  "Customs Clearance, VAT and Duty Charges": "Customs clearance",
-};
 
 /**
  * Req for Quote (/quotes/:id/rfq): the shipment details an agent needs to
@@ -80,6 +83,7 @@ export default function RfqPrintPage() {
         agent={agent}
         notes={notes}
         token={token}
+        charges={params.get("c") ? decodeRfqCharges(params.get("c") as string, q) : undefined}
       />
     </div>
   );
@@ -106,8 +110,9 @@ export function RfqSheet({
   agent,
   notes,
   token,
+  charges,
 }: {
-  q: Pick<Quote, "reference" | "mode" | "origin" | "destination" | "incoterms" | "commodity" | "request_ready_date" | "etd" | "container_type" | "request_pickup" | "quote_lines" | "packing_list_items">;
+  q: Pick<Quote, "reference" | "mode" | "origin" | "destination" | "incoterms" | "delivery_terms" | "commodity" | "request_ready_date" | "etd" | "container_type" | "request_pickup" | "quote_lines" | "packing_list_items">;
   company: RfqCompany;
   me?: string | null;
   ready: boolean;
@@ -117,12 +122,13 @@ export function RfqSheet({
   notes: string;
   /** The agent's reply-link token; prints their online reply link. */
   token?: string;
+  /** The charges asked for; the defaults for the quote when not given. */
+  charges?: RfqChargeItem[];
 }) {
   const vFactor = volumetricFactor(q.mode);
   const packingRows = q.packing_list_items ?? [];
   const pack = packingTotals(packingRows, vFactor);
-  const groups = rfqChargeGroups(q, kind);
-  const sea = usesSeaLayout(q.mode);
+  const groups = groupRfqCharges(charges ?? rfqDefaultCharges(q, kind));
   const me = meName?.trim();
 
   const parties: [string, string][] = [
@@ -132,26 +138,24 @@ export function RfqSheet({
         .filter(Boolean)
         .join("\n"),
     ],
-    [rfqKindLabel(kind), agent || "—"],
+    [rfqKindLabel(kind), agent || "-"],
   ];
-  const rows: [string, string][] = [
-    ["RFQ Number", `RFQ-${q.reference}`],
-    ["RFQ Date", formatDate(new Date().toISOString())],
-    ["Reply By", formatDate(replyBy)],
-    ["Mode", q.mode],
-    ["Port of Load", portCode(q.origin)],
-    ["Port of Discharge", portCode(q.destination)],
-    ["Origin", q.origin || "—"],
-    ["Destination", q.destination || "—"],
-    ["Incoterms", q.incoterms || "—"],
-    ["Commodity", q.commodity || "—"],
-    ["Cargo Ready", formatDate(q.request_ready_date)],
-    ["ETD", formatDate(q.etd)],
-    ...(sea ? ([["Container Type", q.container_type || "—"]] as [string, string][]) : []),
-    ["Collect From", q.request_pickup?.trim() || "—"],
-    ["Service Scope", rfqSections(kind, q.incoterms).map((c) => SCOPE_LABEL[c] ?? c).join(", ")],
-    ["Rates In", "Currency per line, excl. VAT"],
-  ];
+  const rows = rfqFactRows({
+    reference: q.reference,
+    rfqDate: new Date().toISOString(),
+    replyBy,
+    mode: q.mode,
+    origin: q.origin,
+    destination: q.destination,
+    incoterms: q.incoterms,
+    deliveryTerms: q.delivery_terms,
+    commodity: q.commodity,
+    readyDate: q.request_ready_date ?? null,
+    etd: q.etd,
+    containerType: q.container_type,
+    pickup: q.request_pickup ?? null,
+    kind,
+  });
 
   return (
       <div className="qs-sheet" data-ready={ready ? "1" : undefined}>
@@ -372,7 +376,7 @@ function RfqGroup({ title, rows }: { title: string; rows: { code: string; descri
         <tr key={`${title}-${r.code}`}>
           <td>{r.code}</td>
           <td style={{ whiteSpace: "normal" }}>{r.description}</td>
-          <td>{r.unit || "—"}</td>
+          <td>{r.unit || "-"}</td>
           <td>{r.cur}</td>
           <td className="rfq-fill" />
           <td className="rfq-fill" />

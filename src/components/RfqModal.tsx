@@ -11,11 +11,12 @@ import {
   useCompanySettings,
   useDestinationAgents,
   useTransporters,
+  useTariffSheets,
   useUploadMailAsset,
 } from "../lib/hooks";
 import { sendMail, SUPPORT_BCC } from "../lib/mail";
 import { htmlToText, resolveMergeFields, type MergeContext } from "../lib/mailMerge";
-import { linkifyHtml } from "../lib/mailStyle";
+import { emailButtonHtml, linkifyHtml } from "../lib/mailStyle";
 import { formatDate, portCode } from "../lib/format";
 import { buildPrintSheetPdf } from "../lib/shipmentAttachments";
 import type { QuoteAttachment } from "../lib/quotePdf";
@@ -23,7 +24,11 @@ import {
   RFQ_KINDS,
   RFQ_TITLE,
   defaultReplyBy,
-  rfqChargeGroups,
+  groupRfqCharges,
+  rfqCatalogFor,
+  rfqDefaultCharges,
+  rfqSections,
+  partnersOnRoute,
   rfqKindLabel,
   rfqPrintPath,
   rfqReplyUrl,
@@ -137,6 +142,27 @@ export default function RfqModal({
     if (!p || recipients.some((r) => r.email.toLowerCase() === (p.email ?? "").trim().toLowerCase())) return;
     setRecipients((rs) => [...rs, toRecipient(p)]);
   }
+  // Trade routes = the Rates & Tariff tier-sheet routes; the quote's own
+  // mode first. Picking one adds every partner of this type on it.
+  const tariffQ = useTariffSheets();
+  const routes = useMemo(() => {
+    const sheets = tariffQ.data ?? [];
+    const same = [...new Set(sheets.filter((s) => s.mode === quote.mode).map((s) => s.route))].sort();
+    const other = [...new Set(sheets.map((s) => s.route))].filter((r) => !same.includes(r)).sort();
+    return { same, other };
+  }, [tariffQ.data, quote.mode]);
+  function addRoute(route: string) {
+    if (!route) return;
+    const linked = kind === "agent"
+      ? (tariffQ.data ?? []).filter((s) => s.route === route && s.agent_id).map((s) => s.agent_id as string)
+      : [];
+    const found = partnersOnRoute(route, partners, kind, linked);
+    const fresh = found.filter((p) => !recipients.some((r) => r.email.toLowerCase() === (p.email ?? "").trim().toLowerCase()));
+    if (found.length === 0) return toastError(`No ${rfqKindLabel(kind).toLowerCase()}s with an email cover ${route}`);
+    if (fresh.length === 0) return toast(`Everyone on ${route} is already on the list`);
+    setRecipients((rs) => [...rs, ...fresh.map(toRecipient)]);
+    toast(`Added ${fresh.length} on ${route}: ${fresh.map((p) => p.company).join(", ")}`);
+  }
   function addNew() {
     const email = newEmail.trim();
     if (!EMAIL_RE.test(email)) return toastError(`Not a valid email address: ${email || "(blank)"}`);
@@ -146,9 +172,17 @@ export default function RfqModal({
     setNewCompany("");
   }
 
-  const groups = rfqChargeGroups(quote, kind);
-  const charges: RfqCharge[] = groups.flatMap((g) => g.rows.map((r) => ({ ...r, category: g.category })));
-  const previewPath = rfqPrintPath(quote.id, { kind, replyBy, notes, agent: recipients[0]?.company });
+  // The charges asked for: the defaults for the quote, then whatever staff
+  // remove or add (not every default applies to every shipment).
+  const [charges, setCharges] = useState<RfqCharge[]>(() => rfqDefaultCharges(quote, "agent"));
+  useEffect(() => {
+    setCharges(rfqDefaultCharges(quote, kind));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind]);
+  const addable = rfqSections(kind, quote.incoterms)
+    .flatMap((c) => rfqCatalogFor(kind, c, quote.mode))
+    .filter((c) => !charges.some((x) => x.category === c.category && x.code === c.code));
+  const previewPath = rfqPrintPath(quote.id, { kind, replyBy, notes, agent: recipients[0]?.company, charges });
 
   // Default message: follows the reply-by date until the operator edits it.
   // {{ contact.name }} becomes each agent's contact (or company) on send.
@@ -205,7 +239,7 @@ export default function RfqModal({
         try {
           setProgress(`Preparing PDF for ${who} (${i + 1} of ${made.recipients.length})…`);
           const pdf = await buildPrintSheetPdf(
-            rfqPrintPath(quote.id, { kind, replyBy, notes, agent: r.company ?? "", token: r.token }),
+            rfqPrintPath(quote.id, { kind, replyBy, notes, agent: r.company ?? "", token: r.token, charges }),
             RFQ_TITLE,
             quote.reference,
           );
@@ -220,11 +254,17 @@ export default function RfqModal({
             mode: quote.mode,
           };
           const link = rfqReplyUrl(r.token);
-          let filled = resolveMergeFields(body, ctx);
-          filled = filled.includes(LINK_SENTINEL)
-            ? filled.split(LINK_SENTINEL).join(link)
-            : `${filled}<br><br>Submit your rates online: <a href="${link}">${link}</a>`;
-          const html = linkifyHtml(filled);
+          // The editor's placeholder button becomes the rounded, Outlook-safe
+          // mail button (same as Live Tracking / portal mails), on the
+          // agent's own link. Deleted from the message? The link goes last.
+          const button = emailButtonHtml(link, "Submit your rates");
+          const linked = linkifyHtml(resolveMergeFields(body, ctx));
+          const anchor = /<a\b[^>]*href=["']https:\/\/rfq-reply-link\.invalid\/?["'][^>]*>[\s\S]*?<\/a>/gi;
+          const html = anchor.test(linked)
+            ? linked.replace(anchor, button)
+            : linked.includes(LINK_SENTINEL)
+              ? linked.split(LINK_SENTINEL).join(link)
+              : `${linked}<br><br>${button}`;
           await sendMail({
             to: [r.email],
             cc: ccList.length ? ccList : undefined,
@@ -326,6 +366,27 @@ export default function RfqModal({
                 </option>
               ))}
           </select>
+          <select value="" onChange={(e) => addRoute(e.target.value)} disabled={busy} title="Adds every agent on the route">
+            <option value="">Add all on a trade route…</option>
+            {routes.same.length > 0 && (
+              <optgroup label={quote.mode}>
+                {routes.same.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {routes.other.length > 0 && (
+              <optgroup label="Other modes">
+                {routes.other.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
           <input
             type="email"
             value={newEmail}
@@ -349,6 +410,52 @@ export default function RfqModal({
         <label>CC</label>
         <input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="cc@example.com" disabled={busy} />
         <ExpacCcPicks value={cc} onChange={setCc} />
+      </div>
+      <div className="field">
+        <label>Charges requested ({charges.length})</label>
+        <div className="rfq-charge-list">
+          {groupRfqCharges(charges).map((g) => (
+            <div key={g.category}>
+              <div className="muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>
+                {g.category}
+              </div>
+              {g.rows.map((r) => (
+                <div key={r.code} className="rfq-charge-row">
+                  <span>
+                    <b>{r.code}</b> {r.description}
+                    {r.unit ? <span className="muted"> · {r.unit}</span> : null}
+                  </span>
+                  <button
+                    type="button"
+                    className="link-btn rfq-remove"
+                    disabled={busy}
+                    onClick={() => setCharges((cs) => cs.filter((x) => !(x.category === g.category && x.code === r.code)))}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+          {charges.length === 0 && <span className="hint">No charges, add at least one.</span>}
+        </div>
+        {addable.length > 0 && (
+          <select
+            value=""
+            disabled={busy}
+            onChange={(e) => {
+              const c = addable.find((x) => `${x.category}|${x.code}` === e.target.value);
+              if (c) setCharges((cs) => [...cs, c]);
+            }}
+          >
+            <option value="">Add a charge…</option>
+            {addable.map((c) => (
+              <option key={`${c.category}|${c.code}`} value={`${c.category}|${c.code}`}>
+                {c.code} {c.description} ({c.category})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="field">
         <label>Notes to agent (printed on the RFQ)</label>

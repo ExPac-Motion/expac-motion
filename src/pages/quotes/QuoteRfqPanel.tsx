@@ -6,7 +6,7 @@ import { useToast } from "../../components/Toast";
 import { formatDate, formatDateTime, money } from "../../lib/format";
 import { useCan } from "../../lib/hooks";
 import { LINE_CURRENCIES, type Quote } from "../../lib/types";
-import { rfqKindLabel, rfqReplyTotalZar, rfqReplyUrl } from "../../lib/rfq";
+import { rfqKindLabel, rfqReplyTotalZar, rfqReplyUrl, rfqUnitOptions } from "../../lib/rfq";
 import {
   RFQ_STATUS_LABEL,
   cleanAmount,
@@ -346,8 +346,10 @@ function StaffEntryModal({ rfq, recipient, quoteId, onClose }: { rfq: Rfq; recip
             <th>Charge</th>
             <th>Cur</th>
             <th>Rate</th>
+            <th>Unit</th>
             <th>Min</th>
             <th>Remarks</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -358,7 +360,6 @@ function StaffEntryModal({ rfq, recipient, quoteId, onClose }: { rfq: Rfq; recip
                 <span className="muted">
                   {" "}
                   {r.code}
-                  {r.unit ? ` · ${r.unit}` : ""}
                 </span>
               </td>
               <td>
@@ -372,10 +373,24 @@ function StaffEntryModal({ rfq, recipient, quoteId, onClose }: { rfq: Rfq; recip
                 <input inputMode="decimal" value={r.rate} onChange={(e) => set(i, { rate: e.target.value })} />
               </td>
               <td>
+                <select value={r.unit} onChange={(e) => set(i, { unit: e.target.value })}>
+                  {rfqUnitOptions(r.unit).map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td>
                 <input inputMode="decimal" value={r.min} onChange={(e) => set(i, { min: e.target.value })} />
               </td>
               <td>
                 <input value={r.remarks} onChange={(e) => set(i, { remarks: e.target.value })} />
+              </td>
+              <td>
+                <button type="button" className="link-btn rfq-remove" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
+                  Remove
+                </button>
               </td>
             </tr>
           ))}
