@@ -13418,6 +13418,9 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
 .rfq-sec {
   margin: 12px 0;
 }
+.rfq-sec-add {
+  margin-top: 8px;
+}
 .rfq-sec-head {
   background: var(--green);
   color: var(--ink);

@@ -86,6 +86,15 @@ export default function RfqReplyPage() {
     };
   }, [token]);
 
+  /** A blank extra charge, placed at the end of its section. */
+  const addRow = (category: string) =>
+    setRows((rs) => {
+      const blank: Row = { category, code: "", description: "", unit: "", cur: "USD", rate: "", min_charge: "", remarks: "", extra: true };
+      let at = -1;
+      rs.forEach((r, j) => r.category === category && (at = j));
+      return at < 0 ? [...rs, blank] : [...rs.slice(0, at + 1), blank, ...rs.slice(at + 1)];
+    });
+
   const set = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   async function submit(decline: boolean) {
@@ -354,18 +363,14 @@ export default function RfqReplyPage() {
                 </div>
               ),
             )}
+            {s !== EXTRA && (
+              <button type="button" className="btn outline rfq-sec-add" onClick={() => addRow(s)}>
+                + Add a charge
+              </button>
+            )}
           </div>
         ))}
-        <button
-          type="button"
-          className="btn outline"
-          onClick={() =>
-            setRows((rs) => [
-              ...rs,
-              { category: EXTRA, code: "", description: "", unit: "", cur: "USD", rate: "", min_charge: "", remarks: "", extra: true },
-            ])
-          }
-        >
+        <button type="button" className="btn outline" onClick={() => addRow(EXTRA)}>
           + Add a charge
         </button>
 
