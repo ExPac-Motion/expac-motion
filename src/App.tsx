@@ -50,6 +50,9 @@ import ClearingAgentsPage from "./pages/ClearingAgentsPage";
 import DestinationAgentsPage from "./pages/DestinationAgentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ShipmentDocPrintPage from "./pages/ShipmentDocPrintPage";
+import RfqPrintPage from "./pages/RfqPrintPage";
+import RfqDemoPage from "./pages/RfqDemoPage";
+import RfqReplyPage from "./pages/RfqReplyPage";
 import CrmPage from "./pages/CrmPage";
 import RatesPage from "./pages/RatesPage";
 import PortalLayout from "./pages/portal/PortalLayout";
@@ -228,6 +231,7 @@ function AppRoutes() {
           {import.meta.env.DEV && (
             <Route path="/quotes/demo/print" element={<QuotePrintDemoPage />} />
           )}
+          {import.meta.env.DEV && <Route path="/quotes/demo/rfq" element={<RfqDemoPage />} />}
           {import.meta.env.DEV && (
             <Route path="/dev/wms-print" element={<WmsPrintDemoPage />} />
           )}
@@ -269,6 +273,7 @@ function AppRoutes() {
           )}
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/forms/:id" element={<FormPublicPage />} />
+          <Route path="/rfq/reply/:token" element={<RfqReplyPage />} />
           <Route path="/track" element={<PublicTrackPage />} />
           <Route path="/portal/signup" element={<PortalSignupPage />} />
           <Route path="/partner/signup" element={<PartnerSignupPage />} />
@@ -362,6 +367,7 @@ function AppRoutes() {
           <Route element={<RequireAuth />}>
             <Route path="quotes/:id/print" element={<QuotePrintPage />} />
             <Route path="portal/quotes/:id/print" element={<PortalQuotePrintPage />} />
+            <Route path="quotes/:id/rfq" element={<RfqPrintPage />} />
             <Route
               path="jobs/:id/documents/:doc/print"
               element={<ShipmentDocPrintPage />}

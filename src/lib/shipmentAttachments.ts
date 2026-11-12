@@ -64,9 +64,23 @@ function waitForSheet(doc: Document): Promise<HTMLElement> {
 /** Render a generated shipment document (/jobs/:id/documents/:slug/print)
  *  to an A4 PDF. The sheet is one tall page on screen, so it's captured
  *  once and sliced into A4-height pages. */
-export async function buildShipmentDocPdf(
+export function buildShipmentDocPdf(
   jobId: string,
   slug: string,
+  title: string,
+  reference: string,
+): Promise<QuoteAttachment> {
+  return buildPrintSheetPdf(
+    `/jobs/${encodeURIComponent(jobId)}/documents/${encodeURIComponent(slug)}/print`,
+    title,
+    reference,
+  );
+}
+
+/** Render any single-sheet print page (a `.qs-sheet` that sets data-ready
+ *  once everything has loaded) to an A4 PDF, e.g. the Req for Quote. */
+export async function buildPrintSheetPdf(
+  path: string,
   title: string,
   reference: string,
 ): Promise<QuoteAttachment> {
@@ -80,7 +94,7 @@ export async function buildShipmentDocPdf(
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.cssText =
     "position:fixed;left:-10000px;top:0;width:900px;height:1400px;border:0;visibility:visible;";
-  iframe.src = `/jobs/${encodeURIComponent(jobId)}/documents/${encodeURIComponent(slug)}/print`;
+  iframe.src = path;
   document.body.appendChild(iframe);
 
   try {

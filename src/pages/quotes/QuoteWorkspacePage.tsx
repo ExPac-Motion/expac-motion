@@ -12,6 +12,9 @@ import { todayIso, useJobTimeline } from "../../lib/timeline";
 import { WON_QUOTE_STATUSES, type Job } from "../../lib/types";
 import { RecordTasks } from "../shipments/ShipmentWorkspacePage";
 import BackButton from "../../components/BackButton";
+import RfqModal from "../../components/RfqModal";
+import QuoteRfqPanel, { rfqPending } from "./QuoteRfqPanel";
+import { useQuoteRfqs } from "../../lib/rfqDb";
 
 /**
  * Quote page (/quotes/:id/view): one page per quotation, same build as the
@@ -21,11 +24,12 @@ import BackButton from "../../components/BackButton";
  * quote View pop-up.
  */
 
-const TABS = ["overview", "charges", "tasks", "shipment"] as const;
+const TABS = ["overview", "charges", "rfq", "tasks", "shipment"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABEL: Record<Tab, string> = {
   overview: "Overview",
   charges: "Details & charges",
+  rfq: "Agent rates",
   tasks: "Tasks",
   shipment: "Shipment",
 };
@@ -46,6 +50,9 @@ export default function QuoteWorkspacePage() {
   const canDelete = useCan()("delete");
   const goBack = useBackTo("/quotes");
   const [railOpen, setRailOpen] = useState(() => params.get("comms") === "1");
+  const [rfqOpen, setRfqOpen] = useState(false);
+  const rfqsQ = useQuoteRfqs(id);
+  const rfq = rfqPending(rfqsQ.data);
 
   const tabParam = params.get("tab") as Tab | null;
   const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : "overview";
@@ -101,6 +108,20 @@ export default function QuoteWorkspacePage() {
     actions.push({ key: "portal", text: "Customer accepted on the portal, create the shipment", cta: "Accept", go: onAccept });
   if (q.revision_pending)
     actions.push({ key: "rev", text: "Customer asked for a revision", cta: "Edit quote", go: () => navigate(`/quotes/${q.id}`) });
+  if (rfq.toPick > 0)
+    actions.push({
+      key: "rfq-pick",
+      text: `Agent rates received (${rfq.toPick}), pick one for the quote`,
+      cta: "Agent rates",
+      go: () => setTab("rfq"),
+    });
+  if (rfq.awaiting > 0)
+    actions.push({
+      key: "rfq-wait",
+      text: `Waiting on ${rfq.awaiting} agent${rfq.awaiting === 1 ? "" : "s"} for rates${rfq.nextReply ? `, reply by ${formatDate(rfq.nextReply)}` : ""}`,
+      cta: "Agent rates",
+      go: () => setTab("rfq"),
+    });
   if (!priced)
     actions.push({ key: "price", text: "Not priced yet, add the charges", cta: "Edit quote", go: () => navigate(`/quotes/${q.id}`) });
   else if (q.status === "open")
@@ -134,6 +155,9 @@ export default function QuoteWorkspacePage() {
             <Link className="btn outline" to={`/quotes/${q.id}/print`}>
               Quotation document
             </Link>
+            <button className="btn outline" onClick={() => setRfqOpen(true)} title="Send the shipment details to an agent for rates (no customer details)">
+              Req for Quote
+            </button>
             <Link className="btn outline" to={`/quotes/${q.id}`}>
               Edit quote
             </Link>
@@ -205,6 +229,7 @@ export default function QuoteWorkspacePage() {
           <button key={x} role="tab" aria-selected={tab === x} className={tab === x ? "on" : ""} onClick={() => setTab(x)}>
             {TAB_LABEL[x]}
             {x === "tasks" && openTasks.length > 0 && <span className="ws-count">{openTasks.length}</span>}
+            {x === "rfq" && rfq.awaiting + rfq.toPick > 0 && <span className="ws-count">{rfq.awaiting + rfq.toPick}</span>}
           </button>
         ))}
       </nav>
@@ -282,6 +307,7 @@ export default function QuoteWorkspacePage() {
             <QuoteDetailBody q={q} />
           </div>
         )}
+        {tab === "rfq" && <QuoteRfqPanel quote={q} onNew={() => setRfqOpen(true)} />}
         {tab === "tasks" && (
           <RecordTasks
             tasks={tasks}
@@ -293,6 +319,13 @@ export default function QuoteWorkspacePage() {
       </div>
 
       <QuoteCommsRail quote={q} open={railOpen} onToggle={() => setRailOpen((v) => !v)} />
+      {rfqOpen && (
+        <RfqModal
+          quote={q}
+          onClose={() => setRfqOpen(false)}
+          onSent={() => setTab("rfq")}
+        />
+      )}
     </>
   );
 }

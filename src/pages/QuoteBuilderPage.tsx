@@ -27,6 +27,9 @@ import {
   useTransporters,
 } from "../lib/hooks";
 import { useCustomerConsignees } from "../lib/customers";
+import { useQueryClient } from "@tanstack/react-query";
+import { applyRfqRates, rfqSections } from "../lib/rfq";
+import { getRfqRecipient, markRfqReplyUsed } from "../lib/rfqDb";
 import {
   autoQty,
   buyRate,
@@ -244,6 +247,7 @@ export default function QuoteBuilderPage() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { toast, error } = useToast();
+  const qc = useQueryClient();
 
   const clientsQ = useClients();
   const leadsQ = useLeads();
@@ -302,6 +306,44 @@ export default function QuoteBuilderPage() {
     setLoadedFor(existingQ.data.id);
     setDraft(draftFromQuote(existingQ.data));
   }
+
+  // Quote page › Agent rates › Use these rates (0241): ?rfqReply=<reply id>
+  // loads that agent's rates as buy lines once the quote is in; saving
+  // marks the reply Used (the others on the request Not used).
+  const rfqReplyId = new URLSearchParams(useLocation().search).get("rfqReply");
+  const rfqApplied = useRef<string | null>(null);
+  const [rfqPendingUse, setRfqPendingUse] = useState<string | null>(null);
+  useEffect(() => {
+    if (!rfqReplyId || !draft || !existingQ.data || rfqApplied.current === rfqReplyId) return;
+    rfqApplied.current = rfqReplyId;
+    getRfqRecipient(rfqReplyId)
+      .then((r) => {
+        const kind = r.rfq.partner_kind;
+        const pack = packingTotals(draft.packing, volumetricFactor(draft.mode));
+        const res = applyRfqRates(draft.lines, r.quote_rfq_rates, {
+          mode: draft.mode,
+          pack,
+          fx: fxOfDraft(draft),
+          margin: rateTier(draft.rate_tier).margin,
+          fallback: rfqSections(kind, draft.incoterms)[0] ?? "International Freight Charges",
+        });
+        setDraft((d) =>
+          d
+            ? {
+                ...d,
+                lines: res.lines,
+                ...(r.partner_id ? { [partnerIdKey(kind)]: r.partner_id } : {}),
+              }
+            : d,
+        );
+        setRfqPendingUse(r.id);
+        toast(
+          `Loaded ${r.company || r.email}'s rates: ${res.replaced} replaced, ${res.added} added. Check the figures, then Save.`,
+        );
+      })
+      .catch((e) => error(e instanceof Error ? e.message : "Could not load the agent's rates"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rfqReplyId, draft, existingQ.data]);
 
   // Seed a brand-new quote's FX rates / incoterm from Settings > Quote Defaults,
   // once, as soon as they load, never touches an existing (edit) quote.
@@ -878,6 +920,12 @@ export default function QuoteBuilderPage() {
       const savedId = await saveQuote.mutateAsync(draft);
       // A duplicated quote takes today's date on its first save.
       await finalizeCopied.mutateAsync(savedId);
+      if (rfqPendingUse) {
+        await markRfqReplyUsed(rfqPendingUse).catch(() => undefined);
+        setRfqPendingUse(null);
+        void qc.invalidateQueries({ queryKey: ["quote_rfqs", savedId] });
+        navigate(`/quotes/${savedId}`, { replace: true });
+      }
       toast("Quotation saved");
       // Stay on the quotation until it's closed. A new one moves to its own
       // address, so the next Save updates it instead of making another.
