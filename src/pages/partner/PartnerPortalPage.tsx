@@ -17,6 +17,7 @@ import { PARTNER_LABEL } from "../../lib/tariff";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 import BrokerDesk from "./BrokerDesk";
 import PartnerShipments from "./PartnerShipments";
+import { PartnerDashboard, PartnerQuotes, PartnerTracking } from "./PartnerHome";
 
 /** The partner's own coverage, editable with the edit_coverage permission. */
 function MyCoverage({ me, canEdit }: { me: MyPartner; canEdit: boolean }) {
@@ -79,11 +80,24 @@ export default function PartnerPortalPage() {
   const can = useCan();
   // Clearing agents also get the Broker Desk (customs files, 0232), first.
   const broker = me?.partner_kind === "clearing_agent";
-  // Every partner gets Shipments (0243), first.
-  const [tab, setTab] = useState<"shipments" | "customs" | "rates">("shipments");
-  const view = !broker && tab === "customs" ? "shipments" : tab;
+  // Every partner: Dashboard, Shipments (0243), Tracking, Quotes (0244).
+  const [tab, setTab] = useState<"dashboard" | "shipments" | "tracking" | "quotes" | "customs" | "rates">("dashboard");
+  const view = !broker && tab === "customs" ? "dashboard" : tab;
+  // The shipment open on the Shipments tab (the dashboard and map open them too).
+  const [openJob, setOpenJob] = useState<string | null>(null);
+  const openShipment = (id: string) => {
+    setOpenJob(id);
+    setTab("shipments");
+  };
   const tabBtn = (k: typeof tab, label: string) => (
-    <button type="button" className={`topbar-tab${view === k ? " active" : ""}`} onClick={() => setTab(k)}>
+    <button
+      type="button"
+      className={`topbar-tab${view === k ? " active" : ""}`}
+      onClick={() => {
+        setTab(k);
+        if (k === "shipments") setOpenJob(null);
+      }}
+    >
       {label}
     </button>
   );
@@ -95,7 +109,10 @@ export default function PartnerPortalPage() {
           <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac Motion" />
         </Link>
         <nav className="topbar-primary">
+          {tabBtn("dashboard", "Dashboard")}
           {tabBtn("shipments", "Shipments")}
+          {tabBtn("tracking", "Tracking")}
+          {tabBtn("quotes", "Quotes")}
           {broker && tabBtn("customs", "Customs Files")}
           {tabBtn("rates", "Rate Sheets")}
         </nav>
@@ -127,18 +144,17 @@ export default function PartnerPortalPage() {
           </div>
         ) : (
           <>
-            <p className="hint" style={{ margin: "0 0 4px" }}>
-              ExPac Partner Portal · {PARTNER_LABEL[me.partner_kind]}
+            <p className="hint ph-who">
+              ExPac Partner Portal · {PARTNER_LABEL[me.partner_kind]} · <b>{me.company || "Your company"}</b>
             </p>
-            <h1 style={{ margin: "0 0 6px" }}>{me.company || "Your company"}</h1>
-            {view === "shipments" ? (
-              <>
-                <p className="hint" style={{ margin: "0 0 14px" }}>
-                  Shipments ExPac Forwarding has assigned to you. Keep the status and dates up to date, upload your
-                  documents and message ExPac here; ExPac sees every step.
-                </p>
-                <PartnerShipments kind={me.partner_kind} />
-              </>
+            {view === "dashboard" ? (
+              <PartnerDashboard kind={me.partner_kind} onOpen={openShipment} onTab={setTab} />
+            ) : view === "shipments" ? (
+              <PartnerShipments kind={me.partner_kind} openId={openJob} onOpen={setOpenJob} />
+            ) : view === "tracking" ? (
+              <PartnerTracking kind={me.partner_kind} onOpen={openShipment} />
+            ) : view === "quotes" ? (
+              <PartnerQuotes />
             ) : view === "customs" ? (
               <>
                 <p className="hint" style={{ margin: "0 0 14px" }}>

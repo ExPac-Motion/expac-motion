@@ -3,6 +3,8 @@ import type { PartnerKind, PackingItem } from "../../lib/types";
 import { isRfqKind } from "../../lib/rfq";
 import type { PartnerShipment, PartnerShipmentRow } from "../../lib/partnerShipments";
 import PartnerShipments from "./PartnerShipments";
+import { PartnerDashboard, PartnerQuotes, PartnerTracking } from "./PartnerHome";
+import type { PartnerRfq } from "../../lib/partnerShipments";
 import PartnersTab from "../shipments/PartnersTab";
 import type { Job } from "../../lib/types";
 
@@ -31,6 +33,7 @@ const ROWS: PartnerShipmentRow[] = [
     completed: false,
     unread: 1,
     action: "Booking details missing",
+    tracking: { vessel_lat: null, vessel_lon: null, position_at: null, pol_lat: 31.23, pol_lon: 121.47, pod_lat: -29.87, pod_lon: 31.03, status: "booked" },
   },
   {
     id: "demo2",
@@ -51,6 +54,8 @@ const ROWS: PartnerShipmentRow[] = [
     completed: false,
     unread: 0,
     action: null,
+    vessel_name: "EK 772",
+    tracking: { vessel_lat: 5.2, vessel_lon: 58.4, position_at: "2026-11-13T06:10:00Z", pol_lat: 22.31, pol_lon: 113.92, pod_lat: -26.13, pod_lon: 28.24, status: "in_transit" },
   },
 ];
 
@@ -108,9 +113,49 @@ export default function PartnerShipmentsDemo() {
   const k = params.get("kind");
   const kind: PartnerKind = isRfqKind(k) ? k : "agent";
   if (params.get("view") === "staff") return <StaffDemo />;
+  const v = params.get("view") ?? "shipments";
+  const tabs = [
+    ["dashboard", "Dashboard"],
+    ["shipments", "Shipments"],
+    ["tracking", "Tracking"],
+    ["quotes", "Quotes"],
+    ...(kind === "clearing_agent" ? [["customs", "Customs Files"]] : []),
+    ["rates", "Rate Sheets"],
+  ];
+  // The real portal's top bar, so the page header sits where it does live.
   return (
-    <div className="main">
-      <PartnerShipments kind={kind} demoRows={ROWS} demoShipment={SHIPMENT(kind)} />
+    <div className="app-shell">
+      <header className="topbar-nav">
+        <span className="topbar-brand">
+          <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac Motion" />
+        </span>
+        <nav className="topbar-primary">
+          {tabs.map(([k, label]) => (
+            <span key={k} className={`topbar-tab${v === k ? " active" : ""}`}>
+              {label}
+            </span>
+          ))}
+        </nav>
+        <div className="topbar-utils">
+          <div className="topbar-account">
+            <span className="who">ops@demo-logistics.example</span>
+          </div>
+        </div>
+      </header>
+      <main className="main">
+        <p className="hint ph-who">
+          ExPac Partner Portal · Agent · <b>Demo Logistics Co. Ltd</b>
+        </p>
+        {v === "dashboard" ? (
+          <PartnerDashboard kind={kind} onOpen={() => undefined} onTab={() => undefined} demoRows={ROWS} demoRfqs={RFQS} />
+        ) : v === "tracking" ? (
+          <PartnerTracking kind={kind} onOpen={() => undefined} demoRows={ROWS} />
+        ) : v === "quotes" ? (
+          <PartnerQuotes demoRfqs={RFQS} />
+        ) : (
+          <PartnerShipments kind={kind} demoRows={ROWS} demoShipment={SHIPMENT(kind)} openId={params.get("open")} onOpen={() => undefined} />
+        )}
+      </main>
     </div>
   );
 }
@@ -144,3 +189,42 @@ function StaffDemo() {
     </div>
   );
 }
+
+const RFQS: PartnerRfq[] = [
+  {
+    id: "q1",
+    token: "demo",
+    rfq_number: "RFQ-SEA126101",
+    reference: "SEA126101",
+    mode: "Sea Freight (LCL)",
+    origin: "CNNGB Ningbo, China",
+    destination: "ZADUR Durban, South Africa",
+    incoterms: "EXW",
+    reply_by: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+    sent_at: "2026-11-12T08:00:00Z",
+    status: "awaiting",
+    responded_at: null,
+    validity: null,
+    transit_time: null,
+    remarks: null,
+    rates: [],
+  },
+  {
+    id: "q2",
+    token: "demo",
+    rfq_number: "RFQ-AIR126090",
+    reference: "AIR126090",
+    mode: "Air Freight (AIR)",
+    origin: "HKHKG Hong Kong",
+    destination: "ZAJNB Johannesburg",
+    incoterms: "FOB",
+    reply_by: "2026-11-10",
+    sent_at: "2026-11-08T08:00:00Z",
+    status: "used",
+    responded_at: "2026-11-09T10:00:00Z",
+    validity: "30/11/2026",
+    transit_time: "3 days via DXB",
+    remarks: null,
+    rates: [{ code: "AF-01", description: "Air Freight Fee", unit: "KG", cur: "USD", rate: 4.2, min_charge: 85, remarks: null }],
+  },
+];

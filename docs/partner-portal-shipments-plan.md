@@ -117,3 +117,7 @@ One digest per day for anything else.
 | 7 | none | Merge Broker Desk into the clearing agent's shipment page (keep Broker Desk as a filter) |
 
 Steps 1 to 4 make it usable for partners; 5 and 6 close the loop for ops.
+
+## Update 13/11/2026: agent profile (0244)
+
+User direction: agents need a full view on their own profile (ops, tracking, quotes and rates, milestone statuses), linked to Motion active shipments; agents have nothing to do with the clearing agent, so step 7 (Broker Desk merge) is dropped. Built: Dashboard (counts, fleet map, needs attention, arriving next), Shipments list on the shared DataTable grid like Active Shipments, Tracking tab (fleet map + grid), Quotes tab (RFQs sent to the partner via partner_rfqs()), email alerts (partner_alerts queue, pg_cron partner-alerts every 5 min: assigned + ETD/ETA/delivery date changes by ExPac). No-login link not built (profile login instead). Manual: docs/partner-manual (ExPac Motion - Vendor Profile Manual.pdf, source manual.html, screenshots from /dev/partner-shipments?view=...).

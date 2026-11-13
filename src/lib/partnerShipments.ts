@@ -26,6 +26,18 @@ export interface PartnerShipmentRow {
   delivery_date: string | null;
   awb_mbl: string | null;
   container_no: string | null;
+  vessel_name?: string | null;
+  /** Latest position (0244), for the dashboard map. */
+  tracking?: {
+    vessel_lat: number | null;
+    vessel_lon: number | null;
+    position_at: string | null;
+    pol_lat: number | null;
+    pol_lon: number | null;
+    pod_lat: number | null;
+    pod_lon: number | null;
+    status: string | null;
+  } | null;
   completed: boolean;
   unread: number;
   action: string | null;
@@ -370,4 +382,53 @@ export function useStaffPartnerMutation<A>(fn: (a: A) => Promise<void>) {
     mutationFn: fn,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["job_partner_messages"] }),
   });
+}
+
+/* ---------------- Requests for Quote sent to this partner (0244) ---------------- */
+
+export interface PartnerRfq {
+  id: string;
+  token: string;
+  rfq_number: string;
+  reference: string;
+  mode: string | null;
+  origin: string | null;
+  destination: string | null;
+  incoterms: string | null;
+  reply_by: string | null;
+  sent_at: string;
+  status: "awaiting" | "received" | "used" | "not_used" | "declined";
+  responded_at: string | null;
+  validity: string | null;
+  transit_time: string | null;
+  remarks: string | null;
+  rates: { code: string | null; description: string; unit: string | null; cur: string; rate: number | null; min_charge: number | null; remarks: string | null }[];
+}
+
+/** How a request reads to the partner. */
+export function partnerRfqStatus(r: Pick<PartnerRfq, "status" | "reply_by">): { label: string; tone: string } {
+  const overdue = r.status === "awaiting" && !!r.reply_by && r.reply_by < new Date().toISOString().slice(0, 10);
+  if (overdue) return { label: "Reply overdue", tone: "warn" };
+  switch (r.status) {
+    case "awaiting":
+      return { label: "Waiting for your rates", tone: "amber" };
+    case "received":
+      return { label: "Rates sent, with ExPac", tone: "teal" };
+    case "used":
+      return { label: "Your rates were used", tone: "green" };
+    case "not_used":
+      return { label: "Not selected this time", tone: "muted" };
+    default:
+      return { label: "You declined", tone: "muted" };
+  }
+}
+
+export async function listPartnerRfqs(): Promise<PartnerRfq[]> {
+  const { data, error } = await supabase.rpc("partner_rfqs");
+  if (error) fail(error);
+  return (data ?? []) as PartnerRfq[];
+}
+
+export function usePartnerRfqs(enabled = true) {
+  return useQuery({ queryKey: ["partner_rfqs"], queryFn: listPartnerRfqs, enabled, retry: false });
 }

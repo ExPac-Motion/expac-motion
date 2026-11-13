@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ExPac Motion: Vendor Profile Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --navy: #10263e; --card: #1b3554; --card2: #22406a; --coral: #f0505f; --lime: #8dc63f;
+    --lime-dark: #5f9a22; --text: #ffffff; --muted: #b9c6d6; --line: rgba(255,255,255,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0b1b2d; }
+  body { font-family: "Red Hat Display", system-ui, sans-serif; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide { width: 1280px; height: 720px; background: var(--navy); position: relative; overflow: hidden; page-break-after: always; break-after: page; }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  /* the brochure's lime shards on the right edge */
+  .shards::before, .shards::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; }
+  .shards::before { width: 120px; background: var(--lime); clip-path: polygon(70% 0, 100% 0, 100% 100%, 40% 100%, 100% 55%, 55% 40%); opacity: .95; }
+  .shards::after { width: 230px; background: var(--lime-dark); clip-path: polygon(100% 62%, 100% 100%, 20% 100%); opacity: .9; }
+  .pad { position: absolute; inset: 0; padding: 62px 80px 50px 80px; }
+  .eyebrow { color: var(--lime); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; font-size: 15px; margin-bottom: 10px; }
+  h1 { font-size: 58px; line-height: 1.05; font-weight: 700; }
+  h2 { color: var(--coral); font-size: 42px; line-height: 1.12; font-weight: 700; margin-bottom: 26px; }
+  .lead { color: var(--muted); font-size: 20px; line-height: 1.5; }
+  .steps { list-style: none; display: grid; gap: 20px; }
+  .steps li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; }
+  .num { width: 34px; height: 34px; border-radius: 50%; background: var(--lime); color: var(--navy); font-weight: 800; font-size: 17px; display: grid; place-items: center; }
+  .steps b { display: block; font-size: 20px; font-weight: 600; margin-bottom: 3px; }
+  .steps span { color: var(--muted); font-size: 16px; line-height: 1.45; display: block; }
+  .two { display: grid; grid-template-columns: 330px 1fr; gap: 44px; height: 100%; align-items: center; }
+  .two.wide-text { grid-template-columns: 400px 1fr; }
+  /* browser frame around a screenshot */
+  .browser { background: #f4f1ea; border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,.45); overflow: hidden; position: relative; }
+  .browser .bar { height: 26px; background: #e9e5dc; display: flex; align-items: center; gap: 7px; padding-left: 12px; }
+  .browser .bar i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .browser .bar i:nth-child(1) { background: #f05f57; } .browser .bar i:nth-child(2) { background: #f8bd2e; } .browser .bar i:nth-child(3) { background: #2ac940; }
+  .browser .shot { position: relative; }
+  .browser img { display: block; width: 100%; }
+  .crop { overflow: hidden; }
+  .pin { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--coral); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; box-shadow: 0 0 0 4px rgba(240,80,95,.3), 0 4px 10px rgba(0,0,0,.35); }
+  .cards { display: grid; gap: 18px; }
+  .card { background: var(--card); border-radius: 14px; padding: 22px 22px 20px; }
+  .card .ico { width: 38px; height: 38px; border-radius: 50%; background: var(--lime); color: var(--navy); display: grid; place-items: center; font-weight: 800; font-size: 17px; margin-bottom: 14px; }
+  .card b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .card span { color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .tip { margin-top: 22px; background: rgba(141,198,63,.12); border-left: 4px solid var(--lime); border-radius: 0 10px 10px 0; padding: 12px 16px; color: #dfe9d2; font-size: 15px; line-height: 1.45; }
+  .tip b { color: var(--lime); }
+  .status { display: grid; grid-template-columns: 170px 1fr; gap: 10px 14px; font-size: 15px; align-items: center; }
+  .chip { border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: 13px; text-align: center; }
+  .chip.req { background: #fdf0d5; color: #8a5a00; } .chip.resp { background: #d9f1ee; color: #0b6b62; }
+  .chip.rev { background: #ece7fb; color: #5a3fb0; } .chip.acc { background: #dff2cf; color: #3d6e12; } .chip.closed { background: #e6e9ee; color: #4b5563; }
+  .status span { color: var(--muted); line-height: 1.4; }
+  .footer { position: absolute; left: 80px; bottom: 24px; font-size: 12px; color: #7d8ea6; letter-spacing: .04em; }
+  .pageno { position: absolute; right: 150px; bottom: 24px; font-size: 12px; color: #7d8ea6; }
+  .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 28px; }
+  .faq div { background: var(--card); border-radius: 12px; padding: 16px 18px; }
+  .faq b { display: block; font-size: 16px; margin-bottom: 6px; }
+  .faq span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+  .contact { list-style: none; display: grid; gap: 16px; margin-top: 30px; }
+  .contact li { display: flex; align-items: center; gap: 16px; font-size: 24px; font-weight: 600; }
+  .contact .num { width: 46px; height: 46px; font-size: 20px; }
+  .two > * { min-width: 0; }
+  .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .table th { text-align: left; color: var(--lime); font-weight: 700; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .table td { padding: 9px 10px; border-bottom: 1px solid var(--line); color: var(--muted); vertical-align: top; line-height: 1.4; }
+  .table td:first-child { color: #fff; font-weight: 600; width: 170px; }
+  .chip.wait { background: #fdf0d5; color: #8a5a00; } .chip.sent { background: #d9f1ee; color: #0b6b62; }
+  .chip.used { background: #dff2cf; color: #3d6e12; } .chip.late { background: #ef4910; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- 1. Cover -->
+<section class="slide shards">
+  <div class="pad" style="padding-top:70px">
+    <img src="img/logo-white.png" alt="ExPac" style="width:190px;margin-bottom:26px" />
+    <div class="eyebrow">ExPac Motion · Partner Portal</div>
+    <h1 style="max-width:560px">Vendor Profile<br />&amp; Portal Manual</h1>
+    <p style="color:var(--coral);font-size:26px;font-weight:600;margin:18px 0 16px">Your shipments, tracking, quotes and rates</p>
+    <p class="lead" style="max-width:500px">For ExPac's agents, transporters and destination partners: how to follow your ExPac shipments live, update milestones, reply to rate requests and keep your rates current.</p>
+  </div>
+  <div class="browser" style="position:absolute;left:600px;top:130px;width:600px">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <div class="shot"><img src="img/01-dashboard.png" alt="Partner dashboard" /></div>
+  </div>
+</section>
+
+<!-- 2. Contents -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">What's inside</div>
+    <h2>Everything on your profile, in one place</h2>
+    <div class="cards" style="grid-template-columns:repeat(4,1fr);max-width:1060px">
+      <div class="card"><div class="ico">1</div><b>Getting started</b><span>Your invite, signing in and the menu.</span></div>
+      <div class="card"><div class="ico">2</div><b>Dashboard</b><span>What's moving, what's arriving and what needs you.</span></div>
+      <div class="card"><div class="ico">3</div><b>Shipments</b><span>Every ExPac shipment assigned to you, in one grid.</span></div>
+      <div class="card"><div class="ico">4</div><b>Update a shipment</b><span>Booking details, milestones, delays and the POD.</span></div>
+      <div class="card"><div class="ico">5</div><b>Documents &amp; messages</b><span>Upload your documents and talk to our ops team.</span></div>
+      <div class="card"><div class="ico">6</div><b>Live tracking</b><span>All your shipments on one map.</span></div>
+      <div class="card"><div class="ico">7</div><b>Quotes</b><span>Our Requests for Quote and your replies.</span></div>
+      <div class="card"><div class="ico">8</div><b>Rate sheets</b><span>Keep your rates and coverage up to date.</span></div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">2</div>
+</section>
+
+<!-- 3. Getting started -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">1 · Getting started</div>
+        <h2>Sign in to your profile</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Open your invite</b><span>ExPac emails a "Create your partner login" link. Sign up with the same email address it was sent to.</span></div></li>
+          <li><div class="num">2</div><div><b>Sign in at expac-motion.co.za</b><span>Any computer or phone, no app to install. Your profile opens on the Dashboard.</span></div></li>
+          <li><div class="num">3</div><div><b>Use the top menu</b><span>Dashboard, Shipments, Tracking, Quotes and Rate Sheets. Your company and partner type show above each page.</span></div></li>
+        </ul>
+        <div class="tip"><b>One profile per company.</b> Need a login for a colleague? Ask us and we'll send another invite.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:300px"><img src="img/01-dashboard.png" alt="Menu" />
+          <span class="pin" style="left:27%;top:9%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">3</div>
+</section>
+
+<!-- 4. Dashboard -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">2 · Dashboard</div>
+        <h2>Your day at a glance</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>The counters</b><span>Active shipments, arriving in 5 days, needing your action, rate requests waiting and new messages. Click one to jump there.</span></div></li>
+          <li><div class="num">2</div><div><b>Where your shipments are</b><span>Green dot: live vessel or flight position. Teal dot: the port, until it's tracking.</span></div></li>
+          <li><div class="num">3</div><div><b>Needs your attention</b><span>Rate requests to answer and shipments missing an update, with a button straight to each.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot"><img src="img/01-dashboard.png" alt="Dashboard" />
+          <span class="pin" style="left:4%;top:24%">1</span>
+          <span class="pin" style="left:4%;top:38%">2</span>
+          <span class="pin" style="left:62%;top:38%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">4</div>
+</section>
+
+<!-- 5. Shipments grid -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">3 · Shipments</div>
+    <h2>Every shipment assigned to you</h2>
+    <div class="browser" style="width:1010px">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="shot crop" style="height:240px"><img src="img/02-shipments.png" alt="Shipments" />
+        <span class="pin" style="left:23%;top:30%">1</span>
+        <span class="pin" style="left:38%;top:30%">2</span>
+        <span class="pin" style="left:46%;top:58%">3</span>
+        <span class="pin" style="left:79%;top:30%">4</span>
+      </div>
+    </div>
+    <div class="cards" style="grid-template-columns:repeat(4,1fr);max-width:1010px;margin-top:22px">
+      <div class="card"><div class="ico">1</div><b>Search</b><span>Shipment number, MBL / AWB, container or vessel.</span></div>
+      <div class="card"><div class="ico">2</div><b>Filter</b><span>Active, Delivered or All, and by Air, Sea or Road.</span></div>
+      <div class="card"><div class="ico">3</div><b>Action Needed</b><span>What ExPac is waiting for. A red ETA means arrival is 5 days away or less.</span></div>
+      <div class="card"><div class="ico">4</div><b>Your grid</b><span>Sort, resize and move columns, then Save Grid. Table settings shows or hides columns.</span></div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">5</div>
+</section>
+
+<!-- 6. Shipment page -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two wide-text">
+      <div>
+        <div class="eyebrow">4 · Update a shipment</div>
+        <h2>Open a shipment</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Shipment details</b><span>Mode, incoterm, delivery terms, route, dates, carrier and container. Only your leg: no customer details or selling prices.</span></div></li>
+          <li><div class="num">2</div><div><b>Collect from / Deliver to</b><span>Agents see the shipper and pickup address; delivering partners see the delivery address and site contact.</span></div></li>
+          <li><div class="num">3</div><div><b>Update status</b><span>Pick the next milestone, add a note and save. ExPac and the timeline update straight away.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:470px"><img src="img/03-shipment.png" alt="Shipment" style="margin-top:-47px" />
+          <span class="pin" style="left:3%;top:16%">1</span>
+          <span class="pin" style="left:3%;top:45%">2</span>
+          <span class="pin" style="left:66%;top:12%">3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">6</div>
+</section>
+
+<!-- 7. Milestones by partner type -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">4 · Update a shipment</div>
+    <h2>Which milestones you update</h2>
+    <table class="table" style="max-width:1010px">
+      <tr><th>Partner</th><th>You set</th><th>You fill in</th></tr>
+      <tr><td>Origin agent</td><td>Booked, Collected, Received (CFS / airline), Loaded, Departed</td><td>Booking details: carrier, shipping line, vessel or flight, voyage, MBL / MAWB, container and seal, ETD and ETA</td></tr>
+      <tr><td>Transporter</td><td>Collected, Out for delivery, Delivered</td><td>Who signed for it and the delivery date, then upload the signed POD</td></tr>
+      <tr><td>Destination agent</td><td>Arrived, Discharged, Out for delivery, Delivered</td><td>Arrival notification and POD</td></tr>
+      <tr><td>Clearing agent</td><td>Entry lodged, Query raised, Customs cleared (Customs Files)</td><td>Entry number, release note, customs entry, duty / VAT invoice</td></tr>
+    </table>
+    <div class="tip" style="max-width:1010px"><b>Running late?</b> Use <b>Report a delay</b> on the shipment: say what happened and give the new ETA or delivery date. ExPac gets it as a priority task.</div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">7</div>
+</section>
+
+<!-- 8. Booking details -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two wide-text">
+      <div>
+        <div class="eyebrow">4 · Update a shipment</div>
+        <h2>Booking details (agents)</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Fill in what you have</b><span>Carrier, vessel or flight, voyage, MBL / MAWB, container, seal, ETD, ETA. Dates are dd/mm/yyyy.</span></div></li>
+          <li><div class="num">2</div><div><b>Save booking details</b><span>They go straight onto the ExPac shipment and its tracking. Every change is logged with your company name.</span></div></li>
+        </ul>
+        <div class="tip"><b>Tip:</b> the MBL / MAWB and container numbers start live tracking, so fill them in as soon as you have them.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:300px"><img src="img/03-shipment.png" alt="Booking details" style="margin-top:-306px" />
+          <span class="pin" style="left:3%;top:9%">1</span>
+          <span class="pin" style="left:49%;top:52%">2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">8</div>
+</section>
+
+<!-- 9. Charges & documents -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two wide-text">
+      <div>
+        <div class="eyebrow">5 · Documents &amp; messages</div>
+        <h2>Your charges and documents</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Your charges</b><span>The rates ExPac booked with you for this shipment, per charge, excl. VAT.</span></div></li>
+          <li><div class="num">2</div><div><b>Upload a document</b><span>Pick the type (B/L or AWB, HBL, invoice, packing list, POD, delivery note, photos...) and choose the file. Upload your invoice as "Supplier Invoice".</span></div></li>
+        </ul>
+        <div class="tip"><b>Private by default.</b> Your uploads go to ExPac only. Our team decides what the customer sees.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:225px"><img src="img/03-shipment.png" alt="Charges and documents" style="margin-top:-567px" />
+          <span class="pin" style="left:3%;top:8%">1</span>
+          <span class="pin" style="left:3%;top:86%">2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">9</div>
+</section>
+
+<!-- 10. Messages & alerts -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two">
+      <div>
+        <div class="eyebrow">5 · Documents &amp; messages</div>
+        <h2>Talk to our ops team</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Messages with ExPac</b><span>One thread per shipment. A "new" badge shows on the shipment when we've written to you.</span></div></li>
+          <li><div class="num">2</div><div><b>Document requests</b><span>When we need a document, we'll ask here (and by email). Upload it on the same shipment.</span></div></li>
+          <li><div class="num">3</div><div><b>Email alerts</b><span>We email you when a shipment is assigned to you and when ExPac changes its ETD, ETA or delivery date, all in one email.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser" style="width:450px;justify-self:center">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:300px"><img src="img/03-shipment.png" alt="Messages" style="width:1440px;max-width:none;margin:-610px 0 0 -962px" /></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">10</div>
+</section>
+
+<!-- 11. Tracking -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two wide-text">
+      <div>
+        <div class="eyebrow">6 · Live tracking</div>
+        <h2>All your shipments on one map</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>The map</b><span>Click a dot for the shipment, vessel or flight, status and ETA, then open it.</span></div></li>
+          <li><div class="num">2</div><div><b>The tracking grid</b><span>Vessel or flight, ports, ETD, ETA, Live or Estimated position and when it last updated.</span></div></li>
+        </ul>
+        <div class="tip"><b>Not tracking yet?</b> Add the MBL / MAWB or container number to the booking details and tracking starts automatically.</div>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:350px"><img src="img/04-tracking.png" alt="Tracking" style="margin-top:-50px" />
+          <span class="pin" style="left:3%;top:22%">1</span>
+          <span class="pin" style="left:3%;top:84%">2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">11</div>
+</section>
+
+<!-- 12. Quotes -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">7 · Quotes</div>
+    <h2>Our Requests for Quote</h2>
+    <div class="browser" style="width:1010px">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="shot crop" style="height:220px"><img src="img/05-quotes.png" alt="Quotes" />
+        <span class="pin" style="left:5%;top:72%">1</span>
+      </div>
+    </div>
+    <div class="status" style="max-width:1010px;margin-top:22px">
+      <span class="chip wait">Waiting for your rates</span><span>ExPac asked for your rates. <b style="color:#fff">Send rates</b> opens the reply form.</span>
+      <span class="chip sent">Rates sent, with ExPac</span><span>We have your reply. You can still edit it until we decide.</span>
+      <span class="chip used">Your rates were used</span><span>We quoted our customer on your rates. Watch Shipments for the booking.</span>
+      <span class="chip late">Reply overdue</span><span>Past the reply-by date (48 hours from the request). Send what you can.</span>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">12</div>
+</section>
+
+<!-- 13. Reply to an RFQ -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="two wide-text">
+      <div>
+        <div class="eyebrow">7 · Quotes</div>
+        <h2>Send your rates</h2>
+        <ul class="steps">
+          <li><div class="num">1</div><div><b>Check the shipment</b><span>Mode, ports, incoterm, delivery terms, cargo ready date and the full packing list, as on the RFQ PDF.</span></div></li>
+          <li><div class="num">2</div><div><b>Price each charge</b><span>Currency, rate, the unit you charge per (KG, CBM, W/M, AWB, container...) and any minimum. Remove what doesn't apply, add what's missing.</span></div></li>
+          <li><div class="num">3</div><div><b>Validity &amp; transit</b><span>Add rate validity, transit time or routing, then <b style="display:inline;font-size:16px">Send rates to ExPac</b>. Can't quote? Tell us with one click.</span></div></li>
+        </ul>
+      </div>
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="shot crop" style="height:470px"><img src="img/06-reply.png" alt="RFQ reply" style="width:961px;max-width:none;margin:-503px 0 0 -143px" /></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">13</div>
+</section>
+
+<!-- 14. Rate sheets -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">8 · Rate sheets</div>
+    <h2>Keep your rates and coverage current</h2>
+    <div class="cards" style="grid-template-columns:repeat(3,1fr);max-width:1010px">
+      <div class="card"><div class="ico">1</div><b>One sheet per route</b><span>A rate sheet per mode and trade route, on ExPac's charge codes, in your currency. Add or update a sheet whenever your rates change, at least weekly.</span></div>
+      <div class="card"><div class="ico">2</div><b>Coverage</b><span>The modes, countries and ports you handle. We use it to send you the right Requests for Quote and shipments.</span></div>
+      <div class="card"><div class="ico">3</div><b>Every change counts</b><span>ExPac sees each update with its date. Sheets can be added and edited; ask us if one needs removing.</span></div>
+    </div>
+    <div class="tip" style="max-width:1010px"><b>Why it matters:</b> current rates on your sheets mean we can quote our customers on your rates straight away, without a new request each time.</div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">14</div>
+</section>
+
+<!-- 15. Quick answers -->
+<section class="slide shards">
+  <div class="pad">
+    <div class="eyebrow">Quick answers</div>
+    <h2>Good to know</h2>
+    <div class="faq" style="max-width:1060px">
+      <div><b>Why don't I see a shipment?</b><span>Only shipments ExPac has assigned to your company show. Ask us if one is missing.</span></div>
+      <div><b>Can I see the customer or our selling price?</b><span>No. Your profile shows your leg of the shipment and your own rates only.</span></div>
+      <div><b>I entered a wrong date or number.</b><span>Save the correct one. Every change is logged, and the latest value counts.</span></div>
+      <div><b>Who sees my messages?</b><span>ExPac's ops team. Messages never go to the customer.</span></div>
+      <div><b>Can I delete an upload?</b><span>No, uploads are kept for the record. Upload the right file and message us to ignore the wrong one.</span></div>
+      <div><b>Too many emails?</b><span>Alerts are grouped: one email per round of changes, not one per change.</span></div>
+    </div>
+  </div>
+  <div class="footer">ExPac Motion · Vendor Profile &amp; Portal Manual</div><div class="pageno">15</div>
+</section>
+
+<!-- 16. Thank you -->
+<section class="slide shards">
+  <div class="pad" style="padding-top:110px">
+    <img src="img/logo-white.png" alt="ExPac" style="width:190px;margin-bottom:22px" />
+    <h1 style="font-size:76px">Thank you!</h1>
+    <p style="color:var(--coral);font-size:28px;font-weight:600;margin:14px 0 10px">Let's keep the cargo moving, together.</p>
+    <p class="lead" style="max-width:520px">Questions, another login for your team, or a walk-through of your profile: we're a message away.</p>
+    <ul class="contact">
+      <li><span class="num">☎</span>+27 11 568 8281</li>
+      <li><span class="num">✉</span>support@expac.co.za</li>
+      <li><span class="num">⌁</span>expac-motion.co.za</li>
+    </ul>
+  </div>
+  <div style="position:absolute;right:0;top:0;width:560px;height:720px;background:url(img/brochure-p17.png) right center / auto 100% no-repeat"></div>
+</section>
+
+</body>
+</html>

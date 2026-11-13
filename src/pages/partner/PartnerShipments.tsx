@@ -9,11 +9,12 @@ import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import BackButton from "../../components/BackButton";
 import DateInput from "../../components/DateInput";
 import TrackingMap from "../../components/TrackingMap";
-import { EmptyState, ErrorNote, Loading } from "../../components/common";
+import DataTable, { type DataColumn } from "../../components/DataTable";
+import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, RowActions, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
 import { packingRow, packingTotals, volumetricFactor } from "../../lib/calc";
 import { getShipmentDocumentUrl } from "../../lib/db";
-import { formatDate, formatDateTime } from "../../lib/format";
+import { formatDate, formatDateTime, portCode } from "../../lib/format";
 import { stepLabel } from "../../lib/steps";
 import { aisRoute } from "../../lib/trackRoute";
 import { shipmentStatusSlug, type PartnerKind } from "../../lib/types";
@@ -47,128 +48,192 @@ function StatusPill({ status, mode }: { status: string | null; mode: string | nu
 
 /* ---------------- List ---------------- */
 
+const MODE_TABS = [
+  { key: "all", label: "All" },
+  { key: "air", label: "Air" },
+  { key: "sea", label: "Sea" },
+  { key: "road", label: "Road" },
+] as const;
+type ModeTab = (typeof MODE_TABS)[number]["key"];
+const modeOf = (m: string | null | undefined): Exclude<ModeTab, "all"> =>
+  /^(air|courier)/i.test(m ?? "") ? "air" : /^road/i.test(m ?? "") ? "road" : "sea";
+
+/** Days until a date (negative = past), null without one. */
+const daysUntil = (iso: string | null | undefined) => (iso ? Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000) : null);
+
 export default function PartnerShipments({
   kind,
+  openId: openIdIn,
+  onOpen,
   demoRows,
   demoShipment,
 }: {
   kind: PartnerKind;
+  /** Controlled from the portal (the dashboard opens shipments too). */
+  openId?: string | null;
+  onOpen?: (id: string | null) => void;
   /** DEV previews only. */
   demoRows?: PartnerShipmentRow[];
   demoShipment?: PartnerShipment;
 }) {
   const q = usePartnerShipments(!demoRows);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [showDone, setShowDone] = useState(false);
+  const [openLocal, setOpenLocal] = useState<string | null>(null);
+  const openId = openIdIn !== undefined ? openIdIn : openLocal;
+  const setOpenId = (id: string | null) => (onOpen ? onOpen(id) : setOpenLocal(id));
+  const [view, setView] = useState<"active" | "delivered" | "all">("active");
+  const [modeTab, setModeTab] = useState<ModeTab>("all");
   const [search, setSearch] = useState("");
+  const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
   const all = useMemo(() => demoRows ?? q.data ?? [], [demoRows, q.data]);
-  const active = all.filter((r) => !r.completed);
-  const done = all.filter((r) => r.completed);
   const needle = search.trim().toLowerCase();
-  const rows = (showDone ? done : active).filter(
-    (r) => !needle || [r.reference, r.master_reference, r.awb_mbl, r.container_no].some((v) => v?.toLowerCase().includes(needle)),
-  );
-
-  if (openId)
-    return <PartnerShipmentPage id={openId} kind={kind} demo={demoShipment} onBack={() => setOpenId(null)} />;
-  if (!demoRows && q.isLoading) return <Loading />;
-  if (!demoRows && q.error)
-    return isMissingPartnerShipments(q.error) ? (
-      <div className="panel">
-        <EmptyState>Shipments are being switched on. Check back shortly.</EmptyState>
-      </div>
-    ) : (
-      <ErrorNote error={q.error} />
+  const rows = all
+    .filter((r) => (view === "all" ? true : view === "delivered" ? r.completed : !r.completed))
+    .filter((r) => modeTab === "all" || modeOf(r.mode) === modeTab)
+    .filter(
+      (r) =>
+        !needle ||
+        [r.reference, r.master_reference, r.awb_mbl, r.container_no, r.vessel_name, r.origin, r.destination].some((v) =>
+          v?.toLowerCase().includes(needle),
+        ),
     );
+
+  const columns: DataColumn<PartnerShipmentRow>[] = [
+    {
+      key: "actions",
+      header: "Actions",
+      fixed: true,
+      width: 70,
+      render: (r) => (
+        <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+          <RowActions onView={() => setOpenId(r.id)} viewTitle="Open the shipment" />
+        </div>
+      ),
+    },
+    {
+      key: "shipment",
+      header: "Shipment",
+      width: 165,
+      render: (r) => (
+        <>
+          <button type="button" className="ref-link" onClick={() => setOpenId(r.id)}>
+            {r.reference}
+          </button>
+          {r.unread > 0 && <span className="ps-unread">{r.unread} new</span>}
+        </>
+      ),
+      sortValue: (r) => r.reference,
+    },
+    { key: "mode", header: "Mode", width: 140, render: (r) => r.mode || "-", sortValue: (r) => r.mode ?? "" },
+    { key: "inco", header: "Incoterm", width: 90, render: (r) => r.incoterms || "-", sortValue: (r) => r.incoterms ?? "" },
+    {
+      key: "status",
+      header: view === "delivered" ? "Shipment Status" : "Status",
+      width: 150,
+      render: (r) => <StatusPill status={r.shipment_status} mode={r.mode} />,
+      sortValue: (r) => r.shipment_status ?? "",
+    },
+    {
+      key: "action",
+      header: "Action Needed",
+      width: 170,
+      render: (r) => (r.action ? <span className="ps-action">{r.action}</span> : "-"),
+      sortValue: (r) => r.action ?? "",
+    },
+    { key: "ready", header: "Cargo Ready", width: 110, render: (r) => d(r.ready_date), sortValue: (r) => r.ready_date ?? "", defaultHidden: kind !== "agent" },
+    { key: "etd", header: "ETD", width: 110, render: (r) => d(r.etd), sortValue: (r) => r.etd ?? "" },
+    {
+      key: "eta",
+      header: "ETA",
+      width: 120,
+      render: (r) => {
+        const n = daysUntil(r.eta);
+        const flag = !r.completed && n !== null && n <= 5;
+        return (
+          <span
+            className={flag ? "job-eta is-due" : undefined}
+            title={n === null ? undefined : n < 0 ? `ETA passed ${-n} day(s) ago` : n === 0 ? "Arriving today" : `Arriving in ${n} day(s)`}
+          >
+            {d(r.eta)}
+          </span>
+        );
+      },
+      sortValue: (r) => r.eta ?? "",
+    },
+    { key: "pdd", header: "PDD", width: 110, render: (r) => d(r.delivery_date), sortValue: (r) => r.delivery_date ?? "" },
+    { key: "pol", header: "POL", width: 90, render: (r) => portCode(r.origin), sortValue: (r) => portCode(r.origin) },
+    { key: "pod", header: "POD", width: 90, render: (r) => portCode(r.destination), sortValue: (r) => portCode(r.destination) },
+    ...(kind === "transporter"
+      ? []
+      : ([
+          { key: "awb", header: "MBL / AWB", width: 150, render: (r) => r.awb_mbl || "-", sortValue: (r) => r.awb_mbl ?? "" },
+          { key: "vessel", header: "Vessel / Flight", width: 170, render: (r) => r.vessel_name || "-", sortValue: (r) => r.vessel_name ?? "" },
+        ] as DataColumn<PartnerShipmentRow>[])),
+    { key: "container", header: "Container No", width: 140, render: (r) => r.container_no || "-", sortValue: (r) => r.container_no ?? "" },
+    { key: "master", header: "Master", width: 120, render: (r) => r.master_reference || "-", defaultHidden: true },
+  ];
+
+  if (openId) return <PartnerShipmentPage id={openId} kind={kind} demo={demoShipment} onBack={() => setOpenId(null)} />;
 
   return (
     <>
-      <div className="ps-views">
-        <div className="customs-views">
-          <button type="button" className={`customs-view${!showDone ? " on" : ""}`} onClick={() => setShowDone(false)}>
-            Active <span className="customs-view-n">{active.length}</span>
-          </button>
-          <button type="button" className={`customs-view${showDone ? " on" : ""}`} onClick={() => setShowDone(true)}>
-            Delivered <span className="customs-view-n">{done.length}</span>
-          </button>
-        </div>
-        <input
-          className="ps-search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search shipment, MBL / AWB, container"
-          aria-label="Search shipments"
-        />
-      </div>
-      <div className="panel">
-        {rows.length === 0 ? (
+      <PageHeader
+        eyebrow="Assigned to you"
+        title={view === "delivered" ? "Delivered Shipments" : view === "all" ? "All Shipments" : "Active Shipments"}
+      />
+      <PageTools
+        search={<SearchInput value={search} onChange={setSearch} placeholder="Search shipment, MBL / AWB, container, vessel…" />}
+        filters={
+          <>
+            <div className="wms-seg">
+              {(["all", "active", "delivered"] as const).map((v) => (
+                <button key={v} type="button" className={view === v ? "active" : ""} onClick={() => setView(v)}>
+                  {v === "all" ? "All" : v === "active" ? "Active" : "Delivered"}
+                </button>
+              ))}
+            </div>
+            <div className="wms-seg">
+              {MODE_TABS.map((t) => (
+                <button key={t.key} type="button" className={modeTab === t.key ? "active" : ""} onClick={() => setModeTab(t.key)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </>
+        }
+        count={!demoRows && q.isLoading ? undefined : `${rows.length} shipment${rows.length === 1 ? "" : "s"}`}
+        onToolsSlot={setToolsSlot}
+      />
+      <div className="panel jobs-panel">
+        {!demoRows && q.isLoading ? (
+          <Loading />
+        ) : !demoRows && q.error ? (
+          isMissingPartnerShipments(q.error) ? (
+            <EmptyState>Shipments are being switched on. Check back shortly.</EmptyState>
+          ) : (
+            <ErrorNote error={q.error} />
+          )
+        ) : rows.length === 0 ? (
           <EmptyState>
             {needle
-              ? "No shipment matches your search."
-              : showDone
+              ? `No shipments match "${search.trim()}".`
+              : view === "delivered"
                 ? "No delivered shipments in the last 60 days."
-                : "No active shipments. Shipments ExPac assigns to you appear here."}
+                : "No shipments right now. Shipments ExPac assigns to you appear here."}
           </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="customs-table">
-              <thead>
-                <tr>
-                  <th>Shipment</th>
-                  <th>Route</th>
-                  <th>{kind === "agent" ? "Cargo ready" : "ETD"}</th>
-                  <th>ETA</th>
-                  <th>MBL / AWB</th>
-                  <th>Status</th>
-                  <th>Action needed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="customs-row" onClick={() => setOpenId(r.id)}>
-                    <td>
-                      <button type="button" className="link-btn" onClick={() => setOpenId(r.id)}>
-                        {r.reference}
-                      </button>
-                      {r.unread > 0 && <span className="ps-unread">{r.unread} new</span>}
-                      <div className="hint">
-                        {r.mode?.replace(/ \(.*\)/, "")}
-                        {r.incoterms ? ` · ${r.incoterms}` : ""}
-                        {r.master_reference ? ` · on ${r.master_reference}` : ""}
-                      </div>
-                    </td>
-                    <td>
-                      {dash(r.origin)}
-                      <div className="hint">to {dash(r.destination)}</div>
-                    </td>
-                    <td>{kind === "agent" ? d(r.ready_date) : d(r.etd)}</td>
-                    <td>
-                      <EtaCell eta={r.eta} done={r.completed} />
-                    </td>
-                    <td>
-                      {dash(r.awb_mbl)}
-                      {r.container_no && <div className="hint">{r.container_no}</div>}
-                    </td>
-                    <td>
-                      <StatusPill status={r.shipment_status} mode={r.mode} />
-                    </td>
-                    <td>{r.action ? <span className="ps-action">{r.action}</span> : <span className="hint">-</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            tableKey={`partner-jobs-${view}`}
+            className="table--compact"
+            toolsPortal={toolsSlot}
+            columns={columns}
+            rows={rows}
+            rowKey={(r) => r.id}
+            onRowClick={(r) => setOpenId(r.id)}
+          />
         )}
       </div>
     </>
   );
-}
-
-/** ETA, flagged when it's 5 days away or past (same rule as Active Shipments). */
-function EtaCell({ eta, done }: { eta: string | null; done: boolean }) {
-  if (!eta) return <>-</>;
-  const days = Math.ceil((new Date(eta).getTime() - Date.now()) / 86_400_000);
-  return <span className={!done && days <= 5 ? "ps-eta-due" : undefined}>{formatDate(eta)}</span>;
 }
 
 /* ---------------- One shipment ---------------- */
