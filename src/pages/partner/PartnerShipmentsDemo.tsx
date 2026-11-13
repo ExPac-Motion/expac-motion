@@ -3,10 +3,13 @@ import type { PartnerKind, PackingItem } from "../../lib/types";
 import { isRfqKind } from "../../lib/rfq";
 import type { PartnerShipment, PartnerShipmentRow } from "../../lib/partnerShipments";
 import PartnerShipments from "./PartnerShipments";
+import PartnersTab from "../shipments/PartnersTab";
+import type { Job } from "../../lib/types";
 
 /**
  * DEV-ONLY preview of Partner Portal › Shipments with made-up data:
  *   /dev/partner-shipments?kind=agent|transporter|destination_agent|clearing_agent
+ *   /dev/partner-shipments?view=staff   the shipment workspace Partners tab
  */
 const ROWS: PartnerShipmentRow[] = [
   {
@@ -104,9 +107,40 @@ export default function PartnerShipmentsDemo() {
   const [params] = useSearchParams();
   const k = params.get("kind");
   const kind: PartnerKind = isRfqKind(k) ? k : "agent";
+  if (params.get("view") === "staff") return <StaffDemo />;
   return (
     <div className="main">
       <PartnerShipments kind={kind} demoRows={ROWS} demoShipment={SHIPMENT(kind)} />
+    </div>
+  );
+}
+
+function StaffDemo() {
+  const job = {
+    id: "demo",
+    reference: "SEA126049",
+    master_job_id: null,
+    job_events: [
+      { id: "e1", job_id: "demo", milestone: "Booked", note: "Demo Logistics Co. Ltd: Vessel Name: COSCO Shipping Aries; ETD: 27/11/2026; Status: Booked", created_at: "2026-11-12T10:40:00Z" },
+      { id: "e2", job_id: "demo", milestone: "Booked", note: "Demo Logistics Co. Ltd uploaded Commercial Invoice: CI-8841.pdf", created_at: "2026-11-12T11:05:00Z" },
+    ],
+  } as unknown as Job;
+  return (
+    <div className="main">
+      <PartnersTab
+        job={job}
+        quote={null}
+        demo={{
+          partners: [
+            { kind: "agent", id: "a", company: "Demo Logistics Co. Ltd", email: "rates@demo-logistics.example", contact: "Li Wei", phone: null, hasLogin: true },
+            { kind: "transporter", id: "t", company: "Sample Haulage", email: "ops@sample-haulage.example", contact: null, phone: "+27 31 000 0000", hasLogin: false },
+          ],
+          messages: [
+            { id: "m1", job_id: "demo", partner_kind: "agent", partner_id: "a", direction: "out", body: "Please confirm the vessel and send the MBL draft once booked.", created_at: "2026-11-12T08:10:00Z", read_at: null },
+            { id: "m2", job_id: "demo", partner_kind: "agent", partner_id: "a", direction: "in", body: "Booked on COSCO Aries, draft MBL to follow Friday.", created_at: "2026-11-12T10:42:00Z", read_at: null },
+          ],
+        }}
+      />
     </div>
   );
 }

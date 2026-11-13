@@ -13727,3 +13727,131 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- Shipment workspace › Partners (0243 step 5) ---------- */
+.spt-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 2.2fr);
+  gap: 14px;
+  align-items: start;
+}
+.spt-list {
+  display: grid;
+  gap: 8px;
+}
+.spt-card {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.spt-card:hover {
+  border-color: var(--teal);
+}
+.spt-card.on {
+  border-color: var(--teal);
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+.spt-kind {
+  color: var(--teal-ink, var(--teal));
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.spt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0;
+}
+.spt-chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--amber-tint);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.spt-chip.ok {
+  background: var(--green-tint, #e9f3dc);
+}
+.spt-chip.new {
+  background: var(--teal);
+  color: #fff;
+}
+.spt-main {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.spt-main .panel {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.spt-grid > * {
+  min-width: 0;
+}
+.spt-compose textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.spt-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.spt-thread-head h3 {
+  margin: 0;
+}
+.spt-note {
+  background: var(--amber-tint);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.spt-compose {
+  display: grid;
+  gap: 8px;
+}
+.spt-compose select {
+  justify-self: start;
+}
+.spt-send {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.spt-email {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.spt-updates {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.86rem;
+}
+.spt-updates li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 900px) {
+  .spt-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

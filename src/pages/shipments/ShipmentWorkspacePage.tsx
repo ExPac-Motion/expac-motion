@@ -38,6 +38,7 @@ import {
   codeOf,
 } from "../JobsBoard";
 import BackButton from "../../components/BackButton";
+import PartnersTab, { usePartnerUnread } from "./PartnersTab";
 
 /**
  * Shipment workspace (/jobs/:id): one page per shipment, where ops run it.
@@ -46,7 +47,7 @@ import BackButton from "../../components/BackButton";
  * Activity. Built from the same pieces as the View window.
  */
 
-const TABS = ["overview", "timeline", "cargo", "documents", "tasks", "financials", "activity"] as const;
+const TABS = ["overview", "timeline", "cargo", "documents", "tasks", "partners", "financials", "activity"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABEL: Record<Tab, string> = {
   overview: "Overview",
@@ -54,6 +55,7 @@ const TAB_LABEL: Record<Tab, string> = {
   cargo: "Cargo",
   documents: "Documents",
   tasks: "Tasks",
+  partners: "Partners",
   financials: "Financials",
   activity: "Activity",
 };
@@ -112,6 +114,7 @@ export default function ShipmentWorkspacePage() {
   const docsQ = useShipmentDocuments(id);
   const tasksQ = useOpsTasks();
   const quoteQ = useQuote(job?.quote_id ?? undefined);
+  const partnerUnread = usePartnerUnread(job?.id);
 
   const [quick, setQuick] = useState(false);
   const goBack = useBackTo("/jobs");
@@ -296,6 +299,7 @@ export default function ShipmentWorkspacePage() {
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
             {TAB_LABEL[t]}
             {t === "tasks" && openTasks.length > 0 && <span className="ws-count">{openTasks.length}</span>}
+            {t === "partners" && partnerUnread > 0 && <span className="ws-count">{partnerUnread}</span>}
             {t === "documents" && have.length < required.length && (
               <span className="ws-count warn">{required.length - have.length}</span>
             )}
@@ -321,6 +325,7 @@ export default function ShipmentWorkspacePage() {
         {tab === "tasks" && (
           <RecordTasks tasks={tasks} defaults={{ job_id: job.id, client_id: job.client_id, title: "" }} empty="No tasks for this shipment." />
         )}
+        {tab === "partners" && <PartnersTab job={job} quote={quoteQ.data ?? null} />}
         {tab === "financials" && <FinancialsTab job={job} quote={quoteQ.data ?? null} loading={quoteQ.isLoading} />}
         {tab === "activity" && <ActivityTab job={job} onMessages={() => openRail()} />}
       </div>

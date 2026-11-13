@@ -241,3 +241,133 @@ export function usePartnerMutation<A>(fn: (a: A) => Promise<void>) {
     },
   });
 }
+
+/* ---------------- ExPac side (staff) ---------------- */
+
+const PARTNER_TABLE: Record<PartnerKind, string> = {
+  agent: "agents",
+  transporter: "transporters",
+  clearing_agent: "clearing_agents",
+  destination_agent: "destination_agents",
+};
+
+/** One partner on a shipment's leg, as staff see it. */
+export interface JobPartner {
+  kind: PartnerKind;
+  id: string;
+  company: string;
+  email: string | null;
+  contact: string | null;
+  phone: string | null;
+  /** A confirmed Partner Portal login exists for this partner. */
+  hasLogin: boolean;
+}
+
+export interface JobPartnerMessage {
+  id: string;
+  job_id: string;
+  partner_kind: PartnerKind;
+  partner_id: string;
+  direction: "in" | "out";
+  body: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+/** The partners on a shipment, from its quote (the customs file's clearing
+ *  agent wins over the quote's). Same rule as partner_job_ids() in 0243. */
+export async function loadJobPartners(input: {
+  jobId: string;
+  masterJobId?: string | null;
+  quote: { agent_id: string | null; transporter_id: string | null; clearing_agent_id: string | null; destination_agent_id?: string | null } | null;
+}): Promise<JobPartner[]> {
+  const q = input.quote;
+  const ids: Partial<Record<PartnerKind, string | null>> = {
+    agent: q?.agent_id ?? null,
+    destination_agent: q?.destination_agent_id ?? null,
+    transporter: q?.transporter_id ?? null,
+    clearing_agent: q?.clearing_agent_id ?? null,
+  };
+  const cf = await supabase
+    .from("customs_files")
+    .select("clearing_agent_id")
+    .in("job_id", [input.jobId, input.masterJobId].filter(Boolean) as string[])
+    .not("clearing_agent_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (!cf.error && cf.data?.[0]?.clearing_agent_id) ids.clearing_agent = cf.data[0].clearing_agent_id as string;
+
+  const kinds = (Object.keys(ids) as PartnerKind[]).filter((k) => ids[k]);
+  if (kinds.length === 0) return [];
+  const rows = await Promise.all(
+    kinds.map(async (k) => {
+      const { data } = await supabase.from(PARTNER_TABLE[k]).select("id,company,email,contact,phone").eq("id", ids[k]!).maybeSingle();
+      return data ? ({ kind: k, ...(data as Omit<JobPartner, "kind" | "hasLogin">), hasLogin: false } as JobPartner) : null;
+    }),
+  );
+  const found = rows.filter((r): r is JobPartner => !!r);
+  const logins = await supabase
+    .from("profiles")
+    .select("partner_id")
+    .eq("role", "partner")
+    .in("partner_id", found.map((p) => p.id));
+  const withLogin = new Set((logins.data ?? []).map((r) => r.partner_id as string));
+  return found.map((p) => ({ ...p, hasLogin: withLogin.has(p.id) }));
+}
+
+export async function listJobPartnerMessages(jobId: string): Promise<JobPartnerMessage[]> {
+  const { data, error } = await supabase
+    .from("job_partner_messages")
+    .select("id,job_id,partner_kind,partner_id,direction,body,created_at,read_at")
+    .eq("job_id", jobId)
+    .order("created_at");
+  if (error) fail(error);
+  return (data ?? []) as JobPartnerMessage[];
+}
+
+export async function sendStaffPartnerMessage(input: { jobId: string; kind: PartnerKind; partnerId: string; body: string }): Promise<void> {
+  const { error } = await supabase.from("job_partner_messages").insert({
+    job_id: input.jobId,
+    partner_kind: input.kind,
+    partner_id: input.partnerId,
+    direction: "out",
+    body: input.body,
+  });
+  if (error) fail(error);
+}
+
+/** Staff opened the thread: the partner's messages are read. */
+export async function markPartnerMessagesRead(jobId: string, partnerId: string): Promise<void> {
+  await supabase
+    .from("job_partner_messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("job_id", jobId)
+    .eq("partner_id", partnerId)
+    .eq("direction", "in")
+    .is("read_at", null);
+}
+
+export function useJobPartners(input: Parameters<typeof loadJobPartners>[0] | null) {
+  return useQuery({
+    queryKey: ["job_partners", input?.jobId, input?.quote],
+    queryFn: () => loadJobPartners(input!),
+    enabled: !!input && input.jobId !== "demo",
+  });
+}
+
+export function useJobPartnerMessages(jobId: string | undefined) {
+  return useQuery({
+    queryKey: ["job_partner_messages", jobId],
+    queryFn: () => listJobPartnerMessages(jobId!),
+    enabled: !!jobId && jobId !== "demo",
+    retry: false,
+  });
+}
+
+export function useStaffPartnerMutation<A>(fn: (a: A) => Promise<void>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["job_partner_messages"] }),
+  });
+}

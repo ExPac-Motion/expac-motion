@@ -1,6 +1,6 @@
 # Partner Portal: Shipments tab (build plan)
 
-Status: steps 1 to 4 built 13/11/2026 as ONE migration, 0243_partner_shipments.sql (reads, updates, uploads, messages), plus the Shipments tab (src/pages/partner/PartnerShipments.tsx, DEV preview /dev/partner-shipments?kind=). Decisions taken: 1 straight onto the shipment + logged; 2 partner statuses go straight through (portal progress bar reads job_status_history), no automatic customer email; 3 partners see their own buy lines with amounts; 4 no-login link not built (step 6). Staff reply UI for partner messages is step 5 (messages land as Control Tower tasks meanwhile).
+Status: steps 1 to 4 built 13/11/2026 as ONE migration, 0243_partner_shipments.sql (reads, updates, uploads, messages), plus the Shipments tab (src/pages/partner/PartnerShipments.tsx, DEV preview /dev/partner-shipments?kind=). Decisions taken: 1 straight onto the shipment + logged; 2 partner statuses go straight through (portal progress bar reads job_status_history), no automatic customer email; 3 partners see their own buy lines with amounts; 4 no-login link not built (step 6). Step 5 built 13/11/2026 (no migration): shipment workspace Partners tab (src/pages/shipments/PartnersTab.tsx, DEV /dev/partner-shipments?view=staff) with partners per leg, portal-login chip, last activity, thread + reply (optional email), Request a document, "Updated by" log.
 
 Partners (origin agent, destination agent, transporter, clearing agent) already
 log in to the Partner Portal (migration 0121) for their rate sheets and coverage,
