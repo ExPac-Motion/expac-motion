@@ -16,6 +16,7 @@ import type { MyPartner } from "../../lib/types";
 import { PARTNER_LABEL } from "../../lib/tariff";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 import BrokerDesk from "./BrokerDesk";
+import PartnerShipments from "./PartnerShipments";
 
 /** The partner's own coverage, editable with the edit_coverage permission. */
 function MyCoverage({ me, canEdit }: { me: MyPartner; canEdit: boolean }) {
@@ -78,8 +79,14 @@ export default function PartnerPortalPage() {
   const can = useCan();
   // Clearing agents also get the Broker Desk (customs files, 0232), first.
   const broker = me?.partner_kind === "clearing_agent";
-  const [tab, setTab] = useState<"customs" | "rates">("customs");
-  const view = broker ? tab : "rates";
+  // Every partner gets Shipments (0243), first.
+  const [tab, setTab] = useState<"shipments" | "customs" | "rates">("shipments");
+  const view = !broker && tab === "customs" ? "shipments" : tab;
+  const tabBtn = (k: typeof tab, label: string) => (
+    <button type="button" className={`topbar-tab${view === k ? " active" : ""}`} onClick={() => setTab(k)}>
+      {label}
+    </button>
+  );
 
   return (
     <div className="app-shell">
@@ -88,18 +95,9 @@ export default function PartnerPortalPage() {
           <img src="/ExPac-Final_Maybe-300x106.png" alt="ExPac Motion" />
         </Link>
         <nav className="topbar-primary">
-          {broker && (
-            <button type="button" className={`topbar-tab${view === "customs" ? " active" : ""}`} onClick={() => setTab("customs")}>
-              Customs Files
-            </button>
-          )}
-          {broker ? (
-            <button type="button" className={`topbar-tab${view === "rates" ? " active" : ""}`} onClick={() => setTab("rates")}>
-              Rate Sheets
-            </button>
-          ) : (
-            <span className="topbar-tab active">Rate Sheets</span>
-          )}
+          {tabBtn("shipments", "Shipments")}
+          {broker && tabBtn("customs", "Customs Files")}
+          {tabBtn("rates", "Rate Sheets")}
         </nav>
         <div className="topbar-utils">
           <div className="topbar-account">
@@ -133,7 +131,15 @@ export default function PartnerPortalPage() {
               ExPac Partner Portal · {PARTNER_LABEL[me.partner_kind]}
             </p>
             <h1 style={{ margin: "0 0 6px" }}>{me.company || "Your company"}</h1>
-            {view === "customs" ? (
+            {view === "shipments" ? (
+              <>
+                <p className="hint" style={{ margin: "0 0 14px" }}>
+                  Shipments ExPac Forwarding has assigned to you. Keep the status and dates up to date, upload your
+                  documents and message ExPac here; ExPac sees every step.
+                </p>
+                <PartnerShipments kind={me.partner_kind} />
+              </>
+            ) : view === "customs" ? (
               <>
                 <p className="hint" style={{ margin: "0 0 14px" }}>
                   Customs files ExPac Forwarding has instructed you to clear: the shipment, importer and documents, ready to download.

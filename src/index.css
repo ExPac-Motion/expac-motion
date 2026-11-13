@@ -13538,3 +13538,192 @@ button.topbar-tab { background: none; border: 0; cursor: pointer; font: inherit;
   padding: 3px 0;
   border-bottom: 1px solid var(--line);
 }
+
+/* ---------- Partner Portal › Shipments (0243) ---------- */
+.ps-views {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ps-views .customs-views {
+  margin: 4px 0;
+}
+.ps-search {
+  width: min(320px, 100%);
+}
+.ps-unread {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.ps-action {
+  color: var(--orange-ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ps-eta-due {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+}
+.ps-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ps-head h2 {
+  margin: 0;
+}
+.ps-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.ps-main,
+.ps-side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.ps-grid .panel {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.ps-facts {
+  margin-top: 10px;
+}
+.ps-parties {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+.ps-party {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.ps-party .k {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.ps-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+.ps-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ps-side .field {
+  margin-top: 8px;
+}
+.ps-side textarea,
+.ps-side select,
+.ps-side input {
+  width: 100%;
+}
+.ps-charges .num {
+  text-align: right;
+}
+.ps-docs {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.ps-docs li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ps-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ps-msgs {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 8px 0;
+}
+.ps-msg {
+  max-width: 90%;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+.ps-msg .hint {
+  display: block;
+  font-size: 0.72rem;
+}
+.ps-msg.me {
+  justify-self: end;
+  background: var(--teal-tint);
+}
+.ps-msg.them {
+  justify-self: start;
+  background: var(--amber-tint);
+}
+.ps-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.ps-steps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0 4px 18px;
+  position: relative;
+  color: var(--muted);
+}
+.ps-steps li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+.ps-steps li.done {
+  color: inherit;
+  font-weight: 700;
+}
+.ps-steps li.done::before {
+  background: var(--green);
+  border-color: var(--green);
+}
+@media (max-width: 900px) {
+  .ps-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
