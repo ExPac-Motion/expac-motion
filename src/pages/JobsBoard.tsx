@@ -571,6 +571,15 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
     if (kind === "mbl") return (qt?.mbl_no || "").trim() || ((j.mode ?? "").startsWith("Sea") ? (j.awb_mbl ?? "").trim() : "");
     return (qt?.mawb_no || "").trim() || (air ? (j.awb_mbl ?? "").trim() : "");
   }
+  /** Incoterm from the quotation; a house without its own quotation uses
+   *  its master shipment's. */
+  function incotermOf(j: Job): string {
+    const own = j.quote_id ? quoteById.get(j.quote_id) : undefined;
+    if (own) return (own.incoterms ?? "").trim();
+    const master = j.master_job_id ? (jobs ?? []).find((x) => x.id === j.master_job_id) : undefined;
+    const mq = master?.quote_id ? quoteById.get(master.quote_id) : undefined;
+    return (mq?.incoterms ?? "").trim();
+  }
   const partnerPick = params.get("partner") ?? "";
   const setPartnerPick = (v: string) => setParam("partner", v);
   const [pickKind, pickId] = partnerPick.split(":") as [PartnerKey | "", string | undefined];
@@ -1233,6 +1242,16 @@ export default function JobsBoard({ mode }: { mode: BoardMode }) {
         width: 110,
         sortValue: (j) => codeOf(j.destination),
         render: (j) => codeOf(j.destination) || "—",
+      },
+      {
+        key: "incoterm",
+        header: "Incoterm",
+        width: 110,
+        sortValue: (j) => incotermOf(j).toUpperCase(),
+        render: (j) => {
+          const v = incotermOf(j);
+          return v ? <span title={v}>{v}</span> : "—";
+        },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
