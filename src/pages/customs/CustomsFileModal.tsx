@@ -635,6 +635,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
           initialSubject={subject}
           initialBody={body}
           initialFiles={initialFiles}
+          startInPreview
           onClose={() => setHandover(false)}
           onSent={async (info) => {
             await save({ stage: "handed_over", handover_to: info.to });

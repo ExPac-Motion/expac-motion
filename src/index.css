@@ -13081,6 +13081,19 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 .customs-check li.missing .customs-check-mark { color: var(--orange-ink, #b4461f); }
 .customs-check-label { flex: 1; min-width: 0; font-weight: 700; font-size: 0.86rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .customs-doc { font-weight: 400; font-size: 0.8rem; }
+.mail-view-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; margin-bottom: 12px; }
+.mail-view-tabs button { border: 0; background: none; padding: 5px 16px; border-radius: 999px; font-weight: 600; font-size: 0.82rem; color: var(--muted); cursor: pointer; }
+.mail-view-tabs button.on { background: var(--green-dark); color: #fff; }
+.mail-preview { margin-bottom: 8px; }
+.mail-preview > .hint { margin: 0 0 8px; }
+.mail-preview-card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+.mail-preview-head { padding: 12px 16px; border-bottom: 1px solid var(--line); background: #faf8f3; font-size: 0.84rem; display: grid; gap: 3px; }
+.mail-preview-head .k, .mail-preview-attach .k { display: inline-block; min-width: 44px; color: var(--muted); font-weight: 700; font-size: 0.76rem; }
+.mail-preview-subject { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+.mail-preview-body { display: block; width: 100%; height: 320px; border: 0; background: #fff; }
+.mail-preview-attach { padding: 10px 16px; border-top: 1px solid var(--line); font-size: 0.82rem; }
+.mail-preview-attach ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.mail-preview-attach li { border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; background: #faf8f3; }
 .customs-doc-wrap { display: inline-flex; align-items: center; gap: 2px; }
 .customs-doc-remove { font-size: 0.72rem; color: var(--muted); text-decoration: none; padding: 0 4px; opacity: 0.7; }
 .customs-doc-remove:hover { color: #b3261e; opacity: 1; }

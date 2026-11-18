@@ -16,7 +16,7 @@ import {
   resolveMergeFields,
   type MergeContext,
 } from "../lib/mailMerge";
-import { linkifyHtml } from "../lib/mailStyle";
+import { EMAIL_BODY_STYLE, linkifyHtml } from "../lib/mailStyle";
 import { isSendShortcut, SEND_SHORTCUT_HINT } from "../lib/shortcuts";
 import { buildQuotePdf } from "../lib/quotePdf";
 import {
@@ -43,6 +43,7 @@ export default function QuickMailModal({
   job,
   initialFiles,
   initialCc,
+  startInPreview,
 }: {
   to: string | null | undefined;
   company: string;
@@ -62,6 +63,9 @@ export default function QuickMailModal({
   /** Attachments ticked from the start (e.g. the customs documents). */
   initialFiles?: ShipmentAttachmentPick[];
   initialCc?: string;
+  /** Open on the Preview tab (how the recipient will see it), e.g. the
+   *  customs handover to the clearing agent. */
+  startInPreview?: boolean;
 }) {
   const { data: templates } = useMailTemplates();
   const { data: settings } = useCompanySettings();
@@ -75,6 +79,8 @@ export default function QuickMailModal({
   const [phase, setPhase] = useState<"idle" | "pdf" | "sending">("idle");
   const sending = phase !== "idle";
   const subjectRef = useRef<HTMLInputElement>(null);
+  const [view, setView] = useState<"edit" | "preview">(startInPreview ? "preview" : "edit");
+  const previewFrame = useRef<HTMLIFrameElement>(null);
 
   const sig = settings?.mail_signature_html?.trim() || "";
   const withSig = (html: string) => (sig ? `${html}<br>${sig}` : html);
@@ -149,6 +155,26 @@ export default function QuickMailModal({
     }
   }
 
+  // Preview: the body exactly as sent (merge fields, links), in the same
+  // font wrapper send-mail adds, inside a script-less frame.
+  const previewHtml =
+    '<!doctype html><html><head><meta charset="utf-8"><style>body{margin:16px;}img{max-width:100%;}</style></head>' +
+    `<body><div style="${EMAIL_BODY_STYLE}">${linkifyHtml(resolveMergeFields(body, mergeCtx))}</div></body></html>`;
+  const ccShown = cc
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(", ");
+  const attachNames = [
+    ...(attachQuote && quote ? [`Quotation - ${quote.reference}.pdf`] : []),
+    ...files.map((f) => f.label),
+  ];
+  function fitPreview() {
+    const f = previewFrame.current;
+    const doc = f?.contentDocument;
+    if (f && doc?.body) f.style.height = `${Math.min(Math.max(doc.documentElement.scrollHeight, 160), 640)}px`;
+  }
+
   function onKeys(e: KeyboardEvent<HTMLDivElement>) {
     if (!isSendShortcut(e)) return;
     e.preventDefault();
@@ -158,6 +184,61 @@ export default function QuickMailModal({
   return (
     <Modal title={`Email ${company}`} onClose={onClose} wide>
       <div onKeyDown={onKeys}>
+        <div className="mail-view-tabs" role="tablist" aria-label="Edit or preview the email">
+          <button type="button" role="tab" aria-selected={view === "edit"} className={view === "edit" ? "on" : ""} onClick={() => setView("edit")}>
+            Edit
+          </button>
+          <button type="button" role="tab" aria-selected={view === "preview"} className={view === "preview" ? "on" : ""} onClick={() => setView("preview")}>
+            Preview
+          </button>
+        </div>
+        {view === "preview" && (
+          <div className="mail-preview">
+            <p className="hint">This is how {name || company} will receive it.</p>
+            <div className="mail-preview-card">
+              <div className="mail-preview-head">
+                <div className="mail-preview-subject">{resolveMergeFields(subject.trim(), mergeCtx) || "(no subject)"}</div>
+                <div>
+                  <span className="k">From</span> {settings?.mail_sender_name || "ExPac Forwarding"}
+                  {settings?.mail_reply_to ? <span className="hint"> (replies to {settings.mail_reply_to})</span> : null}
+                </div>
+                <div>
+                  <span className="k">To</span> {name ? `${name} <${to ?? ""}>` : to || "—"}
+                </div>
+                {ccShown && (
+                  <div>
+                    <span className="k">CC</span> {ccShown}
+                  </div>
+                )}
+              </div>
+              <iframe
+                ref={previewFrame}
+                className="mail-preview-body"
+                title="Email preview"
+                sandbox="allow-same-origin"
+                srcDoc={previewHtml}
+                onLoad={fitPreview}
+              />
+              <div className="mail-preview-attach">
+                {attachNames.length ? (
+                  <>
+                    <span className="k">
+                      {attachNames.length} attachment{attachNames.length === 1 ? "" : "s"}
+                    </span>
+                    <ul>
+                      {attachNames.map((n, i) => (
+                        <li key={`${n}-${i}`}>📎 {n}</li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <span className="hint">No attachments</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        <div hidden={view === "preview"}>
         <div className="field">
           <label>To</label>
           <strong>{to || "— no email on this customer —"}</strong>
@@ -227,6 +308,7 @@ export default function QuickMailModal({
               : ""}
             Sends from {settings?.mail_sender_name || "the configured sender"}.
           </span>
+        </div>
         </div>
         <div
           style={{
