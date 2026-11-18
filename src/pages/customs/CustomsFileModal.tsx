@@ -185,7 +185,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
     const csv = new File([toCsv(extractionCsvRows(job.reference, ext))], `${job.reference} customs data.csv`, { type: "text/csv" });
     initialFiles.push({ key: "customs-data-csv", label: csv.name, kind: "local", file: csv });
   }
-  const subject = `Customs clearing instruction – ${job?.reference ?? ""}${job?.client?.company ? ` – ${job.client.company}` : ""}`;
+  const subject = `Import Pre-Alert: ${job?.reference ?? ""}`;
   const row = (k: string, v: string | null | undefined) =>
     v ? `<tr><td style="padding:3px 12px 3px 0;color:#666">${esc(k)}</td><td style="padding:3px 0"><b>${esc(v)}</b></td></tr>` : "";
   const body =
