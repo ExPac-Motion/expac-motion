@@ -435,7 +435,6 @@ export const DOCUMENT_TYPES = [
   "HAWB",
   "HBL",
   "MBL",
-  "Import Pre-Alert",
   "Proof of Delivery",
   "Bill of Lading / AWB",
   "Customs",
@@ -1087,7 +1086,10 @@ export interface Contact {
   /** Agent <-> Clearing Agent cross-listing (agents / clearing_agents only). */
   also_clearing_agent?: boolean | null;
   also_agent?: boolean | null;
-  /** Non-null on a row that mirrors a record in the other table (read-only here). */
+  /** Clearing agent -> Transporter cross-listing (clearing_agents only, 0247). */
+  also_transporter?: boolean | null;
+  /** Non-null on a row that mirrors a record in the other table (read-only here).
+   *  source_clearing_agent_id is set on agent and transporter mirrors. */
   source_agent_id?: string | null;
   source_clearing_agent_id?: string | null;
   /** Customer <-> Shipper cross-listing (clients / suppliers only), the
@@ -1123,6 +1125,22 @@ export interface ClientContact {
 }
 /** Partner books that carry coverage + rate structures (migration 0114). */
 export type PartnerKind = "agent" | "transporter" | "clearing_agent" | "destination_agent";
+
+/** More people at a partner company (0247); the record's own contact stays primary. */
+export interface PartnerContact {
+  id: string;
+  partner_kind: PartnerKind;
+  partner_id: string;
+  salutation: string | null;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+}
 
 export interface RateBreak {
   /** e.g. "0-45KG", "Min 100 KGS (Consol Run)". */

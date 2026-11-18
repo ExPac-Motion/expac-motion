@@ -132,10 +132,11 @@ export function useUpdateContactsBulk(
     }) => db.updateContactsBulk(table, input.ids, input.patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [table] });
-      // agents ⇄ clearing agents mirror each other
+      // agents ⇄ clearing agents mirror each other; clearing agents → transporters
       if (table === "agents" || table === "clearing_agents") {
         qc.invalidateQueries({ queryKey: ["agents"] });
         qc.invalidateQueries({ queryKey: ["clearing_agents"] });
+        qc.invalidateQueries({ queryKey: ["transporters"] });
       }
     },
   });
@@ -173,10 +174,12 @@ export function useDeleteSupplier() {
 export function useAgents() {
   return useQuery({ queryKey: ["agents"], queryFn: db.listAgents });
 }
-/** Saving / deleting an agent may add or drop a mirror clearing-agent row. */
+/** Saving / deleting an agent or clearing agent may add or drop a mirror
+ *  row (agent ⇄ clearing agent, clearing agent → transporter). */
 function invalidateAgentPair(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["agents"] });
   qc.invalidateQueries({ queryKey: ["clearing_agents"] });
+  qc.invalidateQueries({ queryKey: ["transporters"] });
 }
 export function useSaveAgent() {
   const qc = useQueryClient();

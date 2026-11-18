@@ -31,8 +31,9 @@ const isSea = (mode?: string | null) => !!mode?.startsWith("Sea");
  * clearing agent receives them. Keys are what required_docs stores ('ci',
  * 'pl', 'tdoc', or a Document Vault type); `type` is what an upload gets.
  */
-export const SEA_SET: { key: string; label: string; type: string }[] = [
-  { key: "Import Pre-Alert", label: "Import Pre-Alert", type: "Import Pre-Alert" },
+export const SEA_SET: { key: string; label: string; type: string; generated?: string }[] = [
+  // A Motion document (Document Vault template), generated from the shipment.
+  { key: "Import Pre-Alert", label: "Import Pre-Alert", type: "Import Pre-Alert", generated: "import-pre-alert" },
   { key: "ci", label: "Commercial Invoice", type: "Commercial Invoice" },
   { key: "pl", label: "Packing List", type: "Packing List" },
   { key: "tdoc", label: "House Bill of Lading (HB/L)", type: "HBL" },
@@ -82,6 +83,8 @@ export interface ChecklistItem {
   required: boolean;
   /** Part of the standard set (can't be removed from the file). */
   set: boolean;
+  /** A Motion-generated document (template slug): always available, no upload. */
+  generated?: string;
 }
 /** Sea: the standard set in order, then the extra required documents.
  *  Other modes: the required documents as before. */
@@ -96,7 +99,7 @@ export function checklist(file: CustomsFile, docs: ShipmentDocument[]): Checklis
   });
   if (!isSea(mode)) return file.required_docs.map((key) => item(key, ["ci", "pl", "tdoc"].includes(key), true));
   const isRequired = (key: string) => file.required_docs.some((k) => sameKey(k, key));
-  const set = SEA_SET.map((s) => item(s.key, true, isRequired(s.key)));
+  const set = SEA_SET.map((s) => ({ ...item(s.key, true, isRequired(s.key)), generated: s.generated }));
   const extras = file.required_docs.filter((k) => !SEA_SET.some((s) => sameKey(s.key, k))).map((k) => item(k, false, true));
   return [...set, ...extras];
 }

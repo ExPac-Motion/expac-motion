@@ -59,6 +59,7 @@ import RateStructures from "./partners/RateStructures";
 import PartnerRateSheets from "./partners/PartnerRateSheets";
 import PartnerMailModal from "./partners/PartnerMailModal";
 import PartnerLoginAccess from "./partners/PartnerLoginAccess";
+import PartnerContactsTab from "./partners/PartnerContactsTab";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import BackButton from "../components/BackButton";
 
@@ -320,6 +321,7 @@ export default function ContactsPage({
     }
     if (kind === "clearing_agent") {
       values.also_agent = fd.get("also_agent") === "on";
+      values.also_transporter = fd.get("also_transporter") === "on";
     }
     if (kind === "client") {
       values.also_shipper = fd.get("also_shipper") === "on";
@@ -390,7 +392,10 @@ export default function ContactsPage({
       values.coverage_notes = row.coverage_notes ?? null;
     }
     if (kind === "agent") values.also_clearing_agent = Boolean(row.also_clearing_agent);
-    if (kind === "clearing_agent") values.also_agent = Boolean(row.also_agent);
+    if (kind === "clearing_agent") {
+      values.also_agent = Boolean(row.also_agent);
+      values.also_transporter = Boolean(row.also_transporter);
+    }
     if (kind === "client") values.also_shipper = Boolean(row.also_shipper);
     if (kind === "supplier") values.also_customer = Boolean(row.also_customer);
     try {
@@ -409,6 +414,7 @@ export default function ContactsPage({
   function mirrorOf(r: Contact): Kind | null {
     if (kind === "agent" && r.source_clearing_agent_id) return "clearing_agent";
     if (kind === "clearing_agent" && r.source_agent_id) return "agent";
+    if (kind === "transporter" && r.source_clearing_agent_id) return "clearing_agent";
     return null;
   }
 
@@ -465,6 +471,7 @@ export default function ContactsPage({
               <span className="tag">also clearing agent</span>
             )}
             {r.also_agent && <span className="tag">also agent</span>}
+            {r.also_transporter && <span className="tag">also transporter</span>}
             {r.also_shipper && <span className="tag">also shipper</span>}
             {r.also_customer && <span className="tag">also customer</span>}
           </>
@@ -918,6 +925,16 @@ export default function ContactsPage({
                 Is also Agent
               </label>
             )}
+            {kind === "clearing_agent" && (
+              <label className="check">
+                <input
+                  type="checkbox"
+                  name="also_transporter"
+                  defaultChecked={Boolean(current?.also_transporter)}
+                />
+                Is also Transporter
+              </label>
+            )}
             {kind === "client" && (
               <label className="check">
                 <input
@@ -986,11 +1003,18 @@ export default function ContactsPage({
                 type: "toggle",
               });
             if (kind === "clearing_agent")
-              f.push({
-                key: "also_agent",
-                label: "Is also Agent",
-                type: "toggle",
-              });
+              f.push(
+                {
+                  key: "also_agent",
+                  label: "Is also Agent",
+                  type: "toggle",
+                },
+                {
+                  key: "also_transporter",
+                  label: "Is also Transporter",
+                  type: "toggle",
+                },
+              );
             if (kind === "client")
               f.push({
                 key: "rate_tier",
@@ -1129,11 +1153,25 @@ function ContactRecord({
   const tasks = linkKey ? allTasks.filter((t) => t[linkKey] === record.id) : [];
   const openTasks = tasks.filter((t) => t.status !== "done");
   const mirror =
-    (kind === "agent" && record.source_clearing_agent_id) || (kind === "clearing_agent" && record.source_agent_id);
+    (kind === "agent" && record.source_clearing_agent_id) ||
+    (kind === "clearing_agent" && record.source_agent_id) ||
+    (kind === "transporter" && record.source_clearing_agent_id);
 
-  type Tab = "overview" | "coverage" | "rates" | "logins" | "mail" | "tasks";
+  // A mirror's contacts live on its master record (0247).
+  const contactsOwner: { kind: PartnerKind; id: string } | null = !isPartner
+    ? null
+    : kind === "agent" && record.source_clearing_agent_id
+      ? { kind: "clearing_agent", id: record.source_clearing_agent_id }
+      : kind === "clearing_agent" && record.source_agent_id
+        ? { kind: "agent", id: record.source_agent_id }
+        : kind === "transporter" && record.source_clearing_agent_id
+          ? { kind: "clearing_agent", id: record.source_clearing_agent_id }
+          : { kind: kind as PartnerKind, id: record.id };
+
+  type Tab = "overview" | "contacts" | "coverage" | "rates" | "logins" | "mail" | "tasks";
   const tabs: Tab[] = [
     "overview",
+    ...(isPartner ? (["contacts"] as Tab[]) : []),
     ...(isPartner ? (["coverage"] as Tab[]) : []),
     ...(isPartner && canRates ? (["rates"] as Tab[]) : []),
     ...(isPartner && isAdmin ? (["logins"] as Tab[]) : []),
@@ -1142,6 +1180,7 @@ function ContactRecord({
   ];
   const TAB_LABEL: Record<Tab, string> = {
     overview: "Overview",
+    contacts: "Contacts",
     coverage: "Coverage",
     rates: "Rates",
     logins: "Partner login",
@@ -1341,6 +1380,16 @@ function ContactRecord({
                   />
                 </label>
               )}
+              {kind === "clearing_agent" && !mirror && (
+                <label className="jv-field">
+                  <span className="k">Also a transporter</span>
+                  <input
+                    type="checkbox"
+                    checked={!!record.also_transporter}
+                    onChange={(e) => void patch({ also_transporter: e.target.checked })}
+                  />
+                </label>
+              )}
               <div className="jv-field">
                 <span className="k">Added</span>
                 <span className="v">{new Date(record.created_at).toLocaleDateString("en-GB")}</span>
@@ -1349,6 +1398,14 @@ function ContactRecord({
           </div>
         )}
 
+        {tab === "contacts" && contactsOwner && (
+          <PartnerContactsTab
+            kind={contactsOwner.kind}
+            partnerId={contactsOwner.id}
+            primary={{ contact: record.contact, email: record.email, phone: record.phone }}
+            readOnlyFrom={mirror ? COPY[contactsOwner.kind].title.replace(/s$/, "") : null}
+          />
+        )}
         {tab === "coverage" && isPartner && (
           <div className="panel ws-panel">
             <div className="ws-sec-head">

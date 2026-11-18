@@ -53,6 +53,8 @@ import type {
   OpsTask,
   OpsTaskPatch,
   ClientContact,
+  PartnerContact,
+  PartnerKind,
   ClientDocument,
   ClientInvite,
   ClientJob,
@@ -170,6 +172,28 @@ export async function listClientContacts(
       .eq("client_id", clientId)
       .order("created_at"),
   );
+}
+
+/* ---------- Partner contacts (0247) ---------- */
+export async function listPartnerContacts(kind: PartnerKind, partnerId: string): Promise<PartnerContact[]> {
+  return unwrap<PartnerContact[]>(
+    await supabase
+      .from("partner_contacts")
+      .select("*")
+      .eq("partner_kind", kind)
+      .eq("partner_id", partnerId)
+      .order("created_at"),
+  );
+}
+export async function savePartnerContact(
+  id: string | undefined,
+  values: Omit<PartnerContact, "id" | "created_at">,
+): Promise<void> {
+  if (id) unwrap(await supabase.from("partner_contacts").update(values).eq("id", id));
+  else unwrap(await supabase.from("partner_contacts").insert(values));
+}
+export async function deletePartnerContact(id: string): Promise<void> {
+  unwrap(await supabase.from("partner_contacts").delete().eq("id", id));
 }
 
 /** Replace-all: the customer edit modal owns the full set of extra contacts. */
