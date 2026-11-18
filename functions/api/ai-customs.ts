@@ -29,39 +29,40 @@ function json(data, status) {
   return new Response(JSON.stringify(data), { status: status || 200, headers: { "content-type": "application/json" } });
 }
 
+// The API allows at most 16 nullable (union-typed) fields per schema, so
+// only numbers are nullable; text fields come back "" when not shown and
+// are turned into null before the reply (blankToNull), as the screen expects.
 const num = () => z.number().nullable();
+const txt = (d?: string) => z.string().describe(`${d ? d + ". " : ""}Empty string if not shown`);
 const Extraction = z.object({
-  invoice_no: z.string().nullable(),
-  invoice_date: z.string().nullable().describe("As written on the invoice, or YYYY-MM-DD"),
-  supplier: z.string().nullable().describe("Seller / exporter"),
-  buyer: z.string().nullable().describe("Buyer / importer / consignee"),
-  currency: z.string().nullable().describe("ISO code, e.g. USD, EUR, CNY, ZAR"),
-  incoterm: z.string().nullable().describe("e.g. FOB Shanghai, CIF Durban, EXW"),
+  invoice_no: txt(),
+  invoice_date: txt("As written on the invoice, or YYYY-MM-DD"),
+  supplier: txt("Seller / exporter"),
+  buyer: txt("Buyer / importer / consignee"),
+  currency: txt("ISO code, e.g. USD, EUR, CNY, ZAR"),
+  incoterm: txt("e.g. FOB Shanghai, CIF Durban, EXW"),
   invoice_total: num(),
   freight: num().describe("Freight charge on the invoice, if shown"),
   insurance: num().describe("Insurance on the invoice, if shown"),
   packages: num().describe("Number of packages / cartons / pallets"),
-  package_type: z.string().nullable(),
+  package_type: txt(),
   gross_kg: num(),
   net_kg: num(),
   cbm: num(),
-  country_of_origin: z.string().nullable(),
-  transport_doc_no: z.string().nullable().describe("B/L or AWB number"),
-  vessel_or_flight: z.string().nullable(),
+  country_of_origin: txt(),
+  transport_doc_no: txt("B/L or AWB number"),
+  vessel_or_flight: txt(),
   container_nos: z.array(z.string()),
   lines: z
     .array(
       z.object({
         description: z.string(),
-        hs_code: z
-          .string()
-          .nullable()
-          .describe("The HS code printed on the invoice; else your best SUGGESTED 8-digit South African tariff heading (e.g. 8413.70.10)"),
+        hs_code: txt("The HS code printed on the invoice; else your best SUGGESTED 8-digit South African tariff heading (e.g. 8413.70.10)"),
         qty: num(),
-        unit: z.string().nullable(),
+        unit: txt(),
         unit_price: num(),
         value: num(),
-        origin: z.string().nullable(),
+        origin: txt(),
         net_kg: num(),
       }),
     )
@@ -85,6 +86,18 @@ async function rest(env, auth, path) {
   const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: env.SUPABASE_ANON_KEY, authorization: auth } });
   if (!r.ok) throw new Error(`Could not read ${path.split("?")[0]} (${r.status})`);
   return r.json();
+}
+
+/** "" -> null for the text fields (keeps CustomsExtraction's nulls). */
+const TEXT_KEYS = ["invoice_no", "invoice_date", "supplier", "buyer", "currency", "incoterm", "package_type", "country_of_origin", "transport_doc_no", "vessel_or_flight"];
+const LINE_TEXT_KEYS = ["hs_code", "unit", "origin"];
+function blankToNull(out) {
+  const fix = (o, keys) => {
+    const r = { ...o };
+    for (const k of keys) r[k] = typeof r[k] === "string" && r[k].trim() ? r[k].trim() : null;
+    return r;
+  };
+  return { ...fix(out, TEXT_KEYS), lines: out.lines.map((l) => fix(l, LINE_TEXT_KEYS)) };
 }
 
 function toBase64(buf) {
@@ -182,7 +195,7 @@ export async function onRequestPost({ request, env }) {
     });
     if (res.stop_reason === "refusal") return json({ error: "Motion AI couldn't read these documents." }, 422);
     if (res.stop_reason === "max_tokens" || !res.parsed_output) return json({ error: "Motion AI's answer came back incomplete, try again." }, 502);
-    const out = res.parsed_output;
+    const out = blankToNull(res.parsed_output);
     return json({ ...out, warnings: [...out.warnings, ...skipped.map((s) => `Not read: ${s}`)], sources });
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) return json({ error: "Motion AI is busy, try again in a moment." }, 429);

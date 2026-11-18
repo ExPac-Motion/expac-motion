@@ -12,6 +12,7 @@ import {
   useAddCustomsEvent,
   useClearingAgents,
   useCustomsEvents,
+  useDeleteShipmentDocument,
   useProfiles,
   useShipmentDocuments,
   useUpdateCustomsFile,
@@ -46,6 +47,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
   const addEvent = useAddCustomsEvent();
   const updateJob = useUpdateJob();
   const upload = useUploadShipmentDocument();
+  const delDoc = useDeleteShipmentDocument();
   const { toast, error } = useToast();
   const [handover, setHandover] = useState(false);
   const [note, setNote] = useState("");
@@ -92,6 +94,29 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
       error(e instanceof Error ? e.message : "Could not open the document");
     }
   }
+
+  async function removeDoc(d: ShipmentDocument) {
+    if (!window.confirm(`Remove "${d.name}"? It is deleted from the shipment's Document Vault and cannot be undone.`)) return;
+    try {
+      await delDoc.mutateAsync(d);
+      toast("Document removed");
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not remove the document");
+    }
+  }
+  const removeBtn = (d: ShipmentDocument) =>
+    closed ? null : (
+      <button
+        type="button"
+        className="link-btn customs-doc-remove"
+        title={`Remove ${d.name}`}
+        aria-label={`Remove ${d.name}`}
+        onClick={() => void removeDoc(d)}
+        disabled={delDoc.isPending}
+      >
+        ✕
+      </button>
+    );
 
   function pickUpload(docType: string) {
     setUploadType(docType);
@@ -231,9 +256,12 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
                   <span className="customs-check-label">
                     {i.label}
                     {i.docs.map((d) => (
-                      <button key={d.id} type="button" className="link-btn customs-doc" onClick={() => void openDoc(d)}>
-                        {d.name}
-                      </button>
+                      <span key={d.id} className="customs-doc-wrap">
+                        <button type="button" className="link-btn customs-doc" onClick={() => void openDoc(d)}>
+                          {d.name}
+                        </button>
+                        {removeBtn(d)}
+                      </span>
                     ))}
                   </span>
                   {!i.docs.length && !closed && (
@@ -287,7 +315,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
                         <button type="button" className="link-btn" onClick={() => void openDoc(d)}>
                           {d.name}
                         </button>{" "}
-                        <span className="hint">{d.doc_type || "No type"}</span>
+                        <span className="hint">{d.doc_type || "No type"}</span> {removeBtn(d)}
                       </li>
                     ))}
                 </ul>
