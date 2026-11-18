@@ -54,7 +54,6 @@ import type {
   OpsTaskPatch,
   ClientContact,
   PartnerContact,
-  PartnerKind,
   ClientDocument,
   ClientInvite,
   ClientJob,
