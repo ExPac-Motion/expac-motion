@@ -21,26 +21,56 @@ export const stageShort = (s: CustomsStage) => CUSTOMS_STAGES.find((x) => x.key 
 export const WITH_AGENT: CustomsStage[] = ["handed_over", "lodged", "query"];
 
 const TDOC = ["bill of lading / awb", "hawb", "hbl", "mawb", "mbl", "bill of lading", "awb"];
+/** On a sea file the house B/L is its own item, so a master B/L doesn't tick it. */
+const SEA_HBL = ["hbl", "bill of lading / awb", "bill of lading"];
+
+const isSea = (mode?: string | null) => !!mode?.startsWith("Sea");
+
+/**
+ * The standard document set of a sea file, in the order ExPac works and the
+ * clearing agent receives them. Keys are what required_docs stores ('ci',
+ * 'pl', 'tdoc', or a Document Vault type); `type` is what an upload gets.
+ */
+export const SEA_SET: { key: string; label: string; type: string }[] = [
+  { key: "Import Pre-Alert", label: "Import Pre-Alert", type: "Import Pre-Alert" },
+  { key: "ci", label: "Commercial Invoice", type: "Commercial Invoice" },
+  { key: "pl", label: "Packing List", type: "Packing List" },
+  { key: "tdoc", label: "House Bill of Lading (HB/L)", type: "HBL" },
+  { key: "MBL", label: "Master Bill of Lading (MB/L)", type: "MBL" },
+  { key: "Arrival Notification (ANF)", label: "Arrival Notification (ANF)", type: "Arrival Notification (ANF)" },
+];
+/** Document Vault types that belong to a set (not offered as "another document"). */
+export const SET_DOC_TYPES = ["Invoice", "Commercial Invoice", "Packing List", "HAWB", "HBL", "MBL", "MAWB", "Bill of Lading / AWB", "Import Pre-Alert", "Arrival Notification (ANF)", "Proof of Delivery", "Other"];
+
+const sameKey = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 export function requiredLabel(key: string, mode?: string | null): string {
-  if (key === "ci") return "Commercial invoice";
-  if (key === "pl") return "Packing list";
-  if (key === "tdoc") return mode?.startsWith("Air") ? "Air waybill (AWB)" : mode?.startsWith("Sea") ? "Bill of lading (B/L)" : "B/L or AWB";
+  if (isSea(mode)) {
+    const s = SEA_SET.find((x) => sameKey(x.key, key));
+    if (s) return s.label;
+  }
+  if (key === "ci") return "Commercial Invoice";
+  if (key === "pl") return "Packing List";
+  if (key === "tdoc") return mode?.startsWith("Air") ? "Air waybill (AWB)" : "B/L or AWB";
   return key;
 }
 /** The Document Vault type a missing item is uploaded as. */
 export function requiredDocType(key: string, mode?: string | null): string {
+  if (isSea(mode)) {
+    const s = SEA_SET.find((x) => sameKey(x.key, key));
+    if (s) return s.type;
+  }
   if (key === "ci") return "Commercial Invoice";
   if (key === "pl") return "Packing List";
-  if (key === "tdoc") return mode?.startsWith("Air") ? "HAWB" : mode?.startsWith("Sea") ? "HBL" : "Bill of Lading / AWB";
+  if (key === "tdoc") return mode?.startsWith("Air") ? "HAWB" : "Bill of Lading / AWB";
   return key;
 }
-export function docMatches(key: string, doc: Pick<ShipmentDocument, "doc_type">): boolean {
+export function docMatches(key: string, doc: Pick<ShipmentDocument, "doc_type">, mode?: string | null): boolean {
   const t = (doc.doc_type ?? "").trim().toLowerCase();
   if (!t) return false;
   if (key === "ci") return t === "commercial invoice";
   if (key === "pl") return t === "packing list";
-  if (key === "tdoc") return TDOC.includes(t);
+  if (key === "tdoc") return (isSea(mode) ? SEA_HBL : TDOC).includes(t);
   return t === key.trim().toLowerCase();
 }
 
@@ -48,13 +78,27 @@ export interface ChecklistItem {
   key: string;
   label: string;
   docs: ShipmentDocument[];
+  /** Counts for "Ready" (in required_docs); set items that aren't are shown but optional. */
+  required: boolean;
+  /** Part of the standard set (can't be removed from the file). */
+  set: boolean;
 }
+/** Sea: the standard set in order, then the extra required documents.
+ *  Other modes: the required documents as before. */
 export function checklist(file: CustomsFile, docs: ShipmentDocument[]): ChecklistItem[] {
-  return file.required_docs.map((key) => ({
+  const mode = file.job?.mode;
+  const item = (key: string, set: boolean, required: boolean): ChecklistItem => ({
     key,
-    label: requiredLabel(key, file.job?.mode),
-    docs: docs.filter((d) => docMatches(key, d)),
-  }));
+    label: requiredLabel(key, mode),
+    docs: docs.filter((d) => docMatches(key, d, mode)),
+    required,
+    set,
+  });
+  if (!isSea(mode)) return file.required_docs.map((key) => item(key, ["ci", "pl", "tdoc"].includes(key), true));
+  const isRequired = (key: string) => file.required_docs.some((k) => sameKey(k, key));
+  const set = SEA_SET.map((s) => item(s.key, true, isRequired(s.key)));
+  const extras = file.required_docs.filter((k) => !SEA_SET.some((s) => sameKey(s.key, k))).map((k) => item(k, false, true));
+  return [...set, ...extras];
 }
 
 const DAY = 86_400_000;

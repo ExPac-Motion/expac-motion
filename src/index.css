@@ -13076,6 +13076,8 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 .customs-check li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); }
 .customs-check li.ok { background: var(--green-tint); border-color: transparent; }
 .customs-check li.missing { background: var(--amber-tint); border-color: transparent; }
+.customs-check li.optional { background: #faf8f3; border-color: transparent; color: var(--muted); }
+.customs-check li.optional .customs-check-mark { color: var(--muted); }
 .customs-check-mark { font-weight: 800; width: 16px; text-align: center; }
 .customs-check li.ok .customs-check-mark { color: var(--green-dark, #4c7a1c); }
 .customs-check li.missing .customs-check-mark { color: var(--orange-ink, #b4461f); }
@@ -13094,6 +13096,8 @@ body:has(.jobs-panel) .topbar-lead .search-box {
 .mail-preview-attach { padding: 10px 16px; border-top: 1px solid var(--line); font-size: 0.82rem; }
 .mail-preview-attach ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .mail-preview-attach li { border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; background: #faf8f3; }
+.customs-not-needed { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+.customs-not-needed:hover { color: #b3261e; }
 .customs-doc-wrap { display: inline-flex; align-items: center; gap: 2px; }
 .customs-doc-remove { font-size: 0.72rem; color: var(--muted); text-decoration: none; padding: 0 4px; opacity: 0.7; }
 .customs-doc-remove:hover { color: #b3261e; opacity: 1; }

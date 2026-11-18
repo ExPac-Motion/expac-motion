@@ -6,7 +6,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Modal from "../../components/Modal";
-import QuickMailModal from "../../components/QuickMailModal";
+import QuickMailModal, { ATTACH_LIST_TOKEN } from "../../components/QuickMailModal";
 import { useToast } from "../../components/Toast";
 import {
   useAddCustomsEvent,
@@ -24,7 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import CustomsDataPanel from "./CustomsDataPanel";
 import { extractionCsvRows } from "../../lib/customs";
 import { toCsv } from "../../lib/zip";
-import { CUSTOMS_STAGES, WITH_AGENT, anfWaiting, checklist, daysBetween, fmtDays, requiredDocType, stageLabel } from "../../lib/customs";
+import { CUSTOMS_STAGES, SET_DOC_TYPES, WITH_AGENT, anfWaiting, checklist, daysBetween, fmtDays, requiredDocType, stageLabel } from "../../lib/customs";
 import { formatDate, formatDateTime } from "../../lib/format";
 import type { ShipmentAttachmentPick } from "../../lib/shipmentAttachments";
 import { DOCUMENT_TYPES, type CustomsFile, type CustomsStage, type ShipmentDocument } from "../../lib/types";
@@ -39,7 +39,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
   const masterDocsQ = useShipmentDocuments(job?.master_job_id ?? undefined);
   const docs = useMemo(() => [...(ownDocsQ.data ?? []), ...(masterDocsQ.data ?? [])], [ownDocsQ.data, masterDocsQ.data]);
   const list = checklist(file, docs);
-  const missing = list.filter((i) => i.docs.length === 0);
+  const missing = list.filter((i) => i.required && i.docs.length === 0);
   const agentsQ = useClearingAgents();
   const eventsQ = useCustomsEvents(file.id);
   const profilesQ = useProfiles();
@@ -109,8 +109,8 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
       <button
         type="button"
         className="link-btn customs-doc-remove"
-        title={`Remove ${d.name}`}
-        aria-label={`Remove ${d.name}`}
+        title={`Delete ${d.name} from the Document Vault`}
+        aria-label={`Delete ${d.name}`}
         onClick={() => void removeDoc(d)}
         disabled={delDoc.isPending}
       >
@@ -164,7 +164,9 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
   const people = new Map((profilesQ.data ?? []).map((p) => [p.id, p.full_name || "Someone"]));
 
   // Handover email: the shipment details and the documents, attached.
-  const attachDocs = list.flatMap((i) => i.docs);
+  // In set order (Pre-Alert, CI, PL, HB/L, MB/L, ANF, then extras), then any
+  // other document on the shipment is left for the attach picker.
+  const attachDocs = list.flatMap((i) => i.docs).filter((d, n, all) => all.findIndex((x) => x.id === d.id) === n);
   const initialFiles: ShipmentAttachmentPick[] = attachDocs.map((d) => ({ key: `file-${d.id}`, label: d.name, kind: "file", doc: d }));
   const ext = file.extraction ?? null;
   if (ext && job) {
@@ -199,9 +201,28 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
         row("Origin", ext.country_of_origin) +
         `</table>`
       : "") +
-    `<p>Documents attached:</p><ul>${list.map((i) => `<li>${esc(i.label)}${i.docs.length ? "" : " – <i>to follow</i>"}</li>`).join("")}</ul>` +
+    `<p>Documents attached:</p><p>${ATTACH_LIST_TOKEN}</p>` +
     `<p>Please confirm receipt, and send us the entry number once lodged and the release note once cleared, quoting our reference ${esc(job?.reference)}.</p>` +
     `<p>Thank you</p>`;
+
+  /** "Documents attached" in the email, from what is attached right now:
+   *  each set item in order (required ones not attached say "to follow"),
+   *  then anything else attached. */
+  const attachList = (files: ShipmentAttachmentPick[]) => {
+    const attachedIds = new Set(files.flatMap((f) => (f.kind === "file" ? [f.doc.id] : [])));
+    const itemDocIds = new Set(list.flatMap((i) => i.docs.map((d) => d.id)));
+    const lines = list.flatMap((i) => {
+      if (i.docs.some((d) => attachedIds.has(d.id))) return [`<li>${esc(i.label)}</li>`];
+      return i.required ? [`<li>${esc(i.label)} – <i>to follow</i></li>`] : [];
+    });
+    for (const f of files) {
+      if (f.kind === "file" && itemDocIds.has(f.doc.id)) continue;
+      if (f.key === "customs-data-csv") lines.push(`<li>Customs data (CSV)</li>`);
+      else if (f.kind === "file") lines.push(`<li>${esc(f.doc.doc_type ? `${f.doc.doc_type}: ${f.label}` : f.label)}</li>`);
+      else lines.push(`<li>${esc(f.label)}</li>`);
+    }
+    return lines.length ? `<ul>${lines.join("")}</ul>` : "<p><i>No documents attached</i></p>";
+  };
 
   const stageAt: Partial<Record<CustomsStage, string | null>> = {
     handed_over: file.handed_over_at,
@@ -251,8 +272,8 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
             <h4>Documents</h4>
             <ul className="customs-check">
               {list.map((i) => (
-                <li key={i.key} className={i.docs.length ? "ok" : "missing"}>
-                  <span className="customs-check-mark">{i.docs.length ? "✓" : "✗"}</span>
+                <li key={i.key} className={i.docs.length ? "ok" : i.required ? "missing" : "optional"}>
+                  <span className="customs-check-mark">{i.docs.length ? "✓" : i.required ? "✗" : "–"}</span>
                   <span className="customs-check-label">
                     {i.label}
                     {i.docs.map((d) => (
@@ -269,14 +290,14 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
                       Upload
                     </button>
                   )}
-                  {!["ci", "pl", "tdoc"].includes(i.key) && !closed && (
+                  {!i.set && !closed && (
                     <button
                       type="button"
-                      className="btn ghost small"
-                      title="Not required on this file"
+                      className="link-btn customs-not-needed"
+                      title="Take this document off the list for this file (the uploaded file itself stays in the Document Vault)"
                       onClick={() => void save({ required_docs: file.required_docs.filter((k) => k !== i.key) })}
                     >
-                      ✕
+                      Not needed
                     </button>
                   )}
                 </li>
@@ -290,7 +311,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
                   aria-label="Add a required document"
                 >
                   <option value="">+ Require another document…</option>
-                  {DOCUMENT_TYPES.filter((t) => !["Invoice", "Commercial Invoice", "Packing List", "HAWB", "HBL", "Bill of Lading / AWB", "Proof of Delivery", "Other"].includes(t))
+                  {DOCUMENT_TYPES.filter((t) => !SET_DOC_TYPES.includes(t))
                     .filter((t) => !file.required_docs.includes(t))
                     .map((t) => (
                       <option key={t} value={t}>
@@ -635,6 +656,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
           initialSubject={subject}
           initialBody={body}
           initialFiles={initialFiles}
+          attachList={attachList}
           startInPreview
           onClose={() => setHandover(false)}
           onSent={async (info) => {

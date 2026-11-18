@@ -434,6 +434,8 @@ export const DOCUMENT_TYPES = [
   "Packing List",
   "HAWB",
   "HBL",
+  "MBL",
+  "Import Pre-Alert",
   "Proof of Delivery",
   "Bill of Lading / AWB",
   "Customs",

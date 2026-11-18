@@ -25,6 +25,10 @@ import {
   type ShipmentAttachmentPick,
 } from "../lib/shipmentAttachments";
 
+/** Put in a body to have `attachList` fill in the attached documents at
+ *  preview and send time, so the list follows what is really attached. */
+export const ATTACH_LIST_TOKEN = "{{ attachments.list }}";
+
 /**
  * Compose-and-send a one-off email to a customer / contact, straight from a
  * list row. Templates, merge fields and the saved signature are applied the
@@ -44,6 +48,7 @@ export default function QuickMailModal({
   initialFiles,
   initialCc,
   startInPreview,
+  attachList,
 }: {
   to: string | null | undefined;
   company: string;
@@ -66,6 +71,8 @@ export default function QuickMailModal({
   /** Open on the Preview tab (how the recipient will see it), e.g. the
    *  customs handover to the clearing agent. */
   startInPreview?: boolean;
+  /** HTML for ATTACH_LIST_TOKEN, from the attachments as they are now. */
+  attachList?: (files: ShipmentAttachmentPick[]) => string;
 }) {
   const { data: templates } = useMailTemplates();
   const { data: settings } = useCompanySettings();
@@ -104,6 +111,16 @@ export default function QuickMailModal({
     ...merge,
   };
 
+  /** The body as it goes out: merge fields, the live attachment list, links. */
+  function finalHtml(): string {
+    let html = resolveMergeFields(body, mergeCtx);
+    if (attachList && html.includes(ATTACH_LIST_TOKEN)) {
+      const listHtml = attachList(files);
+      html = html.split(`<p>${ATTACH_LIST_TOKEN}</p>`).join(listHtml).split(ATTACH_LIST_TOKEN).join(listHtml);
+    }
+    return linkifyHtml(html);
+  }
+
   function applyTemplate(id: string) {
     const t = templates?.find((x) => x.id === id);
     if (!t) return;
@@ -132,7 +149,7 @@ export default function QuickMailModal({
       setPhase("sending");
       // The signature already lives in the body (seeded on open), so it is not
       // appended again here.
-      const html = linkifyHtml(resolveMergeFields(body, mergeCtx));
+      const html = finalHtml();
       const finalSubject = resolveMergeFields(subject.trim(), mergeCtx);
       const sent = await sendMail({
         to: [to],
@@ -159,7 +176,7 @@ export default function QuickMailModal({
   // font wrapper send-mail adds, inside a script-less frame.
   const previewHtml =
     '<!doctype html><html><head><meta charset="utf-8"><style>body{margin:16px;}img{max-width:100%;}</style></head>' +
-    `<body><div style="${EMAIL_BODY_STYLE}">${linkifyHtml(resolveMergeFields(body, mergeCtx))}</div></body></html>`;
+    `<body><div style="${EMAIL_BODY_STYLE}">${finalHtml()}</div></body></html>`;
   const ccShown = cc
     .split(/[,;\s]+/)
     .map((s) => s.trim())
