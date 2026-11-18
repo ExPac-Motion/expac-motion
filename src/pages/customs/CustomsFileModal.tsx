@@ -190,7 +190,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
     v ? `<tr><td style="padding:3px 12px 3px 0;color:#666">${esc(k)}</td><td style="padding:3px 0"><b>${esc(v)}</b></td></tr>` : "";
   const body =
     `<p>Good day${agent?.contact ? ` ${esc(agent.contact.split(" ")[0])}` : ""},</p>` +
-    `<p>Please clear the shipment below on our behalf. The documents are attached.</p>` +
+    `<p>Please find import pre-alert for clearance on the below on our behalf. The documents are attached.</p>` +
     `<table style="border-collapse:collapse;font-size:14px">` +
     row("Our reference", job?.reference) +
     row("Importer", job?.client?.company) +
@@ -214,8 +214,7 @@ export default function CustomsFileModal({ file, onClose }: { file: CustomsFile;
         `</table>`
       : "") +
     `<p>Documents attached:</p><p>${ATTACH_LIST_TOKEN}</p>` +
-    `<p>Please confirm receipt, and send us the entry number once lodged and the release note once cleared, quoting our reference ${esc(job?.reference)}.</p>` +
-    `<p>Thank you</p>`;
+    `<p>Please may you confirm receipt, and send us your clearing instruction link to complete, our reference is ${esc(job?.reference)}.</p>`;
 
   /** "Documents attached" in the email, from what is attached right now:
    *  each set item in order (required ones not attached say "to follow"),
