@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "./Modal";
+import PortCodeInput, { PortCodeList } from "./PortCodeInput";
 import {
   createLeadAndQuote,
   findPartyMatches,
@@ -173,6 +174,7 @@ export default function DocQuoteReview({
         )}
 
         <h4 className="dq-h">Quote</h4>
+        <PortCodeList />
         <div className="grid3">
           <div className="field">
             <label>Mode</label>
@@ -185,11 +187,16 @@ export default function DocQuoteReview({
           </div>
           <div className="field">
             <label>Origin</label>
-            <input value={f.origin} onChange={(e) => set("origin", e.target.value)} />
+            <PortCodeInput value={f.origin} onChange={(v) => set("origin", v)} mode={f.mode} hint={x.origin ? `Document: ${x.origin}` : undefined} />
           </div>
           <div className="field">
             <label>Destination</label>
-            <input value={f.destination} onChange={(e) => set("destination", e.target.value)} />
+            <PortCodeInput
+              value={f.destination}
+              onChange={(v) => set("destination", v)}
+              mode={f.mode}
+              hint={x.destination ? `Document: ${x.destination}` : undefined}
+            />
           </div>
           <div className="field">
             <label>Incoterm</label>

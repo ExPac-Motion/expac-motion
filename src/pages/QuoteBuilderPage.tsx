@@ -82,7 +82,7 @@ import {
   moneyCur,
   referencePrefix,
 } from "../lib/format";
-import { LOCODE_OPTIONS } from "../lib/locodes";
+import PortCodeInput, { PortCodeList } from "../components/PortCodeInput";
 import {
   CHARGE_CATEGORIES,
   CHARGE_UNITS,
@@ -1471,34 +1471,26 @@ export default function QuoteBuilderPage() {
         <div className="qb-band">
           <h3 className="qb-band-title">Route &amp; dates</h3>
           <div className="grid5">
-            <datalist id="qb-locodes">
-              {LOCODE_OPTIONS.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
+            <PortCodeList />
             <div className="field">
               <label>Origin/Port of Load</label>
-              <input
-                list="qb-locodes"
+              <PortCodeInput
                 value={draft.origin}
-                onChange={(e) => set("origin", e.target.value)}
+                onChange={(v) => set("origin", v)}
+                mode={draft.mode}
                 placeholder="CNSHA, Shanghai, China"
+                hint="Pick a UN/LOCODE, or type / paste an address for the nearest port."
               />
-              <span className="hint">
-                Pick a UN/LOCODE or type your own (start with the 5-char code).
-              </span>
             </div>
             <div className="field">
               <label>Destination/Port of Discharge</label>
-              <input
-                list="qb-locodes"
+              <PortCodeInput
                 value={draft.destination}
-                onChange={(e) => set("destination", e.target.value)}
+                onChange={(v) => set("destination", v)}
+                mode={draft.mode}
                 placeholder="ZADUR, Durban, South Africa"
+                hint="Pick a UN/LOCODE, or type / paste an address for the nearest port."
               />
-              <span className="hint">
-                Pick a UN/LOCODE or type your own (start with the 5-char code).
-              </span>
             </div>
             <div className="field">
               <label>ETD</label>

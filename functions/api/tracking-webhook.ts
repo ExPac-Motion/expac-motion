@@ -107,6 +107,11 @@ const PORT_COORDS = {
   TZDAR: [-6.7924, 39.2083], KEMBA: [-4.0435, 39.6682], MUPLU: [-20.1609, 57.5012],
   AOLAD: [-8.8147, 13.2302], NGLOS: [6.4531, 3.3958], GHTEM: [5.6698, -0.0166],
   CIABJ: [5.3097, -4.0126], SNDKR: [14.6928, -17.4467],
+  // West, Central & East Africa (nearest port lookup)
+  SLFNA: [8.484, -13.2299], LRMLW: [6.3428, -10.8061], GNCKY: [9.5092, -13.7122],
+  GMBJL: [13.4549, -16.579], MRNKC: [18.03, -16.03], CVRAI: [14.9177, -23.5092],
+  GWOXB: [11.8636, -15.5977], GQSSG: [3.755, 8.7737], SOMGQ: [2.0333, 45.3436],
+  ERMSW: [15.6097, 39.45], SCPOV: [-4.6167, 55.45],
   // North Africa
   EGPSD: [31.2653, 32.3019], EGSOK: [29.6033, 32.3567], EGALY: [31.2001, 29.9187],
   MAPTM: [35.8883, -5.5], DZALG: [36.7538, 3.0588], TNRDS: [36.7667, 10.2833],
@@ -219,6 +224,7 @@ const AIRPORT_COORDS = {
   MAA: [12.9941, 80.1709, "Chennai International Airport"], BLR: [13.1986, 77.7066, "Kempegowda International Airport"],
   HYD: [17.2403, 78.4294, "Rajiv Gandhi International Airport"], CCU: [22.6547, 88.4467, "Netaji Subhas Chandra Bose International Airport"],
   AMD: [23.0772, 72.6347, "Sardar Vallabhbhai Patel International Airport"], COK: [10.152, 76.4019, "Cochin International Airport"],
+  PNQ: [18.5822, 73.9197, "Pune Airport (Lohegaon)"],
   DAC: [23.8433, 90.3978, "Hazrat Shahjalal International Airport"], CMB: [7.1808, 79.8841, "Bandaranaike International Airport"],
   KTM: [27.6966, 85.3591, "Tribhuvan International Airport"], KHI: [24.9065, 67.1608, "Jinnah International Airport"],
   LHE: [31.5216, 74.4036, "Allama Iqbal International Airport"],
@@ -263,6 +269,16 @@ const AIRPORT_COORDS = {
   SYD: [-33.9399, 151.1753, "Sydney Kingsford Smith Airport"], MEL: [-37.669, 144.841, "Melbourne Airport"],
   BNE: [-27.3842, 153.1175, "Brisbane Airport"], PER: [-31.9385, 115.9672, "Perth Airport"],
   AKL: [-37.0082, 174.785, "Auckland Airport"],
+  // West, Central & East Africa (nearest port lookup)
+  FNA: [8.6164, -13.1955, "Freetown Lungi International Airport"], ROB: [6.2338, -10.3623, "Roberts International Airport"],
+  CKY: [9.5769, -13.612, "Conakry International Airport"], BJL: [13.338, -16.6522, "Banjul International Airport"],
+  NKC: [18.31, -15.97, "Nouakchott-Oumtounsy International Airport"], RAI: [14.9245, -23.4935, "Nelson Mandela International Airport"],
+  OXB: [11.8948, -15.6537, "Osvaldo Vieira International Airport"], SSG: [3.7553, 8.7087, "Malabo International Airport"],
+  BJM: [-3.324, 29.3185, "Melchior Ndadaye International Airport"], JUB: [4.872, 31.6011, "Juba International Airport"],
+  MGQ: [2.0144, 45.3047, "Aden Adde International Airport"], SEZ: [-4.6743, 55.5218, "Seychelles International Airport"],
+  BKO: [12.5335, -7.9499, "Modibo Keita International Airport"], OUA: [12.3532, -1.5124, "Ouagadougou Airport"],
+  NIM: [13.4815, 2.1836, "Diori Hamani International Airport"], NDJ: [12.1337, 15.034, "N'Djamena International Airport"],
+  BGF: [4.3985, 18.5188, "Bangui M'Poko International Airport"],
 };
 /** A sea port (UN/LOCODE) or airport (IATA) code -> coordinates. A LOCODE
  *  with no port entry falls back to the airport with the same last three

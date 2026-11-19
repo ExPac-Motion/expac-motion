@@ -7,6 +7,7 @@
 import { supabase } from "./supabase";
 import { getCompanySettings, saveLead, saveQuote } from "./db";
 import { newReference } from "./format";
+import { portFieldValue, portKindForMode } from "./nearestPort";
 import { blankDraft, newPackingItem } from "./tierQuote";
 import { applyTierMargins, LINE_CURRENCIES, type PackingItem, type QuoteDraft, type QuoteMode } from "./types";
 
@@ -42,6 +43,9 @@ export interface DocQuoteExtraction {
   incoterm_place: string | null;
   origin: string | null;
   destination: string | null;
+  /** UN/LOCODE Motion AI gave for the origin / destination (INPNQ, ZAJNB). */
+  origin_code?: string | null;
+  destination_code?: string | null;
   mode_hint: "air" | "sea_fcl" | "sea_lcl" | "road" | "courier" | "unknown";
   container_type: string | null;
   commodity: string | null;
@@ -222,13 +226,18 @@ export function formFromExtraction(x: DocQuoteExtraction): DocQuoteForm {
   // ExPac is mostly import: the buyer is the customer unless only the seller is named.
   const side: "buyer" | "seller" = x.buyer.company || !x.seller.company ? "buyer" : "seller";
   const cur = (x.currency ?? "").toUpperCase();
+  const mode = guessMode(x);
+  const kind = portKindForMode(mode);
   return {
     customerSide: side,
     customer: { ...(side === "buyer" ? x.buyer : x.seller) },
     useExisting: "",
-    mode: guessMode(x),
-    origin: x.origin ?? "",
-    destination: x.destination ?? "",
+    mode,
+    // In Motion's "CODE, City, Country" form: the code Motion AI gave, else
+    // the nearest port / airport to the place (or, with no place on the
+    // document, to the seller's / buyer's address).
+    origin: portFieldValue(x.origin_code, x.origin || x.seller.address, kind),
+    destination: portFieldValue(x.destination_code, x.destination || x.buyer.address, kind),
     incoterms: [x.incoterm, x.incoterm_place].filter(Boolean).join(" "),
     commodity: x.commodity ?? "",
     customer_reference: x.po_no || x.invoice_no || "",
@@ -245,6 +254,8 @@ export function notesFor(x: DocQuoteExtraction, side: "buyer" | "seller"): strin
     `Created by Motion AI from ${x.sources.join(", ") || "an uploaded document"}.`,
     x.invoice_no ? `Invoice ${x.invoice_no}${x.invoice_date ? ` dated ${x.invoice_date}` : ""}.` : null,
     other,
+    x.origin ? `Origin on the document: ${x.origin}` : null,
+    x.destination ? `Destination on the document: ${x.destination}` : null,
   ]
     .filter(Boolean)
     .join("\n");
