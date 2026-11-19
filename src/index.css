@@ -13995,3 +13995,88 @@ button.pt-kpi {
 .ph-who {
   margin: 0 0 6px;
 }
+
+/* Motion AI: lead + quote from a document */
+.mai-attach {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  padding: 0;
+}
+.mai-attach svg {
+  width: 18px;
+  height: 18px;
+}
+.mai-drop {
+  outline: 2px dashed var(--blue-ink);
+  outline-offset: -8px;
+}
+.dq-src {
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.dq-warn {
+  font-size: 13px;
+  color: var(--orange-ink);
+  background: var(--orange-tint);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.dq-warn ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.dq-h {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+.dq-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+.dq-side label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dq-pack-wrap {
+  overflow-x: auto;
+}
+.dq-pack {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.dq-pack th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 6px;
+}
+.dq-pack td {
+  padding: 3px 6px 3px 0;
+}
+.dq-pack input {
+  width: 100%;
+  min-width: 64px;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--ink);
+}
+.dq-pack-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin: 6px 0 12px;
+}

@@ -20,6 +20,7 @@ import QuotePrintDemoPage from "./pages/QuotePrintDemoPage";
 import TimelineDemoPage from "./pages/TimelineDemoPage";
 import InboxDemoPage from "./pages/InboxDemoPage";
 import MotionAiDemoPage from "./pages/MotionAiDemoPage";
+import DocQuoteDemoPage from "./pages/DocQuoteDemoPage";
 import PreAlertDemoPage from "./pages/shipments/PreAlertDemoPage";
 import { CustomerMessagesDemo, MastersDemo, SageCustomerDemo, SageDemoSeed, SageSettingsDemo } from "./pages/SageDemoPage";
 // Presentation screenshot mode (dev only). The flag is written out here, not
@@ -269,6 +270,7 @@ function AppRoutes() {
           {import.meta.env.DEV && <Route path="/dev/broker" element={<BrokerDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/partner-shipments" element={<PartnerShipmentsDemo />} />}
           {import.meta.env.DEV && <Route path="/dev/motion-ai" element={<MotionAiDemoPage />} />}
+          {import.meta.env.DEV && <Route path="/dev/doc-quote" element={<DocQuoteDemoPage />} />}
           {import.meta.env.DEV && <Route path="/dev/pre-alert" element={<PreAlertDemoPage />} />}
           {import.meta.env.DEV && (
             <Route path="/dev/rate-structure" element={<RateStructureDemoPage />} />

@@ -15,11 +15,20 @@ import {
   type AiAction,
 } from "../lib/motionAi";
 import MotionAiActionCard from "./MotionAiActionCard";
+import DocQuoteReview from "./DocQuoteReview";
+import { useNavigate } from "react-router-dom";
+import { DOC_ACCEPT, readShippingDocuments, type DocQuoteExtraction } from "../lib/docQuote";
 
 const SPARK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
     <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />
+  </svg>
+);
+
+const CLIP = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9" />
   </svg>
 );
 
@@ -145,6 +154,27 @@ export function MotionAiPanel({
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const [docRead, setDocRead] = useState<DocQuoteExtraction | null>(null);
+  const [reading, setReading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  /** Commercial invoice / packing list -> review form -> lead + New Lead quote. */
+  async function readDocs(files: File[]) {
+    if (!files.length || busy || reading) return;
+    setError(null);
+    setReading(true);
+    setTurns((t) => [...t, { key: `d${Date.now()}`, role: "user", text: `Create a lead and quote from: ${files.map((f) => f.name).join(", ")}` }]);
+    try {
+      setDocRead(await readShippingDocuments(files));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   const convQ = useQuery({ queryKey: ["ai_conversations"], queryFn: listAiConversations });
 
@@ -251,10 +281,24 @@ export function MotionAiPanel({
 
   return (
     <aside
-      className="mai-panel"
+      className={`mai-panel${dragOver ? " mai-drop" : ""}`}
       role="dialog"
       aria-label="Motion AI"
       style={{ "--mai-top": `${top}px` } as CSSProperties}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false);
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.files.length) return;
+        e.preventDefault();
+        setDragOver(false);
+        readDocs(Array.from(e.dataTransfer.files));
+      }}
     >
       <div className="mai-head">
         <span className="mai-title">{SPARK} Motion AI</span>
@@ -305,7 +349,11 @@ export function MotionAiPanel({
         {turns.length === 0 && (
           <div className="mai-empty">
             <p>Ask about shipments, quotes, customers, tasks or rates.</p>
+            <p>Or drop a commercial invoice or packing list here to create a lead and quote from it.</p>
             <div className="mai-starters">
+              <button className="btn btn-sm" onClick={() => fileRef.current?.click()} disabled={busy || reading}>
+                Lead + quote from a document
+              </button>
               {STARTERS.map((s) => (
                 <button key={s} className="btn outline btn-sm" onClick={() => send(s)} disabled={busy}>
                   {s}
@@ -331,6 +379,7 @@ export function MotionAiPanel({
             </div>
           ),
         )}
+        {reading && <div className="mai-working">Reading the document…</div>}
         {busy && (
           <div className="mai-working">{tool ? `${AI_TOOL_LABEL[tool] ?? "Looking it up"}…` : "Thinking…"}</div>
         )}
@@ -345,6 +394,24 @@ export function MotionAiPanel({
           send(draft);
         }}
       >
+        <input
+          ref={fileRef}
+          type="file"
+          accept={DOC_ACCEPT}
+          multiple
+          hidden
+          onChange={(e) => readDocs(Array.from(e.target.files ?? []))}
+        />
+        <button
+          type="button"
+          className="btn outline mai-attach"
+          title="Create a lead and quote from a commercial invoice or packing list"
+          aria-label="Upload a document"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy || reading}
+        >
+          {CLIP}
+        </button>
         <textarea
           ref={inputRef}
           value={draft}
@@ -368,6 +435,26 @@ export function MotionAiPanel({
           </button>
         )}
       </form>
+      {docRead && (
+        <DocQuoteReview
+          extraction={docRead}
+          onClose={() => setDocRead(null)}
+          onCreated={(r) => {
+            setDocRead(null);
+            setTurns((t) => [
+              ...t,
+              {
+                key: `q${Date.now()}`,
+                role: "assistant",
+                text: `${r.newLead ? `Created lead **${r.customer}** and` : `For **${r.customer}**, created`} quote **${r.reference}** (New Lead). Opening it now: use Load rates to price it.`,
+              },
+            ]);
+            qc.invalidateQueries({ queryKey: ["quotes"] });
+            qc.invalidateQueries({ queryKey: ["leads"] });
+            navigate(`/quotes/${r.quote_id}/view`);
+          }}
+        />
+      )}
     </aside>
   );
 }
