@@ -9469,6 +9469,45 @@ tr.clickable:hover td {
   border-radius: 8px;
   padding: 8px 10px;
 }
+.cr-portal-contacts {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  max-width: 760px;
+  background: #fbfaf7;
+}
+.cr-portal-contacts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.cr-portal-contact {
+  border-top: 1px solid var(--line);
+  padding: 10px 0 4px;
+}
+.cr-portal-add {
+  display: grid;
+  grid-template-columns: 110px 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: end;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.cr-portal-add-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+@media (max-width: 720px) {
+  .cr-portal-add {
+    grid-template-columns: 1fr;
+  }
+}
 .cr-portal-logins {
   display: flex;
   flex-direction: column;

@@ -19,7 +19,13 @@ export default function PortalAccessBox({
   salutation,
   lastName,
   isAdmin,
+  compact,
+  startEnabled,
 }: {
+  /** One line per extra contact (General › Other contacts with portal access): no note, no login list. */
+  compact?: { label: string };
+  /** Open ticked with the password box, right after the contact was added. */
+  startEnabled?: boolean;
   client: CustomerRecord;
   email: string;
   name: string;
@@ -35,7 +41,7 @@ export default function PortalAccessBox({
   const [password, setPassword] = useState("");
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
   const [sending, setSending] = useState(false);
-  const [enabling, setEnabling] = useState(false);
+  const [enabling, setEnabling] = useState(!!startEnabled);
 
   const logins = (usersQ.data ?? []).filter((u) => u.client_id === client.id);
   const mine = logins.find((u) => (u.email ?? "").toLowerCase() === email.trim().toLowerCase());
@@ -44,8 +50,8 @@ export default function PortalAccessBox({
 
   if (!isAdmin) {
     return (
-      <div className="cr-portal">
-        <b>Customer Portal Access</b>
+      <div className={compact ? "cr-portal-contact" : "cr-portal"}>
+        <b>{compact ? compact.label : "Customer Portal Access"}</b>
         <p className="hint">
           {active ? "This contact can sign in to the portal." : "No portal login for this contact."} An admin manages portal logins.
         </p>
@@ -117,7 +123,7 @@ export default function PortalAccessBox({
 
   const checked = active || enabling;
   return (
-    <div className="cr-portal">
+    <div className={compact ? "cr-portal-contact" : "cr-portal"}>
       <label className="check" style={{ margin: 0 }}>
         <input
           type="checkbox"
@@ -133,11 +139,21 @@ export default function PortalAccessBox({
             } else setEnabling(false);
           }}
         />
-        <b>Enable Customer Portal Access</b>
+        <b>{compact ? compact.label : "Enable Customer Portal Access"}</b>
+        {compact && mine && (
+          <span className="hint" style={{ marginLeft: 6 }}>
+            {active ? "active" : "switched off"}
+            {mine.last_sign_in_at ? ` · last sign-in ${formatDateTime(mine.last_sign_in_at)}` : " · never signed in"}
+          </span>
+        )}
       </label>
-      <p className="hint" style={{ margin: "4px 0 10px" }}>
-        Note: grants the customer instant access to the customer portal for easier interaction and communication.
-      </p>
+      {compact ? (
+        <div style={{ height: 6 }} />
+      ) : (
+        <p className="hint" style={{ margin: "4px 0 10px" }}>
+          Note: grants the customer instant access to the customer portal for easier interaction and communication.
+        </p>
+      )}
       {checked && (
         <div className="cr-portal-row">
           <input
@@ -172,7 +188,7 @@ export default function PortalAccessBox({
           Login: <b>{issued.email}</b> · Password: <b>{issued.password}</b>. Sign in to the portal with it (private window) to check everything, then Send Login Details To Customer.
         </p>
       )}
-      {logins.length > 0 && (
+      {!compact && logins.length > 0 && (
         <div className="cr-portal-logins">
           {logins.map((u) => (
             <span key={u.id}>

@@ -19,6 +19,7 @@ import {
 } from "../../lib/customers";
 import ClientActivity from "../ClientActivity";
 import PortalAccessBox from "./PortalAccessBox";
+import PortalContacts from "./PortalContacts";
 import SageAccountTab from "./SageAccountTab";
 import ClientChatThread from "../../components/ClientChatThread";
 import { CustomerMailHistory } from "../../components/MailHistory";
@@ -293,6 +294,7 @@ export default function CustomerRecordPage() {
                   isAdmin={isAdmin}
                 />
               )}
+              {!isNew && customerQ.data && <PortalContacts client={customerQ.data} primaryEmail={str("email")} isAdmin={isAdmin} />}
             </>,
           )}
         </>
