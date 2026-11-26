@@ -1,5 +1,9 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
+  useAgents,
+  useClearingAgents,
+  useDestinationAgents,
+  useTransporters,
   useClients,
   useCompanySettings,
   useMyProfile,
@@ -11,7 +15,8 @@ import {
 } from "../lib/hooks";
 import { COMPANY } from "../lib/company";
 import { useCustomerConsignees } from "../lib/customers";
-import { shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
+import { partyBlock, shipmentInfoRows, shipmentPartyRows } from "../lib/docTemplates";
+import type { Contact } from "../lib/types";
 import { packingRow, packingTotals, volumetricFactor } from "../lib/calc";
 import { PreAlertDetails, PreAlertInstructions, type PreAlertData } from "./shipments/PreAlertSections";
 import BackButton from "../components/BackButton";
@@ -22,6 +27,14 @@ function n2(v: number | string | null | undefined): string {
     maximumFractionDigits: 2,
   });
 }
+
+type HandoverKind = "agent" | "transporter" | "clearing_agent" | "destination_agent";
+const HANDOVER_LABEL: Record<HandoverKind, string> = {
+  agent: "Agent",
+  transporter: "Transporter",
+  clearing_agent: "Clearing Agent",
+  destination_agent: "Destination Agent",
+};
 
 /**
  * Generic operational-document letterhead shared by every Document Vault
@@ -50,6 +63,31 @@ export default function ShipmentDocPrintPage() {
   // Import Pre-Alert only: the importer's customs code / VAT and who signs it.
   const clientsQ = useClients();
   const meQ = useMyProfile();
+  // Booking Confirmation (layout "handover"): the partner on the quote the
+  // shipment is handed over to. ?to=<kind> picks one; defaults to the first
+  // assigned in Agent → Transporter → Clearing Agent → Destination Agent order.
+  const handover = def?.layout === "handover";
+  const [search, setSearch] = useSearchParams();
+  const agentsQ = useAgents();
+  const transportersQ = useTransporters();
+  const clearingQ = useClearingAgents();
+  const destQ = useDestinationAgents();
+  const q = quoteQ.data;
+  const handoverOptions: { kind: HandoverKind; partner: Contact }[] = (
+    [
+      ["agent", q?.agent_id, agentsQ.data],
+      ["transporter", q?.transporter_id, transportersQ.data],
+      ["clearing_agent", q?.clearing_agent_id, clearingQ.data],
+      ["destination_agent", q?.destination_agent_id, destQ.data],
+    ] as [HandoverKind, string | null | undefined, Contact[] | undefined][]
+  ).flatMap(([kind, pid, list]) => {
+    const partner = pid ? list?.find((c) => c.id === pid) : undefined;
+    return partner ? [{ kind, partner }] : [];
+  });
+  const handoverTo =
+    handoverOptions.find((o) => o.kind === search.get("to")) ?? handoverOptions[0] ?? null;
+  const partnersLoading =
+    agentsQ.isLoading || transportersQ.isLoading || clearingQ.isLoading || destQ.isLoading;
 
   const company = settings
     ? {
@@ -85,6 +123,22 @@ export default function ShipmentDocPrintPage() {
     <div className="qs-wrap">
       <div className="qs-toolbar">
         <BackButton onClick={() => navigate(-1)} />
+        {handover && handoverOptions.length > 1 && (
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            Handed over to
+            <select
+              className="input"
+              value={handoverTo?.kind ?? ""}
+              onChange={(e) => setSearch({ to: e.target.value }, { replace: true })}
+            >
+              {handoverOptions.map((o) => (
+                <option key={o.kind} value={o.kind}>
+                  {HANDOVER_LABEL[o.kind]}: {o.partner.company}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button className="btn" onClick={() => window.print()}>
           Print / Save as PDF
         </button>
@@ -96,7 +150,8 @@ export default function ShipmentDocPrintPage() {
         // "Attach document" PDF capture waits for this before rendering.
         data-ready={
           settings && !quoteQ.isLoading && !profilesQ.isLoading && !trackingQ.isLoading &&
-          (!preAlert || (!clientsQ.isLoading && !meQ.isLoading))
+          (!preAlert || (!clientsQ.isLoading && !meQ.isLoading)) &&
+          (!handover || !partnersLoading)
             ? "1"
             : undefined
         }
@@ -151,6 +206,33 @@ export default function ShipmentDocPrintPage() {
         </div>
 
         {pa && <PreAlertDetails {...pa} />}
+
+        {handover && (
+          <>
+            <div className="qs-bar">
+              Handed Over To{handoverTo ? ` (${HANDOVER_LABEL[handoverTo.kind]})` : ""}
+            </div>
+            <div className="qs-info" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div>
+                <div className="k">{handoverTo ? HANDOVER_LABEL[handoverTo.kind] : "Partner"}</div>
+                <div className="v" style={{ whiteSpace: "pre-line" }}>
+                  {handoverTo
+                    ? partyBlock(
+                        handoverTo.partner.company,
+                        handoverTo.partner.address,
+                        handoverTo.partner.contact,
+                        handoverTo.partner.phone,
+                      )
+                    : "No agent assigned on this shipment's quote"}
+                </div>
+              </div>
+              <div>
+                <div className="k">Email</div>
+                <div className="v">{handoverTo?.partner.email || "—"}</div>
+              </div>
+            </div>
+          </>
+        )}
 
         {def.showNotes && (
           <>
@@ -249,6 +331,8 @@ export default function ShipmentDocPrintPage() {
               {job.ops_remarks || "—"}
             </p>
 
+            {!handover && (
+            <>
             <div className="qs-bar">Received By</div>
             <div className="qs-sig">
               <div className="qs-sig-field">
@@ -272,6 +356,8 @@ export default function ShipmentDocPrintPage() {
                 <div className="line tall" />
               </div>
             </div>
+            </>
+            )}
           </>
         )}
       </div>
