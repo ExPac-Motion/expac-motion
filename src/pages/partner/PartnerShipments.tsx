@@ -187,7 +187,8 @@ export default function PartnerShipments({
             <div className="wms-seg">
               {(["all", "active", "delivered"] as const).map((v) => (
                 <button key={v} type="button" className={view === v ? "active" : ""} onClick={() => setView(v)}>
-                  {v === "all" ? "All" : v === "active" ? "Active" : "Delivered"}
+                  {v === "all" ? "All" : v === "active" ? "Active" : "Delivered"} (
+                  {v === "all" ? all.length : all.filter((r) => (v === "delivered" ? r.completed : !r.completed)).length})
                 </button>
               ))}
             </div>
