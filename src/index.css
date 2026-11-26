@@ -14242,3 +14242,29 @@ button.pt-kpi {
   background: #f1efe9;
   border-bottom-left-radius: 3px;
 }
+
+/* ---------- Partner accept / decline (0249) ---------- */
+.ps-accept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  justify-content: space-between;
+  border: 1.5px solid var(--green, #8cbc43);
+  background: #f6faef;
+}
+.ps-accept > div:first-child {
+  flex: 1 1 380px;
+}
+.ps-accept-btns {
+  display: flex;
+  gap: 8px;
+}
+.ps-action-accept {
+  color: var(--green-dark, #4f7a1c);
+  font-weight: 700;
+}
+.spt-chip.warn {
+  background: #fdecea;
+  color: #a33b2b;
+}

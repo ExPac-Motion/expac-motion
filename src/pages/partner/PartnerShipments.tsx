@@ -7,6 +7,7 @@
  */
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import BackButton from "../../components/BackButton";
+import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
 import TrackingMap from "../../components/TrackingMap";
 import TimelineProgress from "../../components/TimelineProgress";
@@ -24,6 +25,7 @@ import {
   PARTNER_DOC_SLOTS,
   PARTNER_DOC_TYPES,
   partnerStatuses,
+  respondToShipment,
   PARTNER_STATUSES,
   sendPartnerMessage,
   updatePartnerShipment,
@@ -98,7 +100,9 @@ export default function PartnerShipments({
         [r.reference, r.master_reference, r.awb_mbl, r.container_no, r.vessel_name, r.origin, r.destination].some((v) =>
           v?.toLowerCase().includes(needle),
         ),
-    );
+    )
+    // Shipments waiting for an answer first.
+    .sort((a, b) => Number(b.acceptance === "pending") - Number(a.acceptance === "pending"));
 
   const columns: DataColumn<PartnerShipmentRow>[] = [
     {
@@ -139,7 +143,14 @@ export default function PartnerShipments({
       key: "action",
       header: "Action Needed",
       width: 170,
-      render: (r) => (r.action ? <span className="ps-action">{r.action}</span> : "-"),
+      render: (r) =>
+        r.acceptance === "pending" ? (
+          <span className="ps-action ps-action-accept">Accept or decline</span>
+        ) : r.action ? (
+          <span className="ps-action">{r.action}</span>
+        ) : (
+          "-"
+        ),
       sortValue: (r) => r.action ?? "",
     },
     { key: "ready", header: "Cargo Ready", width: 110, render: (r) => d(r.ready_date), sortValue: (r) => r.ready_date ?? "", defaultHidden: kind !== "agent" },
@@ -269,6 +280,7 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
   const { toast, error } = useToast();
   const save = usePartnerMutation((p: PartnerUpdate) => (demo ? Promise.resolve() : updatePartnerShipment(s.id, p)));
   const air = isAir(s.mode);
+  const pending = s.acceptance === "pending";
   const run = async (p: PartnerUpdate, ok: string) => {
     try {
       await save.mutateAsync(p);
@@ -338,6 +350,7 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
         )}
       </div>
 
+      {pending && <AcceptBanner s={s} demo={demo} />}
       <div className="ps-grid">
         <div className="ps-main">
           <div className="panel">
@@ -358,7 +371,7 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
             {(s.pickup || s.delivery) && <PartyBlock s={s} />}
           </div>
 
-          {kind === "agent" && !s.completed && <BookingPanel s={s} air={air} busy={save.isPending} run={run} />}
+          {!pending && kind === "agent" && !s.completed && <BookingPanel s={s} air={air} busy={save.isPending} run={run} />}
 
           <PackingPanel s={s} />
           <ChargesPanel s={s} />
@@ -366,8 +379,8 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
         </div>
 
         <div className="ps-side">
-          {!s.completed && PARTNER_STATUSES[kind].length > 0 && <StatusPanel key={s.shipment_status ?? ""} s={s} kind={kind} busy={save.isPending} run={run} />}
-          <DocumentsPanel s={s} kind={kind} demo={demo} />
+          {!pending && !s.completed && PARTNER_STATUSES[kind].length > 0 && <StatusPanel key={s.shipment_status ?? ""} s={s} kind={kind} busy={save.isPending} run={run} />}
+          {!pending && <DocumentsPanel s={s} kind={kind} demo={demo} />}
           {kind === "clearing_agent" && (
             <div className="panel">
               <p className="hint" style={{ margin: 0 }}>
@@ -375,11 +388,79 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
               </p>
             </div>
           )}
-          {!s.completed && <DelayPanel kind={kind} busy={save.isPending} run={run} />}
-          <MessagesPanel s={s} demo={demo} />
+          {!pending && !s.completed && <DelayPanel kind={kind} busy={save.isPending} run={run} />}
+          {!pending && <MessagesPanel s={s} demo={demo} />}
         </div>
       </div>
     </>
+  );
+}
+
+/** A shipment ExPac handed over and the partner hasn't accepted yet (0249). */
+function AcceptBanner({ s, demo }: { s: PartnerShipment; demo: boolean }) {
+  const { toast, error } = useToast();
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState("");
+  const respond = usePartnerMutation((a: { accept: boolean; reason?: string }) =>
+    demo ? Promise.resolve() : respondToShipment(s.id, a.accept, a.reason),
+  );
+  async function go(accept: boolean) {
+    try {
+      await respond.mutateAsync({ accept, reason: accept ? undefined : reason.trim() });
+      toast(accept ? "Shipment accepted, thank you" : "Declined, ExPac has been told");
+      setDeclining(false);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not send your answer");
+    }
+  }
+  return (
+    <div className="panel ps-accept">
+      <div>
+        <b>ExPac has handed you this shipment.</b>
+        <p className="hint" style={{ margin: "2px 0 0" }}>
+          Check the route, dates, cargo and your charges below, then accept it to see the full details, update
+          milestones, upload documents and message ExPac. If you can't handle it, decline and tell us why.
+        </p>
+      </div>
+      <div className="ps-accept-btns">
+        <button type="button" className="btn outline warn" disabled={respond.isPending} onClick={() => setDeclining(true)}>
+          Decline
+        </button>
+        <button type="button" className="btn" disabled={respond.isPending} onClick={() => go(true)}>
+          Accept shipment
+        </button>
+      </div>
+      {declining && (
+        <Modal title={`Decline ${s.reference}`} onClose={() => setDeclining(false)}>
+          <p className="hint" style={{ marginTop: 0 }}>
+            The shipment goes back to ExPac to hand to another partner. Tell us why so we can plan around it.
+          </p>
+          <div className="field">
+            <label>Reason</label>
+            <textarea
+              rows={3}
+              autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. no space on the flight that week"
+            />
+          </div>
+          <div className="ps-actions">
+            <button type="button" className="btn outline" onClick={() => setDeclining(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn warn"
+              disabled={respond.isPending || !reason.trim()}
+              onClick={() => go(false)}
+            >
+              Decline shipment
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }
 

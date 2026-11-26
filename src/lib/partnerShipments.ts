@@ -41,6 +41,8 @@ export interface PartnerShipmentRow {
   completed: boolean;
   unread: number;
   action: string | null;
+  /** 0249: "pending" until the partner accepts the job (missing before 0249 = accepted). */
+  acceptance?: "pending" | "accepted";
 }
 
 export interface PartnerParty {
@@ -128,6 +130,7 @@ export interface PartnerShipment {
   pod_signed_by: string | null;
   pod_delivered_at: string | null;
   completed: boolean;
+  acceptance?: "pending" | "accepted";
   notes: string | null;
   customs_stage?: string | null;
   customs_released?: boolean;
@@ -206,9 +209,44 @@ export function isMissingPartnerShipments(e: unknown): boolean {
 }
 
 export async function listPartnerShipments(): Promise<PartnerShipmentRow[]> {
-  const { data, error } = await supabase.rpc("partner_shipments");
+  const [list, acc] = await Promise.all([supabase.rpc("partner_shipments"), supabase.rpc("partner_acceptances")]);
+  if (list.error) fail(list.error);
+  const rows = (list.data ?? []) as PartnerShipmentRow[];
+  // Before 0249 there's no acceptance: everything counts as accepted.
+  if (acc.error) return rows.map((r) => ({ ...r, acceptance: "accepted" as const }));
+  const byJob = new Map((acc.data as { job_id: string; acceptance: "pending" | "accepted" }[]).map((a) => [a.job_id, a.acceptance]));
+  return rows.map((r) => ({ ...r, acceptance: byJob.get(r.id) ?? "accepted" }));
+}
+
+/** Accept the shipment ExPac handed over, or decline it with a reason (0249). */
+export async function respondToShipment(id: string, accept: boolean, reason?: string): Promise<void> {
+  const { error } = await supabase.rpc("partner_respond", { p_job: id, p_accept: accept, p_reason: reason ?? null });
   if (error) fail(error);
-  return (data ?? []) as PartnerShipmentRow[];
+}
+
+/** Staff: each partner's accept / decline on a job (0249). */
+export interface JobPartnerAssignment {
+  partner_kind: PartnerKind;
+  partner_id: string;
+  status: "accepted" | "declined";
+  reason: string | null;
+  responded_at: string;
+}
+export function useJobPartnerAssignments(jobIds: string[] | undefined) {
+  return useQuery({
+    queryKey: ["job_partner_assignments", jobIds],
+    enabled: !!jobIds?.length,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("job_partner_assignments")
+        .select("partner_kind, partner_id, status, reason, responded_at")
+        .in("job_id", jobIds as string[])
+        .order("responded_at", { ascending: false });
+      if (error) return [] as JobPartnerAssignment[]; // before 0249
+      return (data ?? []) as JobPartnerAssignment[];
+    },
+  });
 }
 
 export async function getPartnerShipment(id: string): Promise<PartnerShipment> {

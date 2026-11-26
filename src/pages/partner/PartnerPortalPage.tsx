@@ -193,7 +193,7 @@ export default function PartnerPortalPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const todo = (shipmentsQ.data ?? []).filter((r) => !r.completed && r.action).length;
+  const todo = (shipmentsQ.data ?? []).filter((r) => !r.completed && (r.action || r.acceptance === "pending")).length;
   const openRfqs = (rfqsQ.data ?? []).filter((r) => r.status === "awaiting").length;
   const nav: NavItem[] = [
     { to: "/partner", label: "Dashboard", icon: "dashboard" },
