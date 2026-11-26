@@ -81,7 +81,14 @@ import PortalRequestQuotePage from "./pages/portal/PortalRequestQuotePage";
 import PortalItemsPage from "./pages/portal/PortalItemsPage";
 import PortalReportsPage from "./pages/portal/PortalReportsPage";
 import PortalInfoHubPage from "./pages/portal/PortalInfoHubPage";
-import PartnerPortalPage from "./pages/partner/PartnerPortalPage";
+import PartnerPortalPage, {
+  PartnerCustomsRoute,
+  PartnerDashboardRoute,
+  PartnerQuotesRoute,
+  PartnerRatesRoute,
+  PartnerShipmentsRoute,
+  PartnerTrackingRoute,
+} from "./pages/partner/PartnerPortalPage";
 import PartnerSignupPage from "./pages/partner/PartnerSignupPage";
 import RestrictedAccountPage from "./pages/RestrictedAccountPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
@@ -281,7 +288,16 @@ function AppRoutes() {
           <Route path="/track" element={<PublicTrackPage />} />
           <Route path="/portal/signup" element={<PortalSignupPage />} />
           <Route path="/partner/signup" element={<PartnerSignupPage />} />
-          <Route path="/partner" element={<PartnerProtected />} />
+          <Route path="/partner" element={<PartnerProtected />}>
+            <Route index element={<PartnerDashboardRoute />} />
+            <Route path="shipments" element={<PartnerShipmentsRoute />} />
+            <Route path="shipments/:id" element={<PartnerShipmentsRoute />} />
+            <Route path="tracking" element={<PartnerTrackingRoute />} />
+            <Route path="quotes" element={<PartnerQuotesRoute />} />
+            <Route path="customs" element={<PartnerCustomsRoute />} />
+            <Route path="rates" element={<PartnerRatesRoute />} />
+            <Route path="*" element={<Navigate to="/partner" replace />} />
+          </Route>
           <Route element={<PortalProtected />}>
             <Route path="portal" element={<PortalDashboardPage />} />
             <Route

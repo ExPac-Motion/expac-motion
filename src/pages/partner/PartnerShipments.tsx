@@ -80,7 +80,7 @@ export default function PartnerShipments({
   const [openLocal, setOpenLocal] = useState<string | null>(null);
   const openId = openIdIn !== undefined ? openIdIn : openLocal;
   const setOpenId = (id: string | null) => (onOpen ? onOpen(id) : setOpenLocal(id));
-  const [view, setView] = useState<"active" | "delivered" | "all">("active");
+  const [view, setView] = useState<"active" | "delivered" | "all">("all");
   const [modeTab, setModeTab] = useState<ModeTab>("all");
   const [search, setSearch] = useState("");
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);

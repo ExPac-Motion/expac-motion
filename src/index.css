@@ -14129,3 +14129,35 @@ button.pt-kpi {
   font-size: 13px;
   margin: 6px 0 12px;
 }
+
+/* ---------- Partner portal shell (reuses the customer portal's pt-*) ---------- */
+.pp-nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 100px;
+  background: var(--green, #8cbc43);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
+}
+.pp-top-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.pp-top-company {
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.pp-top-company b {
+  color: var(--ink);
+}
+@media (max-width: 720px) {
+  .pp-top-title {
+    display: none;
+  }
+}
