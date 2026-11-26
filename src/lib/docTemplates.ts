@@ -13,8 +13,10 @@ export interface DocumentTypeDef {
   /** Heading for that free-text section. Defaults to `title` when unset. */
   notesLabel?: string;
   /** A document with its own sections after Shipment Information instead
-   *  of the standard notes / remarks / Received By blocks. */
-  layout?: "pre-alert";
+   *  of the standard notes / remarks / Received By blocks.
+   *  "handover": partner-specific, prints the agent / transporter / clearing
+   *  agent the shipment is handed over to, and has no Received By block. */
+  layout?: "pre-alert" | "handover";
 }
 
 export const DOCUMENT_TYPES_LIST: DocumentTypeDef[] = [
@@ -29,7 +31,8 @@ export const DOCUMENT_TYPES_LIST: DocumentTypeDef[] = [
   { slug: "airline-draw-letter", title: "Airline Draw Letter", showNotes: true },
   { slug: "authorization-letter", title: "Authorization Letter", showNotes: true },
   { slug: "arrival-notification", title: "Arrival Notification" },
-  { slug: "booking-confirmation", title: "Booking Confirmation" },
+  // Partner-specific: names the agent the shipment is handed over to.
+  { slug: "booking-confirmation", title: "Booking Confirmation", layout: "handover" },
   // For the clearing agent: the shipment in transit to them + their clearing
   // instruction (Customs Bill of Entry Instructions and declaration).
   { slug: "import-pre-alert", title: "Import Pre-Alert", layout: "pre-alert" },
@@ -50,7 +53,7 @@ export function documentTypes(titles: Record<string, string> | null | undefined)
 
 /** A party's company name, then "Add:", "Attn:" and "Tel:" lines (printed
  *  with white-space: pre-line); any missing line is simply left out. */
-function partyBlock(
+export function partyBlock(
   company: string | null | undefined,
   address: string | null | undefined,
   contact: string | null | undefined,
