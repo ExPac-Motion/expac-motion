@@ -151,6 +151,24 @@ export const PARTNER_STATUSES: Record<PartnerKind, string[]> = {
   clearing_agent: [],
 };
 
+/** The statuses for this shipment's mode: agents also get "Flight Booked" /
+ *  "Vessel Booked" (partner_update_shipment accepts both). */
+export function partnerStatuses(kind: PartnerKind, mode: string | null | undefined): string[] {
+  const list = PARTNER_STATUSES[kind];
+  if (kind !== "agent") return list;
+  const booked = /air|courier/i.test(mode ?? "") ? "Flight Booked" : "Vessel Booked";
+  return [list[0], booked, ...list.slice(1)];
+}
+
+/** The documents ExPac expects from each partner kind, shown as a checklist
+ *  on the shipment page (any other type still uploads under "Other"). */
+export const PARTNER_DOC_SLOTS: Record<PartnerKind, string[]> = {
+  agent: ["Bill of Lading / AWB", "Commercial Invoice", "Packing List", "Supplier Invoice"],
+  transporter: ["Proof of Delivery", "Delivery Note", "Supplier Invoice"],
+  destination_agent: ["Arrival Notification (ANF)", "Proof of Delivery", "Supplier Invoice"],
+  clearing_agent: ["Customs Release Note", "Customs Entry", "Supplier Invoice"],
+};
+
 /** Document types each partner kind may upload (partner_add_document). */
 export const PARTNER_DOC_TYPES: Record<PartnerKind, string[]> = {
   agent: ["Bill of Lading / AWB", "HBL", "HAWB", "Commercial Invoice", "Packing List", "Certificate of Origin", "Supplier Invoice", "Photos", "Other"],

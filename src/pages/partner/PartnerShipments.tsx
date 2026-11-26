@@ -9,6 +9,7 @@ import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import BackButton from "../../components/BackButton";
 import DateInput from "../../components/DateInput";
 import TrackingMap from "../../components/TrackingMap";
+import TimelineProgress from "../../components/TimelineProgress";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, RowActions, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
@@ -20,7 +21,9 @@ import { aisRoute } from "../../lib/trackRoute";
 import { shipmentStatusSlug, type PartnerKind } from "../../lib/types";
 import {
   isMissingPartnerShipments,
+  PARTNER_DOC_SLOTS,
   PARTNER_DOC_TYPES,
+  partnerStatuses,
   PARTNER_STATUSES,
   sendPartnerMessage,
   updatePartnerShipment,
@@ -306,12 +309,33 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
 
   return (
     <>
-      <div className="ps-head">
-        <h2>{s.reference}</h2>
-        <StatusPill status={s.shipment_status} mode={s.mode} />
-        <span className="hint">
-          {dash(s.origin)} to {dash(s.destination)}
-        </span>
+      <div className="panel ps-hero">
+        <div className="ps-head">
+          <h2>{s.reference}</h2>
+          <StatusPill status={s.shipment_status} mode={s.mode} />
+          <span className="hint">
+            {dash(s.mode)}
+            {s.master_reference ? ` · on ${s.master_reference}` : ""}
+          </span>
+        </div>
+        <div className="sp-route ps-route">
+          <div className="sp-port">
+            <span className="sp-port-code">{s.origin ? portCode(s.origin) : "Origin"}</span>
+            <span className="sp-port-name">{s.origin || "To be confirmed"}</span>
+            <span className="sp-port-date">ETD {d(s.etd)}</span>
+          </div>
+          <div className="sp-route-line" aria-hidden>
+            <span>{air ? "✈️" : "🚢"}</span>
+          </div>
+          <div className="sp-port end">
+            <span className="sp-port-code">{s.destination ? portCode(s.destination) : "Destination"}</span>
+            <span className="sp-port-name">{s.destination || "To be confirmed"}</span>
+            <span className="sp-port-date">ETA {d(s.eta)}</span>
+          </div>
+        </div>
+        {s.timeline.length > 0 && (
+          <TimelineProgress steps={s.timeline} mode={s.mode ?? ""} delivered={s.completed} />
+        )}
       </div>
 
       <div className="ps-grid">
@@ -338,12 +362,12 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
 
           <PackingPanel s={s} />
           <ChargesPanel s={s} />
-          <DocumentsPanel s={s} kind={kind} demo={demo} />
           {s.tracking && (s.tracking.pol_lat != null || s.tracking.vessel_lat != null) && <TrackingPanel s={s} />}
         </div>
 
         <div className="ps-side">
-          {!s.completed && PARTNER_STATUSES[kind].length > 0 && <StatusPanel s={s} kind={kind} busy={save.isPending} run={run} />}
+          {!s.completed && PARTNER_STATUSES[kind].length > 0 && <StatusPanel key={s.shipment_status ?? ""} s={s} kind={kind} busy={save.isPending} run={run} />}
+          <DocumentsPanel s={s} kind={kind} demo={demo} />
           {kind === "clearing_agent" && (
             <div className="panel">
               <p className="hint" style={{ margin: 0 }}>
@@ -353,7 +377,6 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
           )}
           {!s.completed && <DelayPanel kind={kind} busy={save.isPending} run={run} />}
           <MessagesPanel s={s} demo={demo} />
-          <HistoryPanel s={s} />
         </div>
       </div>
     </>
@@ -458,26 +481,41 @@ function BookingPanel({ s, air, busy, run }: { s: PartnerShipment; air: boolean;
 }
 
 function StatusPanel({ s, kind, busy, run }: { s: PartnerShipment; kind: PartnerKind; busy: boolean; run: Run }) {
-  const options = PARTNER_STATUSES[kind];
+  const options = partnerStatuses(kind, s.mode);
   const cur = options.indexOf(s.shipment_status ?? "");
-  const [status, setStatus] = useState(options[Math.min(cur + 1, options.length - 1)] ?? options[0]);
+  const next = options[Math.min(cur + 1, options.length - 1)] ?? options[0];
+  const [status, setStatus] = useState(next);
+  const [pick, setPick] = useState(false);
   const [note, setNote] = useState("");
   const [signedBy, setSignedBy] = useState("");
   const [podDate, setPodDate] = useState(new Date().toISOString().slice(0, 10));
   const delivered = status === "Delivered";
+  const atEnd = cur === options.length - 1;
   return (
-    <div className="panel">
-      <div className="rfq-sec-head">Update status</div>
-      <div className="field">
-        <label>New status</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          {options.map((o) => (
-            <option key={o} value={o}>
-              {stepLabel(o, s.mode)}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="panel ps-next">
+      <div className="rfq-sec-head">Update the milestone</div>
+      <p className="ps-next-now">
+        Now: <b>{s.shipment_status ? stepLabel(s.shipment_status, s.mode) : "Created"}</b>
+      </p>
+      {pick || atEnd ? (
+        <div className="field">
+          <label>New status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {options.map((o) => (
+              <option key={o} value={o}>
+                {stepLabel(o, s.mode)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <p className="ps-next-to">
+          Next: <b>{stepLabel(status, s.mode)}</b>{" "}
+          <button type="button" className="link-btn" onClick={() => setPick(true)}>
+            choose another
+          </button>
+        </p>
+      )}
       {delivered && (
         <>
           <div className="field">
@@ -507,12 +545,15 @@ function StatusPanel({ s, kind, busy, run }: { s: PartnerShipment; kind: Partner
             },
             `Status set to ${stepLabel(status, s.mode)}`,
           );
-          if (ok) setNote("");
+          if (ok) {
+            setNote("");
+            setPick(false);
+          }
         }}
       >
-        Save status
+        Mark as {stepLabel(status, s.mode)}
       </button>
-      {delivered && <p className="hint">Upload the signed POD under Documents as well.</p>}
+      {delivered && <p className="hint">Upload the signed Proof of Delivery under Documents as well.</p>}
     </div>
   );
 }
@@ -689,21 +730,48 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
       error(e instanceof Error ? e.message : "Could not open the document");
     }
   }
+  const pickFile = (t: string) => {
+    setDocType(t);
+    input.current?.click();
+  };
+  const slots = PARTNER_DOC_SLOTS[kind];
+  const others = s.documents.filter((doc) => !slots.includes(doc.doc_type ?? ""));
   return (
     <div className="panel">
       <div className="rfq-sec-head">Documents</div>
-      {s.documents.length === 0 ? (
-        <p className="hint">No documents yet.</p>
-      ) : (
+      <ul className="ps-slots">
+        {slots.map((t) => {
+          const docs = s.documents.filter((doc) => doc.doc_type === t);
+          return (
+            <li key={t} className={docs.length ? "has" : undefined}>
+              <span className="ps-slot-tick" aria-hidden>
+                {docs.length ? "✓" : ""}
+              </span>
+              <div className="ps-slot-body">
+                <b>{t}</b>
+                {docs.map((doc) => (
+                  <button key={doc.id} type="button" className="link-btn" onClick={() => open(doc.storage_path)}>
+                    {doc.name}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn small outline" disabled={upload.isPending} onClick={() => pickFile(t)}>
+                {docs.length ? "Add" : "Upload"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {others.length > 0 && (
         <ul className="ps-docs">
-          {s.documents.map((doc) => (
+          {others.map((doc) => (
             <li key={doc.id}>
               <button type="button" className="link-btn" onClick={() => open(doc.storage_path)}>
                 {doc.name}
               </button>
               <span className="hint">
                 {dash(doc.doc_type)} · {formatDate(doc.created_at)}
-                {doc.mine ? " · uploaded by you" : ""}
+                {doc.mine ? " · uploaded by you" : " · from ExPac"}
               </span>
             </li>
           ))}
@@ -716,7 +784,7 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
           ))}
         </select>
         <button type="button" className="btn outline" disabled={upload.isPending} onClick={() => input.current?.click()}>
-          {upload.isPending ? "Uploading…" : "Upload document"}
+          {upload.isPending ? "Uploading…" : "Upload other"}
         </button>
         <input
           ref={input}
@@ -817,23 +885,6 @@ function MessagesPanel({ s, demo }: { s: PartnerShipment; demo: boolean }) {
           Send
         </button>
       </div>
-    </div>
-  );
-}
-
-function HistoryPanel({ s }: { s: PartnerShipment }) {
-  if (s.timeline.length === 0 && s.history.length === 0) return null;
-  return (
-    <div className="panel">
-      <div className="rfq-sec-head">Progress</div>
-      <ol className="ps-steps">
-        {s.timeline.map((t) => (
-          <li key={t.step} className={t.done ? "done" : undefined}>
-            <span>{stepLabel(t.step, s.mode)}</span>
-            <span className="hint">{t.actual_date ? formatDate(t.actual_date) : t.planned_date ? `planned ${formatDate(t.planned_date)}` : ""}</span>
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }

@@ -14161,3 +14161,84 @@ button.pt-kpi {
     display: none;
   }
 }
+
+/* ---------- Partner shipment page (hero, next step, document slots) ---------- */
+.ps-hero .ps-head {
+  margin-bottom: 6px;
+}
+.ps-hero .ps-route {
+  box-shadow: none;
+  border: 0;
+  padding: 6px 0 2px;
+  margin: 0;
+}
+.ps-hero .sp-steps {
+  margin-top: 14px;
+}
+.ps-next .btn {
+  width: 100%;
+}
+.ps-next-now,
+.ps-next-to {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+}
+.ps-slots {
+  list-style: none;
+  margin: 8px 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.ps-slots li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+.ps-slots li.has {
+  border-style: solid;
+  background: #f6faef;
+}
+.ps-slot-tick {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+.ps-slots li.has .ps-slot-tick {
+  background: var(--green, #8cbc43);
+  border-color: var(--green, #8cbc43);
+}
+.ps-slot-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 0.88rem;
+}
+.ps-slot-body .link-btn {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.ps-msg.me {
+  justify-self: end;
+  background: #eaf3dc;
+  border-bottom-right-radius: 3px;
+}
+.ps-msg.them {
+  justify-self: start;
+  background: #f1efe9;
+  border-bottom-left-radius: 3px;
+}

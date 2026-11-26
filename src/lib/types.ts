@@ -425,6 +425,9 @@ export interface ShipmentDocument {
   from_client?: boolean;
   /** The house it belongs to on a master shipment (0164), null = master. */
   house_id?: string | null;
+  /** Uploaded by a partner on the partner portal (0243). */
+  from_partner_id?: string | null;
+  from_partner_kind?: PartnerKind | null;
 }
 
 /** Options for the "Type" picker on a shipment document upload. */
