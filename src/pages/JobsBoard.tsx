@@ -1819,6 +1819,11 @@ export function DocumentsSection({ job }: { job: Job }) {
                   <span className="muted small"> · {doc.doc_type}</span>
                 )}
                 {doc.from_client && <span className="badge sent" style={{ marginLeft: 6 }}>From customer</span>}
+                {doc.from_partner_kind && (
+                  <span className="badge sent" style={{ marginLeft: 6 }}>
+                    From {PARTNER_LABEL[doc.from_partner_kind].toLowerCase()} (partner portal)
+                  </span>
+                )}
               </button>
               {houses.length > 0 && (
                 <select

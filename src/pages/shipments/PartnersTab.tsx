@@ -21,6 +21,7 @@ import {
   PARTNER_DOC_TYPES,
   sendStaffPartnerMessage,
   useJobPartnerMessages,
+  useJobPartnerAssignments,
   useJobPartners,
   useStaffPartnerMutation,
   type JobPartner,
@@ -61,6 +62,8 @@ export default function PartnersTab({
 }) {
   const partnersQ = useJobPartners(demo ? null : { jobId: job.id, masterJobId: job.master_job_id, quote });
   const msgsQ = useJobPartnerMessages(demo ? undefined : job.id);
+  // 0249: each partner's accept / decline (a house follows its master).
+  const accQ = useJobPartnerAssignments(demo ? undefined : [job.id, job.master_job_id].filter(Boolean) as string[]);
   const partners = demo?.partners ?? partnersQ.data ?? [];
   const messages = useMemo(() => demo?.messages ?? msgsQ.data ?? [], [demo, msgsQ.data]);
   const [pick, setPick] = useState<string | null>(null);
@@ -97,6 +100,17 @@ export default function PartnersTab({
               <span className="spt-chips">
                 <span className={`spt-chip${p.hasLogin ? " ok" : ""}`}>{p.hasLogin ? "Portal login" : "No portal login"}</span>
                 {unread > 0 && <span className="spt-chip new">{unread} new</span>}
+                {(() => {
+                  const a = (accQ.data ?? []).find((x) => x.partner_kind === p.kind && x.partner_id === p.id);
+                  if (a?.status === "accepted") return <span className="spt-chip ok">Accepted</span>;
+                  if (a?.status === "declined")
+                    return (
+                      <span className="spt-chip warn" title={a.reason ?? undefined}>
+                        Declined earlier
+                      </span>
+                    );
+                  return p.hasLogin ? <span className="spt-chip">Awaiting acceptance</span> : null;
+                })()}
               </span>
               <span className="hint">{last ? `Last activity ${formatDateTime(last)}` : "No activity yet"}</span>
             </button>

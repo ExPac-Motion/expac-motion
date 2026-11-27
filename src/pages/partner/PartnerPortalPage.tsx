@@ -17,6 +17,8 @@ import { PARTNER_LABEL } from "../../lib/tariff";
 import { usePartnerRfqs, usePartnerShipments } from "../../lib/partnerShipments";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 import BrokerDesk from "./BrokerDesk";
+import PartnerInvoices from "./PartnerInvoices";
+import { usePartnerInvoices } from "../../lib/partnerInvoices";
 import PartnerShipments from "./PartnerShipments";
 import { PartnerDashboard, PartnerQuotes, PartnerTracking } from "./PartnerHome";
 import { PortalIcon } from "../portal/PortalLayout";
@@ -27,11 +29,12 @@ interface PartnerCtx {
 }
 const usePartnerCtx = () => useOutletContext<PartnerCtx>();
 
-type Tab = "shipments" | "tracking" | "quotes";
+type Tab = "shipments" | "tracking" | "quotes" | "invoices";
 const TAB_PATH: Record<Tab, string> = {
   shipments: "/partner/shipments",
   tracking: "/partner/tracking",
   quotes: "/partner/quotes",
+  invoices: "/partner/invoices",
 };
 
 /** The partner's own coverage, editable with the edit_coverage permission. */
@@ -95,6 +98,7 @@ export function PartnerDashboardRoute() {
   return (
     <PartnerDashboard
       kind={me.partner_kind}
+      company={me.company || undefined}
       onOpen={(id) => navigate(`/partner/shipments/${id}`)}
       onTab={(t) => navigate(TAB_PATH[t])}
     />
@@ -118,6 +122,11 @@ export function PartnerTrackingRoute() {
   const { me } = usePartnerCtx();
   const navigate = useNavigate();
   return <PartnerTracking kind={me.partner_kind} onOpen={(id) => navigate(`/partner/shipments/${id}`)} />;
+}
+
+export function PartnerInvoicesRoute() {
+  const { me } = usePartnerCtx();
+  return <PartnerInvoices company={me.company || "Your company"} />;
 }
 
 export function PartnerQuotesRoute() {
@@ -190,16 +199,19 @@ export default function PartnerPortalPage() {
   const can = useCan();
   const shipmentsQ = usePartnerShipments(!!me);
   const rfqsQ = usePartnerRfqs(!!me);
+  const invoicesQ = usePartnerInvoices(!!me);
+  const queried = (invoicesQ.data ?? []).filter((i) => i.status === "queried").length;
   const [navOpen, setNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const todo = (shipmentsQ.data ?? []).filter((r) => !r.completed && r.action).length;
+  const todo = (shipmentsQ.data ?? []).filter((r) => !r.completed && (r.action || r.acceptance === "pending")).length;
   const openRfqs = (rfqsQ.data ?? []).filter((r) => r.status === "awaiting").length;
   const nav: NavItem[] = [
     { to: "/partner", label: "Dashboard", icon: "dashboard" },
     { to: "/partner/shipments", label: "Shipments", icon: "shipments", badge: todo },
     { to: "/partner/tracking", label: "Tracking", icon: "ship" },
     { to: "/partner/quotes", label: "Quotes", icon: "quotes", badge: openRfqs },
+    { to: "/partner/invoices", label: "Invoices", icon: "invoices", badge: queried },
     ...(me?.partner_kind === "clearing_agent"
       ? [{ to: "/partner/customs", label: "Customs Files", icon: "reports" }]
       : []),
