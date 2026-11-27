@@ -84,6 +84,7 @@ import PortalInfoHubPage from "./pages/portal/PortalInfoHubPage";
 import PartnerPortalPage, {
   PartnerCustomsRoute,
   PartnerDashboardRoute,
+  PartnerInvoicesRoute,
   PartnerQuotesRoute,
   PartnerRatesRoute,
   PartnerShipmentsRoute,
@@ -294,6 +295,7 @@ function AppRoutes() {
             <Route path="shipments/:id" element={<PartnerShipmentsRoute />} />
             <Route path="tracking" element={<PartnerTrackingRoute />} />
             <Route path="quotes" element={<PartnerQuotesRoute />} />
+            <Route path="invoices" element={<PartnerInvoicesRoute />} />
             <Route path="customs" element={<PartnerCustomsRoute />} />
             <Route path="rates" element={<PartnerRatesRoute />} />
             <Route path="*" element={<Navigate to="/partner" replace />} />
