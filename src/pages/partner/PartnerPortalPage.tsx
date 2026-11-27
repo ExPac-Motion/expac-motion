@@ -4,7 +4,7 @@
 // back and shared links work. The database only ever returns this partner's
 // own shipments, RFQs and rate sheets (RLS / SECURITY DEFINER RPCs).
 import { useState } from "react";
-import { Link, Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth/AuthProvider";
 import { ErrorNote, Loading, PageHeader } from "../../components/common";
@@ -23,6 +23,8 @@ import HubGrid from "../../components/HubGrid";
 import { useHubItems } from "../../lib/hub";
 import { usePartnerInvoices } from "../../lib/partnerInvoices";
 import PartnerShipments from "./PartnerShipments";
+import PartnerCompliance from "./PartnerCompliance";
+import { needsSigning, usePartnerCompliance } from "../../lib/compliance";
 import { PartnerDashboard, PartnerQuotes, PartnerTracking } from "./PartnerHome";
 import { PortalIcon } from "../portal/PortalLayout";
 
@@ -132,6 +134,11 @@ export function PartnerInvoicesRoute() {
   return <PartnerInvoices company={me.company || "Your company"} />;
 }
 
+export function PartnerComplianceRoute() {
+  const { me } = usePartnerCtx();
+  return <PartnerCompliance company={me.company || "your company"} />;
+}
+
 export function PartnerHubRoute() {
   const q = useHubItems();
   return (
@@ -217,6 +224,12 @@ export default function PartnerPortalPage() {
   const rfqsQ = usePartnerRfqs(!!me);
   const invoicesQ = usePartnerInvoices(!!me);
   const bookingsQ = usePartnerBookings(!!me);
+  const complianceQ = usePartnerCompliance(!!me);
+  // Until the NDA is accepted only Compliance, the Hub and rate sheets open
+  // (the database returns no shipments either). No migration yet = no gate.
+  const gated = complianceQ.data ? !complianceQ.data.ok : false;
+  const gateOpen = ["/partner/compliance", "/partner/hub", "/partner/rates"].some((p) => isActive(p, pathname));
+  const toSign = (complianceQ.data?.documents ?? []).filter(needsSigning).length;
   const quotesReady = (bookingsQ.data ?? []).filter((b) => b.status === "sent").length;
   const queried = (invoicesQ.data ?? []).filter((i) => i.status === "queried").length;
   const [navOpen, setNavOpen] = useState(false);
@@ -235,6 +248,7 @@ export default function PartnerPortalPage() {
       ? [{ to: "/partner/customs", label: "Customs Files", icon: "reports" }]
       : []),
     { to: "/partner/rates", label: "Rate Sheets", icon: "tariff" },
+    { to: "/partner/compliance", label: "Compliance", icon: "compliance", badge: toSign },
     { to: "/partner/hub", label: "Information Hub", icon: "hub" },
   ];
 
@@ -322,7 +336,11 @@ export default function PartnerPortalPage() {
               </p>
             </div>
           ) : (
-            <Outlet context={{ me, can } satisfies PartnerCtx} />
+            gated && !gateOpen ? (
+              <Navigate to="/partner/compliance" replace />
+            ) : (
+              <Outlet context={{ me, can } satisfies PartnerCtx} />
+            )
           )}
         </main>
       </div>

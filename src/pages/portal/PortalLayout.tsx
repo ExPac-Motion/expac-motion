@@ -108,6 +108,7 @@ const EMOJI: Record<string, string> = {
   tasks: "📝",
   warehouse: "🏭",
   hub: "📚",
+  compliance: "🛡️",
   calendar: "📅",
   plane: "✈️",
   ship: "🚢",
