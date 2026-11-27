@@ -17,6 +17,8 @@ import { PARTNER_LABEL } from "../../lib/tariff";
 import { usePartnerRfqs, usePartnerShipments } from "../../lib/partnerShipments";
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 import BrokerDesk from "./BrokerDesk";
+import PartnerInvoices from "./PartnerInvoices";
+import { usePartnerInvoices } from "../../lib/partnerInvoices";
 import PartnerShipments from "./PartnerShipments";
 import { PartnerDashboard, PartnerQuotes, PartnerTracking } from "./PartnerHome";
 import { PortalIcon } from "../portal/PortalLayout";
@@ -120,6 +122,11 @@ export function PartnerTrackingRoute() {
   return <PartnerTracking kind={me.partner_kind} onOpen={(id) => navigate(`/partner/shipments/${id}`)} />;
 }
 
+export function PartnerInvoicesRoute() {
+  const { me } = usePartnerCtx();
+  return <PartnerInvoices company={me.company || "Your company"} />;
+}
+
 export function PartnerQuotesRoute() {
   return <PartnerQuotes />;
 }
@@ -190,6 +197,8 @@ export default function PartnerPortalPage() {
   const can = useCan();
   const shipmentsQ = usePartnerShipments(!!me);
   const rfqsQ = usePartnerRfqs(!!me);
+  const invoicesQ = usePartnerInvoices(!!me);
+  const queried = (invoicesQ.data ?? []).filter((i) => i.status === "queried").length;
   const [navOpen, setNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -200,6 +209,7 @@ export default function PartnerPortalPage() {
     { to: "/partner/shipments", label: "Shipments", icon: "shipments", badge: todo },
     { to: "/partner/tracking", label: "Tracking", icon: "ship" },
     { to: "/partner/quotes", label: "Quotes", icon: "quotes", badge: openRfqs },
+    { to: "/partner/invoices", label: "Invoices", icon: "invoices", badge: queried },
     ...(me?.partner_kind === "clearing_agent"
       ? [{ to: "/partner/customs", label: "Customs Files", icon: "reports" }]
       : []),

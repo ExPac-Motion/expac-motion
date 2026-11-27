@@ -267,12 +267,13 @@ export async function sendPartnerMessage(id: string, body: string): Promise<void
   if (error) fail(error);
 }
 
-export async function uploadPartnerDocument(id: string, file: File, docType: string): Promise<void> {
+/** Uploads a file to the shipment and returns the new document id. */
+export async function uploadPartnerDocument(id: string, file: File, docType: string): Promise<string> {
   const safe = file.name.replace(/[^\w.() -]+/g, "_");
   const path = `partner/${id}/${Date.now()}-${safe}`;
   const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
   if (up.error) fail(up.error);
-  const { error } = await supabase.rpc("partner_add_document", {
+  const { data, error } = await supabase.rpc("partner_add_document", {
     p_job: id,
     p_name: file.name,
     p_path: path,
@@ -283,6 +284,7 @@ export async function uploadPartnerDocument(id: string, file: File, docType: str
     await supabase.storage.from(DOCS_BUCKET).remove([path]);
     fail(error);
   }
+  return data as string;
 }
 
 export function usePartnerShipments(enabled = true) {
