@@ -83,6 +83,7 @@ import PortalReportsPage from "./pages/portal/PortalReportsPage";
 import PortalInfoHubPage from "./pages/portal/PortalInfoHubPage";
 import { PartnerBookingNew, PartnerBookingsList } from "./pages/partner/PartnerBookings";
 import PartnerPortalPage, {
+  PartnerComplianceRoute,
   PartnerCustomsRoute,
   PartnerDashboardRoute,
   PartnerHubRoute,
@@ -303,6 +304,7 @@ function AppRoutes() {
             <Route path="customs" element={<PartnerCustomsRoute />} />
             <Route path="rates" element={<PartnerRatesRoute />} />
             <Route path="hub" element={<PartnerHubRoute />} />
+            <Route path="compliance" element={<PartnerComplianceRoute />} />
             <Route path="*" element={<Navigate to="/partner" replace />} />
           </Route>
           <Route element={<PortalProtected />}>

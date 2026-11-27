@@ -63,6 +63,7 @@ import MotionAiSettingsTab from "./MotionAiSettingsTab";
 import MotionAiKnowledgeTab from "./MotionAiKnowledgeTab";
 import AppearanceSettingsTab from "./AppearanceSettingsTab";
 import WmsSettings from "./wms/WmsSettings";
+import ComplianceSettingsTab from "./ComplianceSettingsTab";
 
 type Tab =
   | "company"
@@ -71,6 +72,7 @@ type Tab =
   | "team"
   | "portal"
   | "roles"
+  | "compliance"
   | "email"
   | "comms"
   | "replies"
@@ -104,6 +106,7 @@ const GROUPS: { title: string; tabs: { key: Tab; label: string }[] }[] = [
       { key: "team", label: "Team" },
       { key: "portal", label: "Customers on Portal" },
       { key: "roles", label: "Roles & Permissions" },
+      { key: "compliance", label: "Partner Compliance" },
     ],
   },
   {
@@ -177,6 +180,7 @@ export default function SettingsPage() {
           {tab === "team" && <TeamTab view="team" />}
           {tab === "portal" && <TeamTab view="portal" />}
           {tab === "roles" && <RolesTab />}
+          {tab === "compliance" && <ComplianceSettingsTab />}
           {tab === "email" && <EmailTab />}
           {tab === "comms" && <ShipmentCommsTab />}
           {tab === "replies" && <ShipmentRepliesTab />}

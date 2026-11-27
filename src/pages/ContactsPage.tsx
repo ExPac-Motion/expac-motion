@@ -60,6 +60,7 @@ import PartnerRateSheets from "./partners/PartnerRateSheets";
 import PartnerMailModal from "./partners/PartnerMailModal";
 import PartnerLoginAccess from "./partners/PartnerLoginAccess";
 import PartnerInvoicesStaff from "./partners/PartnerInvoicesStaff";
+import PartnerComplianceStaff from "./partners/PartnerComplianceStaff";
 import PartnerContactsTab from "./partners/PartnerContactsTab";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import BackButton from "../components/BackButton";
@@ -1169,7 +1170,7 @@ function ContactRecord({
           ? { kind: "clearing_agent", id: record.source_clearing_agent_id }
           : { kind: kind as PartnerKind, id: record.id };
 
-  type Tab = "overview" | "contacts" | "coverage" | "rates" | "logins" | "invoices" | "mail" | "tasks";
+  type Tab = "overview" | "contacts" | "coverage" | "rates" | "logins" | "invoices" | "compliance" | "mail" | "tasks";
   const tabs: Tab[] = [
     "overview",
     ...(isPartner ? (["contacts"] as Tab[]) : []),
@@ -1177,6 +1178,7 @@ function ContactRecord({
     ...(isPartner && canRates ? (["rates"] as Tab[]) : []),
     ...(isPartner && isAdmin ? (["logins"] as Tab[]) : []),
     ...(isPartner ? (["invoices"] as Tab[]) : []),
+    ...(isPartner ? (["compliance"] as Tab[]) : []),
     "mail",
     ...(linkKey ? (["tasks"] as Tab[]) : []),
   ];
@@ -1187,6 +1189,7 @@ function ContactRecord({
     rates: "Rates",
     logins: "Partner login",
     invoices: "Invoices",
+    compliance: "Compliance",
     mail: "Mail history",
     tasks: "Tasks",
   };
@@ -1481,6 +1484,12 @@ function ContactRecord({
         {tab === "invoices" && isPartner && (
           <div className="ws-panel">
             <PartnerInvoicesStaff kind={kind as PartnerKind} partnerId={record.id} />
+          </div>
+        )}
+
+        {tab === "compliance" && isPartner && (
+          <div className="ws-panel">
+            <PartnerComplianceStaff kind={kind as PartnerKind} partnerId={record.id} />
           </div>
         )}
 
