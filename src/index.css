@@ -14781,3 +14781,98 @@ button.pt-kpi {
     justify-items: start;
   }
 }
+
+/* ---------- Partner statement card (open, unboxed) ---------- */
+.pi-statement:has(.pi-stmt) {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+}
+.pi-stmt {
+  padding: 20px 22px;
+}
+.pi-stmt-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pi-stmt-total {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 2px 0 16px;
+  font-variant-numeric: tabular-nums;
+}
+.pi-stmt-meter {
+  height: 6px;
+  border-radius: 100px;
+  background: var(--night-tint);
+  overflow: hidden;
+}
+.pi-stmt-meter span {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  border-radius: 100px;
+}
+.pi-stmt-figs {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.pi-stmt-figs b {
+  color: var(--ink);
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.pi-stmt-age {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.pi-stmt-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 100px;
+  overflow: hidden;
+  gap: 2px;
+  background: var(--night-tint);
+}
+.pi-stmt-legend {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.86rem;
+}
+.pi-stmt-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pi-stmt-legend li b {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.pi-stmt-legend li.zero {
+  color: var(--muted);
+}
+.pi-stmt-legend li.zero b {
+  font-weight: 400;
+}
+.pi-stmt-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pi-stmt .b0 { background: var(--green); }
+.pi-stmt .b1 { background: var(--amber); }
+.pi-stmt .b2 { background: #e07a1f; }
+.pi-stmt .b3 { background: var(--orange); }
+.pi-stmt .b4 { background: #a33b2b; }
+.pi-stmt-legend li.zero i { opacity: 0.35; }

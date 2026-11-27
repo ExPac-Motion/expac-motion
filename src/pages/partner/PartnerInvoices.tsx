@@ -81,31 +81,53 @@ export default function PartnerInvoices({ company }: { company: string }) {
         <>
           {statement.length > 0 && (
             <div className="pi-statement">
-              {statement.map((s) => (
-                <div key={s.currency} className="panel pi-cur">
-                  <div className="pi-cur-head">
-                    <span>{s.currency}</span>
-                    <b>{money(s.currency, s.outstanding)}</b>
-                    <span className="hint">outstanding</span>
-                  </div>
-                  <div className="pi-cur-row">
-                    <span>Invoiced</span>
-                    <b>{money(s.currency, s.invoiced)}</b>
-                  </div>
-                  <div className="pi-cur-row">
-                    <span>Paid</span>
-                    <b>{money(s.currency, s.paid)}</b>
-                  </div>
-                  <div className="pi-ageing">
-                    {STATEMENT_BUCKETS.map((b, i) => (
-                      <div key={b.label} className={s.ageing[i] > 0 && i > 0 ? "late" : undefined}>
-                        <span>{b.label}</span>
-                        <b>{s.ageing[i] ? money(s.currency, s.ageing[i]) : "-"}</b>
+              {statement.map((s) => {
+                const paidPct = s.invoiced > 0 ? Math.min(100, (s.paid / s.invoiced) * 100) : 0;
+                return (
+                  <div key={s.currency} className="panel pi-cur pi-stmt">
+                    <div className="pi-stmt-label">Outstanding · {s.currency}</div>
+                    <div className="pi-stmt-total">{money(s.currency, s.outstanding)}</div>
+                    <div className="pi-stmt-paid">
+                      <div className="pi-stmt-meter">
+                        <span style={{ width: `${paidPct}%` }} />
                       </div>
-                    ))}
+                      <div className="pi-stmt-figs">
+                        <span>
+                          Invoiced <b>{money(s.currency, s.invoiced)}</b>
+                        </span>
+                        <span>
+                          Paid <b>{money(s.currency, s.paid)}</b>
+                        </span>
+                      </div>
+                    </div>
+                    {s.outstanding > 0 && (
+                      <div className="pi-stmt-age">
+                        <div className="pi-stmt-bar">
+                          {STATEMENT_BUCKETS.map((b, i) =>
+                            s.ageing[i] > 0 ? (
+                              <span
+                                key={b.label}
+                                className={`b${i}`}
+                                style={{ width: `${(s.ageing[i] / s.outstanding) * 100}%` }}
+                                title={`${b.label}: ${money(s.currency, s.ageing[i])}`}
+                              />
+                            ) : null,
+                          )}
+                        </div>
+                        <ul className="pi-stmt-legend">
+                          {STATEMENT_BUCKETS.map((b, i) => (
+                            <li key={b.label} className={s.ageing[i] > 0 ? undefined : "zero"}>
+                              <i className={`b${i}`} />
+                              <span>{b.label}</span>
+                              <b>{s.ageing[i] ? money(s.currency, s.ageing[i]) : "–"}</b>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
