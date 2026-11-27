@@ -21,7 +21,15 @@ import {
   type PartnerInvoice,
 } from "../../lib/partnerInvoices";
 
-export default function PartnerInvoicesStaff({ kind, partnerId }: { kind: PartnerKind; partnerId: string }) {
+export default function PartnerInvoicesStaff({
+  kind,
+  partnerId,
+  company,
+}: {
+  kind: PartnerKind;
+  partnerId: string;
+  company: string;
+}) {
   const q = useStaffPartnerInvoices(kind, partnerId);
   const act = useStaffInvoiceAction();
   const { toast, error } = useToast();
@@ -59,6 +67,8 @@ export default function PartnerInvoicesStaff({ kind, partnerId }: { kind: Partne
             <thead>
               <tr>
                 <th>Invoice</th>
+                <th>From</th>
+                <th>To</th>
                 <th>Shipment</th>
                 <th>Date</th>
                 <th>Due</th>
@@ -80,6 +90,8 @@ export default function PartnerInvoicesStaff({ kind, partnerId }: { kind: Partne
                       <b>{i.invoice_no}</b>
                     )}
                   </td>
+                  <td>{company}</td>
+                  <td>EXPAC FORWARDING</td>
                   <td>
                     <Link to={`/jobs/${i.job_id}`}>{i.reference}</Link>
                   </td>
