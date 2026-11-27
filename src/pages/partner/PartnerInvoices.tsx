@@ -93,6 +93,8 @@ export default function PartnerInvoices({ company }: { company: string }) {
                   <thead>
                     <tr>
                       <th>Invoice</th>
+                      <th>From</th>
+                      <th>To</th>
                       <th>Shipment</th>
                       <th>Date</th>
                       <th>Due</th>
@@ -114,6 +116,8 @@ export default function PartnerInvoices({ company }: { company: string }) {
                             <b>{i.invoice_no}</b>
                           )}
                         </td>
+                        <td>{company}</td>
+                        <td>EXPAC FORWARDING</td>
                         <td>{i.reference}</td>
                         <td>{formatDate(i.invoice_date)}</td>
                         <td>{i.due_date ? formatDate(i.due_date) : "-"}</td>
