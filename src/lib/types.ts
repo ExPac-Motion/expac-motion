@@ -428,6 +428,8 @@ export interface ShipmentDocument {
   /** Uploaded by a partner on the partner portal (0243). */
   from_partner_id?: string | null;
   from_partner_kind?: PartnerKind | null;
+  /** Shown to the shipment's partners on the Partner Portal (0254). */
+  visible_to_partner?: boolean | null;
 }
 
 /** Options for the "Type" picker on a shipment document upload. */
@@ -435,6 +437,7 @@ export const DOCUMENT_TYPES = [
   "Invoice",
   "Commercial Invoice",
   "Packing List",
+  "MAWB",
   "HAWB",
   "HBL",
   "MBL",
@@ -446,6 +449,8 @@ export const DOCUMENT_TYPES = [
   "ICASA Certificate",
   "NRCS Letter of Authority",
   "EUR1 Certificate",
+  "Manifest",
+  "Cargo Photos",
   "Arrival Notification (ANF)",
   "Customs Entry",
   "Duty / VAT Invoice",
@@ -1040,6 +1045,7 @@ export const CHARGE_UNITS: string[] = [
   "W/M",
   "R/T",
   "HBL",
+  "MAWB",
   "HAWB",
   "MAWB",
   "B/L",

@@ -840,9 +840,16 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
                   </button>
                 ))}
               </div>
+              {t === "Supplier Invoice" && !demo ? (
+                // An invoice goes through Invoices (number, amounts, PDF) so ExPac can approve and pay it.
+                <Link to={`/partner/invoices?job=${s.id}`} className="btn small">
+                  Submit invoice
+                </Link>
+              ) : (
               <button type="button" className="btn small outline" disabled={upload.isPending} onClick={() => pickFile(t)}>
                 {docs.length ? "Add" : "Upload"}
               </button>
+              )}
             </li>
           );
         })}
@@ -931,15 +938,28 @@ function TrackingPanel({ s }: { s: PartnerShipment }) {
 }
 
 function MessagesPanel({ s, demo }: { s: PartnerShipment; demo: boolean }) {
-  const { toast, error } = useToast();
+  const { error } = useToast();
   const [draft, setDraft] = useState("");
   const send = usePartnerMutation((body: string) => (demo ? Promise.resolve() : sendPartnerMessage(s.id, body)));
+  async function go() {
+    const body = draft.trim();
+    if (!body || send.isPending) return;
+    try {
+      await send.mutateAsync(body);
+      setDraft("");
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not send");
+    }
+  }
   return (
-    <div className="panel">
+    <div className="panel ps-chat">
       <div className="rfq-sec-head">Messages with ExPac</div>
       <div className="ps-msgs">
         {s.messages.length === 0 ? (
-          <p className="hint">No messages yet.</p>
+          <div className="ps-chat-empty">
+            <span aria-hidden>💬</span>
+            <p>No messages yet. Ask ExPac anything about this shipment; the team replies here.</p>
+          </div>
         ) : (
           s.messages.map((m) => (
             <div key={m.id} className={`ps-msg ${m.direction === "in" ? "me" : "them"}`}>
@@ -951,25 +971,25 @@ function MessagesPanel({ s, demo }: { s: PartnerShipment; demo: boolean }) {
           ))
         )}
       </div>
-      <textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write to ExPac about this shipment" />
-      <div className="ps-actions">
-        <button
-          type="button"
-          className="btn"
-          disabled={send.isPending || !draft.trim()}
-          onClick={async () => {
-            try {
-              await send.mutateAsync(draft.trim());
-              setDraft("");
-              toast("Message sent to ExPac");
-            } catch (e) {
-              error(e instanceof Error ? e.message : "Could not send");
+      <div className="ps-composer">
+        <textarea
+          rows={2}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void go();
             }
           }}
-        >
-          Send
+          placeholder="Write to ExPac about this shipment…"
+          aria-label="Message to ExPac"
+        />
+        <button type="button" className="ps-send" disabled={send.isPending || !draft.trim()} onClick={() => void go()} aria-label="Send">
+          {send.isPending ? "…" : "➤"}
         </button>
       </div>
+      <span className="ps-composer-hint">Enter to send · Shift+Enter for a new line</span>
     </div>
   );
 }
