@@ -29,11 +29,12 @@ interface PartnerCtx {
 }
 const usePartnerCtx = () => useOutletContext<PartnerCtx>();
 
-type Tab = "shipments" | "tracking" | "quotes";
+type Tab = "shipments" | "tracking" | "quotes" | "invoices";
 const TAB_PATH: Record<Tab, string> = {
   shipments: "/partner/shipments",
   tracking: "/partner/tracking",
   quotes: "/partner/quotes",
+  invoices: "/partner/invoices",
 };
 
 /** The partner's own coverage, editable with the edit_coverage permission. */
@@ -97,6 +98,7 @@ export function PartnerDashboardRoute() {
   return (
     <PartnerDashboard
       kind={me.partner_kind}
+      company={me.company || undefined}
       onOpen={(id) => navigate(`/partner/shipments/${id}`)}
       onTab={(t) => navigate(TAB_PATH[t])}
     />
