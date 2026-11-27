@@ -41,6 +41,8 @@ export interface PartnerShipmentRow {
   completed: boolean;
   unread: number;
   action: string | null;
+  /** 0249: "pending" until the partner accepts the job (missing before 0249 = accepted). */
+  acceptance?: "pending" | "accepted";
 }
 
 export interface PartnerParty {
@@ -128,6 +130,7 @@ export interface PartnerShipment {
   pod_signed_by: string | null;
   pod_delivered_at: string | null;
   completed: boolean;
+  acceptance?: "pending" | "accepted";
   notes: string | null;
   customs_stage?: string | null;
   customs_released?: boolean;
@@ -149,6 +152,24 @@ export const PARTNER_STATUSES: Record<PartnerKind, string[]> = {
   transporter: ["Collected", "On-Delivery", "Delivered"],
   destination_agent: ["Arrived", "Unloaded", "On-Delivery", "Delivered"],
   clearing_agent: [],
+};
+
+/** The statuses for this shipment's mode: agents also get "Flight Booked" /
+ *  "Vessel Booked" (partner_update_shipment accepts both). */
+export function partnerStatuses(kind: PartnerKind, mode: string | null | undefined): string[] {
+  const list = PARTNER_STATUSES[kind];
+  if (kind !== "agent") return list;
+  const booked = /air|courier/i.test(mode ?? "") ? "Flight Booked" : "Vessel Booked";
+  return [list[0], booked, ...list.slice(1)];
+}
+
+/** The documents ExPac expects from each partner kind, shown as a checklist
+ *  on the shipment page (any other type still uploads under "Other"). */
+export const PARTNER_DOC_SLOTS: Record<PartnerKind, string[]> = {
+  agent: ["Bill of Lading / AWB", "Commercial Invoice", "Packing List", "Supplier Invoice"],
+  transporter: ["Proof of Delivery", "Delivery Note", "Supplier Invoice"],
+  destination_agent: ["Arrival Notification (ANF)", "Proof of Delivery", "Supplier Invoice"],
+  clearing_agent: ["Customs Release Note", "Customs Entry", "Supplier Invoice"],
 };
 
 /** Document types each partner kind may upload (partner_add_document). */
@@ -188,9 +209,44 @@ export function isMissingPartnerShipments(e: unknown): boolean {
 }
 
 export async function listPartnerShipments(): Promise<PartnerShipmentRow[]> {
-  const { data, error } = await supabase.rpc("partner_shipments");
+  const [list, acc] = await Promise.all([supabase.rpc("partner_shipments"), supabase.rpc("partner_acceptances")]);
+  if (list.error) fail(list.error);
+  const rows = (list.data ?? []) as PartnerShipmentRow[];
+  // Before 0249 there's no acceptance: everything counts as accepted.
+  if (acc.error) return rows.map((r) => ({ ...r, acceptance: "accepted" as const }));
+  const byJob = new Map((acc.data as { job_id: string; acceptance: "pending" | "accepted" }[]).map((a) => [a.job_id, a.acceptance]));
+  return rows.map((r) => ({ ...r, acceptance: byJob.get(r.id) ?? "accepted" }));
+}
+
+/** Accept the shipment ExPac handed over, or decline it with a reason (0249). */
+export async function respondToShipment(id: string, accept: boolean, reason?: string): Promise<void> {
+  const { error } = await supabase.rpc("partner_respond", { p_job: id, p_accept: accept, p_reason: reason ?? null });
   if (error) fail(error);
-  return (data ?? []) as PartnerShipmentRow[];
+}
+
+/** Staff: each partner's accept / decline on a job (0249). */
+export interface JobPartnerAssignment {
+  partner_kind: PartnerKind;
+  partner_id: string;
+  status: "accepted" | "declined";
+  reason: string | null;
+  responded_at: string;
+}
+export function useJobPartnerAssignments(jobIds: string[] | undefined) {
+  return useQuery({
+    queryKey: ["job_partner_assignments", jobIds],
+    enabled: !!jobIds?.length,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("job_partner_assignments")
+        .select("partner_kind, partner_id, status, reason, responded_at")
+        .in("job_id", jobIds as string[])
+        .order("responded_at", { ascending: false });
+      if (error) return [] as JobPartnerAssignment[]; // before 0249
+      return (data ?? []) as JobPartnerAssignment[];
+    },
+  });
 }
 
 export async function getPartnerShipment(id: string): Promise<PartnerShipment> {
@@ -211,12 +267,13 @@ export async function sendPartnerMessage(id: string, body: string): Promise<void
   if (error) fail(error);
 }
 
-export async function uploadPartnerDocument(id: string, file: File, docType: string): Promise<void> {
+/** Uploads a file to the shipment and returns the new document id. */
+export async function uploadPartnerDocument(id: string, file: File, docType: string): Promise<string> {
   const safe = file.name.replace(/[^\w.() -]+/g, "_");
   const path = `partner/${id}/${Date.now()}-${safe}`;
   const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file);
   if (up.error) fail(up.error);
-  const { error } = await supabase.rpc("partner_add_document", {
+  const { data, error } = await supabase.rpc("partner_add_document", {
     p_job: id,
     p_name: file.name,
     p_path: path,
@@ -227,6 +284,7 @@ export async function uploadPartnerDocument(id: string, file: File, docType: str
     await supabase.storage.from(DOCS_BUCKET).remove([path]);
     fail(error);
   }
+  return data as string;
 }
 
 export function usePartnerShipments(enabled = true) {

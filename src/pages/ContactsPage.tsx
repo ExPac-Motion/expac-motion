@@ -59,6 +59,7 @@ import RateStructures from "./partners/RateStructures";
 import PartnerRateSheets from "./partners/PartnerRateSheets";
 import PartnerMailModal from "./partners/PartnerMailModal";
 import PartnerLoginAccess from "./partners/PartnerLoginAccess";
+import PartnerInvoicesStaff from "./partners/PartnerInvoicesStaff";
 import PartnerContactsTab from "./partners/PartnerContactsTab";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import BackButton from "../components/BackButton";
@@ -1168,13 +1169,14 @@ function ContactRecord({
           ? { kind: "clearing_agent", id: record.source_clearing_agent_id }
           : { kind: kind as PartnerKind, id: record.id };
 
-  type Tab = "overview" | "contacts" | "coverage" | "rates" | "logins" | "mail" | "tasks";
+  type Tab = "overview" | "contacts" | "coverage" | "rates" | "logins" | "invoices" | "mail" | "tasks";
   const tabs: Tab[] = [
     "overview",
     ...(isPartner ? (["contacts"] as Tab[]) : []),
     ...(isPartner ? (["coverage"] as Tab[]) : []),
     ...(isPartner && canRates ? (["rates"] as Tab[]) : []),
     ...(isPartner && isAdmin ? (["logins"] as Tab[]) : []),
+    ...(isPartner ? (["invoices"] as Tab[]) : []),
     "mail",
     ...(linkKey ? (["tasks"] as Tab[]) : []),
   ];
@@ -1184,6 +1186,7 @@ function ContactRecord({
     coverage: "Coverage",
     rates: "Rates",
     logins: "Partner login",
+    invoices: "Invoices",
     mail: "Mail history",
     tasks: "Tasks",
   };
@@ -1472,6 +1475,12 @@ function ContactRecord({
         {tab === "logins" && isPartner && isAdmin && (
           <div className="panel ws-panel">
             <PartnerLoginAccess kind={kind as PartnerKind} partnerId={record.id} company={record.company} email={record.email} />
+          </div>
+        )}
+
+        {tab === "invoices" && isPartner && (
+          <div className="ws-panel">
+            <PartnerInvoicesStaff kind={kind as PartnerKind} partnerId={record.id} />
           </div>
         )}
 

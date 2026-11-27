@@ -6,9 +6,12 @@
  * Every step is logged on the shipment and opens a Control Tower task.
  */
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
 import BackButton from "../../components/BackButton";
+import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
 import TrackingMap from "../../components/TrackingMap";
+import TimelineProgress from "../../components/TimelineProgress";
 import DataTable, { type DataColumn } from "../../components/DataTable";
 import { EmptyState, ErrorNote, Loading, PageHeader, PageTools, RowActions, SearchInput } from "../../components/common";
 import { useToast } from "../../components/Toast";
@@ -20,7 +23,10 @@ import { aisRoute } from "../../lib/trackRoute";
 import { shipmentStatusSlug, type PartnerKind } from "../../lib/types";
 import {
   isMissingPartnerShipments,
+  PARTNER_DOC_SLOTS,
   PARTNER_DOC_TYPES,
+  partnerStatuses,
+  respondToShipment,
   PARTNER_STATUSES,
   sendPartnerMessage,
   updatePartnerShipment,
@@ -80,7 +86,7 @@ export default function PartnerShipments({
   const [openLocal, setOpenLocal] = useState<string | null>(null);
   const openId = openIdIn !== undefined ? openIdIn : openLocal;
   const setOpenId = (id: string | null) => (onOpen ? onOpen(id) : setOpenLocal(id));
-  const [view, setView] = useState<"active" | "delivered" | "all">("active");
+  const [view, setView] = useState<"active" | "delivered" | "all">("all");
   const [modeTab, setModeTab] = useState<ModeTab>("all");
   const [search, setSearch] = useState("");
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
@@ -95,7 +101,9 @@ export default function PartnerShipments({
         [r.reference, r.master_reference, r.awb_mbl, r.container_no, r.vessel_name, r.origin, r.destination].some((v) =>
           v?.toLowerCase().includes(needle),
         ),
-    );
+    )
+    // Shipments waiting for an answer first.
+    .sort((a, b) => Number(b.acceptance === "pending") - Number(a.acceptance === "pending"));
 
   const columns: DataColumn<PartnerShipmentRow>[] = [
     {
@@ -136,7 +144,14 @@ export default function PartnerShipments({
       key: "action",
       header: "Action Needed",
       width: 170,
-      render: (r) => (r.action ? <span className="ps-action">{r.action}</span> : "-"),
+      render: (r) =>
+        r.acceptance === "pending" ? (
+          <span className="ps-action ps-action-accept">Accept or decline</span>
+        ) : r.action ? (
+          <span className="ps-action">{r.action}</span>
+        ) : (
+          "-"
+        ),
       sortValue: (r) => r.action ?? "",
     },
     { key: "ready", header: "Cargo Ready", width: 110, render: (r) => d(r.ready_date), sortValue: (r) => r.ready_date ?? "", defaultHidden: kind !== "agent" },
@@ -266,6 +281,7 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
   const { toast, error } = useToast();
   const save = usePartnerMutation((p: PartnerUpdate) => (demo ? Promise.resolve() : updatePartnerShipment(s.id, p)));
   const air = isAir(s.mode);
+  const pending = s.acceptance === "pending";
   const run = async (p: PartnerUpdate, ok: string) => {
     try {
       await save.mutateAsync(p);
@@ -306,14 +322,36 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
 
   return (
     <>
-      <div className="ps-head">
-        <h2>{s.reference}</h2>
-        <StatusPill status={s.shipment_status} mode={s.mode} />
-        <span className="hint">
-          {dash(s.origin)} to {dash(s.destination)}
-        </span>
+      <div className="panel ps-hero">
+        <div className="ps-head">
+          <h2>{s.reference}</h2>
+          <StatusPill status={s.shipment_status} mode={s.mode} />
+          <span className="hint">
+            {dash(s.mode)}
+            {s.master_reference ? ` · on ${s.master_reference}` : ""}
+          </span>
+        </div>
+        <div className="sp-route ps-route">
+          <div className="sp-port">
+            <span className="sp-port-code">{s.origin ? portCode(s.origin) : "Origin"}</span>
+            <span className="sp-port-name">{s.origin || "To be confirmed"}</span>
+            <span className="sp-port-date">ETD {d(s.etd)}</span>
+          </div>
+          <div className="sp-route-line" aria-hidden>
+            <span>{air ? "✈️" : "🚢"}</span>
+          </div>
+          <div className="sp-port end">
+            <span className="sp-port-code">{s.destination ? portCode(s.destination) : "Destination"}</span>
+            <span className="sp-port-name">{s.destination || "To be confirmed"}</span>
+            <span className="sp-port-date">ETA {d(s.eta)}</span>
+          </div>
+        </div>
+        {s.timeline.length > 0 && (
+          <TimelineProgress steps={s.timeline} mode={s.mode ?? ""} delivered={s.completed} />
+        )}
       </div>
 
+      {pending && <AcceptBanner s={s} demo={demo} />}
       <div className="ps-grid">
         <div className="ps-main">
           <div className="panel">
@@ -334,16 +372,16 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
             {(s.pickup || s.delivery) && <PartyBlock s={s} />}
           </div>
 
-          {kind === "agent" && !s.completed && <BookingPanel s={s} air={air} busy={save.isPending} run={run} />}
+          {!pending && kind === "agent" && !s.completed && <BookingPanel s={s} air={air} busy={save.isPending} run={run} />}
 
           <PackingPanel s={s} />
-          <ChargesPanel s={s} />
-          <DocumentsPanel s={s} kind={kind} demo={demo} />
+          <ChargesPanel s={s} demo={demo} />
           {s.tracking && (s.tracking.pol_lat != null || s.tracking.vessel_lat != null) && <TrackingPanel s={s} />}
         </div>
 
         <div className="ps-side">
-          {!s.completed && PARTNER_STATUSES[kind].length > 0 && <StatusPanel s={s} kind={kind} busy={save.isPending} run={run} />}
+          {!pending && !s.completed && PARTNER_STATUSES[kind].length > 0 && <StatusPanel key={s.shipment_status ?? ""} s={s} kind={kind} busy={save.isPending} run={run} />}
+          {!pending && <DocumentsPanel s={s} kind={kind} demo={demo} />}
           {kind === "clearing_agent" && (
             <div className="panel">
               <p className="hint" style={{ margin: 0 }}>
@@ -351,12 +389,79 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
               </p>
             </div>
           )}
-          {!s.completed && <DelayPanel kind={kind} busy={save.isPending} run={run} />}
-          <MessagesPanel s={s} demo={demo} />
-          <HistoryPanel s={s} />
+          {!pending && !s.completed && <DelayPanel kind={kind} busy={save.isPending} run={run} />}
+          {!pending && <MessagesPanel s={s} demo={demo} />}
         </div>
       </div>
     </>
+  );
+}
+
+/** A shipment ExPac handed over and the partner hasn't accepted yet (0249). */
+function AcceptBanner({ s, demo }: { s: PartnerShipment; demo: boolean }) {
+  const { toast, error } = useToast();
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState("");
+  const respond = usePartnerMutation((a: { accept: boolean; reason?: string }) =>
+    demo ? Promise.resolve() : respondToShipment(s.id, a.accept, a.reason),
+  );
+  async function go(accept: boolean) {
+    try {
+      await respond.mutateAsync({ accept, reason: accept ? undefined : reason.trim() });
+      toast(accept ? "Shipment accepted, thank you" : "Declined, ExPac has been told");
+      setDeclining(false);
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not send your answer");
+    }
+  }
+  return (
+    <div className="panel ps-accept">
+      <div>
+        <b>ExPac has handed you this shipment.</b>
+        <p className="hint" style={{ margin: "2px 0 0" }}>
+          Check the route, dates, cargo and your charges below, then accept it to see the full details, update
+          milestones, upload documents and message ExPac. If you can't handle it, decline and tell us why.
+        </p>
+      </div>
+      <div className="ps-accept-btns">
+        <button type="button" className="btn outline warn" disabled={respond.isPending} onClick={() => setDeclining(true)}>
+          Decline
+        </button>
+        <button type="button" className="btn" disabled={respond.isPending} onClick={() => go(true)}>
+          Accept shipment
+        </button>
+      </div>
+      {declining && (
+        <Modal title={`Decline ${s.reference}`} onClose={() => setDeclining(false)}>
+          <p className="hint" style={{ marginTop: 0 }}>
+            The shipment goes back to ExPac to hand to another partner. Tell us why so we can plan around it.
+          </p>
+          <div className="field">
+            <label>Reason</label>
+            <textarea
+              rows={3}
+              autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. no space on the flight that week"
+            />
+          </div>
+          <div className="ps-actions">
+            <button type="button" className="btn outline" onClick={() => setDeclining(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn warn"
+              disabled={respond.isPending || !reason.trim()}
+              onClick={() => go(false)}
+            >
+              Decline shipment
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }
 
@@ -458,26 +563,41 @@ function BookingPanel({ s, air, busy, run }: { s: PartnerShipment; air: boolean;
 }
 
 function StatusPanel({ s, kind, busy, run }: { s: PartnerShipment; kind: PartnerKind; busy: boolean; run: Run }) {
-  const options = PARTNER_STATUSES[kind];
+  const options = partnerStatuses(kind, s.mode);
   const cur = options.indexOf(s.shipment_status ?? "");
-  const [status, setStatus] = useState(options[Math.min(cur + 1, options.length - 1)] ?? options[0]);
+  const next = options[Math.min(cur + 1, options.length - 1)] ?? options[0];
+  const [status, setStatus] = useState(next);
+  const [pick, setPick] = useState(false);
   const [note, setNote] = useState("");
   const [signedBy, setSignedBy] = useState("");
   const [podDate, setPodDate] = useState(new Date().toISOString().slice(0, 10));
   const delivered = status === "Delivered";
+  const atEnd = cur === options.length - 1;
   return (
-    <div className="panel">
-      <div className="rfq-sec-head">Update status</div>
-      <div className="field">
-        <label>New status</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          {options.map((o) => (
-            <option key={o} value={o}>
-              {stepLabel(o, s.mode)}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="panel ps-next">
+      <div className="rfq-sec-head">Update the milestone</div>
+      <p className="ps-next-now">
+        Now: <b>{s.shipment_status ? stepLabel(s.shipment_status, s.mode) : "Created"}</b>
+      </p>
+      {pick || atEnd ? (
+        <div className="field">
+          <label>New status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {options.map((o) => (
+              <option key={o} value={o}>
+                {stepLabel(o, s.mode)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <p className="ps-next-to">
+          Next: <b>{stepLabel(status, s.mode)}</b>{" "}
+          <button type="button" className="link-btn" onClick={() => setPick(true)}>
+            choose another
+          </button>
+        </p>
+      )}
       {delivered && (
         <>
           <div className="field">
@@ -507,12 +627,15 @@ function StatusPanel({ s, kind, busy, run }: { s: PartnerShipment; kind: Partner
             },
             `Status set to ${stepLabel(status, s.mode)}`,
           );
-          if (ok) setNote("");
+          if (ok) {
+            setNote("");
+            setPick(false);
+          }
         }}
       >
-        Save status
+        Mark as {stepLabel(status, s.mode)}
       </button>
-      {delivered && <p className="hint">Upload the signed POD under Documents as well.</p>}
+      {delivered && <p className="hint">Upload the signed Proof of Delivery under Documents as well.</p>}
     </div>
   );
 }
@@ -632,7 +755,7 @@ function PackingPanel({ s }: { s: PartnerShipment }) {
   );
 }
 
-function ChargesPanel({ s }: { s: PartnerShipment }) {
+function ChargesPanel({ s, demo }: { s: PartnerShipment; demo: boolean }) {
   return (
     <div className="panel">
       <div className="rfq-sec-head">Your charges on this shipment</div>
@@ -670,7 +793,10 @@ function ChargesPanel({ s }: { s: PartnerShipment }) {
         </div>
       )}
       <p className="hint" style={{ marginBottom: 0 }}>
-        Rates as agreed with ExPac, excl. VAT. Upload your invoice under Documents as "Supplier Invoice".
+        Rates as agreed with ExPac, excl. VAT.{" "}
+        {s.acceptance !== "pending" && !demo && (
+          <Link to={`/partner/invoices?job=${s.id}`}>Invoice this shipment →</Link>
+        )}
       </p>
     </div>
   );
@@ -681,7 +807,7 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
   const types = PARTNER_DOC_TYPES[kind];
   const [docType, setDocType] = useState(types[0]);
   const input = useRef<HTMLInputElement>(null);
-  const upload = usePartnerMutation((f: File) => (demo ? Promise.resolve() : uploadPartnerDocument(s.id, f, docType)));
+  const upload = usePartnerMutation((f: File) => (demo ? Promise.resolve() : uploadPartnerDocument(s.id, f, docType).then(() => undefined)));
   async function open(path: string) {
     try {
       window.open(await getShipmentDocumentUrl(path), "_blank", "noopener");
@@ -689,21 +815,48 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
       error(e instanceof Error ? e.message : "Could not open the document");
     }
   }
+  const pickFile = (t: string) => {
+    setDocType(t);
+    input.current?.click();
+  };
+  const slots = PARTNER_DOC_SLOTS[kind];
+  const others = s.documents.filter((doc) => !slots.includes(doc.doc_type ?? ""));
   return (
     <div className="panel">
       <div className="rfq-sec-head">Documents</div>
-      {s.documents.length === 0 ? (
-        <p className="hint">No documents yet.</p>
-      ) : (
+      <ul className="ps-slots">
+        {slots.map((t) => {
+          const docs = s.documents.filter((doc) => doc.doc_type === t);
+          return (
+            <li key={t} className={docs.length ? "has" : undefined}>
+              <span className="ps-slot-tick" aria-hidden>
+                {docs.length ? "✓" : ""}
+              </span>
+              <div className="ps-slot-body">
+                <b>{t}</b>
+                {docs.map((doc) => (
+                  <button key={doc.id} type="button" className="link-btn" onClick={() => open(doc.storage_path)}>
+                    {doc.name}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn small outline" disabled={upload.isPending} onClick={() => pickFile(t)}>
+                {docs.length ? "Add" : "Upload"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {others.length > 0 && (
         <ul className="ps-docs">
-          {s.documents.map((doc) => (
+          {others.map((doc) => (
             <li key={doc.id}>
               <button type="button" className="link-btn" onClick={() => open(doc.storage_path)}>
                 {doc.name}
               </button>
               <span className="hint">
                 {dash(doc.doc_type)} · {formatDate(doc.created_at)}
-                {doc.mine ? " · uploaded by you" : ""}
+                {doc.mine ? " · uploaded by you" : " · from ExPac"}
               </span>
             </li>
           ))}
@@ -716,7 +869,7 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
           ))}
         </select>
         <button type="button" className="btn outline" disabled={upload.isPending} onClick={() => input.current?.click()}>
-          {upload.isPending ? "Uploading…" : "Upload document"}
+          {upload.isPending ? "Uploading…" : "Upload other"}
         </button>
         <input
           ref={input}
@@ -817,23 +970,6 @@ function MessagesPanel({ s, demo }: { s: PartnerShipment; demo: boolean }) {
           Send
         </button>
       </div>
-    </div>
-  );
-}
-
-function HistoryPanel({ s }: { s: PartnerShipment }) {
-  if (s.timeline.length === 0 && s.history.length === 0) return null;
-  return (
-    <div className="panel">
-      <div className="rfq-sec-head">Progress</div>
-      <ol className="ps-steps">
-        {s.timeline.map((t) => (
-          <li key={t.step} className={t.done ? "done" : undefined}>
-            <span>{stepLabel(t.step, s.mode)}</span>
-            <span className="hint">{t.actual_date ? formatDate(t.actual_date) : t.planned_date ? `planned ${formatDate(t.planned_date)}` : ""}</span>
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }
