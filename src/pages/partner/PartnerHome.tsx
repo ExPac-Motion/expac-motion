@@ -23,6 +23,7 @@ import {
   type PartnerRfq,
   type PartnerShipmentRow,
 } from "../../lib/partnerShipments";
+import { money, statementByCurrency, usePartnerInvoices } from "../../lib/partnerInvoices";
 
 const d = (v: string | null | undefined) => (v ? formatDate(v) : "-");
 const daysUntil = (iso: string | null | undefined) => (iso ? Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000) : null);
@@ -73,49 +74,153 @@ function Kpi({ label, value, icon, onClick, tone }: { label: string; value: numb
   );
 }
 
+export type DashTab = "shipments" | "tracking" | "quotes" | "invoices";
+
+/** One day of the coming week: what's departing, arriving or delivering. */
+function weekAhead(rows: PartnerShipmentRow[]) {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const dt = new Date();
+    dt.setHours(0, 0, 0, 0);
+    dt.setDate(dt.getDate() + i);
+    return { iso: dt.toISOString().slice(0, 10), date: dt, items: [] as { id: string; ref: string; what: string }[] };
+  });
+  const at = (iso: string | null | undefined) => days.find((d) => iso && iso.slice(0, 10) === d.iso);
+  for (const r of rows) {
+    if (r.completed) continue;
+    at(r.ready_date)?.items.push({ id: r.id, ref: r.reference, what: "Cargo ready" });
+    at(r.etd)?.items.push({ id: r.id, ref: r.reference, what: "Departs" });
+    at(r.eta)?.items.push({ id: r.id, ref: r.reference, what: "Arrives" });
+    at(r.delivery_date)?.items.push({ id: r.id, ref: r.reference, what: "Delivery" });
+  }
+  return days;
+}
+
 export function PartnerDashboard({
   kind,
+  company,
   onOpen,
   onTab,
   demoRows,
   demoRfqs,
 }: {
   kind: PartnerKind;
+  company?: string;
   onOpen: (id: string) => void;
-  onTab: (t: "shipments" | "tracking" | "quotes") => void;
+  onTab: (t: DashTab) => void;
   demoRows?: PartnerShipmentRow[];
   demoRfqs?: PartnerRfq[];
 }) {
   const sq = usePartnerShipments(!demoRows);
   const rq = usePartnerRfqs(!demoRfqs);
+  const iq = usePartnerInvoices(!demoRows);
   const rows = useMemo(() => demoRows ?? sq.data ?? [], [demoRows, sq.data]);
   const rfqs = useMemo(() => demoRfqs ?? rq.data ?? [], [demoRfqs, rq.data]);
+  const invoices = useMemo(() => iq.data ?? [], [iq.data]);
   const active = rows.filter((r) => !r.completed);
+  const toAccept = active.filter((r) => r.acceptance === "pending");
+  const todo = active.filter((r) => r.acceptance !== "pending" && r.action);
+  const inTransit = active.filter((r) => DEPARTED.has(r.shipment_status ?? ""));
   const soon = active.filter((r) => {
     const n = daysUntil(r.eta);
-    return n !== null && n <= 5;
+    return n !== null && n >= 0 && n <= 7;
   });
-  const todo = active.filter((r) => r.action || r.unread > 0);
   const waiting = rfqs.filter((r) => r.status === "awaiting");
-  const unread = active.reduce((n, r) => n + r.unread, 0);
+  const queried = invoices.filter((i) => i.status === "queried");
+  const owed = statementByCurrency(invoices).filter((s) => s.outstanding > 0);
+  const unreadRows = active.filter((r) => r.unread > 0);
   const points = useMemo(() => fleetPoints(rows), [rows]);
-  const next = [...active].filter((r) => r.eta).sort((a, b) => (a.eta ?? "").localeCompare(b.eta ?? "")).slice(0, 6);
+  const week = useMemo(() => weekAhead(rows), [rows]);
+  const nothing = toAccept.length + todo.length + waiting.length + queried.length === 0;
+  const hour = new Date().getHours();
 
   if (!demoRows && sq.isLoading) return <Loading />;
   if (!demoRows && sq.error) return <ErrorNote error={sq.error} />;
 
   return (
     <>
-      <PageHeader eyebrow="Partner Portal" title="Dashboard" />
-      <div className="pt-kpis">
-        <Kpi label="Active shipments" value={active.length} icon="shipments" onClick={() => onTab("shipments")} />
-        <Kpi label="Arriving in 5 days" value={soon.length} icon="calendar" onClick={() => onTab("shipments")} />
+      <PageHeader
+        eyebrow={new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}
+        title={`Good ${hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening"}${company ? `, ${company}` : ""}`}
+      />
+      <div className="pt-kpis pp-kpis">
+        <Kpi label="New jobs to accept" value={toAccept.length} icon="shipments" onClick={() => onTab("shipments")} tone={toAccept.length ? "amber" : undefined} />
         <Kpi label="Need your action" value={todo.length} icon="tasks" onClick={() => onTab("shipments")} tone={todo.length ? "amber" : undefined} />
+        <Kpi label="In transit" value={inTransit.length} icon={kind === "transporter" ? "shipments" : "ship"} onClick={() => onTab("tracking")} />
+        <Kpi label="Arriving in 7 days" value={soon.length} icon="calendar" onClick={() => onTab("shipments")} />
         <Kpi label="Waiting for your rates" value={waiting.length} icon="quotes" onClick={() => onTab("quotes")} tone={waiting.length ? "amber" : undefined} />
-        <Kpi label="New messages from ExPac" value={unread} icon="party" onClick={() => onTab("shipments")} />
+        <button type="button" className="pt-kpi" onClick={() => onTab("invoices")}>
+          <span className="pt-kpi-label">Owed to you</span>
+          <span className="pt-kpi-icon" aria-hidden>
+            <PortalIcon name="invoices" />
+          </span>
+          <span className="pt-kpi-value pp-kpi-money">
+            {owed.length ? owed.slice(0, 2).map((s) => <span key={s.currency}>{money(s.currency, s.outstanding)}</span>) : "-"}
+          </span>
+        </button>
       </div>
 
       <div className="ph-grid">
+        <div className="panel">
+          <div className="ph-head">
+            <h3>Your to-do</h3>
+          </div>
+          {nothing ? (
+            <EmptyState>Nothing waiting on you. Nice.</EmptyState>
+          ) : (
+            <ul className="ph-todo">
+              {toAccept.map((r) => (
+                <li key={"a" + r.id} className="pp-todo-accept">
+                  <div>
+                    <b>{r.reference}</b>
+                    <span className="hint">
+                      New shipment · {portCode(r.origin)} to {portCode(r.destination)}
+                      {r.etd ? ` · ETD ${d(r.etd)}` : ""}
+                    </span>
+                  </div>
+                  <button type="button" className="btn small" onClick={() => onOpen(r.id)}>
+                    Accept or decline
+                  </button>
+                </li>
+              ))}
+              {todo.map((r) => (
+                <li key={"t" + r.id}>
+                  <div>
+                    <b>{r.reference}</b>
+                    <span className="hint">{r.action}</span>
+                  </div>
+                  <button type="button" className="btn small outline" onClick={() => onOpen(r.id)}>
+                    Open
+                  </button>
+                </li>
+              ))}
+              {waiting.map((r) => (
+                <li key={"r" + r.id}>
+                  <div>
+                    <b>{r.rfq_number}</b>
+                    <span className="hint">
+                      Rates requested · {portCode(r.origin)} to {portCode(r.destination)} · reply by {d(r.reply_by)}
+                    </span>
+                  </div>
+                  <a className="btn small outline" href={`/rfq/reply/${r.token}`} target="_blank" rel="noopener">
+                    Send rates
+                  </a>
+                </li>
+              ))}
+              {queried.map((i) => (
+                <li key={"q" + i.id}>
+                  <div>
+                    <b>Invoice {i.invoice_no}</b>
+                    <span className="hint">ExPac has a query · {i.reference}</span>
+                  </div>
+                  <button type="button" className="btn small outline" onClick={() => onTab("invoices")}>
+                    Answer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div className="panel">
           <div className="ph-head">
             <h3>Where your shipments are</h3>
@@ -123,99 +228,61 @@ export function PartnerDashboard({
               Open tracking
             </button>
           </div>
-          <FleetMap points={points} height={320} onOpen={onOpen} />
-        </div>
-
-        <div className="panel">
-          <div className="ph-head">
-            <h3>Needs your attention</h3>
-          </div>
-          {todo.length === 0 && waiting.length === 0 ? (
-            <EmptyState>Nothing waiting on you. Nice.</EmptyState>
-          ) : (
-            <ul className="ph-todo">
-              {waiting.map((r) => (
-                <li key={r.id}>
-                  <div>
-                    <b>{r.rfq_number}</b>
-                    <span className="hint">
-                      {portCode(r.origin)} to {portCode(r.destination)} · reply by {d(r.reply_by)}
-                    </span>
-                  </div>
-                  <a className="btn small" href={`/rfq/reply/${r.token}`} target="_blank" rel="noopener">
-                    Send rates
-                  </a>
-                </li>
-              ))}
-              {todo.map((r) => (
-                <li key={r.id}>
-                  <div>
-                    <b>{r.reference}</b>
-                    <span className="hint">
-                      {[r.action, r.unread ? `${r.unread} new message${r.unread === 1 ? "" : "s"}` : null].filter(Boolean).join(" · ")}
-                    </span>
-                  </div>
-                  <button type="button" className="btn small outline" onClick={() => onOpen(r.id)}>
-                    Open
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <FleetMap points={points} height={300} onOpen={onOpen} />
         </div>
       </div>
 
       <div className="panel" style={{ marginTop: 14 }}>
         <div className="ph-head">
-          <h3>Arriving next</h3>
+          <h3>This week</h3>
           <button type="button" className="link-btn" onClick={() => onTab("shipments")}>
             All shipments
           </button>
         </div>
-        {next.length === 0 ? (
-          <EmptyState>No arrivals scheduled.</EmptyState>
-        ) : (
-          <div className="table-wrap">
-            <table className="customs-table">
-              <thead>
-                <tr>
-                  <th>Shipment</th>
-                  <th>Mode</th>
-                  <th>POL</th>
-                  <th>POD</th>
-                  {kind !== "transporter" && <th>Vessel / Flight</th>}
-                  <th>ETA</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {next.map((r) => {
-                  const n = daysUntil(r.eta);
-                  return (
-                    <tr key={r.id} className="customs-row" onClick={() => onOpen(r.id)}>
-                      <td>
-                        <button type="button" className="ref-link">
-                          {r.reference}
-                        </button>
-                      </td>
-                      <td>{r.mode || "-"}</td>
-                      <td>{portCode(r.origin)}</td>
-                      <td>{portCode(r.destination)}</td>
-                      {kind !== "transporter" && <td>{r.vessel_name || "-"}</td>}
-                      <td>
-                        <span className={n !== null && n <= 5 ? "job-eta is-due" : undefined}>{d(r.eta)}</span>
-                      </td>
-                      <td>
-                        <StatusPill status={r.shipment_status} mode={r.mode} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="pp-week">
+          {week.map((day, i) => (
+            <div key={day.iso} className={`pp-day${i === 0 ? " today" : ""}`}>
+              <div className="pp-day-head">
+                <b>{i === 0 ? "Today" : day.date.toLocaleDateString("en-ZA", { weekday: "short" })}</b>
+                <span>{day.date.getDate()}</span>
+              </div>
+              {day.items.length === 0 ? (
+                <span className="pp-day-empty">-</span>
+              ) : (
+                day.items.map((it, n) => (
+                  <button key={n} type="button" className="pp-day-item" onClick={() => onOpen(it.id)}>
+                    <b>{it.ref}</b>
+                    <span>{it.what}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {unreadRows.length > 0 && (
+        <div className="panel" style={{ marginTop: 14 }}>
+          <div className="ph-head">
+            <h3>New messages from ExPac</h3>
+          </div>
+          <ul className="ph-todo">
+            {unreadRows.map((r) => (
+              <li key={"m" + r.id}>
+                <div>
+                  <b>{r.reference}</b>
+                  <span className="hint">
+                    {r.unread} new message{r.unread === 1 ? "" : "s"} · <StatusPill status={r.shipment_status} mode={r.mode} />
+                  </span>
+                </div>
+                <button type="button" className="btn small outline" onClick={() => onOpen(r.id)}>
+                  Read
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </>
   );
 }

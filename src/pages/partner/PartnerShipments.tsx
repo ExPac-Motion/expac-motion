@@ -6,6 +6,7 @@
  * Every step is logged on the shipment and opens a Control Tower task.
  */
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
 import BackButton from "../../components/BackButton";
 import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
@@ -374,7 +375,7 @@ function ShipmentBody({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKind
           {!pending && kind === "agent" && !s.completed && <BookingPanel s={s} air={air} busy={save.isPending} run={run} />}
 
           <PackingPanel s={s} />
-          <ChargesPanel s={s} />
+          <ChargesPanel s={s} demo={demo} />
           {s.tracking && (s.tracking.pol_lat != null || s.tracking.vessel_lat != null) && <TrackingPanel s={s} />}
         </div>
 
@@ -754,7 +755,7 @@ function PackingPanel({ s }: { s: PartnerShipment }) {
   );
 }
 
-function ChargesPanel({ s }: { s: PartnerShipment }) {
+function ChargesPanel({ s, demo }: { s: PartnerShipment; demo: boolean }) {
   return (
     <div className="panel">
       <div className="rfq-sec-head">Your charges on this shipment</div>
@@ -792,7 +793,10 @@ function ChargesPanel({ s }: { s: PartnerShipment }) {
         </div>
       )}
       <p className="hint" style={{ marginBottom: 0 }}>
-        Rates as agreed with ExPac, excl. VAT. Upload your invoice under Documents as "Supplier Invoice".
+        Rates as agreed with ExPac, excl. VAT.{" "}
+        {s.acceptance !== "pending" && !demo && (
+          <Link to={`/partner/invoices?job=${s.id}`}>Invoice this shipment →</Link>
+        )}
       </p>
     </div>
   );
@@ -803,7 +807,7 @@ function DocumentsPanel({ s, kind, demo }: { s: PartnerShipment; kind: PartnerKi
   const types = PARTNER_DOC_TYPES[kind];
   const [docType, setDocType] = useState(types[0]);
   const input = useRef<HTMLInputElement>(null);
-  const upload = usePartnerMutation((f: File) => (demo ? Promise.resolve() : uploadPartnerDocument(s.id, f, docType)));
+  const upload = usePartnerMutation((f: File) => (demo ? Promise.resolve() : uploadPartnerDocument(s.id, f, docType).then(() => undefined)));
   async function open(path: string) {
     try {
       window.open(await getShipmentDocumentUrl(path), "_blank", "noopener");
