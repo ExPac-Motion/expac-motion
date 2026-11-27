@@ -14501,3 +14501,77 @@ button.pt-kpi {
   margin-top: 10px;
   font-size: 0.95rem;
 }
+
+/* ---------- Partner shipment chat ---------- */
+.ps-chat .ps-msgs {
+  background: #faf9f6;
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 120px;
+  max-height: 360px;
+}
+.ps-chat-empty {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.86rem;
+  padding: 18px 10px;
+}
+.ps-chat-empty span {
+  font-size: 1.6rem;
+}
+.ps-chat-empty p {
+  margin: 6px 0 0;
+}
+.ps-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ps-composer:focus-within {
+  border-color: var(--green, #8cbc43);
+  box-shadow: 0 0 0 3px rgba(140, 188, 67, 0.18);
+}
+.ps-composer textarea {
+  flex: 1;
+  border: 0 !important;
+  outline: none;
+  box-shadow: none !important;
+  resize: none;
+  background: transparent;
+  padding: 7px 0;
+  font: inherit;
+  font-size: 0.9rem;
+  min-height: 22px;
+  max-height: 140px;
+}
+.ps-send {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--green, #8cbc43);
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.ps-send:disabled {
+  background: #d9e6c4;
+  cursor: default;
+}
+.ps-composer-hint {
+  display: block;
+  margin: 4px 0 0 14px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}

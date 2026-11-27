@@ -85,6 +85,7 @@ import {
   type ShipmentDocument,
 } from "../lib/types";
 import CommsRail from "./shipments/CommsRail";
+import { sharedWithPartner } from "../lib/partnerShipments";
 
 /** "AWB" for air/courier, "MBL" for sea, "Ref" otherwise. */
 export function docLabel(mode: string): string {
@@ -1685,6 +1686,18 @@ export function DocumentsSection({ job }: { job: Job }) {
     }
   }
 
+  async function onTogglePartner(doc: ShipmentDocument) {
+    try {
+      await updateDoc.mutateAsync({
+        id: doc.id,
+        jobId: job.id,
+        patch: { visible_to_partner: !sharedWithPartner(doc) },
+      });
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Could not update");
+    }
+  }
+
   async function onDownload(doc: ShipmentDocument) {
     // Open the tab synchronously (still inside the click gesture) so the
     // browser doesn't block it as a popup once the signed URL is awaited.
@@ -1853,6 +1866,16 @@ export function DocumentsSection({ job }: { job: Job }) {
                 >
                   {doc.visible_to_client ? "Visible to customer" : "Staff only"}
                 </button>
+                {!doc.from_partner_kind && (
+                  <button
+                    type="button"
+                    className={`btn outline small${sharedWithPartner(doc) ? " on" : ""}`}
+                    title="Partners see Commercial Invoice, Packing List, MAWB / HAWB / MBL / HBL, Manifest and Cargo Photos by default; click to override for this document"
+                    onClick={() => onTogglePartner(doc)}
+                  >
+                    {sharedWithPartner(doc) ? "Partner can see" : "Hidden from partner"}
+                  </button>
+                )}
                 <button
                   className="row-icon-btn danger"
                   title="Delete"

@@ -2339,7 +2339,7 @@ export async function uploadShipmentDocument(
 
 export async function updateShipmentDocument(
   id: string,
-  patch: Partial<Pick<ShipmentDocument, "doc_type" | "visible_to_client">>,
+  patch: Partial<Pick<ShipmentDocument, "doc_type" | "visible_to_client" | "visible_to_partner">>,
 ): Promise<ShipmentDocument> {
   return unwrap<ShipmentDocument>(
     await supabase

@@ -490,3 +490,20 @@ export async function listPartnerRfqs(): Promise<PartnerRfq[]> {
 export function usePartnerRfqs(enabled = true) {
   return useQuery({ queryKey: ["partner_rfqs"], queryFn: listPartnerRfqs, enabled, retry: false });
 }
+
+/** ExPac uploads partners see by default (same list as 0254's
+ *  partner_doc_type_shared); staff can override one document either way. */
+export const PARTNER_SHARED_DOC_TYPES = [
+  "Commercial Invoice",
+  "Packing List",
+  "MAWB",
+  "HAWB",
+  "MBL",
+  "HBL",
+  "Bill of Lading / AWB",
+  "Manifest",
+  "Cargo Photos",
+  "Photos",
+];
+export const sharedWithPartner = (d: { doc_type: string | null; visible_to_partner?: boolean | null }) =>
+  d.visible_to_partner ?? PARTNER_SHARED_DOC_TYPES.includes(d.doc_type ?? "");
