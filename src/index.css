@@ -14322,7 +14322,7 @@ button.pt-kpi {
   color: #a33b2b;
 }
 .pi-table .num {
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 .pi-status {
@@ -14883,5 +14883,5 @@ button.pt-kpi {
 }
 .qs-pk.pi-stmt-sum th:not(:first-child),
 .qs-pk.pi-stmt-sum td:not(:first-child) {
-  text-align: right;
+  text-align: left;
 }

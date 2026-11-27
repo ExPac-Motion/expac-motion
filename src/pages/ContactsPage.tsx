@@ -1483,7 +1483,7 @@ function ContactRecord({
 
         {tab === "invoices" && isPartner && (
           <div className="ws-panel">
-            <PartnerInvoicesStaff kind={kind as PartnerKind} partnerId={record.id} />
+            <PartnerInvoicesStaff kind={kind as PartnerKind} partnerId={record.id} company={record.company} />
           </div>
         )}
 
