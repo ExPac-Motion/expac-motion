@@ -8,6 +8,7 @@ import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
 import { EmptyState, ErrorNote, Loading } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import StatementCards from "../partner/StatementCards";
 import { getShipmentDocumentUrl } from "../../lib/db";
 import { formatDate } from "../../lib/format";
 import type { PartnerKind } from "../../lib/types";
@@ -49,27 +50,7 @@ export default function PartnerInvoicesStaff({ kind, partnerId }: { kind: Partne
   return (
     <div className="panel">
       <h3 style={{ marginTop: 0 }}>Invoices from the partner portal</h3>
-      {rows.length > 0 && (
-        <div className="pi-statement" style={{ marginBottom: 12 }}>
-          {statementByCurrency(rows).map((s) => (
-            <div key={s.currency} className="pi-cur pi-cur-flat">
-              <div className="pi-cur-head">
-                <span>{s.currency}</span>
-                <b>{money(s.currency, s.outstanding)}</b>
-                <span className="hint">outstanding</span>
-              </div>
-              <div className="pi-cur-row">
-                <span>Invoiced</span>
-                <b>{money(s.currency, s.invoiced)}</b>
-              </div>
-              <div className="pi-cur-row">
-                <span>Paid</span>
-                <b>{money(s.currency, s.paid)}</b>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <StatementCards statement={statementByCurrency(rows)} />
       {rows.length === 0 ? (
         <EmptyState>No invoices submitted on the partner portal yet.</EmptyState>
       ) : (

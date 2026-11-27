@@ -14876,3 +14876,12 @@ button.pt-kpi {
 .pi-stmt .b3 { background: var(--orange); }
 .pi-stmt .b4 { background: #a33b2b; }
 .pi-stmt-legend li.zero i { opacity: 0.35; }
+/* Printed statement summary: headings and amounts never wrap. */
+.qs-pk.pi-stmt-sum th,
+.qs-pk.pi-stmt-sum td {
+  white-space: nowrap;
+}
+.qs-pk.pi-stmt-sum th:not(:first-child),
+.qs-pk.pi-stmt-sum td:not(:first-child) {
+  text-align: right;
+}
