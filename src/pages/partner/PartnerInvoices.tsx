@@ -11,6 +11,7 @@ import Modal from "../../components/Modal";
 import DateInput from "../../components/DateInput";
 import { EmptyState, ErrorNote, Loading, PageHeader } from "../../components/common";
 import { useToast } from "../../components/Toast";
+import StatementCards from "./StatementCards";
 import { COMPANY } from "../../lib/company";
 import { getShipmentDocumentUrl } from "../../lib/db";
 import { formatDate } from "../../lib/format";
@@ -79,58 +80,7 @@ export default function PartnerInvoices({ company }: { company: string }) {
         <ErrorNote error={q.error} />
       ) : (
         <>
-          {statement.length > 0 && (
-            <div className="pi-statement">
-              {statement.map((s) => {
-                const paidPct = s.invoiced > 0 ? Math.min(100, (s.paid / s.invoiced) * 100) : 0;
-                return (
-                  <div key={s.currency} className="panel pi-cur pi-stmt">
-                    <div className="pi-stmt-label">Outstanding · {s.currency}</div>
-                    <div className="pi-stmt-total">{money(s.currency, s.outstanding)}</div>
-                    <div className="pi-stmt-paid">
-                      <div className="pi-stmt-meter">
-                        <span style={{ width: `${paidPct}%` }} />
-                      </div>
-                      <div className="pi-stmt-figs">
-                        <span>
-                          Invoiced <b>{money(s.currency, s.invoiced)}</b>
-                        </span>
-                        <span>
-                          Paid <b>{money(s.currency, s.paid)}</b>
-                        </span>
-                      </div>
-                    </div>
-                    {s.outstanding > 0 && (
-                      <div className="pi-stmt-age">
-                        <div className="pi-stmt-bar">
-                          {STATEMENT_BUCKETS.map((b, i) =>
-                            s.ageing[i] > 0 ? (
-                              <span
-                                key={b.label}
-                                className={`b${i}`}
-                                style={{ width: `${(s.ageing[i] / s.outstanding) * 100}%` }}
-                                title={`${b.label}: ${money(s.currency, s.ageing[i])}`}
-                              />
-                            ) : null,
-                          )}
-                        </div>
-                        <ul className="pi-stmt-legend">
-                          {STATEMENT_BUCKETS.map((b, i) => (
-                            <li key={b.label} className={s.ageing[i] > 0 ? undefined : "zero"}>
-                              <i className={`b${i}`} />
-                              <span>{b.label}</span>
-                              <b>{s.ageing[i] ? money(s.currency, s.ageing[i]) : "–"}</b>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
+          <StatementCards statement={statement} />
           <div className="panel">
             {rows.length === 0 ? (
               <EmptyState>
@@ -422,7 +372,7 @@ function StatementPrint({ company, rows, onClose }: { company: string; rows: Par
           <b>{company}</b> · Statement date {formatDate(today())}
         </p>
         <div className="qs-bar">Summary</div>
-        <table className="qs-pk">
+        <table className="qs-pk pi-stmt-sum">
           <thead>
             <tr>
               <th>Currency</th>
