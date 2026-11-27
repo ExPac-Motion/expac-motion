@@ -18,6 +18,8 @@ import { usePartnerRfqs, usePartnerShipments } from "../../lib/partnerShipments"
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 import BrokerDesk from "./BrokerDesk";
 import PartnerInvoices from "./PartnerInvoices";
+import HubGrid from "../../components/HubGrid";
+import { useHubItems } from "../../lib/hub";
 import { usePartnerInvoices } from "../../lib/partnerInvoices";
 import PartnerShipments from "./PartnerShipments";
 import { PartnerDashboard, PartnerQuotes, PartnerTracking } from "./PartnerHome";
@@ -129,6 +131,19 @@ export function PartnerInvoicesRoute() {
   return <PartnerInvoices company={me.company || "Your company"} />;
 }
 
+export function PartnerHubRoute() {
+  const q = useHubItems();
+  return (
+    <>
+      <PageHeader eyebrow="Help & resources" title="Information Hub" />
+      <p className="hint" style={{ marginTop: 0 }}>
+        ExPac's Partner Portal manual, presentations and marketing material, to read online, download or share.
+      </p>
+      {q.isLoading ? <Loading /> : q.error ? <ErrorNote error={q.error} /> : (q.data ?? []).length === 0 ? <p className="hint">Nothing here yet.</p> : <HubGrid items={q.data ?? []} />}
+    </>
+  );
+}
+
 export function PartnerQuotesRoute() {
   return <PartnerQuotes />;
 }
@@ -216,6 +231,7 @@ export default function PartnerPortalPage() {
       ? [{ to: "/partner/customs", label: "Customs Files", icon: "reports" }]
       : []),
     { to: "/partner/rates", label: "Rate Sheets", icon: "tariff" },
+    { to: "/partner/hub", label: "Information Hub", icon: "hub" },
   ];
 
   const email = user?.email ?? "";

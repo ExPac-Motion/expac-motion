@@ -15,6 +15,7 @@ import {
 } from "../../lib/hooks";
 import { formatDate } from "../../lib/format";
 import type { MediaAsset } from "../../lib/types";
+import HubManager from "./HubManager";
 
 const ALL = "All media";
 const DEFAULT_FOLDER = "General";
@@ -422,6 +423,8 @@ export default function MediaPage() {
           saving={rename.isPending}
         />
       )}
+
+      <HubManager />
 
       {viewingImage && (
         <Modal

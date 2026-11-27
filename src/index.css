@@ -14439,3 +14439,11 @@ button.pt-kpi {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.pt-hub-nocover {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 2.4rem;
+  background: #f4f2ec;
+}
