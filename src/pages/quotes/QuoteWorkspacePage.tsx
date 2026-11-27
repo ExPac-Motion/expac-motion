@@ -182,6 +182,11 @@ export default function QuoteWorkspacePage() {
       <div className="ws-head panel">
         <div className="ws-title">
           <StatusBadge status={q.status} />
+          {q.from_partner_id && (
+            <span className="badge sent" title="Requested on the Partner Portal: the partner is the customer and is billed">
+              Partner booking
+            </span>
+          )}
           <span className="ws-route">
             {q.mode} · <b>{q.origin || "—"}</b> → <b>{q.destination || "—"}</b>
           </span>

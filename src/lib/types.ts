@@ -1439,6 +1439,10 @@ export interface Quote {
   portal_decision?: "accepted" | "declined" | null;
   portal_decided_at?: string | null;
   portal_decline_reason?: string | null;
+  /** Requested on the Partner Portal (0253): the partner is the customer. */
+  from_partner_kind?: PartnerKind | null;
+  from_partner_id?: string | null;
+  partner_services?: string[] | null;
   /** Ship from stock (0149): warehouse receipts this quote is for. */
   wms_receipt_ids?: string[] | null;
   /** Revisions (0153): revision number, and a customer revision request waiting. */

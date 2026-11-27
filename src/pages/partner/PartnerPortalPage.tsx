@@ -18,6 +18,7 @@ import { usePartnerRfqs, usePartnerShipments } from "../../lib/partnerShipments"
 import PartnerRateSheets from "../partners/PartnerRateSheets";
 import BrokerDesk from "./BrokerDesk";
 import PartnerInvoices from "./PartnerInvoices";
+import { usePartnerBookings } from "../../lib/partnerBookings";
 import HubGrid from "../../components/HubGrid";
 import { useHubItems } from "../../lib/hub";
 import { usePartnerInvoices } from "../../lib/partnerInvoices";
@@ -215,6 +216,8 @@ export default function PartnerPortalPage() {
   const shipmentsQ = usePartnerShipments(!!me);
   const rfqsQ = usePartnerRfqs(!!me);
   const invoicesQ = usePartnerInvoices(!!me);
+  const bookingsQ = usePartnerBookings(!!me);
+  const quotesReady = (bookingsQ.data ?? []).filter((b) => b.status === "sent").length;
   const queried = (invoicesQ.data ?? []).filter((i) => i.status === "queried").length;
   const [navOpen, setNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -226,6 +229,7 @@ export default function PartnerPortalPage() {
     { to: "/partner/shipments", label: "Shipments", icon: "shipments", badge: todo },
     { to: "/partner/tracking", label: "Tracking", icon: "ship" },
     { to: "/partner/quotes", label: "Quotes", icon: "quotes", badge: openRfqs },
+    { to: "/partner/bookings", label: "Send us a shipment", icon: "plane", badge: quotesReady },
     { to: "/partner/invoices", label: "Invoices", icon: "invoices", badge: queried },
     ...(me?.partner_kind === "clearing_agent"
       ? [{ to: "/partner/customs", label: "Customs Files", icon: "reports" }]

@@ -81,6 +81,7 @@ import PortalRequestQuotePage from "./pages/portal/PortalRequestQuotePage";
 import PortalItemsPage from "./pages/portal/PortalItemsPage";
 import PortalReportsPage from "./pages/portal/PortalReportsPage";
 import PortalInfoHubPage from "./pages/portal/PortalInfoHubPage";
+import { PartnerBookingNew, PartnerBookingsList } from "./pages/partner/PartnerBookings";
 import PartnerPortalPage, {
   PartnerCustomsRoute,
   PartnerDashboardRoute,
@@ -297,6 +298,8 @@ function AppRoutes() {
             <Route path="tracking" element={<PartnerTrackingRoute />} />
             <Route path="quotes" element={<PartnerQuotesRoute />} />
             <Route path="invoices" element={<PartnerInvoicesRoute />} />
+            <Route path="bookings" element={<PartnerBookingsList />} />
+            <Route path="bookings/new" element={<PartnerBookingNew />} />
             <Route path="customs" element={<PartnerCustomsRoute />} />
             <Route path="rates" element={<PartnerRatesRoute />} />
             <Route path="hub" element={<PartnerHubRoute />} />

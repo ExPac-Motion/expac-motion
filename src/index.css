@@ -14447,3 +14447,57 @@ button.pt-kpi {
   font-size: 2.4rem;
   background: #f4f2ec;
 }
+
+/* ---------- Partner bookings (0253) ---------- */
+.pb-form {
+  display: grid;
+  gap: 14px;
+}
+.pb-form .panel {
+  margin: 0;
+}
+.pb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 14px;
+}
+.pb-grid .wide {
+  grid-column: 1 / -1;
+}
+.pb-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+.pb-modes button {
+  border: 1px solid var(--line);
+  background: var(--white);
+  border-radius: 100px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pb-modes button.on {
+  background: var(--green, #8cbc43);
+  border-color: var(--green, #8cbc43);
+  color: #fff;
+  font-weight: 700;
+}
+.pb-services {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px 14px;
+}
+.pb-pack input {
+  width: 100%;
+  min-width: 60px;
+}
+.pb-totals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-top: 10px;
+  font-size: 0.95rem;
+}
